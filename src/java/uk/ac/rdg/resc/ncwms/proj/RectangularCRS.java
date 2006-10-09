@@ -28,46 +28,29 @@
 
 package uk.ac.rdg.resc.ncwms.proj;
 
-import java.util.Iterator;
-import ucar.unidata.geoloc.LatLonPoint;
-
 /**
- * RequestCRS object for Plate Carree projection (lon-lat).
+ * A RectangularCRS is made up of a pair of perpendicular latitude and longitude
+ * axes.  The values along the axes need not be equally spaced.  Examples
+ * of RectangularCRSs are Plate Carree (CRS:84), Mercator and Gaussian (but not
+ * Reduced Gaussian, in which the number of longitude points per latitude line
+ * varies with latitude).
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class RequestCRS_CRS84 extends RequestCRS implements RectangularCRS
+public interface RectangularCRS
 {
-    /**
-     * @return an Iterator over all the lon-lat points in this projection in
-     * the given bounding box.  The bounding box and picture dimensions will
-     * have been set before this method is called.
-     */
-    public Iterator<LatLonPoint> getLatLonPointIterator()
-    {
-        return null;
-    }
-    
     /**
      * @return array of numbers representing the values along the longitude
      * axis
      */
-    public double[] getLongitudeValues()
-    {
-        return null;
-    }
+    public double[] getLongitudeValues();
     
     /**
      * @return array of numbers representing the values along the latitude
      * axis
      */
-    public double[] getLatitudeValues()
-    {
-        return null;
-    }
-    
-    
+    public double[] getLatitudeValues();
 }

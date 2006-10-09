@@ -205,6 +205,10 @@ public class GetMap
                         dsAndVar[1] + " not found");
                 }
                 
+                resp.setContentType("text/plain");
+                resp.getWriter().write("Projection: " + 
+                    var.getProjection().getClassName());
+                resp.getWriter().close();
                 
             }
             catch(IOException ioe)

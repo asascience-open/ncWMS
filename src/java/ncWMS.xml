@@ -25,5 +25,7 @@
     <datasets>
         <!--<dataset id="Ifremer" title="Test Ifremer dataset" location="C:\data\OA_20060830.nc"/>
         <dataset id="FOAM" title="Test aggregated dataset" location="C:\data\FOAM_one.ncml"/>-->
+        <dataset id="MRCS" title="POLCOMS MRCS data" location="C:\data\POLCOMS_MRCS_NOWCAST_20060731.nc"/>
+        <dataset id="FOAM" title="NCOF FOAM data" location="C:\data\FOAM_20050422.0.nc"/>
     </datasets>
 </ncWMS>
