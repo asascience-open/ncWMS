@@ -26,60 +26,28 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms;
-
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionReport;
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionType;
+package uk.ac.rdg.resc.ncwms.exceptions;
 
 /**
- * Exception that is thrown during operation of a WMS. It is presented to the 
- * web client as an XML document.
- * @todo create type-safe enumeration of allowed codes
+ * Exception that is thrown when a client requests an optional operation (e.g.
+ * GetFeatureInfo) that is not supported by this server
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class WMSException extends Exception
+public class OperationNotSupportedException extends WMSException
 {
-    private ServiceExceptionReport exReport;
     
     /**
-     * Creates a new WMSException with no code
-     * @param message A free-form message
+     * Creates a new OperationNotSupportedException
+     * @param op The name of the requested Operation
      */
-    public WMSException(String message)
+    public OperationNotSupportedException(String op)
     {
-        this(message, null);
-    }
-    
-    /**
-     * Creates a new WMSException
-     * @param message A free-form message
-     * @param code One of the official error codes
-     * (todo: make an enumeration of these, or create subclasses)
-     */
-    public WMSException(String message, String code)
-    {
-        this.exReport = new ServiceExceptionReport();
-        exReport.setVersion(WMS.VERSION);
-        ServiceExceptionType ex = new ServiceExceptionType();
-        if (code != null)
-        {
-            ex.setCode(code);
-        }
-        ex.setValue(message);
-        this.exReport.getServiceException().add(ex);
-    }
-    
-    /**
-     * @return the ServiceExceptionReport object, ready for marshalling into
-     * XML and returning to the client
-     */
-    public ServiceExceptionReport getServiceExceptionReport()
-    {
-        return this.exReport;
+        super("The operation " + op + " is not supported by this server",
+            "OperationNotSupported");
     }
     
 }

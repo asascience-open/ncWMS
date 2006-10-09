@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.util.Hashtable;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 
 /**
  * Class for parsing the query string of a WMS request. Essentially, this

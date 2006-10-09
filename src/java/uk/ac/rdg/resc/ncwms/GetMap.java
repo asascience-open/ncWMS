@@ -35,6 +35,10 @@ import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidCRSException;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
+import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 
 /**
  * Implements the GetMap operation
@@ -83,8 +87,7 @@ public class GetMap
         String crs = reqParser.getParameterValue("CRS");
         if (!crs.equals(WMS.CRS_84)) // TODO get supported CRSs from somewhere
         {
-            throw new WMSException("The CRS " + crs + " is not supported by this server",
-                "InvalidCRS");
+            throw new InvalidCRSException(crs);
         }
         String[] bboxEls = reqParser.getParameterValue("BBOX").split(",");
         if (bboxEls.length != 4)
@@ -116,8 +119,7 @@ public class GetMap
         String format = reqParser.getParameterValue("FORMAT");
         if (!format.equals("image/png")) // TODO get supported formats from somewhere
         {
-            throw new WMSException("Image format " + format +
-                " is not supported by this server", "InvalidFormat");
+            throw new InvalidFormatException(format);
         }
         processRequest(resp, config, layers, styles, crs, bbox, width, height, format);
     }
@@ -136,8 +138,8 @@ public class GetMap
             String[] dsAndVar = layer.split("/");
             if (dsAndVar.length != 2)
             {
-                throw new WMSException("Invalid format for layer (must be dataset/variable)",
-                    "LayerNotDefined");
+                throw new LayerNotDefinedException("Invalid format for layer " +
+                    "(must be dataset/variable)");
             }
             // Look for the dataset location
             String location = null;
@@ -152,8 +154,8 @@ public class GetMap
             }
             if (location == null)
             {
-                throw new WMSException("Dataset with id " + dsAndVar[0] + " not found",
-                    "LayerNotDefined");
+                throw new LayerNotDefinedException("Dataset with id " +
+                    dsAndVar[0] + " not found");
             }
             // Open the dataset (TODO: get from cache?)
             NetcdfDataset nc = NetcdfDataset.openDataset(location);
@@ -165,9 +167,11 @@ public class GetMap
             if (var == null)
             {
                 gd.close();
-                throw new WMSException("Variable with name " + dsAndVar[1] +
-                    " not found", "LayerNotDefined");
+                throw new LayerNotDefinedException("Variable with name " +
+                    dsAndVar[1] + " not found");
             }
+            
+            
 
             gd.close();
         }

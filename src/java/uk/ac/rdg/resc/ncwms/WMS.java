@@ -38,7 +38,6 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.validation.Schema;
@@ -47,6 +46,8 @@ import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
+import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.WMSCapabilities;
 
 /**
@@ -80,6 +81,7 @@ public class WMS extends HttpServlet
     {
         super.init(servletConfig);
         this.config = readConfig(servletConfig.getServletContext());
+        // Set up the default projections
     }
     
     /**
@@ -131,6 +133,7 @@ public class WMS extends HttpServlet
         catch(Exception e)
         {
             // Wrap all other Exceptions as ServletExceptions: TODO is this OK?
+            // TODO: we should log the error here before throwing it.
             throw new ServletException(e);
         }
     }
@@ -139,6 +142,7 @@ public class WMS extends HttpServlet
      * Processes GET request.
      * @param request servlet request
      * @param response servlet response
+     * @todo should we throw all Exceptions as WMSExceptions to help
      */
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
@@ -180,8 +184,7 @@ public class WMS extends HttpServlet
             }
             else if (req.equals("GetFeatureInfo"))
             {
-                throw new WMSException("Operation not yet supported",
-                    "OperationNotSupported");
+                throw new OperationNotSupportedException(req);
             }
             else
             {
