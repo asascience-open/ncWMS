@@ -36,9 +36,11 @@ import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidCRSException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
+import uk.ac.rdg.resc.ncwms.proj.RequestCRS;
+import uk.ac.rdg.resc.ncwms.proj.RequestCRSFactory;
 
 /**
  * Implements the GetMap operation
@@ -53,14 +55,17 @@ public class GetMap
     
     /**
      * The GetMap operation
-     * @param reqParser The RequestParser object that was created from the
+     * @param reqParser The RequestParser object that was created from the URL
+     * arguments
      * @param config the NcWMS configuration object for this WMS
      * @param resp The HttpServletResponse object to which we will write the image
-     * URL arguments
-     * @throws WMSException if 
+     * @throws WMSException if the client's request was invalid
+     * @throws WMSInternalError if there was an internal problem (e.g.
+     * could not access underlying data, could not dynamically create a RequestCRS
+     * object, etc)
      */
     public static void getMap(RequestParser reqParser, NcWMS config,
-        HttpServletResponse resp) throws WMSException, IOException
+        HttpServletResponse resp) throws WMSException, WMSInternalError
     {
         String version = reqParser.getParameterValue("VERSION");
         if (!version.equals(WMS.VERSION))
@@ -84,11 +89,12 @@ public class GetMap
             throw new WMSException("You must request exactly one STYLE per layer,"
                 + "or use the default style for each layer with STYLES=");
         }
-        String crs = reqParser.getParameterValue("CRS");
-        if (!crs.equals(WMS.CRS_84)) // TODO get supported CRSs from somewhere
-        {
-            throw new InvalidCRSException(crs);
-        }
+        
+        // Get an object representing the CRS of the request
+        RequestCRS crs =
+            RequestCRSFactory.getRequestCRS(reqParser.getParameterValue("CRS"));
+        
+        // Get the bounding box
         String[] bboxEls = reqParser.getParameterValue("BBOX").split(",");
         if (bboxEls.length != 4)
         {
@@ -99,37 +105,61 @@ public class GetMap
         {
             bbox[i] = Double.parseDouble(bboxEls[i]);
         }
-        // TODO: convert to bounding box in proper projection
         if (bbox[0] > bbox[2] || bbox[1] > bbox[3])
         {
             throw new WMSException("Invalid bounding box format");
         }
-        int width = Integer.parseInt(reqParser.getParameterValue("WIDTH"));
-        if (width > config.getService().getMaxWidth().intValue() || width < 1)
-        {
-            throw new WMSException("WIDTH must be between 1 and "
-                + config.getService().getMaxWidth() + " inclusive");
-        }
-        int height = Integer.parseInt(reqParser.getParameterValue("HEIGHT"));
-        if (height > config.getService().getMaxHeight().intValue() || height < 1)
-        {
-            throw new WMSException("HEIGHT must be between 1 and "
-                + config.getService().getMaxHeight() + " inclusive");
-        }
+        crs.setBoundingBox(bbox);
+        
+        // Get the picture dimensions
+        int width = parseImageDimension(reqParser, "WIDTH",
+            config.getService().getMaxWidth().intValue());
+        int height = parseImageDimension(reqParser, "HEIGHT",
+            config.getService().getMaxHeight().intValue());
+        crs.setPictureDimension(width, height);
+        
+        // Get the required image format
         String format = reqParser.getParameterValue("FORMAT");
         if (!format.equals("image/png")) // TODO get supported formats from somewhere
         {
             throw new InvalidFormatException(format);
         }
-        processRequest(resp, config, layers, styles, crs, bbox, width, height, format);
+        
+        processRequest(resp, config, layers, styles, crs, format);
+    }
+    
+    /**
+     * Parses the image dimensions
+     * @param dimName The name of the dimension (WIDTH or HEIGHT)
+     * @param maxValue The maximum value for the dimension
+     * @throws WMSException if the image dimension could not be parsed or was
+     * greater than maxValue or less than 1
+     */
+    private static int parseImageDimension(RequestParser reqParser,
+        String dimName, int maxValue) throws WMSException
+    {
+        try
+        {
+            int dim = Integer.parseInt(reqParser.getParameterValue(dimName));
+            if (dim > maxValue || dim < 1)
+            {
+                throw new WMSException(dimName + " must be between 1 and "
+                    + maxValue + " inclusive");
+            }
+            return dim;
+        }
+        catch(NumberFormatException nfe)
+        {
+            throw new WMSException("Invalid integer for " + dimName + " parameter");
+        }
     }
     
     /**
      * Perform the operation
      */
     private static void processRequest(HttpServletResponse resp, NcWMS config,
-        String[] layers, String[] styles, String crs, double[] bbox, int width,
-        int height, String format) throws WMSException, IOException
+        String[] layers, String[] styles, RequestCRS crs, String format)
+        throws WMSException, WMSInternalError
     {
         // TODO: handle this iteration properly: for now we only allow 1 layer anyway.
         for (String layer : layers)
@@ -139,7 +169,7 @@ public class GetMap
             if (dsAndVar.length != 2)
             {
                 throw new LayerNotDefinedException("Invalid format for layer " +
-                    "(must be dataset/variable)");
+                    "(must be <dataset>/<variable>)");
             }
             // Look for the dataset location
             String location = null;
@@ -157,23 +187,45 @@ public class GetMap
                 throw new LayerNotDefinedException("Dataset with id " +
                     dsAndVar[0] + " not found");
             }
-            // Open the dataset (TODO: get from cache?)
-            NetcdfDataset nc = NetcdfDataset.openDataset(location);
-            // Wrapping as a GridDataset allows us to get at georeferencing
-            GridDataset gd = new GridDataset(nc);
-
-            // Get the variable object
-            GeoGrid var = gd.findGridByName(dsAndVar[1]);
-            if (var == null)
+            
+            // Now extract the data and build the picture
+            GridDataset gd = null;
+            try
             {
-                gd.close();
-                throw new LayerNotDefinedException("Variable with name " +
-                    dsAndVar[1] + " not found");
-            }
-            
-            
+                // Open the dataset (TODO: get from cache?)
+                NetcdfDataset nc = NetcdfDataset.openDataset(location);
+                // Wrapping as a GridDataset allows us to get at georeferencing
+                gd = new GridDataset(nc);
 
-            gd.close();
+                // Get the variable object
+                GeoGrid var = gd.findGridByName(dsAndVar[1]);
+                if (var == null)
+                {
+                    throw new LayerNotDefinedException("Variable with name " +
+                        dsAndVar[1] + " not found");
+                }
+                
+                
+            }
+            catch(IOException ioe)
+            {
+                throw new WMSInternalError("Error reading from dataset "
+                    + location + ": " + ioe.getMessage(), ioe);
+            }
+            finally
+            {
+                if (gd != null)
+                {
+                    try
+                    {
+                        gd.close();
+                    }
+                    catch(IOException ioe)
+                    {
+                        // TODO: log the error
+                    }
+                }
+            }
         }
     }
     

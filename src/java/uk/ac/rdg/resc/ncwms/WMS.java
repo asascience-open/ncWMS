@@ -48,6 +48,7 @@ import org.xml.sax.XMLReader;
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.WMSCapabilities;
 
 /**
@@ -128,6 +129,7 @@ public class WMS extends HttpServlet
         }
         catch(ServletException se)
         {
+            // TODO: log the error
             throw se;
         }
         catch(Exception e)
@@ -190,6 +192,12 @@ public class WMS extends HttpServlet
             {
                 throw new WMSException("Invalid operation");
             }
+        }
+        catch(WMSInternalError wmsie)
+        {
+            // TODO: in future we could wrap this as a WMSException to help
+            // clients: for the moment we just throw it
+            throw new ServletException(wmsie);
         }
         catch(WMSException wmse)
         {

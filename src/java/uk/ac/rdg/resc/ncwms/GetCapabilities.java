@@ -56,6 +56,7 @@ import uk.ac.rdg.resc.ncwms.ogc.capabilities.OperationType;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.Request;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.Service;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.WMSCapabilities;
+import uk.ac.rdg.resc.ncwms.proj.RequestCRSFactory;
 
 /**
  * Implements the GetCapabilities operation.
@@ -141,7 +142,13 @@ public class GetCapabilities
         
         Layer rootLayer = new Layer();
         rootLayer.setTitle("Web Map Server"); // TODO get the title from somewhere
-        rootLayer.getCRS().add(WMS.CRS_84);
+        
+        // Get the list of supported CRSs
+        for (String crs : RequestCRSFactory.getSupportedCRSCodes())
+        {
+            rootLayer.getCRS().add(crs);
+        }
+
         // TODO: Style
         
         // Add each dataset as a new Layer hierarchy

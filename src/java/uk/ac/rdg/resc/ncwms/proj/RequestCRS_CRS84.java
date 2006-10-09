@@ -26,60 +26,29 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.exceptions;
+package uk.ac.rdg.resc.ncwms.proj;
 
-import uk.ac.rdg.resc.ncwms.*;
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionReport;
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionType;
+import java.util.Iterator;
+import ucar.unidata.geoloc.LatLonPoint;
 
 /**
- * Exception that is thrown during operation of a WMS in response to an invalid
- * client request (as distinct from an internal server error). It is presented to the 
- * web client as an XML document.
+ * RequestCRS object for Plate Carree projection (lon-lat).
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class WMSException extends Exception
+public class RequestCRS_CRS84 extends RequestCRS
 {
-    private ServiceExceptionReport exReport;
-    
     /**
-     * Creates a new WMSException
-     * @param message A free-form message
+     * @return an Iterator over all the lon-lat points in this projection in
+     * the given bounding box.  The bounding box and picture dimensions will
+     * have been set before this method is called.
      */
-    public WMSException(String message)
+    public Iterator<LatLonPoint> getLatLonPointIterator()
     {
-        this(message, null);
-    }
-    
-    /**
-     * Creates a new WMSException: only subclasses can call this method
-     * @param message A free-form message
-     * @param code One of the official error codes
-     */
-    protected WMSException(String message, String code)
-    {
-        this.exReport = new ServiceExceptionReport();
-        exReport.setVersion(WMS.VERSION);
-        ServiceExceptionType ex = new ServiceExceptionType();
-        if (code != null)
-        {
-            ex.setCode(code);
-        }
-        ex.setValue(message);
-        this.exReport.getServiceException().add(ex);
-    }
-    
-    /**
-     * @return the ServiceExceptionReport object, ready for marshalling into
-     * XML and returning to the client
-     */
-    public ServiceExceptionReport getServiceExceptionReport()
-    {
-        return this.exReport;
+        return null;
     }
     
 }

@@ -28,58 +28,23 @@
 
 package uk.ac.rdg.resc.ncwms.exceptions;
 
-import uk.ac.rdg.resc.ncwms.*;
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionReport;
-import uk.ac.rdg.resc.ncwms.ogc.exceptions.ServiceExceptionType;
-
 /**
- * Exception that is thrown during operation of a WMS in response to an invalid
- * client request (as distinct from an internal server error). It is presented to the 
- * web client as an XML document.
+ * Exception that is thrown due to an invalid configuration of the server.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class WMSException extends Exception
+public class ConfigurationException extends Exception
 {
-    private ServiceExceptionReport exReport;
     
     /**
-     * Creates a new WMSException
-     * @param message A free-form message
+     * Creates a new instance of ConfigurationException
      */
-    public WMSException(String message)
+    public ConfigurationException(String message)
     {
-        this(message, null);
-    }
-    
-    /**
-     * Creates a new WMSException: only subclasses can call this method
-     * @param message A free-form message
-     * @param code One of the official error codes
-     */
-    protected WMSException(String message, String code)
-    {
-        this.exReport = new ServiceExceptionReport();
-        exReport.setVersion(WMS.VERSION);
-        ServiceExceptionType ex = new ServiceExceptionType();
-        if (code != null)
-        {
-            ex.setCode(code);
-        }
-        ex.setValue(message);
-        this.exReport.getServiceException().add(ex);
-    }
-    
-    /**
-     * @return the ServiceExceptionReport object, ready for marshalling into
-     * XML and returning to the client
-     */
-    public ServiceExceptionReport getServiceExceptionReport()
-    {
-        return this.exReport;
+        super(message);
     }
     
 }

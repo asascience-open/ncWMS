@@ -28,26 +28,64 @@
 
 package uk.ac.rdg.resc.ncwms.proj;
 
+import java.awt.Dimension;
+import java.awt.geom.Rectangle2D;
 import java.util.Iterator;
 import ucar.unidata.geoloc.LatLonPoint;
 
 /**
- * Description of RequestCRS
+ * Abstract superclass for a requested map CRS (as opposed to a CRS
+ * for source data).  A new object of this class will be created with each
+ * client request.  Subclasses must provide a no-argument constructor.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface RequestCRS
+public abstract class RequestCRS
 {
+    /**
+     * The bounding box of the request in this CRS, as specified by the client
+     */
+    protected Rectangle2D.Double bbox;
+    /**
+     * The width of the requested picture in pixels
+     */
+    protected int picWidth;
+    /**
+     * The height of the requested picture in pixels
+     */
+    protected int picHeight;
+    
+    /**
+     * Sets the bounding box of this request
+     * @param bbox The bounding box of the request as an array of four doubles
+     * (minx, miny, maxx, maxy).  We will already have checked that 
+     * maxx > minx and maxy > miny.
+     */
+    public void setBoundingBox(double[] bbox)
+    {
+        this.bbox = new Rectangle2D.Double(bbox[0], bbox[1],
+            (bbox[2] - bbox[0]), (bbox[3] - bbox[1]));
+    }
+    
+    /**
+     * Sets the dimensions of the requested picture in pixels
+     * @param width The width of the requested picture in pixels
+     * @param height The height of the requested picture in pixels
+     */
+    public void setPictureDimension(int width, int height)
+    {
+        this.picWidth = width;
+        this.picHeight = height;
+    }
     
     /**
      * @return an Iterator over all the lon-lat points in this projection in
-     * the given bounding box
+     * the given bounding box.  The bounding box and picture dimensions will
+     * have been set before this method is called.
      */
-    public Iterator<LatLonPoint> getLatLonPointIterator();
-    
-    
+    public abstract Iterator<LatLonPoint> getLatLonPointIterator();
     
 }

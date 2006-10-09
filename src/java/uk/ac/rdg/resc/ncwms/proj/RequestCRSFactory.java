@@ -30,13 +30,14 @@ package uk.ac.rdg.resc.ncwms.proj;
 
 import java.awt.Rectangle;
 import java.util.Hashtable;
+import java.util.Set;
+import uk.ac.rdg.resc.ncwms.WMS;
+import uk.ac.rdg.resc.ncwms.exceptions.ConfigurationException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCRSException;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
  * Factory for RequestCRS objects.
- * Interface for a requested map CRS (as opposed to a CRS
- * for source data).  Subclasses should provide a no-argument constructor.
  *
  * @author Jon Blower
  * $Revision$
@@ -45,58 +46,107 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
  */
 public class RequestCRSFactory
 {
-    // Maps projection codes to their associated RequestProjection class names
-    private static Hashtable<String, String> projs;
+    // Maps projection codes to their associated RequestProjection classes
+    private static Hashtable<String, Class> projs = new Hashtable<String, Class>();
     
     protected String code; // Unique code for this projection (e.g. CRS:84)
     protected Rectangle bbox; // Bounding box in this proj's coordinate space
     
     static
     {
-        projs = new Hashtable<String, String>();
-        registerCRS("CRS:84", "uk.ac.rdg.resc.ncwms.proj.ReqProjCRS84");
+        try
+        {
+            // Add the known CRSs (these can be added to and overridden by registerCRS())
+            registerCRS(WMS.CRS_84, RequestCRS_CRS84.class);
+        }
+        catch(ConfigurationException ce)
+        {
+            // Should not happen since we know that the built-in CRSs are
+            // RequestCRSs
+            throw new ExceptionInInitializerError(ce);
+        }
+    }
+    
+    /**
+     * @return a set of codes for the supported request CRSs
+     */
+    public static Set<String> getSupportedCRSCodes()
+    {
+        return projs.keySet();
     }
     
     /**
      * Registers the class with the given name as being the handler for the 
-     * given code. Does not check to see if className represents a valid class.
+     * CRS with the given code.  This will override any previous handlers for
+     * this CRS code, allowing users to plug in their own handlers if required.
+     * Does not check to see if className represents a valid class.
      * @param code The unique code for the projection
      * @param className The name of the class that will handle this projection
+     * @throws ClassNotFoundException if a class called className could not be
+     * found.
+     * @throws ConfigurationException if the class was found but it is not a
+     * subclass of {@link RequestCRS}
      */
     public synchronized static void registerCRS(String code, String className)
+        throws ClassNotFoundException, ConfigurationException
     {
-        if (projs.containsKey(code))
-        {
-            // TODO: throw an Exception
-        }
-        projs.put(code, className);
+        registerCRS(code, Class.forName(className));
     }
     
     /**
-     * Gets the RequestCRS object that is specified by the given code.
+     * Registers the given class as being the handler for the CRS with the
+     * given code.  This will override any previous handlers for
+     * this CRS code, allowing users to plug in their own handlers if required.
+     * Does not check to see if className represents a valid class.
+     * @param code The unique code for the projection
+     * @param theClass The class that will handle this projection
+     * @throws ConfigurationException if the given class is not a subclass
+     * of {@link RequestCRS}
+     */
+    public synchronized static void registerCRS(String code, Class theClass)
+        throws ConfigurationException
+    {
+        if (RequestCRS.class.isAssignableFrom(theClass))
+        {
+            projs.put(code, theClass);
+        }
+        else
+        {
+            throw new ConfigurationException(theClass.getName() +
+                " is not a subclass of RequestCRS");
+        }
+    }
+    
+    /**
+     * Gets the {@link RequestCRS} object that is specified by the given code.
+     * Called by the {@link GetMap} operation.
      * @param code The unique code for this projection (e.g. CRS:84)
      * @return the RequestProjection object
-     * @throws InvalidCRSException if the code does not represent a projection
+     * @throws {@link InvalidCRSException} if the code does not represent a projection
      * that is supported by this server
+     * @throws {@link WMSInternalError} if the {@link RequestCRS} object could not be
+     * created (e.g. constructor was private)
      */
-    public RequestCRS getRequestCRS(String code) throws WMSException
+    public static RequestCRS getRequestCRS(String code)
+        throws InvalidCRSException, WMSInternalError
     {
-        String className = projs.get(code);
-        if (className == null)
+        Class theClass = projs.get(code);
+        if (theClass == null)
         {
             throw new InvalidCRSException(code);
         }
-        return null; // TODO (RequestCRS)Class.forName(className).newInstance();
+        try
+        {
+            return (RequestCRS)theClass.newInstance();
+        }
+        catch(Exception e)
+        {
+            // Could be an InstantiationException or IllegalAccessException
+            throw new WMSInternalError("Could not create the a RequestCRS object" +
+                " for CRS " + code + ": " + e.getMessage(), e);
+        }
+        // ClassCastExceptions should not happen because we have checked in
+        // registerCRS that the RequestCRS class is of the correct type
     }
-    
-    /**
-     * Sets the bounding box in this projection's coordinate system
-     * @param bbox The bounding box.
-     */
-    public void setBoundingBox(Rectangle bbox)
-    {
-        this.bbox = bbox;
-    }
-    
     
 }
