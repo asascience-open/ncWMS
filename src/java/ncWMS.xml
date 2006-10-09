@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Document   : ncWMS.xml
+    Created on : 30 September 2006, 11:35
+    Author     : Jon
+    Description:
+        Configuration file for the Web Map Service
+-->
+
+<ncWMS xmlns="http://www.resc.rdg.ac.uk/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.resc.rdg.ac.uk/ ncWMSconfig.xsd">
+    <service>
+        <name>ncWMS</name>
+        <title>NetCDF Web Map Service</title>
+        <href>http://www.nerc-essc.ac.uk</href>
+        <!-- The elements below all have default values and so can be left empty.
+             However, they must be present in the configuration file. -->
+        <fees></fees>
+        <accessConstraints></accessConstraints>
+        <layerLimit></layerLimit>
+        <maxWidth></maxWidth>
+        <maxHeight></maxHeight>
+    </service>
+    <datasets>
+        <!--<dataset id="Ifremer" title="Test Ifremer dataset" location="C:\data\OA_20060830.nc"/>
+        <dataset id="FOAM" title="Test aggregated dataset" location="C:\data\FOAM_one.ncml"/>-->
+    </datasets>
+</ncWMS>

@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://www.resc.rdg.ac.uk/"
+    xmlns="http://www.resc.rdg.ac.uk/"
+    elementFormDefault="qualified">
+
+<xs:element name="ncWMS">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:element name="service">
+            <xs:complexType>
+                <xs:all>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="title" type="xs:string"/>
+                    <xs:element name="fees" type="xs:string" default="none"/>
+                    <xs:element name="accessConstraints" type="xs:string" minOccurs="0" maxOccurs="1" default="none"/>
+                    <!-- Can only currently handle 1 layer at a time -->
+                    <xs:element name="layerLimit" fixed="1">
+                        <xs:simpleType>
+                          <xs:restriction base="xs:positiveInteger">
+                            <xs:minInclusive value="1"/>
+                          </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="maxWidth" default="1000">
+                        <xs:simpleType>
+                          <xs:restriction base="xs:positiveInteger">
+                            <xs:minInclusive value="1"/>
+                          </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="maxHeight" default="1000">
+                        <xs:simpleType>
+                          <xs:restriction base="xs:positiveInteger">
+                            <xs:minInclusive value="1"/>
+                          </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="href" type="xs:string"/>
+                </xs:all>
+            </xs:complexType>
+        </xs:element>
+        <xs:element name="datasets">
+            <xs:complexType>
+                <xs:sequence>
+                    <xs:element name="dataset" minOccurs="0" maxOccurs="unbounded">
+                        <xs:complexType>
+                            <xs:attribute name="id" type="xs:ID" use="required"/>
+                            <xs:attribute name="title" type="xs:string" use="required"/>
+                            <xs:attribute name="location" type="xs:string" use="required"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+</xs:element>
+
+</xs:schema>
