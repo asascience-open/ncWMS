@@ -95,21 +95,7 @@ public class GetMap
             RequestCRSFactory.getRequestCRS(reqParser.getParameterValue("CRS"));
         
         // Get the bounding box
-        String[] bboxEls = reqParser.getParameterValue("BBOX").split(",");
-        if (bboxEls.length != 4)
-        {
-            throw new WMSException("Invalid bounding box format");
-        }
-        double[] bbox = new double[bboxEls.length];
-        for (int i = 0; i < bboxEls.length; i++)
-        {
-            bbox[i] = Double.parseDouble(bboxEls[i]);
-        }
-        if (bbox[0] > bbox[2] || bbox[1] > bbox[3])
-        {
-            throw new WMSException("Invalid bounding box format");
-        }
-        crs.setBoundingBox(bbox);
+        crs.setBoundingBox(reqParser.getParameterValue("BBOX"));
         
         // Get the picture dimensions
         int width = parseImageDimension(reqParser, "WIDTH",
@@ -206,9 +192,13 @@ public class GetMap
                 }
                 
                 resp.setContentType("text/plain");
-                resp.getWriter().write("Projection: " + 
-                    var.getProjection().getClassName());
+                resp.getWriter().write("Projection name: " + 
+                    var.getProjection().getName() + "\n");
+                resp.getWriter().write("Projection header: " + 
+                    var.getProjection().getHeader() + "\n");
+                resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());
                 resp.getWriter().close();
+                
                 
             }
             catch(IOException ioe)

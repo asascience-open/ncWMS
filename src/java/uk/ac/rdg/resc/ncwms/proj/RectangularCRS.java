@@ -28,6 +28,11 @@
 
 package uk.ac.rdg.resc.ncwms.proj;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.LatLonPointImpl;
+
 /**
  * A RectangularCRS is made up of a pair of perpendicular latitude and longitude
  * axes.  The values along the axes need not be equally spaced.  Examples
@@ -40,17 +45,64 @@ package uk.ac.rdg.resc.ncwms.proj;
  * $Date$
  * $Log$
  */
-public interface RectangularCRS
+public abstract class RectangularCRS extends RequestCRS
 {
     /**
      * @return array of numbers representing the values along the longitude
      * axis
      */
-    public double[] getLongitudeValues();
+    public abstract double[] getLongitudeValues();
     
     /**
      * @return array of numbers representing the values along the latitude
      * axis
      */
-    public double[] getLatitudeValues();
+    public abstract double[] getLatitudeValues();
+    
+    /**
+     * @return an Iterator over all the lon-lat points in this projection in
+     * the given bounding box, with longitude as the faster-varying axis.
+     */
+    public Iterator<LatLonPoint> getLatLonPointIterator()
+    {
+        return new Iterator<LatLonPoint>()
+        {
+            private double[] lonValues = getLongitudeValues();
+            private double[] latValues = getLatitudeValues();
+            private int i = 0;
+
+            /**
+             * @return the next LatLonPoint.  Longitude is the faster-varying axis.
+             */
+            public synchronized LatLonPoint next()
+            {
+                int lonIndex = this.i % this.lonValues.length;
+                int latIndex = this.i / this.lonValues.length;
+                this.i++;
+                if (latIndex < this.latValues.length &&
+                    lonIndex < this.lonValues.length)
+                {
+                    return new LatLonPointImpl(this.latValues[latIndex],
+                        this.lonValues[lonIndex]);
+                }
+                else
+                {
+                    throw new NoSuchElementException();
+                }
+            }
+
+            public boolean hasNext()
+            {
+                return this.i < this.latValues.length * this.lonValues.length;
+            }
+
+            /**
+             * Operation not supported in this Iterator
+             */
+            public void remove()
+            {
+                throw new UnsupportedOperationException("remove()");
+            }
+        };
+    }
 }

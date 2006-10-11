@@ -28,10 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.proj;
 
-import java.awt.Dimension;
 import java.awt.geom.Rectangle2D;
 import java.util.Iterator;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 
 /**
  * Abstract superclass for a requested map CRS (as opposed to a CRS
@@ -48,7 +48,7 @@ public abstract class RequestCRS
     /**
      * The bounding box of the request in this CRS, as specified by the client
      */
-    protected Rectangle2D.Double bbox;
+    protected Rectangle2D bbox;
     /**
      * The width of the requested picture in pixels
      */
@@ -60,12 +60,34 @@ public abstract class RequestCRS
     
     /**
      * Sets the bounding box of this request
-     * @param bbox The bounding box of the request as an array of four doubles
-     * (minx, miny, maxx, maxy).  We will already have checked that 
-     * maxx > minx and maxy > miny.
+     * @param bboxStr String representing the bounding box in the form
+     * "minx,miny,maxx,maxy"
+     * @throws WMSException if the format of the bounding box is not correct
      */
-    public void setBoundingBox(double[] bbox)
+    public void setBoundingBox(String bboxStr) throws WMSException
     {
+        String[] bboxEls = bboxStr.split(",");
+        if (bboxEls.length != 4)
+        {
+            throw new WMSException("Invalid bounding box format");
+        }
+        double[] bbox = new double[bboxEls.length];
+        for (int i = 0; i < bboxEls.length; i++)
+        {
+            try
+            {
+                bbox[i] = Double.parseDouble(bboxEls[i]);
+            }
+            catch(NumberFormatException nfe)
+            {
+                throw new WMSException("Invalid number in bounding box");
+            }
+        }
+        if (bbox[0] > bbox[2] || bbox[1] > bbox[3])
+        {
+            throw new WMSException("Invalid bounding box format");
+        }
+        // TODO: check that the bounding box values are valid
         this.bbox = new Rectangle2D.Double(bbox[0], bbox[1],
             (bbox[2] - bbox[0]), (bbox[3] - bbox[1]));
     }

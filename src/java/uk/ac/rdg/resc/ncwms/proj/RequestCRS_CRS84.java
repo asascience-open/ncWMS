@@ -32,24 +32,18 @@ import java.util.Iterator;
 import ucar.unidata.geoloc.LatLonPoint;
 
 /**
- * RequestCRS object for Plate Carree projection (lon-lat).
+ * RequestCRS object for Plate Carree projection (lon-lat).  Longitude and
+ * latitude axes are regularly-spaced.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class RequestCRS_CRS84 extends RequestCRS implements RectangularCRS
+public class RequestCRS_CRS84 extends RectangularCRS
 {
-    /**
-     * @return an Iterator over all the lon-lat points in this projection in
-     * the given bounding box.  The bounding box and picture dimensions will
-     * have been set before this method is called.
-     */
-    public Iterator<LatLonPoint> getLatLonPointIterator()
-    {
-        return null;
-    }
+    private double[] lonValues = null;
+    private double[] latValues = null;
     
     /**
      * @return array of numbers representing the values along the longitude
@@ -57,7 +51,17 @@ public class RequestCRS_CRS84 extends RequestCRS implements RectangularCRS
      */
     public double[] getLongitudeValues()
     {
-        return null;
+        if (this.lonValues == null)
+        {
+            double pixelWidth =
+                (this.bbox.getMaxX() - this.bbox.getMinX()) / this.picWidth;
+            this.lonValues = new double[this.picWidth];
+            for (int i = 0; i < this.picWidth; i++)
+            {
+                this.lonValues[i] = this.bbox.getMinX() + (i + 0.5) * pixelWidth;
+            }
+        }
+        return this.lonValues;
     }
     
     /**
@@ -66,8 +70,35 @@ public class RequestCRS_CRS84 extends RequestCRS implements RectangularCRS
      */
     public double[] getLatitudeValues()
     {
-        return null;
+        if (this.latValues == null)
+        {
+            double pixelHeight =
+                (this.bbox.getMaxY() - this.bbox.getMinY()) / this.picHeight;
+            this.latValues = new double[this.picHeight];
+            for (int i = 0; i < this.picHeight; i++)
+            {
+                this.latValues[i] = this.bbox.getMinY() + (i + 0.5) * pixelHeight;
+            }
+        }
+        return this.latValues;
     }
     
-    
+    /**
+     * Simple test harness
+     */
+    public static void main(String[] args) throws Exception
+    {
+        RequestCRS_CRS84 crs = new RequestCRS_CRS84();
+        crs.setBoundingBox("0,40,360,90");
+        crs.setPictureDimension(10,10);
+        int i = 0;
+        for (Iterator<LatLonPoint> it = crs.getLatLonPointIterator(); it.hasNext(); )
+        {
+            LatLonPoint point = it.next();
+            System.out.println("Lon: " + point.getLongitude() + ", Lat: "
+                + point.getLatitude());
+            i++;
+        }
+        System.out.println("Got " + i + " points");
+    }
 }

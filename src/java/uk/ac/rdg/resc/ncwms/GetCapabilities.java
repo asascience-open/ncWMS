@@ -37,9 +37,8 @@ import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
+import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionRect;
 import ucar.unidata.geoloc.projection.LatLonProjection;
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.BoundingBox;
@@ -220,15 +219,30 @@ public class GetCapabilities
             GridCoordSys coordSys = var.getCoordinateSystem();
             
             // Get the lat-lon bounding box for this variable
+            //ProjectionImpl proj = var.getProjection();
+            
             LatLonRect bbox = coordSys.getLatLonBoundingBox();
-            ProjectionRect projRect =  proj.latLonToProjBB(bbox);
+            //LatLonRect bbox = proj.getDefaultMapAreaLL();
+            /*ProjectionRect projRect =  proj.latLonToProjBB(bbox);
             ProjectionPoint lowerLeft = projRect.getLowerLeftPoint();
-            ProjectionPoint upperRight = projRect.getUpperRightPoint();
+            ProjectionPoint upperRight = projRect.getUpperRightPoint();*/
             EXGeographicBoundingBox exBbox = new EXGeographicBoundingBox();
-            exBbox.setWestBoundLongitude(lowerLeft.getX());
-            exBbox.setEastBoundLongitude(upperRight.getX());
-            exBbox.setSouthBoundLatitude(lowerLeft.getY());
-            exBbox.setNorthBoundLatitude(upperRight.getY());
+            LatLonPoint lowerLeft = bbox.getLowerLeftPoint();
+            LatLonPoint upperRight = bbox.getUpperRightPoint();
+            // TODO is this logic OK?
+            if (lowerLeft.getLongitude() == upperRight.getLongitude())
+            {
+                // Longitude axis wraps
+                exBbox.setWestBoundLongitude(-180);
+                exBbox.setEastBoundLongitude(180);
+            }
+            else
+            {
+                exBbox.setWestBoundLongitude(lowerLeft.getLongitude());
+                exBbox.setEastBoundLongitude(upperRight.getLongitude());
+            }
+            exBbox.setSouthBoundLatitude(lowerLeft.getLatitude());
+            exBbox.setNorthBoundLatitude(upperRight.getLatitude());
             layer.setEXGeographicBoundingBox(exBbox);
             // Also need to add as a BoundingBox element for some reason
             BoundingBox crsBbox = new BoundingBox();
