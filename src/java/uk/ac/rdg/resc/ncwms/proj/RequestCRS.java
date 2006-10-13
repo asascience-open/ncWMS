@@ -104,6 +104,22 @@ public abstract class RequestCRS
     }
     
     /**
+     * @return the width of the picture in pixels
+     */
+    public int getPictureWidth()
+    {
+        return this.picWidth;
+    }
+    
+    /**
+     * @return the height of the picture in pixels
+     */
+    public int getPictureHeight()
+    {
+        return this.picHeight;
+    }
+    
+    /**
      * @return an Iterator over all the lon-lat points in this projection in
      * the given bounding box.  The bounding box and picture dimensions will
      * have been set before this method is called.

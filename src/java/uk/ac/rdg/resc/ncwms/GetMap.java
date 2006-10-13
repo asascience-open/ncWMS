@@ -29,9 +29,14 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.Vector;
 import javax.servlet.http.HttpServletResponse;
+import ucar.ma2.Array;
+import ucar.ma2.InvalidRangeException;
+import ucar.ma2.Range;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
@@ -42,6 +47,8 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
+import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
+import uk.ac.rdg.resc.ncwms.graphics.SimplePicMaker;
 import uk.ac.rdg.resc.ncwms.proj.RequestCRS;
 import uk.ac.rdg.resc.ncwms.proj.RequestCRSFactory;
 
@@ -196,28 +203,125 @@ public class GetMap
                 GridCoordSys coordSys = var.getCoordinateSystem();
                 
                 resp.setContentType("text/plain");
-                resp.getWriter().write("Projection name: " + 
+                /*resp.getWriter().write("Projection name: " + 
                     var.getProjection().getName() + "\n");
                 resp.getWriter().write("Projection header: " + 
                     var.getProjection().getHeader() + "\n");
-                resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());
+                resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());*/
+                long start = System.currentTimeMillis();
                 
-                Hashtable<Integer, Hashtable<Integer, Integer>> scanlines = 
-                    new Hashtable<Integer, Hashtable<Integer, Integer>>();
+                // Maps y indices to scanlines
+                Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
+                // Cycle through each pixel in the picture and work out which
+                // x and y index in the source data it corresponds to
+                int pixelIndex = 0;
                 for (Iterator<LatLonPoint> it = crs.getLatLonPointIterator(); it.hasNext(); )
                 {
                     LatLonPoint point = it.next();
                     // TODO: translate lat-lon to projection coordinates
+                    
+                    // *** THIS LINE IS VERY SLOW!!! ***
                     int[] coords = coordSys.findXYCoordElement(point.getLongitude(),
                         point.getLatitude(), null);
-                    resp.getWriter().write("Lon: " + point.getLongitude() + 
+                    
+                    /*resp.getWriter().write("Pixel index: " + pixelIndex +
+                        " Lon: " + point.getLongitude() + 
                         " Lat: " + point.getLatitude() + " x: " + coords[0] +
-                        " y: " + coords[1] + "\n");
+                        " y: " + coords[1] + "\n");*/
+                    
+                    // Get the scanline for this y index
+                    if (coords[1] >= 0)
+                    {
+                        Scanline scanline = scanlines.get(coords[1]);
+                        if (scanline == null)
+                        {
+                            scanline = new Scanline();
+                            scanlines.put(coords[1], scanline);
+                        }
+                        if (coords[0] >= 0)
+                        {
+                            scanline.put(coords[0], pixelIndex);
+                        }
+                    }
+                    
+                    pixelIndex++;
                 }
+                resp.getWriter().write("Produced scanlines: " +
+                    (System.currentTimeMillis() - start) + " ms\n");
+                start = System.currentTimeMillis();
+                
+                // Create the picture array
+                float[] picArray = new float[crs.getPictureWidth() *
+                    crs.getPictureHeight()];
+                
+                // Now build the picture: iterate through the scanlines,
+                // the order doesn't matter
+                for (int yIndex : scanlines.keySet())
+                {
+                    //resp.getWriter().write(yIndex + ": ");
+                    Scanline scanline = scanlines.get(yIndex);
+                    Vector<Integer> xIndices = scanline.getSortedXIndices();
+                    
+                    // Read the scanline from the disk, from the first to the
+                    // last x index
+                    try
+                    {
+                        Range tRange = new Range(0, 0); // TODO sort z and t
+                        Range zRange = new Range(0, 0);
+                        Range yRange = new Range(yIndex, yIndex);
+                        Range xRange = new Range(xIndices.firstElement(),
+                            xIndices.lastElement());
+                        GeoGrid subset = var.subset(tRange, zRange, yRange, xRange);
+                        // Read all of the subset
+                        Array data = subset.readYXData(0, 0);
+                        if (data.getElementType() != float.class)
+                        {
+                            throw new WMSInternalError("Data type " +
+                                data.getElementType() + " unrecognized", null);
+                        }
+                        float[] arr = (float[])data.getStorage();
+                        //resp.getWriter().write("[read " + data.getSize() + "] ");
+                    
+                        for (int xIndex : xIndices)
+                        {
+                            //resp.getWriter().write(xIndex + "(");
+                            boolean firstTime = true;
+                            for (int p : scanline.getPixelIndices(xIndex))
+                            {
+                                picArray[p] = arr[xIndex - xIndices.firstElement()];
+                                if (firstTime)
+                                {
+                                    firstTime = false;
+                                }
+                                else
+                                {
+                                    //resp.getWriter().write(",");
+                                }
+                                //resp.getWriter().write("" + p);
+                            }
+                            //resp.getWriter().write(") ");
+                        }
+                        //resp.getWriter().write("\n");
+                    }
+                    catch (InvalidRangeException ire)
+                    {
+                        // TODO: log the error
+                        throw new WMSInternalError("Invalid range when reading scanline", ire);
+                    }
+                }
+                resp.getWriter().write("Produced picture: " +
+                    (System.currentTimeMillis() - start) + " ms\n");
                 
                 resp.getWriter().close();
                 
+                // TODO cache the picture array
                 
+                // Now make the actual image
+                /*resp.setContentType("image/png");
+                PicMaker picMaker = new SimplePicMaker(picArray,
+                    crs.getPictureWidth(), crs.getPictureHeight());
+                picMaker.createAndOutputPicture(resp.getOutputStream());
+                resp.getOutputStream().close();*/
             }
             catch(IOException ioe)
             {
@@ -238,6 +342,53 @@ public class GetMap
                     }
                 }
             }
+        }
+    }
+    
+    private static class Scanline
+    {
+        // Maps x indices to a collection of pixel indices
+        //                  x          pixels
+        private Hashtable<Integer, Vector<Integer>> xIndices;
+        
+        public Scanline()
+        {
+            this.xIndices = new Hashtable<Integer, Vector<Integer>>();
+        }
+        
+        /**
+         * @param xIndex The x index of the point in the source data
+         * @param pixelIndex The index of the corresponding point in the picture
+         */
+        public void put(int xIndex, int pixelIndex)
+        {
+            Vector<Integer> pixelIndices = this.xIndices.get(xIndex);
+            if (pixelIndices == null)
+            {
+                pixelIndices = new Vector<Integer>();
+                this.xIndices.put(xIndex, pixelIndices);
+            }
+            pixelIndices.add(pixelIndex);
+        }
+        
+        /**
+         * @return a Vector of all the x indices in this scanline, sorted in
+         * ascending order
+         */
+        public Vector<Integer> getSortedXIndices()
+        {
+            Vector<Integer> v = new Vector<Integer>(this.xIndices.keySet());
+            Collections.sort(v);
+            return v;
+        }
+        
+        /**
+         * @return a Vector of all the pixel indices that correspond to the
+         * given x index, or null if the x index does not exist in the scanline
+         */
+        public Vector<Integer> getPixelIndices(int xIndex)
+        {
+            return this.xIndices.get(xIndex);
         }
     }
     
