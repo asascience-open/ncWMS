@@ -29,11 +29,14 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.io.IOException;
+import java.util.Hashtable;
 import java.util.Iterator;
 import javax.servlet.http.HttpServletResponse;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
+import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
+import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.NcWMS;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -190,6 +193,7 @@ public class GetMap
                     throw new LayerNotDefinedException("Variable with name " +
                         dsAndVar[1] + " not found");
                 }
+                GridCoordSys coordSys = var.getCoordinateSystem();
                 
                 resp.setContentType("text/plain");
                 resp.getWriter().write("Projection name: " + 
@@ -197,6 +201,20 @@ public class GetMap
                 resp.getWriter().write("Projection header: " + 
                     var.getProjection().getHeader() + "\n");
                 resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());
+                
+                Hashtable<Integer, Hashtable<Integer, Integer>> scanlines = 
+                    new Hashtable<Integer, Hashtable<Integer, Integer>>();
+                for (Iterator<LatLonPoint> it = crs.getLatLonPointIterator(); it.hasNext(); )
+                {
+                    LatLonPoint point = it.next();
+                    // TODO: translate lat-lon to projection coordinates
+                    int[] coords = coordSys.findXYCoordElement(point.getLongitude(),
+                        point.getLatitude(), null);
+                    resp.getWriter().write("Lon: " + point.getLongitude() + 
+                        " Lat: " + point.getLatitude() + " x: " + coords[0] +
+                        " y: " + coords[1] + "\n");
+                }
+                
                 resp.getWriter().close();
                 
                 
