@@ -13,21 +13,14 @@
         <name>ncWMS</name>
         <title>NetCDF Web Map Service</title>
         <href>http://www.nerc-essc.ac.uk</href>
-        <!-- The elements below all have default values and so can be left empty.
-             However, they must be present in the configuration file. -->
-        <fees></fees>
-        <accessConstraints></accessConstraints>
-        <layerLimit></layerLimit>
-        <maxWidth></maxWidth>
-        <maxHeight></maxHeight>
     </service>
     <datasets>
-        <dataset id="Ifremer" title="Test Ifremer dataset" location="C:\data\OA_20060830.nc"/>
-        <dataset id="FOAM" title="Test aggregated dataset" location="C:\data\FOAM_one.ncml"/>
+        <!--<dataset id="Ifremer" title="Test Ifremer dataset" location="C:\data\OA_20060830.nc"/>
+        <dataset id="FOAM" title="Test aggregated dataset" location="C:\data\FOAM_one.ncml"/>-->
         <!--<dataset id="FOAM9" title="Test rotated dataset" location="L:\data\cadfael1\marine\FOAM\MERSEA\FOAM_ATL19_ANAL_CLASS1_GRIB_20060616.nc"/>-->
         <!--<dataset id="CORIOLIS" title="CORIOLIS via OPeNDAP" location="http://www.ifremer.fr/thredds/dodsC/global/weekly/temperature/CORT-GLOBAL-01"/>-->
         <!--<dataset id="CERSAT" title="CERSAT data via OPeNDAP" location="http://www.ifremer.fr/thredds/dodsC/sst/cms/daily"/>-->
-        <!--<dataset id="MRCS" title="POLCOMS MRCS data" location="C:\data\POLCOMS_MRCS_NOWCAST_20060731.nc"/>
-        <dataset id="FOAM" title="NCOF FOAM data" location="C:\data\FOAM_20050422.0.nc"/>-->
+        <dataset id="MRCS" title="POLCOMS MRCS data" location="C:\data\POLCOMS_MRCS_NOWCAST_20060731.nc"/>
+        <dataset id="FOAM" title="NCOF FOAM data" location="C:\data\FOAM_20050422.0.nc"/>
     </datasets>
 </ncWMS>
