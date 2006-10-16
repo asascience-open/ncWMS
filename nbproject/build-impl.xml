@@ -401,9 +401,13 @@
         <copy-ear-war file="${libs.JAXB.classpath.libfile.3}" propname="included.lib.libs.JAXB.classpath.3.X"/>
         <copy-ear-war file="${libs.JAXB.classpath.libfile.2}" propname="included.lib.libs.JAXB.classpath.2.X"/>
         <copy-ear-war file="${libs.JAXB.classpath.libfile.1}" propname="included.lib.libs.JAXB.classpath.1.X"/>
+        <basename property="included.lib.libs.dom4j.classpath.2" file="${libs.dom4j.classpath.libfile.2}"/>
+        <basename property="included.lib.libs.dom4j.classpath.1" file="${libs.dom4j.classpath.libfile.1}"/>
+        <copy-ear-war file="${libs.dom4j.classpath.libfile.2}" propname="included.lib.libs.dom4j.classpath.2.X"/>
+        <copy-ear-war file="${libs.dom4j.classpath.libfile.1}" propname="included.lib.libs.dom4j.classpath.1.X"/>
         <mkdir dir="${build.web.dir.real}/META-INF"/>
         <manifest file="${build.web.dir.real}/META-INF/MANIFEST.MF" mode="update">
-            <attribute name="Class-Path" value="${included.lib.libs.NetCDF.classpath} ${included.lib.libs.JAXB.classpath.1.X} ${included.lib.libs.JAXB.classpath.2.X} ${included.lib.libs.JAXB.classpath.3.X} ${included.lib.libs.JAXB.classpath.4.X} ${included.lib.libs.JAXB.classpath.5.X} "/>
+            <attribute name="Class-Path" value="${included.lib.libs.NetCDF.classpath} ${included.lib.libs.JAXB.classpath.1.X} ${included.lib.libs.JAXB.classpath.2.X} ${included.lib.libs.JAXB.classpath.3.X} ${included.lib.libs.JAXB.classpath.4.X} ${included.lib.libs.JAXB.classpath.5.X} ${included.lib.libs.dom4j.classpath.1.X} ${included.lib.libs.dom4j.classpath.2.X} "/>
         </manifest>
         <delete dir="${dist.ear.dir}/temp"/>
     </target>
@@ -414,6 +418,8 @@
         <copy file="${libs.JAXB.classpath.libfile.3}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${libs.JAXB.classpath.libfile.2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${libs.JAXB.classpath.libfile.1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${libs.dom4j.classpath.libfile.2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${libs.dom4j.classpath.libfile.1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
     </target>
     <target name="do-ear-dist" depends="init,compile,compile-jsps,-pre-dist,library-inclusion-in-manifest">
         <dirname property="dist.jar.dir" file="${dist.ear.war}"/>

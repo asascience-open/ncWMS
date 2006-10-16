@@ -50,4 +50,13 @@ public class WMSInternalError extends Exception
         super(message, cause);
     }
     
+    /**
+     * Creates a new instance of InternalError
+     * @param message A message describing the error
+     */
+    public WMSInternalError(String message)
+    {
+        this(message, null);
+    }
+    
 }
