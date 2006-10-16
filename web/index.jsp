@@ -17,7 +17,7 @@
     <p>
     <%-- TODO: how do we get the context path of the WMS servlet automatically? --%>
     <a href="./WMS?SERVICE=WMS&REQUEST=GetCapabilities">GetCapabilities</a><br />
-    <a href="./WMS?SERVICE=WMS&REQUEST=GetMap&VERSION=<%=WMS.VERSION%>&LAYERS=FOAM/TMP&STYLES=&CRS=<%=WMS.CRS_84%>&BBOX=-90,0,0,90&WIDTH=100&HEIGHT=100&FORMAT=image/png">GetMap</a><br />
+    <a href="./WMS?SERVICE=WMS&REQUEST=GetMap&VERSION=<%=WMS.VERSION%>&LAYERS=FOAM/TMP&STYLES=&CRS=<%=WMS.CRS_84%>&BBOX=0,0,90,90&WIDTH=100&HEIGHT=100&FORMAT=image/png">GetMap</a><br />
     
     </p>
     

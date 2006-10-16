@@ -28,9 +28,11 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
+import java.io.IOException;
 import java.util.Date;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
  * A DataLayer is an entity that can be logically represented as a single Layer
@@ -85,7 +87,15 @@ public interface DataLayer
     public XYPoint getXYCoordElement(LatLonPoint point);
     
     /**
-     * Gets a line of data from this layer
+     * Opens the underlying dataset in preparation for reading data with
+     * getScanline().  Used by {@link GetMap}.
+     * @throws IOException if there was an error opening the dataset
+     */
+    public void open() throws IOException;
+    
+    /**
+     * Gets a line of data at a given time, elevation and latitude.  This will
+     * be called after a call to open().
      * @param t The t index of the line of data
      * @param z The z index of the line of data
      * @param y The y index of the line of data
@@ -93,7 +103,17 @@ public interface DataLayer
      * @param xLast The last x index in the line of data
      * @return Array of floating-point values representing data from xFirst to
      * xLast inclusive
+     * @throws WMSInternalError if there was an internal error reading the data
+     * (e.g. file has been moved, unsupported data type)
      */
-    public float[] getScanline(int t, int z, int y, int xFirst, int xLast);
+    public float[] getScanline(int t, int z, int y, int xFirst, int xLast)
+        throws WMSInternalError;
+    
+    /**
+     * Close the underlying dataset after reading data with getScanline().
+     * Used by {@link GetMap}.  Does nothing if the dataset is not open.
+     * @throws IOException if there was an error closing the dataset.
+     */
+    public void close() throws IOException;
     
 }

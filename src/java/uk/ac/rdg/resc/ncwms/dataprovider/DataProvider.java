@@ -94,6 +94,14 @@ public abstract class DataProvider
     }
     
     /**
+     * @return the location of the underlying data
+     */
+    public final String getLocation()
+    {
+        return this.location;
+    }
+    
+    /**
      * @return all the {@link DataLayer}s that are contained in this
      * DataProvider
      */

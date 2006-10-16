@@ -51,21 +51,22 @@ public class DefaultDataProvider extends DataProvider
     
     /**
      * Constructs a {@link DataProvider} for a {@link NetcdfDataset}.
-     * Reads the metadata.
+     * Reads the metadata for each {@link DataLayer}.
      * @param location The location of the underlying dataset
      * @throws IOException if there was an error reading the underlying data
      */
     public DefaultDataProvider(String location) throws IOException
     {
         // Read the layer metadata
-        GridDataset gd = new GridDataset(NetcdfDataset.openDataset(location));
+        NetcdfDataset nc = NetcdfDataset.openDataset(location);
+        GridDataset gd = new GridDataset(nc);
         List grids = gd.getGrids();
         for (int i = 0; i < grids.size(); i++)
         {
             GeoGrid gg = (GeoGrid)grids.get(i);
-            this.layers.put(gg.getName(), new DefaultDataLayer(gg));
+            this.layers.put(gg.getName(), new DefaultDataLayer(gg, this));
         }
-        gd.close();
+        nc.close();
     }
     
 }

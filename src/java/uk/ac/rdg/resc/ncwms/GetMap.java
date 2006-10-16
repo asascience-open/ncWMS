@@ -180,11 +180,6 @@ public class GetMap
             try
             {
                 //resp.setContentType("text/plain");
-                /*resp.getWriter().write("Projection name: " +
-                    var.getProjection().getName() + "\n");
-                resp.getWriter().write("Projection header: " +
-                    var.getProjection().getHeader() + "\n");
-                resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());*/
                 long start = System.currentTimeMillis();
                 
                 // Maps y indices to scanlines
@@ -196,13 +191,7 @@ public class GetMap
                 {
                     LatLonPoint latLon = it.next();
                     // Translate lat-lon to projection coordinates
-                    XYPoint coords = dl.getXYCoordElement(latLon);
-                    
-                    /*resp.getWriter().write("Pixel index: " + pixelIndex +
-                        " Lon: " + point.getLongitude() +
-                        " Lat: " + point.getLatitude() + " x: " + coords[0] +
-                        " y: " + coords[1] + "\n");*/
-                    
+                    XYPoint coords = dl.getXYCoordElement(latLon);                    
                     if (coords != null)
                     {
                         // Get the scanline for this y index
@@ -221,51 +210,40 @@ public class GetMap
                 //    (System.currentTimeMillis() - start) + " ms\n");
                 start = System.currentTimeMillis();
                 
-                // Create the picture array
+                // Create the picture array - initially filled with zeroes,
+                // which represent missing data (transparent pixels)
                 float[] picArray = new float[crs.getPictureWidth() *
                     crs.getPictureHeight()];
+                
+                // Open the underlying dataset of the layer.
+                dl.open();
                 
                 // Now build the picture: iterate through the scanlines,
                 // the order doesn't matter
                 for (int yIndex : scanlines.keySet())
                 {
-                    //resp.getWriter().write(yIndex + ": ");
                     Scanline scanline = scanlines.get(yIndex);
                     Vector<Integer> xIndices = scanline.getSortedXIndices();
                     
                     // Read the scanline from the disk, from the first to the
                     // last x index
+                    // TODO: deal with t and z indices
+                    // TODO: make more efficient by subsampling?
                     float[] arr = dl.getScanline(0, 0, yIndex,
                         xIndices.firstElement(), xIndices.lastElement());
-                    //resp.getWriter().write("[read " + data.getSize() + "] ");
 
                     for (int xIndex : xIndices)
                     {
-                        //resp.getWriter().write(xIndex + "(");
-                        boolean firstTime = true;
                         for (int p : scanline.getPixelIndices(xIndex))
                         {
                             picArray[p] = arr[xIndex - xIndices.firstElement()];
-                            if (firstTime)
-                            {
-                                firstTime = false;
-                            }
-                            else
-                            {
-                                //resp.getWriter().write(",");
-                            }
-                            //resp.getWriter().write("" + p);
                         }
-                        //resp.getWriter().write(") ");
                     }
-                    //resp.getWriter().write("\n");
                 }
                 //resp.getWriter().write("Produced picture: " +
                 //    (System.currentTimeMillis() - start) + " ms\n");
                 
-                //resp.getWriter().close();
-                
-                // TODO cache the picture array
+                // TODO cache the picture array (arr)
                 
                 // Now make the actual image
                 resp.setContentType("image/png");
@@ -276,8 +254,20 @@ public class GetMap
             }
             catch(IOException ioe)
             {
-                throw new WMSInternalError("Error reading from dataset");// "
-                    //+ location + ": " + ioe.getMessage(), ioe);
+                throw new WMSInternalError("Error reading from data layer "
+                    + dl + ": " + ioe.getMessage(), ioe);
+            }
+            finally
+            {
+                try
+                {
+                    // This will do nothing if the underlying dataset is not open
+                    dl.close();
+                }
+                catch(IOException ioe)
+                {
+                    // Do nothing, perhaps log the error.
+                }
             }
         }
     }

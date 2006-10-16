@@ -28,14 +28,19 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
+import java.io.IOException;
 import java.util.Date;
+import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
+import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
  * {@link DataLayer} that belongs to a {@link DefaultDataProvider}.
@@ -47,18 +52,24 @@ import ucar.unidata.geoloc.LatLonRect;
  */
 public class DefaultDataLayer implements DataLayer
 {
+    private DataProvider dp; // The DataProvider that contains this DataLayer
     private String id;
     private String title;
     private Date[] tValues;
     private double[] zValues;
     private String zAxisUnits;
+    private NetcdfDataset nc;
+    private GeoGrid var;
     
     /**
-     * Creates a new instance of DefaultDataLayer from a {@link GeoGrid}
-     * object
+     * Creates a new instance of DefaultDataLayer
+     * @param gg A {@link GeoGrid} object that contains the variable that is
+     * represented by this layer
+     * @param dp The DataProvider that contains this DataLayer
      */
-    public DefaultDataLayer(GeoGrid gg)
+    public DefaultDataLayer(GeoGrid gg, DataProvider dp)
     {
+        this.dp = dp;
         this.id = gg.getName();
         this.title = gg.getDescription();
         
@@ -144,23 +155,38 @@ public class DefaultDataLayer implements DataLayer
      */
     public LatLonRect getLatLonBoundingBox()
     {
-        return new LatLonRect();
+        return new LatLonRect(); // Returns a box covering the whole world
     }
     
     /**
      * @return the x-y coordinates (in this {@link DataProvider}'s coordinate
-     * system of the given point in latitude-longitude space.  Returns a
+     * system) of the given point in latitude-longitude space.  Returns an
      * {@link XYPoint} of two integers if the point is within range or null otherwise.
      * @todo Allow different interpolation methods
      */
     public XYPoint getXYCoordElement(LatLonPoint point)
     {
-        // TODO: do this properly
-        return new XYPoint(0, 0);
+        // TODO: do this properly.  This only works for FOAM data for lon > 0
+        int x = (int)Math.round(point.getLongitude());
+        int y = (int)Math.round(point.getLatitude()) + 89;
+        return new XYPoint(x, y);
     }
     
     /**
-     * Gets a line of data at a given time, elevation and latitude
+     * Opens the underlying dataset in preparation for reading data with
+     * getScanline()
+     * @throws IOException if there was an error opening the dataset
+     */
+    public void open() throws IOException
+    {
+        this.nc = NetcdfDataset.openDataset(this.dp.getLocation());
+        GridDataset gd = new GridDataset(nc);
+        this.var = gd.findGridByName(this.id);
+    }
+    
+    /**
+     * Gets a line of data at a given time, elevation and latitude.  This will
+     * be called after a call to open().
      * @param t The t index of the line of data
      * @param z The z index of the line of data
      * @param y The y index of the line of data
@@ -168,8 +194,12 @@ public class DefaultDataLayer implements DataLayer
      * @param xLast The last x index in the line of data
      * @return Array of floating-point values representing data from xFirst to
      * xLast inclusive
+     * @throws WMSInternalError if there was an internal error reading the data
+     * (e.g. file has been moved, unsupported data type)
+     * @todo: not very efficient, need to stop continually opening files
      */
     public float[] getScanline(int t, int z, int y, int xFirst, int xLast)
+        throws WMSInternalError
     {
         try
         {
@@ -178,19 +208,51 @@ public class DefaultDataLayer implements DataLayer
             Range yRange = new Range(y, y);
             Range xRange = new Range(xFirst, xLast);
             // Create a logical data subset
-            /*GeoGrid subset = var.subset(tRange, zRange, yRange, xRange);
+            GeoGrid subset = this.var.subset(tRange, zRange, yRange, xRange);
             // Read all of the subset
             Array data = subset.readYXData(0, 0);
             if (data.getElementType() != float.class)
             {
-                throw new WMSInternalError("Data type " +
-                    data.getElementType() + " unrecognized", null);
-            }*/
+                throw new WMSInternalError("Data type \"" +
+                    data.getElementType() + "\" not supported", null);
+            }
+            nc.close();
+            return (float[])data.getStorage();
         }
         catch(InvalidRangeException ire)
         {
-            //TODO
+            // Shouldn't happen
+            throw new WMSInternalError("InvalidRangeException reading from "
+                + this, ire);
         }
-        return null;
+        catch(IOException ioe)
+        {
+            throw new WMSInternalError("IOException reading from " + this,
+                ioe);
+        }
+    }
+    
+    /**
+     * Close the underlying dataset after reading data with getScanline().
+     * Used by {@link GetMap}.  Does nothing if the dataset is not open.
+     * @throws IOException if there was an error closing the dataset.
+     */
+    public synchronized void close() throws IOException
+    {
+        if (this.nc != null)
+        {
+            this.nc.close();
+        }
+        this.nc = null;
+        this.var = null;
+    }
+    
+    /**
+     * @return String representation of this DataLayer, made up of the titles
+     * of this layer and the {@link DataProvider} that contains it
+     */
+    public String toString()
+    {
+        return this.dp.getTitle() + ": " + this.title;
     }
 }
