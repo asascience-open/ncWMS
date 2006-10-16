@@ -33,7 +33,6 @@ import java.util.List;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
-import uk.ac.rdg.resc.ncwms.config.NcWMS;
 
 /**
  * Default {@link DataProvider} - simply uses the NetCDF libraries.  Should work
@@ -47,46 +46,26 @@ import uk.ac.rdg.resc.ncwms.config.NcWMS;
  * $Date$
  * $Log$
  */
-public class DefaultDataProvider implements DataProvider
+public class DefaultDataProvider extends DataProvider
 {
-    private String title;
-    private String location;
-    private DataLayer[] layers;
     
     /**
-     * Constructs a {@link DataProvider} for a {@link NetcdfDataset}
+     * Constructs a {@link DataProvider} for a {@link NetcdfDataset}.
+     * Reads the metadata.
+     * @param location The location of the underlying dataset
+     * @throws IOException if there was an error reading the underlying data
      */
-    public DefaultDataProvider(NcWMS.Datasets.Dataset ds) throws IOException
+    public DefaultDataProvider(String location) throws IOException
     {
-        this.title = ds.getTitle();
-        this.location = ds.getLocation();
-        
-        // Now read the layer metadata
-        GridDataset gd = new GridDataset(NetcdfDataset.openDataset(this.location));
+        // Read the layer metadata
+        GridDataset gd = new GridDataset(NetcdfDataset.openDataset(location));
         List grids = gd.getGrids();
-        this.layers = new DataLayer[grids.size()];
         for (int i = 0; i < grids.size(); i++)
         {
-            this.layers[i] = new DefaultDataLayer((GeoGrid)grids.get(i));
+            GeoGrid gg = (GeoGrid)grids.get(i);
+            this.layers.put(gg.getName(), new DefaultDataLayer(gg));
         }
         gd.close();
-    }
-    
-    /**
-     * @return a human-readable title for this DataProvider
-     */
-    public String getTitle()
-    {
-        return this.title;
-    }
-    
-    /**
-     * @return all the {@link DataLayer}s that are contained in this
-     * DataProvider
-     */
-    public DataLayer[] getDataLayers()
-    {
-        return this.layers;
     }
     
 }

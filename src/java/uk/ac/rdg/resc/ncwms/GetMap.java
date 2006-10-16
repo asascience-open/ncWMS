@@ -34,15 +34,11 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
 import javax.servlet.http.HttpServletResponse;
-import ucar.ma2.Array;
-import ucar.ma2.InvalidRangeException;
-import ucar.ma2.Range;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.config.NcWMS;
+import uk.ac.rdg.resc.ncwms.config.NcWMSConfig;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataLayer;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataProvider;
+import uk.ac.rdg.resc.ncwms.dataprovider.XYPoint;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
@@ -67,14 +63,14 @@ public class GetMap
      * The GetMap operation
      * @param reqParser The RequestParser object that was created from the URL
      * arguments
-     * @param config the NcWMS configuration object for this WMS
+     * @param config the configuration object for this WMS
      * @param resp The HttpServletResponse object to which we will write the image
      * @throws WMSException if the client's request was invalid
      * @throws WMSInternalError if there was an internal problem (e.g.
      * could not access underlying data, could not dynamically create a RequestCRS
      * object, etc)
      */
-    public static void getMap(RequestParser reqParser, NcWMS config,
+    public static void getMap(RequestParser reqParser, NcWMSConfig config,
         HttpServletResponse resp) throws WMSException, WMSInternalError
     {
         String version = reqParser.getParameterValue("VERSION");
@@ -87,11 +83,11 @@ public class GetMap
             throw new WMSException("Must provide a value for the LAYERS argument");
         }
         String[] layers = reqParser.getParameterValue("LAYERS").split(",");
-        if (layers.length > config.getService().getLayerLimit().intValue())
+        if (layers.length > config.getLayerLimit())
         {
             throw new WMSException("You may only request a maximum of " +
-                config.getService().getLayerLimit() +
-                " layer from this server with a single request");
+                config.getLayerLimit() +
+                " layer(s) from this server with a single request");
         }
         String[] styles = reqParser.getParameterValue("STYLES").split(",");
         if (styles.length != layers.length && !styles.equals(new String[]{""}))
@@ -108,10 +104,8 @@ public class GetMap
         crs.setBoundingBox(reqParser.getParameterValue("BBOX"));
         
         // Get the picture dimensions
-        int width = parseImageDimension(reqParser, "WIDTH",
-            config.getService().getMaxWidth().intValue());
-        int height = parseImageDimension(reqParser, "HEIGHT",
-            config.getService().getMaxHeight().intValue());
+        int width = parseImageDimension(reqParser, "WIDTH", config.getMaxImageWidth());
+        int height = parseImageDimension(reqParser, "HEIGHT", config.getMaxImageHeight());
         crs.setPictureDimension(width, height);
         
         // Get the required image format
@@ -153,59 +147,42 @@ public class GetMap
     /**
      * Perform the operation
      */
-    private static void processRequest(HttpServletResponse resp, NcWMS config,
+    private static void processRequest(HttpServletResponse resp, NcWMSConfig config,
         String[] layers, String[] styles, RequestCRS crs, String format)
         throws WMSException, WMSInternalError
     {
         // TODO: handle this iteration properly: for now we only allow 1 layer anyway.
         for (String layer : layers)
         {
-            // Get the handle to the dataset
+            // Get the handle to the dataset and variable
             String[] dsAndVar = layer.split("/");
             if (dsAndVar.length != 2)
             {
                 throw new LayerNotDefinedException("Invalid format for layer " +
                     "(must be <dataset>/<variable>)");
             }
-            // Look for the dataset location
-            String location = null;
-            for (Iterator it = config.getDatasets().getDataset().iterator(); it.hasNext(); )
-            {
-                NcWMS.Datasets.Dataset ds = (NcWMS.Datasets.Dataset)it.next();
-                if (ds.getId().equals(dsAndVar[0].trim()))
-                {
-                    location = ds.getLocation();
-                    break;
-                }
-            }
-            if (location == null)
+            // Look for the DataProvider
+            DataProvider dp = config.getDataProvider(dsAndVar[0].trim());
+            if (dp == null)
             {
                 throw new LayerNotDefinedException("Dataset with id " +
                     dsAndVar[0] + " not found");
             }
+            // Look for the DataLayer
+            DataLayer dl = dp.getDataLayer(dsAndVar[1].trim());
+            if (dl == null)
+            {
+                throw new LayerNotDefinedException("Variable with id " +
+                    dsAndVar[1] + " not found");
+            }
             
             // Now extract the data and build the picture
-            GridDataset gd = null;
             try
             {
-                // Open the dataset (TODO: get from cache?)
-                NetcdfDataset nc = NetcdfDataset.openDataset(location);
-                // Wrapping as a GridDataset allows us to get at georeferencing
-                gd = new GridDataset(nc);
-
-                // Get the variable object
-                GeoGrid var = gd.findGridByName(dsAndVar[1]);
-                if (var == null)
-                {
-                    throw new LayerNotDefinedException("Variable with name " +
-                        dsAndVar[1] + " not found");
-                }
-                GridCoordSys coordSys = var.getCoordinateSystem();
-                
                 //resp.setContentType("text/plain");
-                /*resp.getWriter().write("Projection name: " + 
+                /*resp.getWriter().write("Projection name: " +
                     var.getProjection().getName() + "\n");
-                resp.getWriter().write("Projection header: " + 
+                resp.getWriter().write("Projection header: " +
                     var.getProjection().getHeader() + "\n");
                 resp.getWriter().write(var.getProjection().getDefaultMapAreaLL().toString());*/
                 long start = System.currentTimeMillis();
@@ -217,31 +194,25 @@ public class GetMap
                 int pixelIndex = 0;
                 for (Iterator<LatLonPoint> it = crs.getLatLonPointIterator(); it.hasNext(); )
                 {
-                    LatLonPoint point = it.next();
-                    // TODO: translate lat-lon to projection coordinates
-                    
-                    // *** THIS LINE IS VERY SLOW!!! ***
-                    int[] coords = coordSys.findXYCoordElement(point.getLongitude(),
-                        point.getLatitude(), null);
+                    LatLonPoint latLon = it.next();
+                    // Translate lat-lon to projection coordinates
+                    XYPoint coords = dl.getXYCoordElement(latLon);
                     
                     /*resp.getWriter().write("Pixel index: " + pixelIndex +
-                        " Lon: " + point.getLongitude() + 
+                        " Lon: " + point.getLongitude() +
                         " Lat: " + point.getLatitude() + " x: " + coords[0] +
                         " y: " + coords[1] + "\n");*/
                     
-                    // Get the scanline for this y index
-                    if (coords[1] >= 0)
+                    if (coords != null)
                     {
-                        Scanline scanline = scanlines.get(coords[1]);
+                        // Get the scanline for this y index
+                        Scanline scanline = scanlines.get(coords.getY());
                         if (scanline == null)
                         {
                             scanline = new Scanline();
-                            scanlines.put(coords[1], scanline);
+                            scanlines.put(coords.getY(), scanline);
                         }
-                        if (coords[0] >= 0)
-                        {
-                            scanline.put(coords[0], pixelIndex);
-                        }
+                        scanline.put(coords.getX(), pixelIndex);
                     }
                     
                     pixelIndex++;
@@ -264,50 +235,30 @@ public class GetMap
                     
                     // Read the scanline from the disk, from the first to the
                     // last x index
-                    try
+                    float[] arr = dl.getScanline(0, 0, yIndex,
+                        xIndices.firstElement(), xIndices.lastElement());
+                    //resp.getWriter().write("[read " + data.getSize() + "] ");
+
+                    for (int xIndex : xIndices)
                     {
-                        Range tRange = new Range(0, 0); // TODO sort z and t
-                        Range zRange = new Range(0, 0);
-                        Range yRange = new Range(yIndex, yIndex);
-                        Range xRange = new Range(xIndices.firstElement(),
-                            xIndices.lastElement());
-                        GeoGrid subset = var.subset(tRange, zRange, yRange, xRange);
-                        // Read all of the subset
-                        Array data = subset.readYXData(0, 0);
-                        if (data.getElementType() != float.class)
+                        //resp.getWriter().write(xIndex + "(");
+                        boolean firstTime = true;
+                        for (int p : scanline.getPixelIndices(xIndex))
                         {
-                            throw new WMSInternalError("Data type " +
-                                data.getElementType() + " unrecognized", null);
-                        }
-                        float[] arr = (float[])data.getStorage();
-                        //resp.getWriter().write("[read " + data.getSize() + "] ");
-                    
-                        for (int xIndex : xIndices)
-                        {
-                            //resp.getWriter().write(xIndex + "(");
-                            boolean firstTime = true;
-                            for (int p : scanline.getPixelIndices(xIndex))
+                            picArray[p] = arr[xIndex - xIndices.firstElement()];
+                            if (firstTime)
                             {
-                                picArray[p] = arr[xIndex - xIndices.firstElement()];
-                                if (firstTime)
-                                {
-                                    firstTime = false;
-                                }
-                                else
-                                {
-                                    //resp.getWriter().write(",");
-                                }
-                                //resp.getWriter().write("" + p);
+                                firstTime = false;
                             }
-                            //resp.getWriter().write(") ");
+                            else
+                            {
+                                //resp.getWriter().write(",");
+                            }
+                            //resp.getWriter().write("" + p);
                         }
-                        //resp.getWriter().write("\n");
+                        //resp.getWriter().write(") ");
                     }
-                    catch (InvalidRangeException ire)
-                    {
-                        // TODO: log the error
-                        throw new WMSInternalError("Invalid range when reading scanline", ire);
-                    }
+                    //resp.getWriter().write("\n");
                 }
                 //resp.getWriter().write("Produced picture: " +
                 //    (System.currentTimeMillis() - start) + " ms\n");
@@ -325,22 +276,8 @@ public class GetMap
             }
             catch(IOException ioe)
             {
-                throw new WMSInternalError("Error reading from dataset "
-                    + location + ": " + ioe.getMessage(), ioe);
-            }
-            finally
-            {
-                if (gd != null)
-                {
-                    try
-                    {
-                        gd.close();
-                    }
-                    catch(IOException ioe)
-                    {
-                        // TODO: log the error
-                    }
-                }
+                throw new WMSInternalError("Error reading from dataset");// "
+                    //+ location + ": " + ioe.getMessage(), ioe);
             }
         }
     }

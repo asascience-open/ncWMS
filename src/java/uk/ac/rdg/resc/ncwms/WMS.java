@@ -29,23 +29,14 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.io.*;
-import java.net.URL;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
-import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.parsers.SAXParserFactory;
-import javax.xml.transform.sax.SAXSource;
-import javax.xml.validation.Schema;
-import javax.xml.validation.SchemaFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.XMLReader;
-
-import uk.ac.rdg.resc.ncwms.config.NcWMS;
+import uk.ac.rdg.resc.ncwms.config.NcWMSConfig;
+import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
@@ -70,7 +61,7 @@ public class WMS extends HttpServlet
      */
     public static String CRS_84 = "CRS:84";
     
-    private NcWMS config; // Configuration information
+    private NcWMSConfig config; // Configuration information
     
     /**
      * Initializes the servlet: loads the config file.
@@ -81,63 +72,24 @@ public class WMS extends HttpServlet
     public void init(ServletConfig servletConfig) throws ServletException
     {
         super.init(servletConfig);
-        this.config = readConfig(servletConfig.getServletContext());
         // Set up the default projections
         // Read the metadata for all the datasets
-    }
-    
-    /**
-     * Reads configuration information from the given ServletContext and validates
-     * against the schema.
-     * @param context The ServletContext
-     * @return Configuration information as an NcWMS object
-     * @throws ServletException if the configuration information could not be parsed
-     * @todo check the last modified time of the config file and check with each
-     * request
-     */
-    public static NcWMS readConfig(ServletContext context) throws ServletException
-    {
-        SAXParserFactory spf = SAXParserFactory.newInstance();
-        spf.setNamespaceAware(true);
+        
+        // TODO: is this the most sensible place for the configuration files?
+        InputStream is =
+            servletConfig.getServletContext().getResourceAsStream("/WEB-INF/classes/ncWMS.xml");
+        if (is == null)
+        {
+            throw new ServletException("Could not locate configuration file ncWMS.xml");
+        }
         try
         {
-            // TODO: is this the most sensible place for the configuration files?
-            InputStream is = context.getResourceAsStream("/WEB-INF/classes/ncWMS.xml");
-            if (is == null)
-            {
-                throw new ServletException("Could not locate configuration file ncWMS.xml");
-            }
-            URL schemaURL = context.getResource("/WEB-INF/classes/ncWMSconfig.xsd");
-            if (schemaURL == null)
-            {
-                throw new ServletException("Could not locate configuration file schema ncWMSconfig.xsd");
-            }
-            // Create and compile a Schema object for validating the config file
-            SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-            Schema schema = sf.newSchema(schemaURL);
-            spf.setSchema(schema);
-            
-            // We create a SAXSource manually to allow default values for elements
-            // to be entered from the schema
-            XMLReader xmlReader = spf.newSAXParser().getXMLReader();
-            SAXSource source = new SAXSource(xmlReader, new InputSource(is));
-            
-            JAXBContext con = JAXBContext.newInstance("uk.ac.rdg.resc.ncwms.config");
-            Unmarshaller unmarshaller = con.createUnmarshaller();
-            unmarshaller.setSchema(schema);
-            NcWMS config = (NcWMS)unmarshaller.unmarshal(source);
-            return config;
+            this.config = new NcWMSConfig(is);
         }
-        catch(ServletException se)
+        catch(NcWMSConfigException nce)
         {
-            // TODO: log the error
-            throw se;
-        }
-        catch(Exception e)
-        {
-            // Wrap all other Exceptions as ServletExceptions: TODO is this OK?
-            // TODO: we should log the error here before throwing it.
-            throw new ServletException(e);
+            // TODO: log the error here
+            throw new ServletException(nce);
         }
     }
     

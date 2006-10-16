@@ -29,18 +29,15 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Date;
-import java.util.Iterator;
-import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import ucar.unidata.geoloc.projection.LatLonProjection;
-import uk.ac.rdg.resc.ncwms.config.NcWMS;
+import uk.ac.rdg.resc.ncwms.config.NcWMSConfig;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataLayer;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataProvider;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.BoundingBox;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.Capability;
 import uk.ac.rdg.resc.ncwms.ogc.capabilities.DCPType;
@@ -78,7 +75,7 @@ public class GetCapabilities
      * @throws IOException if there was an error reading metadata from the datasets
      */
     public static WMSCapabilities getCapabilities(RequestParser reqParser,
-        NcWMS config, StringBuffer requestURL) throws IOException
+        NcWMSConfig config, StringBuffer requestURL) throws IOException
     {
         // TODO Deal with VERSION, FORMAT and UPDATESEQUENCE
         WMSCapabilities wmsCap = new WMSCapabilities();
@@ -94,19 +91,19 @@ public class GetCapabilities
      * @return the Service portion of the Capabilities document
      * @todo get this stuff from a configuration file or elsewhere in source code
      */
-    private static Service getService(NcWMS config)
+    private static Service getService(NcWMSConfig config)
     {
         Service service = new Service();
-        service.setName(config.getService().getName());
-        service.setTitle(config.getService().getTitle());
-        service.setFees(config.getService().getFees());
-        service.setAccessConstraints(config.getService().getAccessConstraints());
-        service.setLayerLimit(config.getService().getLayerLimit());
-        service.setMaxHeight(config.getService().getMaxHeight());
-        service.setMaxWidth(config.getService().getMaxWidth());
+        service.setName(config.getName());
+        service.setTitle(config.getTitle());
+        service.setFees(config.getFees());
+        service.setAccessConstraints(config.getAccessConstraints());
+        service.setLayerLimit(BigInteger.valueOf(config.getLayerLimit()));
+        service.setMaxHeight(BigInteger.valueOf(config.getMaxImageHeight()));
+        service.setMaxWidth(BigInteger.valueOf(config.getMaxImageWidth()));
         OnlineResource or = new OnlineResource();
         or.setType("simple");
-        or.setHref(config.getService().getHref());
+        or.setHref(config.getHref());
         service.setOnlineResource(or);
         return service;
     }
@@ -120,7 +117,7 @@ public class GetCapabilities
      * NetCDF files
      * @todo get these properties from config files or elsewhere
      */
-    private static Capability getCapability(NcWMS config, StringBuffer requestURL)
+    private static Capability getCapability(NcWMSConfig config, StringBuffer requestURL)
         throws IOException
     {
         Capability cap = new Capability();
@@ -151,10 +148,9 @@ public class GetCapabilities
         // TODO: Style
         
         // Add each dataset as a new Layer hierarchy
-        for (Iterator it = config.getDatasets().getDataset().iterator(); it.hasNext(); )
+        for (DataProvider dp : config.getDataProviders())
         {
-            NcWMS.Datasets.Dataset ds = (NcWMS.Datasets.Dataset)it.next();
-            rootLayer.getLayer().add(getLayer(ds));
+            rootLayer.getLayer().add(getLayer(dp));
         }
         
         cap.setRequest(req);
@@ -182,68 +178,41 @@ public class GetCapabilities
     }
     
     /**
-     * Reads all the metadata from the given Dataset and outputs it as a Layer object,
-     * ready to be incorporated into a Capabilities document.
-     * @param the Dataset object
+     * Reads all the metadata from the given {@link DataProvider} and outputs it
+     * as a Layer object, ready to be incorporated into a Capabilities document.
+     * @param the DataProvider object
      * @return the Layer object
      * @throws IOException if the dataset could not be read
      */
-    private static Layer getLayer(NcWMS.Datasets.Dataset ds) throws IOException
+    private static Layer getLayer(DataProvider dp) throws IOException
     {
-        // Open the dataset TODO: get from cache?
-        NetcdfDataset nc = NetcdfDataset.openDataset(ds.getLocation());
-        // Wrapping as a GridDataset allows us to get at georeferencing
-        GridDataset gd = new GridDataset(nc);
-        
         Layer topLayer = new Layer();
-        topLayer.setTitle(ds.getTitle());
+        topLayer.setTitle(dp.getTitle());
         
         // The Javadocs say we should create one DateFormatter per thread - why?
         DateFormatter dateFormatter = new DateFormatter();
         // Get a regular lon-lat projection (CRS:84)
         LatLonProjection proj = new LatLonProjection();
         
-        for (Iterator iter = gd.getGrids().iterator(); iter.hasNext(); )
+        for (DataLayer dl : dp.getDataLayers())
         {
-            // A GeoGrid is essentially a georeferenced Variable
-            GeoGrid var = (GeoGrid)iter.next();
-            
             // Create a new Layer for this variable
             Layer layer = new Layer();
-            layer.setTitle(var.getDescription());
-            // var.getName() is unique within the dataset
-            layer.setName(ds.getId() + "/" + var.getName());
+            layer.setTitle(dl.getTitle());
+            // Set a unique name for this layer
+            layer.setName(dp.getID() + "/" + dl.getID());
             
-            // Get the coordinate system for this variable
-            // TODO make more efficient: some variables will share coordinate systems
-            GridCoordSys coordSys = var.getCoordinateSystem();
-            
-            // Get the lat-lon bounding box for this variable
-            //ProjectionImpl proj = var.getProjection();
-            
-            LatLonRect bbox = coordSys.getLatLonBoundingBox();
-            //LatLonRect bbox = proj.getDefaultMapAreaLL();
-            /*ProjectionRect projRect =  proj.latLonToProjBB(bbox);
-            ProjectionPoint lowerLeft = projRect.getLowerLeftPoint();
-            ProjectionPoint upperRight = projRect.getUpperRightPoint();*/
+            // Set the bounding box for this layer
+            LatLonRect bbox = dl.getLatLonBoundingBox();
             EXGeographicBoundingBox exBbox = new EXGeographicBoundingBox();
             LatLonPoint lowerLeft = bbox.getLowerLeftPoint();
             LatLonPoint upperRight = bbox.getUpperRightPoint();
-            // TODO is this logic OK?
-            if (lowerLeft.getLongitude() == upperRight.getLongitude())
-            {
-                // Longitude axis wraps
-                exBbox.setWestBoundLongitude(-180);
-                exBbox.setEastBoundLongitude(180);
-            }
-            else
-            {
-                exBbox.setWestBoundLongitude(lowerLeft.getLongitude());
-                exBbox.setEastBoundLongitude(upperRight.getLongitude());
-            }
+            exBbox.setWestBoundLongitude(lowerLeft.getLongitude());
+            exBbox.setEastBoundLongitude(upperRight.getLongitude());
             exBbox.setSouthBoundLatitude(lowerLeft.getLatitude());
             exBbox.setNorthBoundLatitude(upperRight.getLatitude());
             layer.setEXGeographicBoundingBox(exBbox);
+            
             // Also need to add as a BoundingBox element for some reason
             BoundingBox crsBbox = new BoundingBox();
             crsBbox.setCRS(WMS.CRS_84);
@@ -254,37 +223,34 @@ public class GetCapabilities
             layer.getBoundingBox().add(crsBbox);
             
             // Set the level dimension
-            if (coordSys.hasVerticalAxis())
+            if (dl.getZValues() != null)
             {
                 Dimension level = new Dimension();
-                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 level.setName("elevation");
-                level.setUnits(zAxis.getUnitsString());
-                double[] zValues = zAxis.getCoordValues();
+                level.setUnits(dl.getZAxisUnits());
                 StringBuffer buf = new StringBuffer();
                 boolean firstTime = true;
-                for (double z : zValues)
+                for (double z : dl.getZValues())
                 {
                     if (firstTime) firstTime = false;
                     else buf.append(",");
-                    buf.append(coordSys.isZPositive() ? z : -z);
+                    buf.append(z);
                 }
                 level.setValue(buf.toString());
                 // The default value is the first value in the axis
-                level.setDefault("" + (coordSys.isZPositive() ? zValues[0] : -zValues[0]));
+                level.setDefault("" + dl.getZValues()[0]);
                 layer.getDimension().add(level);
             }
             
             // Set the time dimension
-            if (coordSys.isDate())
+            if (dl.getTValues() != null)
             {
                 Dimension time = new Dimension();
                 time.setName("time");
                 time.setUnits("ISO8601");
-                Date[] dates = coordSys.getTimeDates();
                 StringBuffer buf = new StringBuffer();
                 boolean firstTime = true;
-                for (Date date : dates)
+                for (Date date : dl.getTValues())
                 {
                     if (firstTime) firstTime = false;
                     else buf.append(",");
@@ -297,8 +263,6 @@ public class GetCapabilities
             // Add this layer to the top-level Layer
             topLayer.getLayer().add(layer);
         }
-        
-        gd.close();
         return topLayer;
     }
     

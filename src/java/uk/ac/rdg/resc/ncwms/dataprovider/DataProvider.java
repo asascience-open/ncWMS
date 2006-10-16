@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Hashtable;
 
 /**
  * Interface describing methods that must be implemented by a DataProvider.
@@ -38,18 +40,76 @@ import java.io.IOException;
  * $Date$
  * $Log$
  */
-public interface DataProvider
+public abstract class DataProvider
 {
+    
+    protected String id; // Unique ID
+    protected String title; // Human-readable title
+    protected String location; // Location of the underlying dataset
+    protected Hashtable<String, DataLayer> layers; // Map of DataLayers to 
+        // their unique IDs.
+    
+    /**
+     * Protected constructor to prevent direct creation of a DataProvider
+     */
+    protected DataProvider()
+    {
+        this.layers = new Hashtable<String, DataLayer>();
+    }
+    
+    /**
+     * Creates a new DataProvider
+     * @param id The unique id for the data provider
+     * @param title A human-readable title for the data provider
+     * @param location Location of the underlying data
+     * @return The DataProvider object
+     * @throws IOException if there was an error reading the metadata of the
+     * underlying dataset
+     */
+    public static DataProvider create(String id, String title, String location)
+        throws IOException
+    {
+        // For now, always create a DefaultDataProvider
+        DataProvider dp = new DefaultDataProvider(location);
+        dp.id = id;
+        dp.title = title;
+        dp.location = location;
+        return dp;
+    }
+    
+    /**
+     * @return a unique ID for this DataProvider
+     */
+    public final String getID()
+    {
+        return this.id;
+    }
+    
+    /**
+     * @return a human-readable title for this DataProvider
+     */
+    public final String getTitle()
+    {
+        return this.title;
+    }
     
     /**
      * @return all the {@link DataLayer}s that are contained in this
      * DataProvider
      */
-    public DataLayer[] getDataLayers();
+    public final Collection<DataLayer> getDataLayers()
+    {
+        return this.layers.values();
+    }
     
     /**
-     * @return a human-readable title for this DataProvider
+     * Gets the DataLayer with the given id
+     * @param id The unique id of the DataLayer
+     * @return the DataLayer, or null if it does not exist
      */
-    public String getTitle();
+    public final DataLayer getDataLayer(String id)
+    {
+        return this.layers.get(id);
+    }
     
 }

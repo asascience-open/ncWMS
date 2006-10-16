@@ -32,8 +32,8 @@ import java.awt.Rectangle;
 import java.util.Hashtable;
 import java.util.Set;
 import uk.ac.rdg.resc.ncwms.WMS;
-import uk.ac.rdg.resc.ncwms.exceptions.ConfigurationException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCRSException;
+import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
@@ -49,9 +49,6 @@ public class RequestCRSFactory
     // Maps projection codes to their associated RequestProjection classes
     private static Hashtable<String, Class> projs = new Hashtable<String, Class>();
     
-    protected String code; // Unique code for this projection (e.g. CRS:84)
-    protected Rectangle bbox; // Bounding box in this proj's coordinate space
-    
     static
     {
         try
@@ -59,7 +56,7 @@ public class RequestCRSFactory
             // Add the known CRSs (these can be added to and overridden by registerCRS())
             registerCRS(WMS.CRS_84, RequestCRS_CRS84.class);
         }
-        catch(ConfigurationException ce)
+        catch(NcWMSConfigException ce)
         {
             // Should not happen since we know that the built-in CRSs are
             // RequestCRSs
@@ -84,11 +81,11 @@ public class RequestCRSFactory
      * @param className The name of the class that will handle this projection
      * @throws ClassNotFoundException if a class called className could not be
      * found.
-     * @throws ConfigurationException if the class was found but it is not a
+     * @throws NcWMSConfigException if the class was found but it is not a
      * subclass of {@link RequestCRS}
      */
     public synchronized static void registerCRS(String code, String className)
-        throws ClassNotFoundException, ConfigurationException
+        throws ClassNotFoundException, NcWMSConfigException
     {
         registerCRS(code, Class.forName(className));
     }
@@ -100,11 +97,11 @@ public class RequestCRSFactory
      * Does not check to see if className represents a valid class.
      * @param code The unique code for the projection
      * @param theClass The class that will handle this projection
-     * @throws ConfigurationException if the given class is not a subclass
+     * @throws NcWMSConfigException if the given class is not a subclass
      * of {@link RequestCRS}
      */
     public synchronized static void registerCRS(String code, Class theClass)
-        throws ConfigurationException
+        throws NcWMSConfigException
     {
         if (RequestCRS.class.isAssignableFrom(theClass))
         {
@@ -112,7 +109,7 @@ public class RequestCRSFactory
         }
         else
         {
-            throw new ConfigurationException(theClass.getName() +
+            throw new NcWMSConfigException(theClass.getName() +
                 " is not a subclass of RequestCRS");
         }
     }

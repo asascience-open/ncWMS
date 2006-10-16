@@ -29,10 +29,13 @@
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import java.util.Date;
+import ucar.ma2.InvalidRangeException;
+import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.LatLonRect;
 
 /**
  * {@link DataLayer} that belongs to a {@link DefaultDataProvider}.
@@ -136,14 +139,58 @@ public class DefaultDataLayer implements DataLayer
     }
     
     /**
-     * @return the x-y coordinates (in this {@link  DataProvider}'s coordinate
+     * @return the bounding box for this layer in lat-lon space
+     * @todo Not properly functional yet
+     */
+    public LatLonRect getLatLonBoundingBox()
+    {
+        return new LatLonRect();
+    }
+    
+    /**
+     * @return the x-y coordinates (in this {@link DataProvider}'s coordinate
      * system of the given point in latitude-longitude space.  Returns a
-     * array of two integers if the point is within range or null otherwise.
-     * First integer is the x coordinate, the second is the y coordinate.
+     * {@link XYPoint} of two integers if the point is within range or null otherwise.
      * @todo Allow different interpolation methods
      */
-    public int[] getXYCoordElement(LatLonPoint point)
+    public XYPoint getXYCoordElement(LatLonPoint point)
     {
+        // TODO: do this properly
+        return new XYPoint(0, 0);
+    }
+    
+    /**
+     * Gets a line of data at a given time, elevation and latitude
+     * @param t The t index of the line of data
+     * @param z The z index of the line of data
+     * @param y The y index of the line of data
+     * @param xFirst The first x index in the line of data
+     * @param xLast The last x index in the line of data
+     * @return Array of floating-point values representing data from xFirst to
+     * xLast inclusive
+     */
+    public float[] getScanline(int t, int z, int y, int xFirst, int xLast)
+    {
+        try
+        {
+            Range tRange = new Range(t, t);
+            Range zRange = new Range(z, z);
+            Range yRange = new Range(y, y);
+            Range xRange = new Range(xFirst, xLast);
+            // Create a logical data subset
+            /*GeoGrid subset = var.subset(tRange, zRange, yRange, xRange);
+            // Read all of the subset
+            Array data = subset.readYXData(0, 0);
+            if (data.getElementType() != float.class)
+            {
+                throw new WMSInternalError("Data type " +
+                    data.getElementType() + " unrecognized", null);
+            }*/
+        }
+        catch(InvalidRangeException ire)
+        {
+            //TODO
+        }
         return null;
     }
 }

@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import java.util.Date;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.LatLonRect;
 
 /**
  * A DataLayer is an entity that can be logically represented as a single Layer
@@ -71,12 +72,28 @@ public interface DataLayer
     public double[] getZValues();
     
     /**
-     * @return the x-y coordinates (in this {@link  DataProvider}'s coordinate
+     * @return the bounding box for this layer in lat-lon space
+     */
+    public LatLonRect getLatLonBoundingBox();
+    
+    /**
+     * @return the x-y coordinates (in this {@link DataProvider}'s coordinate
      * system of the given point in latitude-longitude space.  Returns a
-     * array of two integers if the point is within range or null otherwise.
-     * First integer is the x coordinate, the second is the y coordinate.
+     * {@link XYPoint} of two integers if the point is within range or null otherwise.
      * @todo Allow different interpolation methods
      */
-    public int[] getXYCoordElement(LatLonPoint point);
+    public XYPoint getXYCoordElement(LatLonPoint point);
+    
+    /**
+     * Gets a line of data from this layer
+     * @param t The t index of the line of data
+     * @param z The z index of the line of data
+     * @param y The y index of the line of data
+     * @param xFirst The first x index in the line of data
+     * @param xLast The last x index in the line of data
+     * @return Array of floating-point values representing data from xFirst to
+     * xLast inclusive
+     */
+    public float[] getScanline(int t, int z, int y, int xFirst, int xLast);
     
 }

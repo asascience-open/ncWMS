@@ -28,37 +28,37 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
-import java.io.IOException;
-import uk.ac.rdg.resc.ncwms.config.NcWMS;
-
 /**
- * Factory class for creating {@link DataProvider}s.
+ * Simple class holding the x and y coordinates of a point in a source
+ * dataset (i.e. array indices) as integers
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class DataProviderFactory
+public class XYPoint
 {
-    
-    /** Class cannot be instantiated directly */
-    private DataProviderFactory()
-    {
-    }
+    private int x;
+    private int y;
     
     /**
-     * Gets a {@link DataProvider} for the given dataset
-     * @param location The configuration information for the dataset
-     * @return a {@link DataProvider}
-     * @throws {@link DataProvider} if there was an error reading the metadata
-     * for the DataProvider
-     * @todo Allow user-specified classes that implement {@link DataProvider}
+     * Creates a new instance of XYPoint
      */
-    public static DataProvider getDataProvider(NcWMS.Datasets.Dataset ds)
-        throws IOException
+    public XYPoint(int x, int y)
     {
-        return new DefaultDataProvider(ds);
+        this.x = x;
+        this.y = y;
+    }
+
+    public int getX()
+    {
+        return x;
+    }
+
+    public int getY()
+    {
+        return y;
     }
     
 }
