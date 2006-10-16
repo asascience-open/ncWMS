@@ -76,13 +76,14 @@ public class WMS extends HttpServlet
      * Initializes the servlet: loads the config file.
      * @param servletConfig The servlet configuration object
      * @throws ServletException if the servlet could not be initialized (e.g.
-     * could not find to config file)
+     * could not find config file)
      */
     public void init(ServletConfig servletConfig) throws ServletException
     {
         super.init(servletConfig);
         this.config = readConfig(servletConfig.getServletContext());
         // Set up the default projections
+        // Read the metadata for all the datasets
     }
     
     /**

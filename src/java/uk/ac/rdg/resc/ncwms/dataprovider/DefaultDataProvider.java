@@ -29,27 +29,64 @@
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import java.io.IOException;
+import java.util.List;
+import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.grid.GeoGrid;
+import ucar.nc2.dataset.grid.GridDataset;
+import uk.ac.rdg.resc.ncwms.config.NcWMS;
 
 /**
- * Interface describing methods that must be implemented by a DataProvider.
+ * Default {@link DataProvider} - simply uses the NetCDF libraries.  Should work
+ * (but may not be optimally efficient) for any data source that can be read
+ * by the Java NetCDF libraries (including OPeNDAP sources).
+ *
+ * @todo Use cached NetCDF files?
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface DataProvider
+public class DefaultDataProvider implements DataProvider
 {
+    private String title;
+    private String location;
+    private DataLayer[] layers;
+    
+    /**
+     * Constructs a {@link DataProvider} for a {@link NetcdfDataset}
+     */
+    public DefaultDataProvider(NcWMS.Datasets.Dataset ds) throws IOException
+    {
+        this.title = ds.getTitle();
+        this.location = ds.getLocation();
+        
+        // Now read the layer metadata
+        GridDataset gd = new GridDataset(NetcdfDataset.openDataset(this.location));
+        List grids = gd.getGrids();
+        this.layers = new DataLayer[grids.size()];
+        for (int i = 0; i < grids.size(); i++)
+        {
+            this.layers[i] = new DefaultDataLayer((GeoGrid)grids.get(i));
+        }
+        gd.close();
+    }
+    
+    /**
+     * @return a human-readable title for this DataProvider
+     */
+    public String getTitle()
+    {
+        return this.title;
+    }
     
     /**
      * @return all the {@link DataLayer}s that are contained in this
      * DataProvider
      */
-    public DataLayer[] getDataLayers();
-    
-    /**
-     * @return a human-readable title for this DataProvider
-     */
-    public String getTitle();
+    public DataLayer[] getDataLayers()
+    {
+        return this.layers;
+    }
     
 }

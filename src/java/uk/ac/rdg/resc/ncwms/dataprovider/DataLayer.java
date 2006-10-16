@@ -28,28 +28,55 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
-import java.io.IOException;
+import java.util.Date;
+import ucar.unidata.geoloc.LatLonPoint;
 
 /**
- * Interface describing methods that must be implemented by a DataProvider.
+ * A DataLayer is an entity that can be logically represented as a single Layer
+ * in a WMS (e.g. a Variable in a NetCDF file).
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface DataProvider
+public interface DataLayer
 {
-    
     /**
-     * @return all the {@link DataLayer}s that are contained in this
-     * DataProvider
+     * @return a unique ID for this DataLayer
      */
-    public DataLayer[] getDataLayers();
+    public String getID();
     
     /**
-     * @return a human-readable title for this DataProvider
+     * @return a human-readable title for this DataLayer
      */
     public String getTitle();
+    
+    /**
+     * @return values along the time axis, or null if there is no time dimension
+     * in this layer
+     */
+    public Date[] getTValues();
+    
+    /**
+     * @return a String describing the units of the vertical axis, or null if
+     * there is no vertical axis
+     */
+    public String getZAxisUnits();
+    
+    /**
+     * @return values along the vertical axis (depth, elevation, sigma etc) or null
+     * if there is no vertical axis in this layer
+     */
+    public double[] getZValues();
+    
+    /**
+     * @return the x-y coordinates (in this {@link  DataProvider}'s coordinate
+     * system of the given point in latitude-longitude space.  Returns a
+     * array of two integers if the point is within range or null otherwise.
+     * First integer is the x coordinate, the second is the y coordinate.
+     * @todo Allow different interpolation methods
+     */
+    public int[] getXYCoordElement(LatLonPoint point);
     
 }

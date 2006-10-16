@@ -202,7 +202,7 @@ public class GetMap
                 }
                 GridCoordSys coordSys = var.getCoordinateSystem();
                 
-                resp.setContentType("text/plain");
+                //resp.setContentType("text/plain");
                 /*resp.getWriter().write("Projection name: " + 
                     var.getProjection().getName() + "\n");
                 resp.getWriter().write("Projection header: " + 
@@ -246,8 +246,8 @@ public class GetMap
                     
                     pixelIndex++;
                 }
-                resp.getWriter().write("Produced scanlines: " +
-                    (System.currentTimeMillis() - start) + " ms\n");
+                //resp.getWriter().write("Produced scanlines: " +
+                //    (System.currentTimeMillis() - start) + " ms\n");
                 start = System.currentTimeMillis();
                 
                 // Create the picture array
@@ -309,19 +309,19 @@ public class GetMap
                         throw new WMSInternalError("Invalid range when reading scanline", ire);
                     }
                 }
-                resp.getWriter().write("Produced picture: " +
-                    (System.currentTimeMillis() - start) + " ms\n");
+                //resp.getWriter().write("Produced picture: " +
+                //    (System.currentTimeMillis() - start) + " ms\n");
                 
-                resp.getWriter().close();
+                //resp.getWriter().close();
                 
                 // TODO cache the picture array
                 
                 // Now make the actual image
-                /*resp.setContentType("image/png");
+                resp.setContentType("image/png");
                 PicMaker picMaker = new SimplePicMaker(picArray,
                     crs.getPictureWidth(), crs.getPictureHeight());
                 picMaker.createAndOutputPicture(resp.getOutputStream());
-                resp.getOutputStream().close();*/
+                resp.getOutputStream().close();
             }
             catch(IOException ioe)
             {

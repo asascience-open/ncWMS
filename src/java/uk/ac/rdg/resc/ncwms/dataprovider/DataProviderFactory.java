@@ -29,27 +29,36 @@
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import java.io.IOException;
+import uk.ac.rdg.resc.ncwms.config.NcWMS;
 
 /**
- * Interface describing methods that must be implemented by a DataProvider.
+ * Factory class for creating {@link DataProvider}s.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface DataProvider
+public class DataProviderFactory
 {
     
-    /**
-     * @return all the {@link DataLayer}s that are contained in this
-     * DataProvider
-     */
-    public DataLayer[] getDataLayers();
+    /** Class cannot be instantiated directly */
+    private DataProviderFactory()
+    {
+    }
     
     /**
-     * @return a human-readable title for this DataProvider
+     * Gets a {@link DataProvider} for the given dataset
+     * @param location The configuration information for the dataset
+     * @return a {@link DataProvider}
+     * @throws {@link DataProvider} if there was an error reading the metadata
+     * for the DataProvider
+     * @todo Allow user-specified classes that implement {@link DataProvider}
      */
-    public String getTitle();
+    public static DataProvider getDataProvider(NcWMS.Datasets.Dataset ds)
+        throws IOException
+    {
+        return new DefaultDataProvider(ds);
+    }
     
 }

@@ -26,30 +26,29 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.dataprovider;
-
-import java.io.IOException;
+package uk.ac.rdg.resc.ncwms.exceptions;
 
 /**
- * Interface describing methods that must be implemented by a DataProvider.
+ * Exception that is thrown due to an invalid configuration file
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface DataProvider
+public class NcWMSConfigException extends WMSInternalError
 {
     
-    /**
-     * @return all the {@link DataLayer}s that are contained in this
-     * DataProvider
-     */
-    public DataLayer[] getDataLayers();
+    /** Creates a new instance of NcWMSConfigException */
+    public NcWMSConfigException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
     
-    /**
-     * @return a human-readable title for this DataProvider
-     */
-    public String getTitle();
+    /** Creates a new instance of NcWMSConfigException */
+    public NcWMSConfigException(String message)
+    {
+        super(message);
+    }
     
 }
