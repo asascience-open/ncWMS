@@ -33,6 +33,7 @@ import java.util.Date;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
+import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
@@ -40,6 +41,7 @@ import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
@@ -58,6 +60,8 @@ public class DefaultDataLayer implements DataLayer
     private Date[] tValues;
     private double[] zValues;
     private String zAxisUnits;
+    private CoordinateAxis1D xAxis;
+    private CoordinateAxis1D yAxis;
     private NetcdfDataset nc;
     private GeoGrid var;
     
@@ -66,8 +70,10 @@ public class DefaultDataLayer implements DataLayer
      * @param gg A {@link GeoGrid} object that contains the variable that is
      * represented by this layer
      * @param dp The DataProvider that contains this DataLayer
+     * @throws NcWMSConfigException if the metadata could not be read or was invalid
      */
     public DefaultDataLayer(GeoGrid gg, DataProvider dp)
+        throws NcWMSConfigException
     {
         this.dp = dp;
         this.id = gg.getName();
@@ -103,7 +109,23 @@ public class DefaultDataLayer implements DataLayer
         // Set the time dimension
         this.tValues = coordSys.isDate() ? coordSys.getTimeDates() : null;
         
-        // Set the conversion between lat-lon and x-y coordinates
+        // Set the horizontal axes
+        if (coordSys.getXHorizAxis() instanceof CoordinateAxis1D)
+        {
+            this.xAxis = (CoordinateAxis1D)coordSys.getXHorizAxis();
+        }
+        else
+        {
+            throw new NcWMSConfigException("Invalid x axis type");
+        }
+        if (coordSys.getYHorizAxis() instanceof CoordinateAxis1D)
+        {
+            this.yAxis = (CoordinateAxis1D)coordSys.getYHorizAxis();
+        }
+        else
+        {
+            throw new NcWMSConfigException("Invalid y axis type");
+        }
     }
     
     /**
@@ -166,6 +188,11 @@ public class DefaultDataLayer implements DataLayer
      */
     public XYPoint getXYCoordElement(LatLonPoint point)
     {
+        // TODO: check that the lon and lat values are within range
+        if (this.xAxis.isRegular())
+        {
+            
+        }
         // TODO: do this properly.  This only works for FOAM data for lon > 0
         int x = (int)Math.round(point.getLongitude());
         int y = (int)Math.round(point.getLatitude()) + 89;
@@ -176,6 +203,7 @@ public class DefaultDataLayer implements DataLayer
      * Opens the underlying dataset in preparation for reading data with
      * getScanline()
      * @throws IOException if there was an error opening the dataset
+     * @todo make thread safe
      */
     public void open() throws IOException
     {
@@ -236,6 +264,7 @@ public class DefaultDataLayer implements DataLayer
      * Close the underlying dataset after reading data with getScanline().
      * Used by {@link GetMap}.  Does nothing if the dataset is not open.
      * @throws IOException if there was an error closing the dataset.
+     * @todo make thread safe
      */
     public synchronized void close() throws IOException
     {
