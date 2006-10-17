@@ -60,8 +60,7 @@ public class DefaultDataLayer implements DataLayer
     private Date[] tValues;
     private double[] zValues;
     private String zAxisUnits;
-    private CoordinateAxis1D xAxis;
-    private CoordinateAxis1D yAxis;
+    private EnhancedCoordSys enhCoordSys;
     private NetcdfDataset nc;
     private GeoGrid var;
     
@@ -109,23 +108,8 @@ public class DefaultDataLayer implements DataLayer
         // Set the time dimension
         this.tValues = coordSys.isDate() ? coordSys.getTimeDates() : null;
         
-        // Set the horizontal axes
-        if (coordSys.getXHorizAxis() instanceof CoordinateAxis1D)
-        {
-            this.xAxis = (CoordinateAxis1D)coordSys.getXHorizAxis();
-        }
-        else
-        {
-            throw new NcWMSConfigException("Invalid x axis type");
-        }
-        if (coordSys.getYHorizAxis() instanceof CoordinateAxis1D)
-        {
-            this.yAxis = (CoordinateAxis1D)coordSys.getYHorizAxis();
-        }
-        else
-        {
-            throw new NcWMSConfigException("Invalid y axis type");
-        }
+        // Create an EnhancedCoordSys to deal with the horizonal axes
+        this.enhCoordSys = new EnhancedCoordSys(coordSys);
     }
     
     /**
@@ -177,7 +161,7 @@ public class DefaultDataLayer implements DataLayer
      */
     public LatLonRect getLatLonBoundingBox()
     {
-        return new LatLonRect(); // Returns a box covering the whole world
+        return this.enhCoordSys.getLatLonBoundingBox();
     }
     
     /**
@@ -188,15 +172,7 @@ public class DefaultDataLayer implements DataLayer
      */
     public XYPoint getXYCoordElement(LatLonPoint point)
     {
-        // TODO: check that the lon and lat values are within range
-        if (this.xAxis.isRegular())
-        {
-            
-        }
-        // TODO: do this properly.  This only works for FOAM data for lon > 0
-        int x = (int)Math.round(point.getLongitude());
-        int y = (int)Math.round(point.getLatitude()) + 89;
-        return new XYPoint(x, y);
+        return this.enhCoordSys.getXYCoordElement(point);
     }
     
     /**
@@ -255,8 +231,8 @@ public class DefaultDataLayer implements DataLayer
         }
         catch(IOException ioe)
         {
-            throw new WMSInternalError("IOException reading from " + this,
-                ioe);
+            throw new WMSInternalError("IOException reading from " + this
+                + ": " + ioe.getMessage(), ioe);
         }
     }
     
@@ -282,6 +258,6 @@ public class DefaultDataLayer implements DataLayer
      */
     public String toString()
     {
-        return this.dp.getTitle() + ": " + this.title;
+        return this.dp.getTitle() + "/" + this.title;
     }
 }

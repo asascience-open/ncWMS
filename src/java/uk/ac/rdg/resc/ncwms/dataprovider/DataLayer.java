@@ -79,8 +79,8 @@ public interface DataLayer
     public LatLonRect getLatLonBoundingBox();
     
     /**
-     * @return the x-y coordinates (in this {@link DataProvider}'s coordinate
-     * system of the given point in latitude-longitude space.  Returns a
+     * @return the x-y coordinates (in this DataLayer's coordinate
+     * system) of the given point in latitude-longitude space.  Returns a
      * {@link XYPoint} of two integers if the point is within range or null otherwise.
      * @todo Allow different interpolation methods
      */

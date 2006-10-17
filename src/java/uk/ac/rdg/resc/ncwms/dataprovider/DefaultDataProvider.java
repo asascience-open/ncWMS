@@ -33,6 +33,7 @@ import java.util.List;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
+import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 
 /**
  * Default {@link DataProvider} - simply uses the NetCDF libraries.  Should work
@@ -53,9 +54,13 @@ public class DefaultDataProvider extends DataProvider
      * Constructs a {@link DataProvider} for a {@link NetcdfDataset}.
      * Reads the metadata for each {@link DataLayer}.
      * @param location The location of the underlying dataset
-     * @throws IOException if there was an error reading the underlying data
+     * @throws IOException if there was an io error opening or closing the
+     * underlying data file
+     * @throws NcWMSConfigException if the metadata was invalid or could not be
+     * read.
      */
-    public DefaultDataProvider(String location) throws IOException
+    public DefaultDataProvider(String location)
+        throws IOException, NcWMSConfigException
     {
         // Read the layer metadata
         NetcdfDataset nc = NetcdfDataset.openDataset(location);

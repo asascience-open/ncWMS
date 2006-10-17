@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.dataprovider;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Hashtable;
+import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 
 /**
  * Interface describing methods that must be implemented by a DataProvider.
@@ -63,11 +64,13 @@ public abstract class DataProvider
      * @param title A human-readable title for the data provider
      * @param location Location of the underlying data
      * @return The DataProvider object
-     * @throws IOException if there was an error reading the metadata of the
-     * underlying dataset
+     * @throws IOException if there was an IO error reading the metadata of the
+     * underlying dataset (e.g. file not found)
+     * @throws NcWMSConfigException if there was an error in the metadata or
+     * the metadata is invalid for some other reason
      */
     public static DataProvider create(String id, String title, String location)
-        throws IOException
+        throws IOException, NcWMSConfigException
     {
         // For now, always create a DefaultDataProvider
         DataProvider dp = new DefaultDataProvider(location);

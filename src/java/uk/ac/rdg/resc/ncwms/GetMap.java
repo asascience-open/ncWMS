@@ -179,11 +179,12 @@ public class GetMap
             // Now extract the data and build the picture
             try
             {
-                //resp.setContentType("text/plain");
+                resp.setContentType("text/plain");
                 long start = System.currentTimeMillis();
                 
                 // Maps y indices to scanlines
-                Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
+                Hashtable<Integer, Scanline> scanlines =
+                    new Hashtable<Integer, Scanline>();
                 // Cycle through each pixel in the picture and work out which
                 // x and y index in the source data it corresponds to
                 int pixelIndex = 0;
@@ -206,8 +207,8 @@ public class GetMap
                     
                     pixelIndex++;
                 }
-                //resp.getWriter().write("Produced scanlines: " +
-                //    (System.currentTimeMillis() - start) + " ms\n");
+                resp.getWriter().write("Produced scanlines: " +
+                    (System.currentTimeMillis() - start) + " ms\n");
                 start = System.currentTimeMillis();
                 
                 // Create the picture array - initially filled with zeroes,
@@ -229,7 +230,7 @@ public class GetMap
                     // last x index
                     // TODO: deal with t and z indices
                     // TODO: make more efficient by subsampling?
-                    float[] arr = dl.getScanline(0, 0, yIndex,
+                    /*float[] arr = dl.getScanline(0, 0, yIndex,
                         xIndices.firstElement(), xIndices.lastElement());
 
                     for (int xIndex : xIndices)
@@ -238,19 +239,19 @@ public class GetMap
                         {
                             picArray[p] = arr[xIndex - xIndices.firstElement()];
                         }
-                    }
+                    }*/
                 }
-                //resp.getWriter().write("Produced picture: " +
-                //    (System.currentTimeMillis() - start) + " ms\n");
+                resp.getWriter().write("Produced picture: " +
+                    (System.currentTimeMillis() - start) + " ms\n");
                 
                 // TODO cache the picture array (arr)
                 
                 // Now make the actual image
-                resp.setContentType("image/png");
+                /*resp.setContentType("image/png");
                 PicMaker picMaker = new SimplePicMaker(picArray,
                     crs.getPictureWidth(), crs.getPictureHeight());
                 picMaker.createAndOutputPicture(resp.getOutputStream());
-                resp.getOutputStream().close();
+                resp.getOutputStream().close();*/
             }
             catch(IOException ioe)
             {
