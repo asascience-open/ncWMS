@@ -10,7 +10,6 @@
 	<xs:element name="service">
             <xs:complexType>
                 <xs:all>
-                    <xs:element name="name" type="xs:string"/>
                     <xs:element name="title" type="xs:string"/>
                     <xs:element name="fees" type="xs:string" default="none"/>
                     <xs:element name="accessConstraints" type="xs:string" minOccurs="0" maxOccurs="1" default="none"/>

@@ -52,7 +52,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 public class NcWMSConfig
 {
     private Document doc; // The Document representing the config file
-    private String name;  // The name of this Web Map Service
     private String title; // The human-readable title of this WMS
     private String href;  // URL of the organization running the WMS
     private String fees;
@@ -81,8 +80,7 @@ public class NcWMSConfig
             this.doc = reader.read(in);
             
             // Read the service metadata
-            this.name = this.getServiceMetadata("name");
-            this.title = this.getServiceMetadata("name");
+            this.title = this.getServiceMetadata("title");
             this.href = this.getServiceMetadata("href");
             this.fees = this.getServiceMetadata("fees", "none");
             this.accessConstraints =
@@ -219,14 +217,6 @@ public class NcWMSConfig
     }
     
     /**
-     * @return the name of this Web Map Service
-     */
-    public String getName()
-    {
-        return this.name;
-    }
-    
-    /**
      * @return the human-readable title of this Web Map Service
      */
     public String getTitle()
@@ -301,7 +291,6 @@ public class NcWMSConfig
         FileInputStream fin =
             new FileInputStream("C:\\Documents and Settings\\jdb\\My Documents\\java\\ncWMS\\src\\java\\ncWMS.xml");
         NcWMSConfig conf = new NcWMSConfig(fin);
-        System.out.println("Name: " + conf.getName());
         System.out.println("Title: " + conf.getTitle());
         System.out.println("Href: " + conf.getHref());
         System.out.println("Fees: " + conf.getFees());

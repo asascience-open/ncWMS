@@ -46,7 +46,6 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     private double start;  // The first value along the axis
     private double stride; // The stride length along the axis
     
-    
     /**
      * Creates a new instance of Regular1DCoordAxis
      * @param axis1D A regular {@link CoordinateAxis1D} - we have already

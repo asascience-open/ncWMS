@@ -94,7 +94,7 @@ public class GetCapabilities
     private static Service getService(NcWMSConfig config)
     {
         Service service = new Service();
-        service.setName(config.getName());
+        service.setName("WMS");
         service.setTitle(config.getTitle());
         service.setFees(config.getFees());
         service.setAccessConstraints(config.getAccessConstraints());

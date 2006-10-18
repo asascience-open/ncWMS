@@ -104,7 +104,9 @@ public class WMS extends HttpServlet
     {
         try
         {
-            RequestParser reqParser = new RequestParser(request.getQueryString());
+            // Replace all URL escape codes (e.g. "%2F") with proper characters (e.g "/")
+            String qs = escapeURLCodes(request.getQueryString());
+            RequestParser reqParser = new RequestParser(qs);
             if (!reqParser.getParameterValue("SERVICE").equals("WMS"))
             {
                 throw new WMSException("SERVICE parameter must be WMS");
@@ -183,6 +185,20 @@ public class WMS extends HttpServlet
         throws ServletException, IOException
     {
         throw new ServletException("POST method is not supported on this server");
+    }
+    
+    /**
+     * Replacees all the URL escape sequences in the given query string with 
+     * proper characters (e.g. replaces %2f with /)
+     * @param queryString the query string, as obtained from request.getQueryString()
+     * @return new query string with URL escape sequences replaced
+     * @todo only deals with %2F at the moment
+     */
+    private static String escapeURLCodes(String queryString)
+    {
+        // URL escape sequences are case-insensitive
+        String newStr = queryString.replaceAll("%2F", "/").replaceAll("%2f", "/");
+        return newStr;
     }
     
     /**

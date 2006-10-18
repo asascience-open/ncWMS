@@ -10,7 +10,6 @@
      parsing harder. -->
 <ncWMS>
     <service>
-        <name>ncWMS</name>
         <title>NetCDF Web Map Service</title>
         <href>http://www.nerc-essc.ac.uk</href>
     </service>
