@@ -88,14 +88,26 @@ public interface DataLayer
     
     /**
      * Opens the underlying dataset in preparation for reading data with
-     * getScanline().  Used by {@link GetMap}.
+     * getScanline().  Used by {@link MapBuilder}.  Must create a new object
+     * with each invocation, for thread safety reasons.
+     * @return Object representing the underlying dataset
      * @throws IOException if there was an error opening the dataset
      */
-    public void open() throws IOException;
+    public Object open() throws IOException;
+    
+    /**
+     * Gets an object representing the specific variable that is represented
+     * by this layer.
+     * @param dataSource The source dataset, as returned by this.open()
+     * @return an Object representing the specific variable
+     */
+    public Object getVariable(Object dataSource);
     
     /**
      * Gets a line of data at a given time, elevation and latitude.  This will
      * be called after a call to open().
+     * @param var An object representing the specific variable in questions, as
+     * obtained from this.getVariable()
      * @param t The t index of the line of data
      * @param z The z index of the line of data
      * @param y The y index of the line of data
@@ -103,17 +115,18 @@ public interface DataLayer
      * @param xLast The last x index in the line of data
      * @return Array of floating-point values representing data from xFirst to
      * xLast inclusive
-     * @throws WMSInternalError if there was an internal error reading the data
-     * (e.g. file has been moved, unsupported data type)
+     * @throws IOException if there was an IO error reading the data
+     * @throws WMSInternalError if there was another type of internal error reading the data
+     * (e.g. unsupported data type)
      */
-    public float[] getScanline(int t, int z, int y, int xFirst, int xLast)
-        throws WMSInternalError;
+    public float[] getScanline(Object var, int t, int z, int y,
+        int xFirst, int xLast) throws IOException, WMSInternalError;
     
     /**
      * Close the underlying dataset after reading data with getScanline().
-     * Used by {@link GetMap}.  Does nothing if the dataset is not open.
-     * @throws IOException if there was an error closing the dataset.
+     * Used by {@link GetMap}.  Does nothing if dataSource is null.
+     * @param dataSource The dataset object as obtained from this.open()
      */
-    public void close() throws IOException;
+    public void close(Object dataSource);
     
 }

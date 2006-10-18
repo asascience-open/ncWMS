@@ -177,146 +177,24 @@ public class GetMap
             }
             
             // Now extract the data and build the picture
+            float[] mapData = new MapBuilder(crs, dl).buildMapData();
+
+            // TODO cache the picture array (arr)
+
+            // Now make the actual image
             try
             {
-                resp.setContentType("text/plain");
-                long start = System.currentTimeMillis();
-                
-                // Maps y indices to scanlines
-                Hashtable<Integer, Scanline> scanlines =
-                    new Hashtable<Integer, Scanline>();
-                // Cycle through each pixel in the picture and work out which
-                // x and y index in the source data it corresponds to
-                int pixelIndex = 0;
-                for (Iterator<LatLonPoint> it = crs.getLatLonPointIterator(); it.hasNext(); )
-                {
-                    LatLonPoint latLon = it.next();
-                    // Translate lat-lon to projection coordinates
-                    XYPoint coords = dl.getXYCoordElement(latLon);                    
-                    if (coords != null)
-                    {
-                        // Get the scanline for this y index
-                        Scanline scanline = scanlines.get(coords.getY());
-                        if (scanline == null)
-                        {
-                            scanline = new Scanline();
-                            scanlines.put(coords.getY(), scanline);
-                        }
-                        scanline.put(coords.getX(), pixelIndex);
-                    }
-                    
-                    pixelIndex++;
-                }
-                resp.getWriter().write("Produced scanlines: " +
-                    (System.currentTimeMillis() - start) + " ms\n");
-                start = System.currentTimeMillis();
-                
-                // Create the picture array - initially filled with zeroes,
-                // which represent missing data (transparent pixels)
-                float[] picArray = new float[crs.getPictureWidth() *
-                    crs.getPictureHeight()];
-                
-                // Open the underlying dataset of the layer.
-                dl.open();
-                
-                // Now build the picture: iterate through the scanlines,
-                // the order doesn't matter
-                for (int yIndex : scanlines.keySet())
-                {
-                    Scanline scanline = scanlines.get(yIndex);
-                    Vector<Integer> xIndices = scanline.getSortedXIndices();
-                    
-                    // Read the scanline from the disk, from the first to the
-                    // last x index
-                    // TODO: deal with t and z indices
-                    // TODO: make more efficient by subsampling?
-                    /*float[] arr = dl.getScanline(0, 0, yIndex,
-                        xIndices.firstElement(), xIndices.lastElement());
-
-                    for (int xIndex : xIndices)
-                    {
-                        for (int p : scanline.getPixelIndices(xIndex))
-                        {
-                            picArray[p] = arr[xIndex - xIndices.firstElement()];
-                        }
-                    }*/
-                }
-                resp.getWriter().write("Produced picture: " +
-                    (System.currentTimeMillis() - start) + " ms\n");
-                
-                // TODO cache the picture array (arr)
-                
-                // Now make the actual image
-                /*resp.setContentType("image/png");
-                PicMaker picMaker = new SimplePicMaker(picArray,
+                resp.setContentType("image/png");
+                PicMaker picMaker = new SimplePicMaker(mapData,
                     crs.getPictureWidth(), crs.getPictureHeight());
                 picMaker.createAndOutputPicture(resp.getOutputStream());
-                resp.getOutputStream().close();*/
+                resp.getOutputStream().close();
             }
             catch(IOException ioe)
             {
-                throw new WMSInternalError("Error reading from data layer "
-                    + dl + ": " + ioe.getMessage(), ioe);
+                throw new WMSInternalError("IOException when writing image",
+                    ioe);
             }
-            finally
-            {
-                try
-                {
-                    // This will do nothing if the underlying dataset is not open
-                    dl.close();
-                }
-                catch(IOException ioe)
-                {
-                    // Do nothing, perhaps log the error.
-                }
-            }
-        }
-    }
-    
-    private static class Scanline
-    {
-        // Maps x indices to a collection of pixel indices
-        //                  x          pixels
-        private Hashtable<Integer, Vector<Integer>> xIndices;
-        
-        public Scanline()
-        {
-            this.xIndices = new Hashtable<Integer, Vector<Integer>>();
-        }
-        
-        /**
-         * @param xIndex The x index of the point in the source data
-         * @param pixelIndex The index of the corresponding point in the picture
-         */
-        public void put(int xIndex, int pixelIndex)
-        {
-            Vector<Integer> pixelIndices = this.xIndices.get(xIndex);
-            if (pixelIndices == null)
-            {
-                pixelIndices = new Vector<Integer>();
-                this.xIndices.put(xIndex, pixelIndices);
-            }
-            pixelIndices.add(pixelIndex);
-        }
-        
-        /**
-         * @return a Vector of all the x indices in this scanline, sorted in
-         * ascending order
-         */
-        public Vector<Integer> getSortedXIndices()
-        {
-            Vector<Integer> v = new Vector<Integer>(this.xIndices.keySet());
-            Collections.sort(v);
-            return v;
-        }
-        
-        /**
-         * @return a Vector of all the pixel indices that correspond to the
-         * given x index, or null if the x index does not exist in the scanline
-         */
-        public Vector<Integer> getPixelIndices(int xIndex)
-        {
-            return this.xIndices.get(xIndex);
         }
     }
     

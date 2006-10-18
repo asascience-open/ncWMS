@@ -40,6 +40,7 @@ import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
@@ -60,9 +61,8 @@ public class DefaultDataLayer implements DataLayer
     private Date[] tValues;
     private double[] zValues;
     private String zAxisUnits;
-    private EnhancedCoordSys enhCoordSys;
-    private NetcdfDataset nc;
-    private GeoGrid var;
+    private EnhancedCoordAxis xAxis;
+    private EnhancedCoordAxis yAxis;
     
     /**
      * Creates a new instance of DefaultDataLayer
@@ -108,8 +108,29 @@ public class DefaultDataLayer implements DataLayer
         // Set the time dimension
         this.tValues = coordSys.isDate() ? coordSys.getTimeDates() : null;
         
-        // Create an EnhancedCoordSys to deal with the horizonal axes
-        this.enhCoordSys = new EnhancedCoordSys(coordSys);
+        if (!coordSys.isLatLon())
+        {
+            // TODO: handle other georeferenced coordinate systems
+            throw new NcWMSConfigException("Coordinate system is not lat-lon");
+        }
+        
+        // Create the enhanced horizontal axes, which must be lat and lon
+        if (coordSys.getXHorizAxis() == null)
+        {
+            throw new NcWMSConfigException(this + " does not have an X axis");
+        }
+        else
+        {
+            this.xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
+        }
+        if (coordSys.getYHorizAxis() == null)
+        {
+            throw new NcWMSConfigException(this + " does not have a Y axis");
+        }
+        else
+        {
+            this.yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
+        }
     }
     
     /**
@@ -161,36 +182,71 @@ public class DefaultDataLayer implements DataLayer
      */
     public LatLonRect getLatLonBoundingBox()
     {
-        return this.enhCoordSys.getLatLonBoundingBox();
+        double[] xRange = this.xAxis.getBboxRange();
+        double[] yRange = this.yAxis.getBboxRange();
+        LatLonPoint low = new LatLonPointImpl(yRange[0], xRange[0]);
+        LatLonPoint high = new LatLonPointImpl(yRange[1], xRange[1]);
+        return new LatLonRect(low, high);
     }
     
     /**
-     * @return the x-y coordinates (in this {@link DataProvider}'s coordinate
+     * @return the x-y coordinates (in this DataLayer's coordinate
      * system) of the given point in latitude-longitude space.  Returns an
      * {@link XYPoint} of two integers if the point is within range or null otherwise.
      * @todo Allow different interpolation methods
      */
     public XYPoint getXYCoordElement(LatLonPoint point)
     {
-        return this.enhCoordSys.getXYCoordElement(point);
+        int x = this.xAxis.getIndex(point);
+        int y = this.yAxis.getIndex(point);
+        if (x < 0 || y < 0)
+        {
+            // This point does not exist in the source data
+            return null;
+        }
+        return new XYPoint(x, y);
     }
     
     /**
      * Opens the underlying dataset in preparation for reading data with
-     * getScanline()
+     * getScanline().  Used by {@link MapBuilder}.  Creates a new object
+     * with each invocation, for thread safety reasons.
+     * @return a NetcdfDataset, from which the caller will obtain a GeoGrid
+     * to pass to this.getScanline()
      * @throws IOException if there was an error opening the dataset
-     * @todo make thread safe
      */
-    public void open() throws IOException
+    public Object open() throws IOException
     {
-        this.nc = NetcdfDataset.openDataset(this.dp.getLocation());
-        GridDataset gd = new GridDataset(nc);
-        this.var = gd.findGridByName(this.id);
+        return NetcdfDataset.openDataset(this.dp.getLocation());
+    }
+    
+    /**
+     * Gets an object representing the specific variable that is represented
+     * by this layer.
+     * @param dataSource The source NetcdfDataset, as returned by this.open()
+     * @return a GeoGrid representing the specific variable
+     * @throws IllegalArgumentException if the parameter dataSource is not a
+     * NetcdfDataset
+     */
+    public Object getVariable(Object dataSource)
+    {
+        if (dataSource instanceof NetcdfDataset)
+        {
+            NetcdfDataset nc = (NetcdfDataset)dataSource;
+            GridDataset gd = new GridDataset(nc);
+            return gd.findGridByName(this.id);
+        }
+        else
+        {
+            throw new IllegalArgumentException("The dataSource parameter " +
+                "must be a NetcdfDataset");
+        }
     }
     
     /**
      * Gets a line of data at a given time, elevation and latitude.  This will
      * be called after a call to open().
+     * @param var A {@link GeoGrid} that was obtained from this.getVariable()
      * @param t The t index of the line of data
      * @param z The z index of the line of data
      * @param y The y index of the line of data
@@ -198,13 +254,18 @@ public class DefaultDataLayer implements DataLayer
      * @param xLast The last x index in the line of data
      * @return Array of floating-point values representing data from xFirst to
      * xLast inclusive
-     * @throws WMSInternalError if there was an internal error reading the data
-     * (e.g. file has been moved, unsupported data type)
-     * @todo: not very efficient, need to stop continually opening files
+     * @throws IOException if there was an IO error reading the data
+     * @throws WMSInternalError if there was another type of internal error reading the data
+     * (e.g. unsupported data type)
+     * @throws IllegalArgumentException if the var parameter is not a {@link GeoGrid}.
      */
-    public float[] getScanline(int t, int z, int y, int xFirst, int xLast)
-        throws WMSInternalError
+    public float[] getScanline(Object var, int t, int z, int y, int xFirst,
+        int xLast) throws IOException, WMSInternalError
     {
+        if (!(var instanceof GeoGrid))
+        {
+            throw new IllegalArgumentException("Parameter var must be a GeoGrid");
+        }
         try
         {
             Range tRange = new Range(t, t);
@@ -212,7 +273,7 @@ public class DefaultDataLayer implements DataLayer
             Range yRange = new Range(y, y);
             Range xRange = new Range(xFirst, xLast);
             // Create a logical data subset
-            GeoGrid subset = this.var.subset(tRange, zRange, yRange, xRange);
+            GeoGrid subset = ((GeoGrid)var).subset(tRange, zRange, yRange, xRange);
             // Read all of the subset
             Array data = subset.readYXData(0, 0);
             if (data.getElementType() != float.class)
@@ -220,7 +281,6 @@ public class DefaultDataLayer implements DataLayer
                 throw new WMSInternalError("Data type \"" +
                     data.getElementType() + "\" not supported", null);
             }
-            nc.close();
             return (float[])data.getStorage();
         }
         catch(InvalidRangeException ire)
@@ -229,27 +289,33 @@ public class DefaultDataLayer implements DataLayer
             throw new WMSInternalError("InvalidRangeException reading from "
                 + this, ire);
         }
-        catch(IOException ioe)
-        {
-            throw new WMSInternalError("IOException reading from " + this
-                + ": " + ioe.getMessage(), ioe);
-        }
     }
     
     /**
      * Close the underlying dataset after reading data with getScanline().
-     * Used by {@link GetMap}.  Does nothing if the dataset is not open.
-     * @throws IOException if there was an error closing the dataset.
-     * @todo make thread safe
+     * Used by {@link GetMap}.  Does nothing if dataSource is null.
+     * @param dataSource the NetcdfDataset that was obtained from this.open()
+     * @throws IllegalArgumentException if the dataSource parameter is not
+     * a NetcdfDataset
      */
-    public synchronized void close() throws IOException
+    public void close(Object dataSource)
     {
-        if (this.nc != null)
+        if (dataSource instanceof NetcdfDataset)
         {
-            this.nc.close();
+            try
+            {
+                ((NetcdfDataset)dataSource).close();
+            }
+            catch(IOException ioe)
+            {
+                // TODO: log the error
+            }
         }
-        this.nc = null;
-        this.var = null;
+        else if (dataSource != null)
+        {
+            throw new IllegalArgumentException("The datasource parameter " +
+                "must be a NetcdfDataset");
+        }
     }
     
     /**
