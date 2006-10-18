@@ -178,7 +178,6 @@ public class DefaultDataLayer implements DataLayer
     
     /**
      * @return the bounding box for this layer in lat-lon space
-     * @todo Not properly functional yet
      */
     public LatLonRect getLatLonBoundingBox()
     {
@@ -224,7 +223,7 @@ public class DefaultDataLayer implements DataLayer
      * Gets an object representing the specific variable that is represented
      * by this layer.
      * @param dataSource The source NetcdfDataset, as returned by this.open()
-     * @return a GeoGrid representing the specific variable
+     * @return a {@link GeoGrid} representing the specific variable
      * @throws IllegalArgumentException if the parameter dataSource is not a
      * NetcdfDataset
      */

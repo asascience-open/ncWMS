@@ -151,50 +151,54 @@ public class GetMap
         String[] layers, String[] styles, RequestCRS crs, String format)
         throws WMSException, WMSInternalError
     {
-        // TODO: handle this iteration properly: for now we only allow 1 layer anyway.
-        for (String layer : layers)
+        // TODO: handle more layers
+        if (layers.length != 1)
         {
-            // Get the handle to the dataset and variable
-            String[] dsAndVar = layer.split("/");
-            if (dsAndVar.length != 2)
-            {
-                throw new LayerNotDefinedException("Invalid format for layer " +
-                    "(must be <dataset>/<variable>)");
-            }
-            // Look for the DataProvider
-            DataProvider dp = config.getDataProvider(dsAndVar[0].trim());
-            if (dp == null)
-            {
-                throw new LayerNotDefinedException("Dataset with id " +
-                    dsAndVar[0] + " not found");
-            }
-            // Look for the DataLayer
-            DataLayer dl = dp.getDataLayer(dsAndVar[1].trim());
-            if (dl == null)
-            {
-                throw new LayerNotDefinedException("Variable with id " +
-                    dsAndVar[1] + " not found");
-            }
-            
-            // Now extract the data and build the picture
-            float[] mapData = new MapBuilder(crs, dl).buildMapData();
+            // Shouldn't get here: should have been caught above.  We will only
+            // get here if the server config file is incorrect
+            throw new WMSInternalError("Can only handle one level at a time");
+        }
+        // Get the handle to the dataset and variable
+        String[] dsAndVar = layers[0].split("/");
+        if (dsAndVar.length != 2)
+        {
+            throw new LayerNotDefinedException("Invalid format for layer " +
+                "(must be <dataset>/<variable>)");
+        }
+        // Look for the DataProvider
+        DataProvider dp = config.getDataProvider(dsAndVar[0].trim());
+        if (dp == null)
+        {
+            throw new LayerNotDefinedException("Dataset with id " +
+                dsAndVar[0] + " not found");
+        }
+        // Look for the DataLayer
+        DataLayer dl = dp.getDataLayer(dsAndVar[1].trim());
+        if (dl == null)
+        {
+            throw new LayerNotDefinedException("Variable with id " +
+                dsAndVar[1] + " not found");
+        }
 
-            // TODO cache the picture array (arr)
+        // Now extract the data and build the picture
+        // We create a new MapBuilder with every request for thread safety.
+        float[] mapData = new MapBuilder(crs, dl).buildMapData();
 
-            // Now make the actual image
-            try
-            {
-                resp.setContentType("image/png");
-                PicMaker picMaker = new SimplePicMaker(mapData,
-                    crs.getPictureWidth(), crs.getPictureHeight());
-                picMaker.createAndOutputPicture(resp.getOutputStream());
-                resp.getOutputStream().close();
-            }
-            catch(IOException ioe)
-            {
-                throw new WMSInternalError("IOException when writing image",
-                    ioe);
-            }
+        // TODO cache the picture array (arr)
+
+        // Now make the actual image
+        try
+        {
+            resp.setContentType("image/png");
+            PicMaker picMaker = new SimplePicMaker(mapData,
+                crs.getPictureWidth(), crs.getPictureHeight());
+            picMaker.createAndOutputPicture(resp.getOutputStream());
+            resp.getOutputStream().close();
+        }
+        catch(IOException ioe)
+        {
+            throw new WMSInternalError("IOException when writing image",
+                ioe);
         }
     }
     

@@ -44,10 +44,12 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
     
     protected int count; // The number of points along the axis
     
-    protected double minRange; // The minimum and maximum values covered
-    protected double maxRange; // by this axis
+    protected double[] bboxRange; // The minimum and maximum values covered
+                                  // by this axis 
     
     protected boolean isLongitude; // True if this is a longitude axis
+    protected boolean wrapsWholeGlobe; // True if this is a longitude axis
+                                       // that encircles the whole globe
     
     /**
      * Creates a new instance of OneDCoordAxis
@@ -60,8 +62,27 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
         
         // The range is from the "left" edge of the first coordinate to the
         // "right" edge of the last coordinate
-        this.minRange = axis1D.getCoordEdges(0)[0];
-        this.maxRange = axis1D.getCoordEdges(this.count - 1)[1];
+        double leftEdge = axis1D.getCoordEdges(0)[0];
+        double rightEdge = axis1D.getCoordEdges(this.count - 1)[1];
+        
+        this.wrapsWholeGlobe = false;
+        this.bboxRange = new double[]{leftEdge, rightEdge};
+        if (this.isLongitude)
+        {
+            Longitude startLon = new Longitude(leftEdge);
+            Longitude endLon = new Longitude(rightEdge);
+            double lonRange = startLon.getClockwiseDistanceTo(endLon);
+            double distTo180 = startLon.getClockwiseDistanceTo(180.0);
+            if (startLon.equals(endLon) || distTo180 < lonRange)
+            {
+                // The data cover the whole globe, or the +/-180 degrees line
+                // comes in the middle of the data range.  The data therefore
+                // span the range -180 to 180, even though there may be a gap
+                // in the data in this range
+                this.wrapsWholeGlobe = true;
+                this.bboxRange = new double[]{-180.0, 180.0};
+            }
+        }
     }
     
     /**
@@ -72,22 +93,7 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
      */
     public double[] getBboxRange()
     {
-        if (this.isLongitude)
-        {
-            Longitude startLon = new Longitude(this.minRange);
-            Longitude endLon = new Longitude(this.maxRange);
-            double lonRange = startLon.getClockwiseDistanceTo(endLon);
-            double distTo180 = startLon.getClockwiseDistanceTo(180.0);
-            if (startLon.equals(endLon) || distTo180 < lonRange)
-            {
-                // The data cover the whole globe, or the +/-180 degrees line
-                // comes in the middle of the data range.  The data therefore
-                // span the range -180 to 180, even though there may be a gap
-                // in the data in this range
-                return new double[]{-180.0, 180.0};
-            }
-        }
-        return new double[]{this.minRange, this.maxRange};
+        return this.bboxRange;
     }
     
 }

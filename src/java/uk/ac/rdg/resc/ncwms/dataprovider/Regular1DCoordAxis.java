@@ -68,26 +68,32 @@ public class Regular1DCoordAxis extends OneDCoordAxis
      */
     public int getIndex(LatLonPoint point)
     {
+        double distance;
         if (this.isLongitude)
         {
-            /*Longitude start = new Longitude(axis.getStart());
-            double distance = start.getClockwiseDistanceTo(this);
-            double exactNumSteps = distance / axis.getStride();
-            int numSteps = (int)exactNumSteps;
-            float fracDiff = (exactNumSteps - (float)numSteps) / (float)numSteps;
-            if (fracDiff < 1.0e-6 || round == ROUND_DOWN)
-            {
-                return numSteps;
-            }
-            else
-            {
-                return numSteps + 1;
-            }*/
+            Longitude startLon = new Longitude(this.start);
+            distance = startLon.getClockwiseDistanceTo(point.getLongitude());
         }
         else
         {
             // this is a latitude axis
+            distance = point.getLatitude() - this.start;
         }
-        return -1;
+        double exactNumSteps = distance / this.stride;
+        int index = (int)Math.round(exactNumSteps);
+        if (this.isLongitude && this.wrapsWholeGlobe)
+        {
+            // Longitude cannot be out of range if it encircles the globe
+            index = index % this.count;
+            if (index < 0)
+            {
+                index += this.count;
+            }
+        }
+        if (index < 0 || index >= this.count)
+        {
+            return -1;
+        }
+        return index;
     }
 }

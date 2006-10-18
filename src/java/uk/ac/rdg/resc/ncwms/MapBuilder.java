@@ -29,11 +29,11 @@
 package uk.ac.rdg.resc.ncwms;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
-import ucar.nc2.dataset.NetcdfDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.dataprovider.DataLayer;
 import uk.ac.rdg.resc.ncwms.dataprovider.XYPoint;
@@ -104,10 +104,11 @@ public class MapBuilder
             //    (System.currentTimeMillis() - start) + " ms\n");
             start = System.currentTimeMillis();
 
-            // Create the picture array - initially filled with zeroes,
+            // Create the picture array - initially filled with NaN,
             // which represent missing data (transparent pixels)
             float[] mapData = new float[this.crs.getPictureWidth() *
                 this.crs.getPictureHeight()];
+            Arrays.fill(mapData, Float.NaN);
 
             // Open the underlying dataset of the layer.
             dataSource = this.dl.open();
