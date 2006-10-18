@@ -35,6 +35,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataChunk;
 import uk.ac.rdg.resc.ncwms.dataprovider.DataLayer;
 import uk.ac.rdg.resc.ncwms.dataprovider.XYPoint;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
@@ -108,7 +109,7 @@ public class MapBuilder
             // which represent missing data (transparent pixels)
             float[] mapData = new float[this.crs.getPictureWidth() *
                 this.crs.getPictureHeight()];
-            Arrays.fill(mapData, Float.NaN);
+            //Arrays.fill(mapData, Float.NaN);
 
             // Open the underlying dataset of the layer.
             dataSource = this.dl.open();
@@ -126,14 +127,14 @@ public class MapBuilder
                 // last x index
                 // TODO: deal with t and z indices
                 // TODO: make more efficient by subsampling?
-                float[] arr = this.dl.getScanline(var, 0, 0, yIndex,
+                DataChunk chunk = this.dl.getScanline(var, 0, 0, yIndex,
                     xIndices.firstElement(), xIndices.lastElement());
 
                 for (int xIndex : xIndices)
                 {
                     for (int p : scanline.getPixelIndices(xIndex))
                     {
-                        mapData[p] = arr[xIndex - xIndices.firstElement()];
+                        mapData[p] = chunk.getValue(xIndex - xIndices.firstElement());
                     }
                 }
             }

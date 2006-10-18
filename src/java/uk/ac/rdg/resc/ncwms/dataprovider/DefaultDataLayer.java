@@ -28,9 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
+import com.sun.crypto.provider.ARCFOURCipher;
+import com.sun.org.apache.bcel.internal.generic.ARRAYLENGTH;
 import java.io.IOException;
 import java.util.Date;
 import ucar.ma2.Array;
+import ucar.ma2.ArraySequence;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordinateAxis;
@@ -197,8 +200,12 @@ public class DefaultDataLayer implements DataLayer
     public XYPoint getXYCoordElement(LatLonPoint point)
     {
         int x = this.xAxis.getIndex(point);
+        if (x < 0)
+        {
+            return null;
+        }
         int y = this.yAxis.getIndex(point);
-        if (x < 0 || y < 0)
+        if (y < 0)
         {
             // This point does not exist in the source data
             return null;
@@ -251,14 +258,13 @@ public class DefaultDataLayer implements DataLayer
      * @param y The y index of the line of data
      * @param xFirst The first x index in the line of data
      * @param xLast The last x index in the line of data
-     * @return Array of floating-point values representing data from xFirst to
-     * xLast inclusive
+     * @return {@link DataChunk} containing the scanline data
      * @throws IOException if there was an IO error reading the data
      * @throws WMSInternalError if there was another type of internal error reading the data
      * (e.g. unsupported data type)
      * @throws IllegalArgumentException if the var parameter is not a {@link GeoGrid}.
      */
-    public float[] getScanline(Object var, int t, int z, int y, int xFirst,
+    public DataChunk getScanline(Object var, int t, int z, int y, int xFirst,
         int xLast) throws IOException, WMSInternalError
     {
         if (!(var instanceof GeoGrid))
@@ -275,12 +281,7 @@ public class DefaultDataLayer implements DataLayer
             GeoGrid subset = ((GeoGrid)var).subset(tRange, zRange, yRange, xRange);
             // Read all of the subset
             Array data = subset.readYXData(0, 0);
-            if (data.getElementType() != float.class)
-            {
-                throw new WMSInternalError("Data type \"" +
-                    data.getElementType() + "\" not supported", null);
-            }
-            return (float[])data.getStorage();
+            return new DataChunk(data);
         }
         catch(InvalidRangeException ire)
         {

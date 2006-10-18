@@ -89,7 +89,7 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
      * Gets the range of values covered by this axis.  Note that this will
      * not simply include the minimum and maximum values along the axis: we 
      * also take into account the "cell size" of each axis point.
-     * @return array of two doubles [minVal,maxVal]
+     * @return array of two doubles [min,max]
      */
     public double[] getBboxRange()
     {

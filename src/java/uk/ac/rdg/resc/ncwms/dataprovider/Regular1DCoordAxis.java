@@ -59,7 +59,8 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     }
     
     /**
-     * Gets the index of the given point
+     * Gets the index of the given point. Uses index = (value - start) / stride,
+     * hence this is fast.
      * @param point The {@link LatLonPoint}, which will have lon in range
      * [-180,180] and lat in range [-90,90]
      * @return the index that is nearest to this point, or -1 if the point is

@@ -184,7 +184,7 @@ public class GetMap
         // We create a new MapBuilder with every request for thread safety.
         float[] mapData = new MapBuilder(crs, dl).buildMapData();
 
-        // TODO cache the picture array (arr)
+        // TODO cache the picture array (mapData)
 
         // Now make the actual image
         try

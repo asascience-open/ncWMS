@@ -113,13 +113,12 @@ public interface DataLayer
      * @param y The y index of the line of data
      * @param xFirst The first x index in the line of data
      * @param xLast The last x index in the line of data
-     * @return Array of floating-point values representing data from xFirst to
-     * xLast inclusive
+     * @return {@link DataChunk} containing the scanline data
      * @throws IOException if there was an IO error reading the data
-     * @throws WMSInternalError if there was another type of internal error reading the data
-     * (e.g. unsupported data type)
+     * @throws WMSInternalError if there was another type of internal error
+     * reading the data (e.g. unsupported data type)
      */
-    public float[] getScanline(Object var, int t, int z, int y,
+    public DataChunk getScanline(Object var, int t, int z, int y,
         int xFirst, int xLast) throws IOException, WMSInternalError;
     
     /**
