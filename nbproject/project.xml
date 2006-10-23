@@ -6,16 +6,20 @@
             <name>ncWMS</name>
             <minimum-ant-version>1.6</minimum-ant-version>
             <web-module-libraries>
-                <library files="1">
-                    <file>${libs.NetCDF.classpath}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
                 <library files="5">
                     <file>${libs.JAXB.classpath}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="2">
                     <file>${libs.dom4j.classpath}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library files="1">
+                    <file>${libs.NetCDF.classpath}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library files="1">
+                    <file>${file.reference.jython.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>
@@ -27,5 +31,6 @@
                 <root id="test.src.dir"/>
             </test-roots>
         </data>
+        <references xmlns="http://www.netbeans.org/ns/ant-project-references/1"/>
     </configuration>
 </project>
