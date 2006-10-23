@@ -280,7 +280,7 @@ public class DefaultDataLayer implements DataLayer
             // Create a logical data subset
             GeoGrid subset = ((GeoGrid)var).subset(tRange, zRange, yRange, xRange);
             // Read all of the subset
-            Array data = subset.readYXData(0, 0);
+            Array data = subset.readYXData(0, 0).reduce();
             return new DataChunk(data);
         }
         catch(InvalidRangeException ire)

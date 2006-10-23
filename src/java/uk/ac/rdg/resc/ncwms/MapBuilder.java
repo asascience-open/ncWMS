@@ -54,6 +54,20 @@ public class MapBuilder
 {
     private RequestCRS crs;
     private DataLayer dl;
+    private MapBuilderListener listener;
+      
+    /**
+     * Creates a new instance of MapBuilder
+     * @param crs The {@link RequestCRS} that describes the map area and projection
+     * @param dl The {@link DataLayer} from which the data will be read
+     * @param listener A {@link MapBuilderListener} to listen for events
+     */
+    public MapBuilder(RequestCRS crs, DataLayer dl, MapBuilderListener listener)
+    {
+        this.crs = crs;
+        this.dl = dl;
+        this.listener = listener;
+    }
       
     /**
      * Creates a new instance of MapBuilder
@@ -62,8 +76,7 @@ public class MapBuilder
      */
     public MapBuilder(RequestCRS crs, DataLayer dl)
     {
-        this.crs = crs;
-        this.dl = dl;
+        this(crs, dl, null);
     }
     
     /**
@@ -75,7 +88,6 @@ public class MapBuilder
         Object dataSource = null;
         try
         {
-            //resp.setContentType("text/plain");
             long start = System.currentTimeMillis();
 
             // Maps y indices to scanlines
@@ -87,9 +99,14 @@ public class MapBuilder
             {
                 LatLonPoint latLon = it.next();
                 // Translate lat-lon to projection coordinates
-                XYPoint coords = this.dl.getXYCoordElement(latLon);                    
+                XYPoint coords = this.dl.getXYCoordElement(latLon);
                 if (coords != null)
                 {
+                    this.event( "Pixel index: " + pixelIndex +
+ 	                    " Lon: " + latLon.getLongitude() +
+ 	                    " Lat: " + latLon.getLatitude() + 
+                            " x: " + coords.getX() +
+ 	                    " y: " + coords.getY());
                     // Get the scanline for this y index
                     Scanline scanline = scanlines.get(coords.getY());
                     if (scanline == null)
@@ -101,15 +118,15 @@ public class MapBuilder
                 }
                 pixelIndex++;
             }
-            //resp.getWriter().write("Produced scanlines: " +
-            //    (System.currentTimeMillis() - start) + " ms\n");
+            this.event("Produced scanlines: " +
+                    (System.currentTimeMillis() - start) + " ms");
             start = System.currentTimeMillis();
 
             // Create the picture array - initially filled with NaN,
             // which represent missing data (transparent pixels)
             float[] mapData = new float[this.crs.getPictureWidth() *
                 this.crs.getPictureHeight()];
-            //Arrays.fill(mapData, Float.NaN);
+            Arrays.fill(mapData, Float.NaN);
 
             // Open the underlying dataset of the layer.
             dataSource = this.dl.open();
@@ -129,17 +146,20 @@ public class MapBuilder
                 // TODO: make more efficient by subsampling?
                 DataChunk chunk = this.dl.getScanline(var, 0, 0, yIndex,
                     xIndices.firstElement(), xIndices.lastElement());
+                this.event("[read " + chunk.getSize() + "] from " + yIndex);
 
                 for (int xIndex : xIndices)
                 {
                     for (int p : scanline.getPixelIndices(xIndex))
                     {
-                        mapData[p] = chunk.getValue(xIndex - xIndices.firstElement());
+                        float val = chunk.getValue(xIndex - xIndices.firstElement());
+                        this.event("val = " + val);
+                        mapData[p] = val;
                     }
                 }
             }
-            //resp.getWriter().write("Produced picture: " +
-            //    (System.currentTimeMillis() - start) + " ms\n");
+            this.event("Produced picture: " +
+                    (System.currentTimeMillis() - start) + " ms");
             return mapData;
         }
         catch(IOException ioe)
@@ -151,6 +171,14 @@ public class MapBuilder
         {
             // This will do nothing if the underlying dataset is not open
             this.dl.close(dataSource);
+        }
+    }
+    
+    private void event(String str)
+    {
+        if (this.listener != null)
+        {
+            this.listener.event(str);
         }
     }
     
@@ -200,5 +228,4 @@ public class MapBuilder
             return this.xIndices.get(xIndex);
         }
     }
-    
 }

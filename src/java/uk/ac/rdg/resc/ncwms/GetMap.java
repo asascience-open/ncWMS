@@ -182,7 +182,8 @@ public class GetMap
 
         // Now extract the data and build the picture
         // We create a new MapBuilder with every request for thread safety.
-        float[] mapData = new MapBuilder(crs, dl).buildMapData();
+        MapBuilder mb = new MapBuilder(crs, dl);//, new MBListener(resp));
+        float[] mapData = mb.buildMapData();
 
         // TODO cache the picture array (mapData)
 
@@ -199,6 +200,27 @@ public class GetMap
         {
             throw new WMSInternalError("IOException when writing image",
                 ioe);
+        }
+    }
+    
+    private static class MBListener implements MapBuilderListener
+    {
+        private HttpServletResponse resp;
+        public MBListener(HttpServletResponse resp)
+        {
+            this.resp = resp;
+            this.resp.setContentType("text/plain");
+        }
+        public void event(String str)
+        {
+            try
+            {
+                this.resp.getWriter().write(str + "\n");
+            }
+            catch(IOException ioe)
+            {
+                // shouldn't happen
+            }
         }
     }
     

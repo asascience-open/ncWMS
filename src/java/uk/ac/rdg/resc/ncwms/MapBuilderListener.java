@@ -26,56 +26,23 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.dataprovider;
-
-import ucar.ma2.Array;
-import ucar.ma2.Index;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
+package uk.ac.rdg.resc.ncwms;
 
 /**
- * A chunk of data, as read by DataLayer.getScanline().  The purpose of this
- * class is to get around the annoying feature of Java that there is no
- * Array superclass (well, there is, but it's Object).  This means that there
- * is no general way to do arr[i] if you don't know the type of arr in advance.
+ * Interface describing classes that can listen for events produced by a
+ * {@link MapBuilder}
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class DataChunk
+public interface MapBuilderListener
 {
-    private Array array;
-    private Index index;
-    
     /**
-     * Creates a new instance of DataChunk from an {@link Array}
-     * @param data {@link Array} of data as read by Netcdf libaries
-     * @throws WMSInternalError if the type of the data is not supported
+     * Record an event
+     * @param str String describing the event
      */
-    public DataChunk(Array data) throws WMSInternalError
-    {
-        this.array = data;
-        this.index = this.array.getIndex();
-    }
-    
-    /**
-     * Gets the value at the given index in the chunk as a float.  (We don't 
-     * need greater precision for making pictures.)
-     * @param i the index of the required value in the chunk
-     */
-    public synchronized float getValue(int i)
-    {
-        this.index.set(i);
-        return this.array.getFloat(this.index);
-    }
-    
-    /**
-     * @return the number of data points in this chunk
-     */
-    public int getSize()
-    {
-        return (int)this.array.getSize();
-    }
+    public void event(String str); 
     
 }

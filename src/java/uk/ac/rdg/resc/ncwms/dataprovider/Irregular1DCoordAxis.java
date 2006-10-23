@@ -28,6 +28,9 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
+import ucar.ma2.Array;
+import ucar.ma2.Index;
+import ucar.ma2.IndexIterator;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
@@ -132,11 +135,11 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      */
     public static void main(String[] args) throws Exception
     {
-        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\data\\OA_20060830.nc");
+        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\data\\OA_20060830.nc", true, null);
         GridDataset gd = new GridDataset(nc);
         GeoGrid gg = gd.findGridByName("temperature");
         
-        EnhancedCoordAxis axis =
+        /*EnhancedCoordAxis axis =
             EnhancedCoordAxis.create(gg.getCoordinateSystem().getYHorizAxis());
         System.out.println(axis.getClass().getName());
         for (double lat = -90; lat < 90; lat++)
@@ -144,6 +147,14 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
             LatLonPoint point = new LatLonPointImpl(lat, 0);
             System.out.println("Latitude: " + lat + " index " +
                 axis.getIndex(point));
+        }*/
+        Array arr = gg.readYXData(0, 0);
+        //Index index = arr.getIndex();
+        IndexIterator it = arr.getIndexIteratorFast();
+        while (it.hasNext())
+        {
+            float val = it.getFloatNext();
+            System.out.println("" + val);
         }
         
         nc.close();
