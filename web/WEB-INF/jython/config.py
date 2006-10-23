@@ -1,8 +1,10 @@
 # Configuration of the WMS server
 
 # The root of the file hierarchy
-# TODO: replace by list of Dataset objects
+# TODO: replace root with list of Dataset objects
 root = '/var/www/cdat'
+title = "Web Map Service for marine data"
+url = "http://www.nerc-essc.ac.uk"
 
 ### End of configuration: do not edit anything below this point
 

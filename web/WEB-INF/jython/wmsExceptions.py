@@ -1,5 +1,4 @@
 # Code relevant to exceptions
-# TODO strongly type exceptions
 
 from config import XML_HEADER, WMS_VERSION
 
@@ -25,3 +24,10 @@ class WMSException:
             f.write(self.message)
         f.write("</ServiceException>")
         f.write("</ServiceExceptionReport>")
+
+class OperationNotSupported(WMSException):
+    """ Exception that is raised when a client requests an unsupported
+       operation """
+    def __init__(self, message=None):
+        WMSException.__init__(self, message, "OperationNotSupported")
+

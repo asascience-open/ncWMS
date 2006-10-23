@@ -1,37 +1,71 @@
 # Entry point for the ncWMS (both CDAT and nj22 implementations)
+import re
 
-from exception import WMSException
-from utils import getParamValue
+from wmsExceptions import *
 from capabilities import getCapabilities
+import exceptions
 
-def doWMS(queryString, writer):
+class RequestParser:
+    """ Parses request parameters from the URL.  Parameter values are
+        case-sensitive, but their names are not.  Translates URL
+        escape codes (e.g. %2F) to proper characters (e.g. /) """
+
+    def __init__(self, queryString):
+        """ queryString is the unprocessed query string from the URL """
+
+        # Regular expressions for replacing URL escape codes
+        self._urlCodes = {}
+        self._urlCodes[re.compile("%2f", re.IGNORECASE)] = "/"
+        self._urlCodes[re.compile("%20", re.IGNORECASE)] = " "
+
+        self._params = {} # Hashtable for query parameters and values
+        if queryString is not None:
+            for kvp in queryString.split("&"):
+                keyAndVal = kvp.split("=")
+                if len(keyAndVal) == 2:
+                    (key, value) = keyAndVal
+                    # We always store the key in lower case
+                    self._params[key.lower()] = self._escapeURLCodes(value)
+
+    def _escapeURLCodes(self, str):
+        """ Replaces all the URL escape codes with their proper characters """
+        for regexp in self._urlCodes.keys():
+            str = regexp.sub(self._urlCodes[regexp], str)
+        return str
+
+    def getParamValue(self, key, default=None):
+        """ Gets the value of the given parameter. If default==None
+           and the parameter does not exist, a WMSException is thrown.
+           Otherwise, the parameter value is returned, or the default
+           value if it does not exist """
+        if self._params.has_key(key):
+            return self._params[key]
+        elif default is None:
+            raise WMSException("Must provide a " + key.upper() + " argument")
+        else:
+            return default
+        
+
+def wms(req):
     """ Does the WMS operation.
+       req = Apache request object (or fake object from Jython servlet) """
 
-        queryString = the query string of the URL. Must be a valid
-                      string, even if empty
-        writer = object through which we can write back to the client """
-    
-    # Turn the request object into a dictionary of key-value pairs
-    params = {}
     try:
-        # TODO: create a Params object
-        if not queryString:
-            raise WMSException("Must provide a SERVICE argument")
-        for kvp in queryString.split("&"):
-            (key, value) = kvp.split("=")
-            params[key] = value
-        service = getParamValue(params, "service")
-        request = getParamValue(params, "request")
+        params = RequestParser(req.args)
+        service = params.getParamValue("service")
+        request = params.getParamValue("request")
         if service != "WMS":
             raise WMSException("SERVICE parameter must be WMS")
         if request == "GetCapabilities":
-            writer.write(getCapabilities(params))
+            capdoc = getCapabilities(params)
+            req.content_type="text/xml"
+            req.write(capdoc)
         elif request == "GetMap":
             get_map(req, params)
         elif request == "GetFeatureInfo":
-            raise WMSException("Operation not yet supported", "OperationNotSupported")
+            raise OperationNotSupported("%s is not yet supported on this server" % request)
         else:
             raise WMSException("Invalid operation")
     except WMSException, e:
-        # TODO req.content_type="text/xml"
-        e.write(writer)
+        req.content_type="text/xml"
+        e.write(req)

@@ -4,21 +4,18 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from utils import getParamValue
-from config import *
+import config
 
 def getCapabilities(params):
-    """ Implements the GetCapabilities operation """
-    version = getParamValue(params, "version", "")
-    format = getParamValue(params, "format", "")
-    updatesequence = getParamValue(params, "updatesequence", "")    
-    # We ignore the version and format arguments
-    # TODO: deal with updatesequence
+    """ Returns the Capabilities document """
+    version = params.getParamValue("version", "")
+    format = params.getParamValue("format", "")
+    updatesequence = params.getParamValue("updatesequence", "")    
+    # TODO: deal with version, format and updatesequence
     
-    # TODO: req.content_type = "text/xml"
     output = StringIO()
-    output.write(XML_HEADER)
-    output.write("<WMS_Capabilities version=\"" + WMS_VERSION + "\" xmlns=\"http://www.opengis.net/wms\"")
+    output.write(config.XML_HEADER)
+    output.write("<WMS_Capabilities version=\"" + config.WMS_VERSION + "\" xmlns=\"http://www.opengis.net/wms\"")
     output.write(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
     # The next two lines should be commented out if you wish to load this document
     # in Cadcorp SIS from behind the University of Reading firewall
@@ -28,13 +25,13 @@ def getCapabilities(params):
     
     output.write("<Service>")
     output.write("<Name>WMS</Name>")
-    output.write("<Title>CDAT-based Web Map Server</Title>")
-    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"http://www.nerc-essc.ac.uk\"/>")
+    output.write("<Title>%s</Title>" % config.title)
+    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
-    output.write("<LayerLimit>" + str(LAYER_LIMIT) + "</LayerLimit>")
-    output.write("<MaxWidth>" + str(MAX_IMAGE_WIDTH) + "</MaxWidth>")
-    output.write("<MaxHeight>" + str(MAX_IMAGE_HEIGHT) + "</MaxHeight>")
+    output.write("<LayerLimit>%s</LayerLimit>" % str(config.LAYER_LIMIT))
+    output.write("<MaxWidth>%s</MaxWidth>" % str(config.MAX_IMAGE_WIDTH))
+    output.write("<MaxHeight>%s</MaxHeight>" % str(config.MAX_IMAGE_HEIGHT))
     output.write("</Service>")
     
     output.write("<Capability>")
@@ -42,20 +39,20 @@ def getCapabilities(params):
     output.write("<GetCapabilities>")
     output.write("<Format>text/xml</Format>")
     # TODO: detect the full server context path
-    output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
-        req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
+    #output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
+    #    req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
     output.write("</GetCapabilities>")
     output.write("<GetMap>")
-    for format in SUPPORTED_IMAGE_FORMATS:
-        output.write("<Format>" + format + "</Format>")
-    output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
-        req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
+    for format in config.SUPPORTED_IMAGE_FORMATS:
+        output.write("<Format>%s</Format>" % format)
+    #output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
+    #    req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
     output.write("</Request>")
     # TODO: support more exception types
     output.write("<Exception>")
-    for ex_format in SUPPORTED_EXCEPTION_FORMATS:
-        output.write("<Format>" + ex_format + "</Format>")
+    for ex_format in config.SUPPORTED_EXCEPTION_FORMATS:
+        output.write("<Format>%s</Format>" % ex_format)
     output.write("</Exception>")
     
     # Now for the layers
@@ -65,4 +62,6 @@ def getCapabilities(params):
     output.write("</Capability>")
     output.write("</WMS_Capabilities>")
 
-    return output
+    capdoc = output.getvalue()
+    output.close() # Free the buffer
+    return capdoc
