@@ -28,15 +28,11 @@
 
 package uk.ac.rdg.resc.ncwms.dataprovider;
 
-import com.sun.crypto.provider.ARCFOURCipher;
-import com.sun.org.apache.bcel.internal.generic.ARRAYLENGTH;
 import java.io.IOException;
 import java.util.Date;
 import ucar.ma2.Array;
-import ucar.ma2.ArraySequence;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
