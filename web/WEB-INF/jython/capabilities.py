@@ -6,8 +6,11 @@ except ImportError:
 
 import config
 
-def getCapabilities(params):
-    """ Returns the Capabilities document """
+def getCapabilities(params, datasets):
+    """ Returns the Capabilities document.
+       params = ncWMS.RequestParser object containing the request parameters
+       datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
+
     version = params.getParamValue("version", "")
     format = params.getParamValue("format", "")
     updatesequence = params.getParamValue("updatesequence", "")    
@@ -54,10 +57,69 @@ def getCapabilities(params):
     for ex_format in config.SUPPORTED_EXCEPTION_FORMATS:
         output.write("<Format>%s</Format>" % ex_format)
     output.write("</Exception>")
+
+    # Write the top-level container layer
+    output.write("<Layer>")
+    output.write("<Title>%s</Title>" % config.title)
+    # TODO: add styles
+    for crs in config.SUPPORTED_CRSS.keys():
+        output.write("<CRS>" + crs + "</CRS>")
     
-    # Now for the layers
-    # We recurse through the directory structure to find datasets that contain layers
-    # TODO output_layers(req, ".")
+    # Now for the dataset layers
+    for dsid in datasets.keys():
+        # Write a container layer for this dataset. Container layers
+        # do not have a Name
+        output.write("<Layer>")
+        output.write("<Title>%s</Title>" % datasets[dsid].title)
+        # Now write the displayable data layers
+        vars = datasets[dsid].getVariables()
+        for vid in vars.keys():
+            output.write("<Layer>")
+            output.write("<Name>%s/%s</Name>" % (dsid, vid))
+            output.write("<Title>%s</Title>" % vars[vid].title)
+
+            # Set the bounding box
+            minLon, minLat, maxLon, maxLat = vars[vid].bbox
+            output.write("<EX_GeographicBoundingBox>")
+            output.write("<westBoundLongitude>%f</westBoundLongitude>" % minLon)
+            output.write("<eastBoundLongitude>%f</eastBoundLongitude>" % maxLon)
+            output.write("<southBoundLatitude>%f</southBoundLatitude>" % minLat)
+            output.write("<northBoundLatitude>%f</northBoundLatitude>" % maxLat)
+            output.write("</EX_GeographicBoundingBox>")
+            output.write("<BoundingBox CRS=\"CRS:84\" ")
+            output.write("minx=\"%f\" maxx=\"%f\" miny=\"%f\" maxy=\"%f\"/>"
+                % (minLon, maxLon, minLat, maxLat))
+
+            # Set the level dimension
+            if vars[vid].zValues is not None:
+                output.write("<Dimension name=\"elevation\" units=\"%s\"" 
+                    % vars[vid].zUnits)
+                output.write(" default=\"%s\">" % vars[vid].zValues[0])
+                firstTime = 1
+                for z in vars[vid].zValues:
+                    if firstTime:
+                        firstTime = 0
+                    else:
+                        output.write(",")
+                    output.write(str(z))
+                output.write("</Dimension>")
+
+            # Set the time dimension
+            if vars[vid].tValues is not None:
+                output.write("<Dimension name=\"time\" units=\"ISO8601\">")
+                firstTime = 1
+                for t in vars[vid].tValues:
+                    if firstTime:
+                        firstTime = 0
+                    else:
+                        output.write(",")
+                    output.write(t)
+                output.write("</Dimension>")
+
+            output.write("</Layer>") # end of variable Layer
+        output.write("</Layer>") # end of dataset layer
+    
+    output.write("</Layer>") # end of top-level container layer
     
     output.write("</Capability>")
     output.write("</WMS_Capabilities>")

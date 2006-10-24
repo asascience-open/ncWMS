@@ -47,7 +47,7 @@ public abstract class EnhancedCoordAxis
 {
     
     /**
-     * Method for createing an EnhancedCoordAxis.
+     * Method for creating an EnhancedCoordAxis.
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
      * latitude or longitude axis
      * @return an EnhancedCoordAxis

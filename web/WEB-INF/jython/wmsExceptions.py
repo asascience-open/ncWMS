@@ -31,3 +31,31 @@ class OperationNotSupported(WMSException):
     def __init__(self, message=None):
         WMSException.__init__(self, message, "OperationNotSupported")
 
+class InvalidCRS(WMSException):
+    """ Exception that is raised when a client requests an unsupported
+       CRS """
+    def __init__(self, crs):
+        WMSException.__init__(self, "The CRS \"" + crs + "\" is not supported by this server",
+            "InvalidCRS")
+
+class StyleNotDefined(WMSException):
+    """ Exception that is raised when a client requests an unsupported
+       style """
+    def __init__(self, style):
+        WMSException.__init__(self, "The style \"" + style + "\" is not supported by this server",
+            "StyleNotDefined")
+
+class InvalidFormat(WMSException):
+    """ Exception that is raised when a client requests an unsupported
+       image format """
+    def __init__(self, format):
+        WMSException.__init__(self, "The image format \"" + format + "\" is not supported by this server",
+            "InvalidFormat")
+
+class LayerNotDefined(WMSException):
+    """ Exception that is raised when a client requests a layer that is not
+        provided by the server """
+    def __init__(self, layer):
+        WMSException.__init__(self, "The layer \"" + layer + "\" is not provided by this server",
+            "LayerNotDefined")
+

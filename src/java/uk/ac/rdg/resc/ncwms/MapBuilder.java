@@ -123,7 +123,7 @@ public class MapBuilder
             start = System.currentTimeMillis();
 
             // Create the picture array - initially filled with NaN,
-            // which represent missing data (transparent pixels)
+            // which represents missing data (transparent pixels)
             float[] mapData = new float[this.crs.getPictureWidth() *
                 this.crs.getPictureHeight()];
             Arrays.fill(mapData, Float.NaN);

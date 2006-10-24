@@ -4,6 +4,7 @@ from javax.servlet.http import HttpServlet
 from javax.servlet import ServletException
 
 from ncWMS import wms
+from nj22dataset import Nj22Dataset
 
 class FakeApacheRequest:
     """ Class that wraps an HttpServletResponse to provide the necessary methods of
@@ -28,7 +29,7 @@ class WMS (HttpServlet):
 
     def doGet(self,request,response):
         """ Perform the WMS operation """
-        wms(FakeApacheRequest(request, response))
+        wms(FakeApacheRequest(request, response), Nj22Dataset)
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")

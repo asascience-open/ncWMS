@@ -3,6 +3,43 @@ import re
 
 from wmsExceptions import *
 from capabilities import getCapabilities
+from getmap import getMap
+import config
+
+def wms(req, DatasetClass=None):
+    """ Does the WMS operation.
+       req = Apache request object (or fake object from Jython servlet)
+       DatasetClass = Class that inherits from AbstractDataset, used
+           for reading data and metadata """
+       
+    try:
+        # If no datasetclass is specified we default to the cdms implementation
+        if DatasetClass is None:
+            import cdmsdataset
+            DatasetClass = cdmsdataset.CDMSDataset
+        # Populate the dictionary that links unique IDs to dataset objects
+        datasets = {}
+        for d in config.datasets:
+            datasets[d[0]] = DatasetClass(d[1], d[2])
+        params = RequestParser(req.args)
+        service = params.getParamValue("service")
+        request = params.getParamValue("request")
+        if service != "WMS":
+            raise WMSException("SERVICE parameter must be WMS")
+        if request == "GetCapabilities":
+            capdoc = getCapabilities(params, datasets)
+            req.content_type="text/xml"
+            req.write(capdoc)
+        elif request == "GetMap":
+            getMap(req, params, datasets)
+        elif request == "GetFeatureInfo":
+            raise OperationNotSupported("%s is not supported on this server" % request)
+        else:
+            raise WMSException("Invalid operation")
+    except WMSException, e:
+        req.content_type="text/xml"
+        e.write(req)
+
 
 class RequestParser:
     """ Parses request parameters from the URL.  Parameter values are
@@ -43,28 +80,3 @@ class RequestParser:
             raise WMSException("Must provide a " + key.upper() + " argument")
         else:
             return default
-        
-
-def wms(req):
-    """ Does the WMS operation.
-       req = Apache request object (or fake object from Jython servlet) """
-
-    try:
-        params = RequestParser(req.args)
-        service = params.getParamValue("service")
-        request = params.getParamValue("request")
-        if service != "WMS":
-            raise WMSException("SERVICE parameter must be WMS")
-        if request == "GetCapabilities":
-            capdoc = getCapabilities(params)
-            req.content_type="text/xml"
-            req.write(capdoc)
-        elif request == "GetMap":
-            get_map(req, params)
-        elif request == "GetFeatureInfo":
-            raise OperationNotSupported("%s is not yet supported on this server" % request)
-        else:
-            raise WMSException("Invalid operation")
-    except WMSException, e:
-        req.content_type="text/xml"
-        e.write(req)
