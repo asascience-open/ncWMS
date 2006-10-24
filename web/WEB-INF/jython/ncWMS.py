@@ -3,12 +3,11 @@ import re
 
 from wmsExceptions import *
 from capabilities import getCapabilities
-import exceptions
 
 class RequestParser:
     """ Parses request parameters from the URL.  Parameter values are
         case-sensitive, but their names are not.  Translates URL
-        escape codes (e.g. %2F) to proper characters (e.g. /) """
+        escape codes (e.g. %2F) to proper characters (e.g. /). """
 
     def __init__(self, queryString):
         """ queryString is the unprocessed query string from the URL """
@@ -38,8 +37,8 @@ class RequestParser:
            and the parameter does not exist, a WMSException is thrown.
            Otherwise, the parameter value is returned, or the default
            value if it does not exist """
-        if self._params.has_key(key):
-            return self._params[key]
+        if self._params.has_key(key.lower()):
+            return self._params[key.lower()]
         elif default is None:
             raise WMSException("Must provide a " + key.upper() + " argument")
         else:
