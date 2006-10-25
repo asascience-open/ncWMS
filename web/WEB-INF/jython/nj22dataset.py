@@ -42,24 +42,24 @@ class Nj22Dataset(AbstractDataset):
         nc = NetcdfDataset.openDataset(self.location)
         gd = GridDataset(nc)
         gg = gd.findGridByName(id)
-        var = None
         if gg is None:
             nc.close()
             return None
         else:
             # We don't close the dataset because we will read data from
             # it soon
-            return Nj22Variable(gg)
+            return Nj22Variable(gg, nc)
 
 
 class Nj22Variable(AbstractVariable):
     """ A Variable that is read from NetCDF files using nj22 """
 
-    def __init__(self, geogrid):
+    def __init__(self, geogrid, ncFile = None):
         """ Create an Nj22Variable from a GeoGrid object. """
         AbstractVariable.__init__(self, geogrid.getDescription())   
         self.geogrid = geogrid
         self.coordSys = geogrid.getCoordinateSystem()
+        self._ncFile = ncFile
 
         # Set the vertical dimension as array of doubles
         if self.coordSys.hasVerticalAxis():
@@ -91,7 +91,8 @@ class Nj22Variable(AbstractVariable):
     def readData(self, grid, fillValue=1e20):
         """ Reads data from this variable, projected on to the given grid.
            Returns an array of floating-point numbers representing the data.
-           Missing values are represented by fillValue """
+           Missing values are represented by fillValue.  This is called
+           after __init__(self, geogrid, ncFile) as part of GetMap """
         # TODO: relax these limitations
         if not grid.isLatLon:
             raise "Can only read onto images in lat-lon projections"
@@ -103,12 +104,11 @@ class Nj22Variable(AbstractVariable):
         tRange = Range(0, 0)
         zRange = Range(0, 0)
         # Find the range of x indices
-        # TODO: findCoordElement() could be more efficient
         minX = Integer.MAX_VALUE
-        maxX = Integer.MIN_VALUE
+        maxX = -Integer.MAX_VALUE
         xIndices = []
         for lon in grid.lonValues:
-            xIndex = xAxis.findCoordElement(lon)
+            xIndex = xAxis.findCoordElement(lon) # TODO: findCoordElement() could be more efficient
             xIndices.append(xIndex)
             if xIndex >= 0:
                 if xIndex < minX : minX = xIndex
@@ -120,19 +120,19 @@ class Nj22Variable(AbstractVariable):
         Arrays.fill(picData, fillValue)
         # Cycle through the latitude values, extracting a scanline of
         # data each time from minX to maxX
-        picYIndex = 0
-        for lat in grid.latValues:
-            yIndex = yAxis.findCoordElement(lat)
+        for j in xrange(len(grid.latValues)):
+            yIndex = yAxis.findCoordElement(grid.latValues[j])
             if yIndex >= 0:
                 yRange = Range(yIndex, yIndex)
                 subset = self.geogrid.subset(tRange, zRange, yRange, xRange)
                 array = subset.readYXData(0, 0).reduce()
                 rawData = array.getStorage()
-                picXIndex = 0
-                for xIndex in xIndices:
-                    picIndex = picYIndex * grid.width + picXIndex
-                    picData[picIndex] = rawData[xIndex - minX]
-                    picXIndex = picXIndex + 1
-            picYIndex = picYIndex + 1
-        
+                # Now copy the scanline's data to the picture array
+                for i in xrange(len(xIndices)):
+                    if xIndices[i] >= 0:
+                        picIndex = j * grid.width + i
+                        picData[picIndex] = rawData[xIndices[i] - minX]
+                       
+        # Close the source file and return the data
+        self._ncFile.close()
         return picData

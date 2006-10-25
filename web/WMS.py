@@ -13,7 +13,6 @@ class FakeApacheRequest:
 
     def __init__(self, request, response):
         self._response = response
-        self._writer = response.getWriter()
         self.args = request.getQueryString()
         # We would like content_type to be a class property but this is
         # not supported in Python 2.1
@@ -22,7 +21,12 @@ class FakeApacheRequest:
     def write(self, str):
         """ Sets the content type and writes data to the client """
         self._response.setContentType(self.content_type)
-        self._writer.write(str)
+        self._response.getWriter().write(str)
+
+    def getOutputStream(self):
+        """ Gets an OutputStream for writing binary data. """
+        self._response.setContentType(self.content_type)
+        return self._response.getOutputStream()
 
 # Entry point for the Jython WMS servlet
 class WMS (HttpServlet):

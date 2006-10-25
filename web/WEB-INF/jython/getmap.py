@@ -6,7 +6,7 @@ except ImportError:
 
 from wmsExceptions import *
 from config import *
-import graphics
+import javagraphics
 
 def getMap(req, params, datasets):
     """ The GetMap operation.
@@ -83,36 +83,4 @@ def getMap(req, params, datasets):
     # TODO: cache the data array
     
     # Turn the data into an image and output to the client
-    # TODO: not very efficient
-    # Find the minimum and maximum values in the array
-    minval = 1e10 # TODO: should make sure these are suitable ranges
-    maxval = -1e10
-    for p in picData:
-        if p < minval: minval = p
-        if p > maxval: maxval = p
-    # Create a set of rows, one for each scanline in the picture, and
-    # fill with the correct pixel values
-    pixels = []
-    for y in xrange(height):
-        pixels.append([getPixelColour(picData[i], minval, maxval, fillValue)
-            for i in xrange(y * width, (y+1) * width)])
-    
-    # Write the image: the last parameter is the percentage opacity
-    image = StringIO()
-    graphics.writeIndexedPNG(image, pixels, 100)
-    req.content_type = "image/png"
-    req.write(image.getvalue())
-    image.close()
-
-def getPixelColour(val, minval, maxval, fillval):
-    """ Returns the pixel colour as an integer: 0 if missing value,
-        1 if out of range, [2,255] if a valid pixel
-        val = value of data at the pixel
-        minval = minimum value of data
-        maxval = maximum value of data """
-    if val == fillval:
-        return 0
-    if val < minval or val > maxval:
-        return 1
-    else:
-        return int(((253.0 / (maxval - minval)) * (val - minval)) + 2)
+    javagraphics.makePic(req, picData, width, height, fillValue)

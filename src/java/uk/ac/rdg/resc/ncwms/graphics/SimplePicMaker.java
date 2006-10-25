@@ -50,11 +50,12 @@ public class SimplePicMaker extends PicMaker
      * @param data The raw data to turn into a picture
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
+     * @param fillValue The value to use for missing data
      * @throws IllegalArgumentException if width * height != data.length
      */
-    public SimplePicMaker(float[] data, int width, int height)
+    public SimplePicMaker(float[] data, int width, int height, float fillValue)
     {
-        this(data, width, height, 0.0f, 0.0f);
+        this(data, width, height, fillValue, 0.0f, 0.0f);
     }
     
     /**
@@ -63,14 +64,15 @@ public class SimplePicMaker extends PicMaker
      * @param data The raw data to turn into a picture
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
+     * @param fillValue The value to use for missing data
      * @param scaleMin The minimum value for the scale
      * @param scaleMax The maximum value for the scale
      * @throws IllegalArgumentException if width * height != data.length
      */
     public SimplePicMaker(float[] data, int width, int height, 
-        float scaleMin, float scaleMax)
+        float fillValue, float scaleMin, float scaleMax)
     {
-        super(data, width, height, scaleMin, scaleMax);
+        super(data, width, height, fillValue, scaleMin, scaleMax);
         if (scaleMin == 0.0f && scaleMax == 0.0f)
         {
             this.setScaleAuto();
@@ -86,7 +88,7 @@ public class SimplePicMaker extends PicMaker
         if (this.data != null)
         {
             this.scaleMin = Float.MAX_VALUE;
-            this.scaleMax = Float.MIN_VALUE;
+            this.scaleMax = -Float.MAX_VALUE;
             for (int i = 0; i < this.data.length; i++)
             {
                 if (this.data[i] != this.fillValue)
@@ -106,19 +108,18 @@ public class SimplePicMaker extends PicMaker
     
     /**
      * Makes the picture (array of pixels) from the data array.
-     * Flips the data about a horizontal axis - the data start in the south
-     * but the picture starts in the north
      */
     private void makePicture()
     {
         this.pixels = new byte[this.data.length];
         for (int i = 0; i < this.data.length; i++)
         {
-            int row = i / this.picWidth;
-            int col = i % this.picWidth;
-            int newRow = this.picHeight - 1 - row;
-            int newLoc = newRow * this.picWidth + col;
-            this.pixels[newLoc] = getColourIndex(this.data[i]);
+            //int row = i / this.picWidth;
+            //int col = i % this.picWidth;
+            //int newRow = this.picHeight - 1 - row;
+            //int newLoc = newRow * this.picWidth + col;
+            //this.pixels[newLoc] = getColourIndex(this.data[i]);
+            this.pixels[i] = getColourIndex(this.data[i]);
         }
     }
     

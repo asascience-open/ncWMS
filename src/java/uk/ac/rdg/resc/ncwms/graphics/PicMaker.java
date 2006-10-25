@@ -38,11 +38,13 @@ public abstract class PicMaker
      * @param data The raw data to turn into a picture
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
+     * @param fillValue The value to use for missing data
      * @param scaleMin The minimum value for the scale
      * @param scaleMax The maximum value for the scale
      * @throws IllegalArgumentException if width * height != data.length
      */
-    public PicMaker(float[] data, int width, int height, float scaleMin, float scaleMax)
+    public PicMaker(float[] data, int width, int height, float fillValue,
+        float scaleMin, float scaleMax)
     {
         if (data != null && width * height != data.length)
         {
@@ -56,7 +58,7 @@ public abstract class PicMaker
         this.scaleMin = scaleMin;
         this.scaleMax = scaleMax;
         this.opacity = 100;
-        this.fillValue = Float.NaN;
+        this.fillValue = fillValue;
     }
     
     /**
@@ -71,15 +73,6 @@ public abstract class PicMaker
             throw new IllegalArgumentException("Opacity must be in the range 0 to 100");
         }
         this.opacity = opacity;
-    }
-    
-    /**
-     * Sets a new value for the fill value that represents missing data and will
-     * be rendered as transparent pixels in the final picture
-     */
-    public void setFillValue(float newFillValue)
-    {
-        this.fillValue = newFillValue;
     }
     
     /**
