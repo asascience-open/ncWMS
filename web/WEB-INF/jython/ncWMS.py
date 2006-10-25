@@ -6,30 +6,28 @@ from capabilities import getCapabilities
 from getmap import getMap
 import config
 
-def wms(req, DatasetClass=None):
+class Dataset: pass # Simple class that will hold a dataset's title and location
+
+def wms(req):
     """ Does the WMS operation.
-       req = Apache request object (or fake object from Jython servlet)
-       DatasetClass = Class that inherits from AbstractDataset, used
-           for reading data and metadata """
+        req = mod_python request object (or FakeModPythonRequestObject
+        from Jython servlet) """
        
     try:
-        # If no datasetclass is specified we default to the cdms implementation
-        if DatasetClass is None:
-            import cdmsdataset
-            DatasetClass = cdmsdataset.CDMSDataset
         # Populate the dictionary that links unique IDs to dataset objects
         datasets = {}
         for d in config.datasets:
-            datasets[d[0]] = DatasetClass(d[1], d[2])
+            dataset = Dataset()
+            dataset.title = d[1]
+            dataset.location = d[2]
+            datasets[d[0]] = dataset # d[0] is the dataset's unique ID
         params = RequestParser(req.args)
         service = params.getParamValue("service")
         request = params.getParamValue("request")
         if service != "WMS":
             raise WMSException("SERVICE parameter must be WMS")
         if request == "GetCapabilities":
-            capdoc = getCapabilities(req, params, datasets)
-            req.content_type="text/xml"
-            req.write(capdoc)
+            getCapabilities(req, params, datasets)
         elif request == "GetMap":
             getMap(req, params, datasets)
         elif request == "GetFeatureInfo":

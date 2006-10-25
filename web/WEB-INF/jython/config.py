@@ -5,12 +5,13 @@
 datasets = [
     ['MRCS', 'POLCOMS MRCS data', 'C:\\data\\POLCOMS_MRCS_NOWCAST_20060731.nc'],
     ['OSTIA', 'OSTIA SST Analysis', 'C:\\data\\20061017-UKMO-L4UHfnd-GLOB-v01.nc'],
-    ['FOAM', 'FOAM one degree', 'C:\\data\\FOAM_one.ncml']
+    ['FOAM', 'FOAM one degree', 'C:\\data\\FOAM_one.ncml'],
+    ['Ifremer', 'Ifremer CORIOLIS data', 'C:\\data\\OA_20060830.nc']
 ]
-title = "Web Map Service for marine data"
+title = "Web Map Service for NetCDF data"
 url = "http://www.nerc-essc.ac.uk"
 
-### End of configuration: do not edit anything below this point
+### End of configuration: do not edit anything below this point ###
 
 WMS_VERSION = "1.3.0"
 XML_HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"

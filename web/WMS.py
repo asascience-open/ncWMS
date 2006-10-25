@@ -4,15 +4,14 @@ from javax.servlet.http import HttpServlet
 from javax.servlet import ServletException
 from java.net import URL
 
-from ncWMS import wms
-from nj22dataset import Nj22Dataset
+import ncWMS
 
-class FakeServerObject:
+class FakeModPythonServerObject:
     """ Class that fakes up the req.server mod_python object """
     def __init__(self, hostname):
         self.server_hostname = hostname
 
-class FakeApacheRequest:
+class FakeModPythonRequestObject:
     """ Class that wraps an HttpServletResponse to provide the necessary
         methods and properties of a mod_python request (req) object. 
         This allows us to use identical code for both mod_python and
@@ -25,7 +24,7 @@ class FakeApacheRequest:
         # not supported in Python 2.1
         self.content_type = "text/plain"
         reqURL = URL(request.getRequestURL().toString())
-        self.server = FakeServerObject("%s:%d" % (reqURL.getHost(), reqURL.getPort()))
+        self.server = FakeModPythonServerObject("%s:%d" % (reqURL.getHost(), reqURL.getPort()))
         self.unparsed_uri = str(reqURL.getPath())
  
     def write(self, str):
@@ -43,7 +42,7 @@ class WMS (HttpServlet):
 
     def doGet(self,request,response):
         """ Perform the WMS operation """
-        wms(FakeApacheRequest(request, response), Nj22Dataset)
+        ncWMS.wms(FakeModPythonRequestObject(request, response))
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")

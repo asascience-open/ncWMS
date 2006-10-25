@@ -2,13 +2,13 @@
 
 from wmsExceptions import *
 from config import *
-import javagraphics
+import javagraphics, nj22dataset # TODO import other modules for CDMS server
 
 def getMap(req, params, datasets):
     """ The GetMap operation.
-       req = Apache request object (or faked object from Jython servlet)
+       req = mod_python request object (or FakeModPythonRequestObject from Jython servlet)
        params = ncWMS.RequestParser object containing the request parameters
-       datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
+       datasets = dictionary of ncWMS.Datasets, indexed by unique id """
     
     version = params.getParamValue("version")
     if version != WMS_VERSION:
@@ -65,17 +65,18 @@ def getMap(req, params, datasets):
 
     # Find the source of the requested data
     dsAndVar = layers[0].split(LAYER_SEPARATOR)
-    if len(dsAndVar) != 2:
+    picData = None
+    if len(dsAndVar) == 2 and datasets.has_key(dsAndVar[0]):
+        location = datasets[dsAndVar[0]].location
+        varID = dsAndVar[1]
+        fillValue = 1e20 # Can't use NaN due to lack of portability
+        # Extract the data from the data source using the requested grid
+        picData = nj22dataset.readData(location, varID, grid, fillValue)
+        # TODO: cache the data array
+        # Turn the data into an image and output to the client
+        javagraphics.makePic(req, picData, width, height, fillValue)
+    if picData is None:
         raise LayerNotDefined(layers[0])
-    if datasets.has_key(dsAndVar[0]):
-        var = datasets[dsAndVar[0]].getVariable(dsAndVar[1])
-        if var is None:
-            raise LayerNotDefined(layers[0])
     
-    # Extract the data from the data source using the requested grid
-    fillValue = 1e20 # Can't use NaN due to lack of portability
-    picData = var.readData(grid, fillValue)
-    # TODO: cache the data array
-    
-    # Turn the data into an image and output to the client
-    javagraphics.makePic(req, picData, width, height, fillValue)
+    return
+

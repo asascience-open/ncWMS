@@ -5,11 +5,13 @@ except ImportError:
     from StringIO import StringIO
 
 import config, time
+import nj22dataset # TODO import other modules for CDMS server
 
 def getCapabilities(req, params, datasets):
     """ Returns the Capabilities document.
-       params = ncWMS.RequestParser object containing the request parameters
-       datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
+        req = mod_python request object or WMS.FakeModPythonRequest object
+        params = ncWMS.RequestParser object containing the request parameters
+        datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
 
     version = params.getParamValue("version", "")
     format = params.getParamValue("format", "")
@@ -77,7 +79,7 @@ def getCapabilities(req, params, datasets):
         output.write("<Layer>")
         output.write("<Title>%s</Title>" % datasets[dsid].title)
         # Now write the displayable data layers
-        vars = datasets[dsid].getVariables()
+        vars = nj22dataset.getVariableMetadata(datasets[dsid].location)
         for vid in vars.keys():
             output.write("<Layer>")
             output.write("<Name>%s/%s</Name>" % (dsid, vid))
@@ -129,6 +131,7 @@ def getCapabilities(req, params, datasets):
     output.write("</Capability>")
     output.write("</WMS_Capabilities>")
 
-    capdoc = output.getvalue()
+    req.content_type="text/xml"
+    req.write(output.getvalue())
     output.close() # Free the buffer
-    return capdoc
+    return
