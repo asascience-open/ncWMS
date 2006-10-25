@@ -4,9 +4,9 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-import config
+import config, time
 
-def getCapabilities(params, datasets):
+def getCapabilities(req, params, datasets):
     """ Returns the Capabilities document.
        params = ncWMS.RequestParser object containing the request parameters
        datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
@@ -18,7 +18,12 @@ def getCapabilities(params, datasets):
     
     output = StringIO()
     output.write(config.XML_HEADER)
-    output.write("<WMS_Capabilities version=\"" + config.WMS_VERSION + "\" xmlns=\"http://www.opengis.net/wms\"")
+    output.write("<WMS_Capabilities version=\"" + config.WMS_VERSION + "\"")
+    # UpdateSequence is always the current time, representing the fact
+    # that the capabilities doc is always generated dynamically
+    # TODO: change this to help caches
+    output.write(" updateSequence=\"%04d-%02d-%02dT%02d:%02d:%02dZ\"" % time.gmtime()[:-3])
+    output.write(" xmlns=\"http://www.opengis.net/wms\"")
     output.write(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
     # The next two lines should be commented out if you wish to load this document
     # in Cadcorp SIS from behind the University of Reading firewall
@@ -41,15 +46,15 @@ def getCapabilities(params, datasets):
     output.write("<Request>")
     output.write("<GetCapabilities>")
     output.write("<Format>text/xml</Format>")
-    # TODO: detect the full server context path
-    #output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
-    #    req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
+    url = "http://%s%s?" % (req.server.server_hostname, req.unparsed_uri.split("?")[0])
+    output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
+        url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetCapabilities>")
     output.write("<GetMap>")
     for format in config.SUPPORTED_IMAGE_FORMATS:
         output.write("<Format>%s</Format>" % format)
-    #output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"http://" +
-    #    req.server.server_hostname + "/godiva2cdat/godiva2.py/wms?\"/></Get></HTTP></DCPType>")
+    output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
+        url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
     output.write("</Request>")
     # TODO: support more exception types

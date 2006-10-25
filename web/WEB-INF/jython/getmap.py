@@ -1,8 +1,4 @@
 # Implements the GetMap operation
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 from wmsExceptions import *
 from config import *
@@ -79,7 +75,6 @@ def getMap(req, params, datasets):
     # Extract the data from the data source using the requested grid
     fillValue = 1e20 # Can't use NaN due to lack of portability
     picData = var.readData(grid, fillValue)
-    # TODO: close the data source
     # TODO: cache the data array
     
     # Turn the data into an image and output to the client

@@ -27,7 +27,7 @@ def wms(req, DatasetClass=None):
         if service != "WMS":
             raise WMSException("SERVICE parameter must be WMS")
         if request == "GetCapabilities":
-            capdoc = getCapabilities(params, datasets)
+            capdoc = getCapabilities(req, params, datasets)
             req.content_type="text/xml"
             req.write(capdoc)
         elif request == "GetMap":

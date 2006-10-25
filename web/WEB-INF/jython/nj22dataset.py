@@ -80,12 +80,14 @@ class Nj22Variable(AbstractVariable):
                 self.tValues.append(dateFormatter.toDateTimeStringISO(t))
 
         # Set the bounding box
-        # TODO: doesn't quite work properly yet - see EnhancedCoordAxis
+        # TODO: should take into account the cell bounds
         latLonRect = self.coordSys.getLatLonBoundingBox()
         lowerLeft = latLonRect.getLowerLeftPoint()
         minLon, minLat = (lowerLeft.getLongitude(), lowerLeft.getLatitude())
         upperRight = latLonRect.getUpperRightPoint()
         maxLon, maxLat = (upperRight.getLongitude(), upperRight.getLatitude())
+        if latLonRect.crossDateline():
+            minLon, maxLon = (-180, 180)
         self.bbox = (minLon, minLat, maxLon, maxLat)
 
     def readData(self, grid, fillValue=1e20):
