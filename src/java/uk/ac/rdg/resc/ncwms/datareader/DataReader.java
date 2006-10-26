@@ -36,10 +36,12 @@ import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
+import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.dataprovider.EnhancedCoordAxis;
 
 /**
  * Provides static methods for reading data and returning as float arrays.
- * Called from nj22dataset.py
+ * Called from nj22dataset.py.  Implemented in Java for efficiency.
  *
  * @author Jon Blower
  * $Revision$
@@ -49,6 +51,17 @@ import ucar.nc2.dataset.grid.GridDataset;
 public class DataReader
 {
     
+    /**
+     * Read an array of data from a NetCDF file and projects onto a rectangular
+     * lat-lon grid.
+     * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
+     * @param varID Unique identifier for the required variable in the file
+     * @param fillValue Value to use for missing data
+     * @param lonValues Array of longitude values
+     * @param latValues Array of latitude values
+     * @throws Exception if the variable is not in a lat-lon coordinate system,
+     * or if some other error occurs (file not found etc)
+     */
     public static float[] read(String location, String varID,
         float fillValue, float[] lonValues, float[] latValues)
         throws Exception
@@ -61,7 +74,6 @@ public class DataReader
             GeoGrid geogrid = gd.findGridByName(varID);
             if (geogrid == null)
             {
-                nc.close();
                 return null;
             }
             GridCoordSys coordSys = geogrid.getCoordinateSystem();
@@ -70,8 +82,10 @@ public class DataReader
                 throw new Exception("Can only read data from lat-lon coordinate systems");
             }
 
-            CoordinateAxis1D xAxis = (CoordinateAxis1D)coordSys.getXHorizAxis();
-            CoordinateAxis1D yAxis = (CoordinateAxis1D)coordSys.getYHorizAxis();
+            // EnhancedCoordAxis gives us a fast method for reading index values
+            EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
+            EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
+            
             // TODO: handle t and z properly
             Range tRange = new Range(0, 0);
             Range zRange = new Range(0, 0);
@@ -81,7 +95,7 @@ public class DataReader
             int[] xIndices = new int[lonValues.length];
             for (int i = 0; i < lonValues.length; i++)
             {
-                xIndices[i] = xAxis.findCoordElement(lonValues[i]);
+                xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
                 if (xIndices[i] >= 0)
                 {
                     if (xIndices[i] < minX) minX = xIndices[i];
@@ -96,7 +110,7 @@ public class DataReader
             // data each time from minX to maxX
             for (int j = 0; j < latValues.length; j++)
             {
-                int yIndex = yAxis.findCoordElement(latValues[j]);
+                int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
                 if (yIndex >= 0)
                 {
                     Range yRange = new Range(yIndex, yIndex);
@@ -124,6 +138,15 @@ public class DataReader
                 nc.close();
             }
         }
+    }
+    
+    /**
+     * Finds the nearest index along the given axis that corresponds to the 
+     * given value.  More efficient than CoordinateAxis1D.findCoordElement()
+     */
+    public static int findCoordElement(CoordinateAxis1D axis, double val)
+    {
+        return axis.findCoordElement(val);
     }
     
     public static void main(String[] args) throws Exception

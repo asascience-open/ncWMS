@@ -73,10 +73,11 @@ def getMap(req, params, datasets):
         # Extract the data from the data source using the requested grid
         picData = nj22dataset.readData(location, varID, grid, fillValue)
         # TODO: cache the data array
-        # Turn the data into an image and output to the client
-        javagraphics.makePic(req, picData, width, height, fillValue)
     if picData is None:
         raise LayerNotDefined(layers[0])
+    else:
+        # Turn the data into an image and output to the client
+        javagraphics.makePic(req, picData, width, height, fillValue)
     
     return
 
