@@ -6,14 +6,6 @@
             <name>ncWMS</name>
             <minimum-ant-version>1.6</minimum-ant-version>
             <web-module-libraries>
-                <library files="5">
-                    <file>${libs.JAXB.classpath}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="2">
-                    <file>${libs.dom4j.classpath}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
                 <library files="1">
                     <file>${libs.NetCDF.classpath}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
@@ -23,7 +15,12 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>
-            <web-module-additional-libraries/>
+            <web-module-additional-libraries>
+                <library dirs="1">
+                    <file>${file.reference.jython-2.1-Lib}</file>
+                    <path-in-war>WEB-INF/lib/Lib</path-in-war>
+                </library>
+            </web-module-additional-libraries>
             <source-roots>
                 <root id="src.dir"/>
             </source-roots>

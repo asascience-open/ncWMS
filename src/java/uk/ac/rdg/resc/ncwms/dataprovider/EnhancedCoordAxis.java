@@ -31,7 +31,6 @@ package uk.ac.rdg.resc.ncwms.dataprovider;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.exceptions.NcWMSConfigException;
 
 /**
  * Enhances a {@link CoordinateAxis} by providing an efficient means of finding
@@ -51,11 +50,11 @@ public abstract class EnhancedCoordAxis
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
      * latitude or longitude axis
      * @return an EnhancedCoordAxis
-     * @throws NcWMSConfigException if the provided axis cannot be turned into
+     * @throws Exception if the provided axis cannot be turned into
      * an EnhancedCoordAxis
      */
     public static EnhancedCoordAxis create(CoordinateAxis axis)
-        throws NcWMSConfigException
+        throws Exception
     {
         if (axis instanceof CoordinateAxis1D)
         {
@@ -71,7 +70,7 @@ public abstract class EnhancedCoordAxis
         }
         else
         {
-            throw new NcWMSConfigException("Cannot yet deal with coordinate" +
+            throw new Exception("Cannot yet deal with coordinate" +
                 " axes of >1 dimension");
         }
     }

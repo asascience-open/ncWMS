@@ -30,7 +30,6 @@ package uk.ac.rdg.resc.ncwms.dataprovider;
 
 import ucar.ma2.Array;
 import ucar.ma2.Index;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSInternalError;
 
 /**
  * A chunk of data, as read by DataLayer.getScanline().  The purpose of this
@@ -51,9 +50,8 @@ public class DataChunk
     /**
      * Creates a new instance of DataChunk from an {@link Array}
      * @param data {@link Array} of data as read by Netcdf libaries
-     * @throws WMSInternalError if the type of the data is not supported
      */
-    public DataChunk(Array data) throws WMSInternalError
+    public DataChunk(Array data)
     {
         this.array = data;
         this.index = this.array.getIndex();

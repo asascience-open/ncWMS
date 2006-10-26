@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.util.Arrays;
-import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -37,6 +36,7 @@ import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.dataprovider.DataChunk;
 import uk.ac.rdg.resc.ncwms.dataprovider.EnhancedCoordAxis;
 
 /**
@@ -115,15 +115,16 @@ public class DataReader
                 {
                     Range yRange = new Range(yIndex, yIndex);
                     GeoGrid subset = geogrid.subset(tRange, zRange, yRange, xRange);
-                    Array array = subset.readYXData(0, 0).reduce();
-                    float[] rawData = (float[])array.getStorage();
+                    DataChunk dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
+                    //float[] rawData = (float[])array.getStorage();
                     // Now copy the scanline's data to the picture array
                     for (int i = 0; i < xIndices.length; i++)
                     {
                         if (xIndices[i] >= 0)
                         {
                             int picIndex = j * lonValues.length + i;
-                            picData[picIndex] = rawData[xIndices[i] - minX];
+                            //picData[picIndex] = rawData[xIndices[i] - minX];
+                            picData[picIndex] = dataChunk.getValue(xIndices[i] - minX);
                         }
                     }
                 }
