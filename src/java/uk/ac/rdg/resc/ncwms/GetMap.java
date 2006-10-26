@@ -192,7 +192,7 @@ public class GetMap
         {
             resp.setContentType("image/png");
             PicMaker picMaker = new SimplePicMaker(mapData,
-                crs.getPictureWidth(), crs.getPictureHeight());
+                crs.getPictureWidth(), crs.getPictureHeight(), Float.NaN);
             picMaker.createAndOutputPicture(resp.getOutputStream());
             resp.getOutputStream().close();
         }

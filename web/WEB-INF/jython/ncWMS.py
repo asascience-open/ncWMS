@@ -1,5 +1,4 @@
 # Entry point for the ncWMS (both CDAT and nj22 implementations)
-import re
 
 from wmsExceptions import *
 from capabilities import getCapabilities

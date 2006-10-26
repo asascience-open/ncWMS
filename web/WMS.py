@@ -1,4 +1,4 @@
-# testJythonServlet source file (Jython servlet)
+# Entry point (Jython servlet) for the WMS
 
 from javax.servlet.http import HttpServlet
 from javax.servlet import ServletException
