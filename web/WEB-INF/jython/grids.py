@@ -1,5 +1,6 @@
 # Code relevant to grids, i.e. the array of points that make up the
 # image in a GetMap request
+import math
 
 class AbstractGrid:
     """ Abstract superclass for all grids.  All subclasses must provide
@@ -50,5 +51,38 @@ class MercatorGrid(AbstractGrid):
         # TODO: lat axes not correct!
         dy = (maxLat - minLat) / height
         # The latitude axis is flipped
-        self.latValues = [(minLat + (height - j - 0.5) * dy) for j in xrange(height)]
+        self.latValues = _getMercatorLatitudeArray(minLat, maxLat, height)
         self.size = width * height
+
+def _getMercatorLatitudeArray(minlat, maxlat, n):
+    """ Returns an array (list) of latitudes in Mercator projection where
+        the bounding box has the given minimum and maximum latitudes, and n
+        is the number of points in the array. """
+    # Get the minimum and maximum y coordinates, being careful to avoid
+    # the singularities at lat = +- 90
+    miny = _latToY((minlat, -89.9999)[minlat < -89.9999])
+    maxy = _latToY((maxlat, 89.9999)[maxlat > 89.9999])
+    dy = (maxy - miny) / n
+    # Remember that the latitude axis is flipped
+    return [_yToLat(miny + ((n - j - 1) + 0.5) * dy) for j in xrange(n)]
+
+def _yToLat(y):
+    """ Calculates the latitude (in degrees) of a given y coordinate.
+        lat = arctan(sinh(y)) """
+    return _toDegrees(math.atan(math.sinh(y)))
+
+def _latToY(lat):
+    """ Calculates the y coordinate of a given latitude value in degrees.
+        y = ln(tan(pi/4 + lat/2)) """
+    return math.log(math.tan(math.pi / 4 +_toRadians(lat) / 2))
+
+def _toDegrees(rad):
+    """ Converts the given radians value to degrees (math.degrees is not present
+        in Jython 2.1 """
+    return rad * (180 / math.pi)
+
+def _toRadians(deg):
+    """ Converts the given degrees value to radians (math.radians is not present
+        in Jython 2.1 """
+    return deg * (math.pi / 180)
+    

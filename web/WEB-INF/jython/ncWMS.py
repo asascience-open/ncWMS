@@ -1,4 +1,4 @@
-# Entry point for the ncWMS (both CDAT and nj22 implementations)
+    # Entry point for the ncWMS (both CDAT and nj22 implementations)
 import re
 
 from wmsExceptions import *
@@ -48,6 +48,7 @@ class RequestParser:
         """ queryString is the unprocessed query string from the URL """
 
         # Regular expressions for replacing URL escape codes
+        # TODO there are many more
         self._urlCodes = {}
         self._urlCodes[re.compile("%2f", re.IGNORECASE)] = "/"
         self._urlCodes[re.compile("%20", re.IGNORECASE)] = " "
@@ -58,7 +59,8 @@ class RequestParser:
                 keyAndVal = kvp.split("=")
                 if len(keyAndVal) == 2:
                     (key, value) = keyAndVal
-                    # We always store the key in lower case
+                    # We always store the key in lower case and escape
+                    # the URL % codes
                     self._params[key.lower()] = self._escapeURLCodes(value)
 
     def _escapeURLCodes(self, str):

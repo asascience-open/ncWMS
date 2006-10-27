@@ -31,11 +31,11 @@ def getMap(req, params, datasets):
     
     bboxEls = params.getParamValue("bbox").split(",")
     if len(bboxEls) !=4:
-        raise WMSException("Invalid bounding box format")
+        raise WMSException("Invalid bounding box format: need four elements")
     try:
         bbox = [float(el) for el in bboxEls]
     except ValueError:
-        raise WMSException("Invalid bounding box format")
+        raise WMSException("Invalid bounding box format: all elements must be numeric")
     if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
         raise WMSException("Invalid bounding box format")
     
