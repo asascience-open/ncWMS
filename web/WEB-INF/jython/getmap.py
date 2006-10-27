@@ -62,6 +62,17 @@ def getMap(req, params, datasets):
     tValue = params.getParamValue("time", "")
     if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
         raise WMSException("You may only request a single value of TIME")
+
+    # Get the scale for colouring the map: this is an extension to the
+    # WMS specification
+    scale = params.getParamValue("scale", "0,0") # 0,0 signals auto-scale
+    if len(scale.split(",")) == 2:
+        try:
+            scaleMin, scaleMax = [float(x) for x in scale.split(",")]
+        except ValueError:
+            raise WMSException("Invalid number in SCALE parameter")
+    else:     
+        raise WMSException("The SCALE parameter must be of the form SCALEMIN,SCALEMAX")
     
     # Generate a grid of lon,lat points, one for each image pixel
     crs = params.getParamValue("crs")
@@ -78,6 +89,7 @@ def getMap(req, params, datasets):
         location = datasets[dsAndVar[0]].location
         varID = dsAndVar[1]
         fillValue = 1e20 # Can't use NaN due to lack of portability
+        # TODO: check the cache of extracted data arrays
         # Extract the data from the data source using the requested grid
         picData = nj22dataset.readData(location, varID, tValue, zValue, grid, fillValue)
         # TODO: cache the data array
@@ -85,7 +97,7 @@ def getMap(req, params, datasets):
         raise LayerNotDefined(layers[0])
     else:
         # Turn the data into an image and output to the client
-        javagraphics.makePic(req, picData, width, height, fillValue)
+        javagraphics.makePic(req, picData, width, height, fillValue, scaleMin, scaleMax)
     
     return
 

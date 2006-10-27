@@ -104,6 +104,8 @@ public class DataReader
             
             // TODO: handle t properly
             Range tRange = new Range(0, 0);
+            
+            // Find the index along the depth axis
             int zIndex = 0; // Default value of z is the first in the axis
             if (zValue != null && !zValue.equals("") && coordSys.hasVerticalAxis())
             {
@@ -185,7 +187,8 @@ public class DataReader
     }
     
     /**
-     * Finds the index of a certain z value by brute-force search
+     * Finds the index of a certain z value by brute-force search.  We can afford
+     * to be inefficient here because z axes are not likely to be large.
      * @param zValues Array of values of the z coordinate
      * @param targetVal Value to search for
      * @param zIsPositive True if z values increase upwards

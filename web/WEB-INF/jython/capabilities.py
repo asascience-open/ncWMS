@@ -118,6 +118,8 @@ def getCapabilities(req, params, datasets):
             # Set the time dimension
             if vars[vid].tValues is not None:
                 output.write("<Dimension name=\"time\" units=\"ISO8601\">")
+                # If we change this to support the "current" attribute
+                # we must also change the data reading code
                 firstTime = 1
                 for t in vars[vid].tValues:
                     if firstTime:
