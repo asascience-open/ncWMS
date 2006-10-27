@@ -68,7 +68,11 @@ public class DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Open the dataset but don't enhance it
+            // Open the dataset but don't enhance it.  We do this to avoid 
+            // the performance penalty of unpacking data and checking for
+            // missing values for every data point we read.  We will create
+            // and enhanced variable and use this for unpacking and missing-value
+            // checks, just for the data points we need to display.
             nc = NetcdfDataset.openDataset(location, false, null);
             // Add the coordinate systems
             CoordSysBuilder.addCoordinateSystems(nc, null);
@@ -78,15 +82,13 @@ public class DataReader
             {
                 return null;
             }
-            // Get an enhanced version of the variable
-            // TODO is getRootGroup() OK here?
-            VariableDS enhanced = new VariableDS(nc.getRootGroup(),
-                geogrid.getVariable().getOriginalVariable(), true);
             GridCoordSys coordSys = geogrid.getCoordinateSystem();
             if (!coordSys.isLatLon())
             {
                 throw new Exception("Can only read data from lat-lon coordinate systems");
             }
+            // Get an enhanced version of the variable for fast reading of data
+            EnhanceScaleMissingImpl enhanced = new EnhanceScaleMissingImpl((VariableDS)geogrid.getVariable());
 
             // EnhancedCoordAxis gives us a fast method for reading index values
             EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
@@ -120,6 +122,8 @@ public class DataReader
                 if (yIndex >= 0)
                 {
                     Range yRange = new Range(yIndex, yIndex);
+                    // Read a chunk of data - values will not be unpacked or
+                    // checked for missing values yet
                     GeoGrid subset = geogrid.subset(tRange, zRange, yRange, xRange);
                     DataChunk dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
                     // Now copy the scanline's data to the picture array
@@ -129,9 +133,16 @@ public class DataReader
                         {
                             int picIndex = j * lonValues.length + i;
                             float val = dataChunk.getValue(xIndices[i] - minX);
-                            if (isValidData(enhanced, val))
+                            // We unpack and check for missing values just for 
+                            // the points we need to display.
+                            float pixel = (float)enhanced.convertScaleOffsetMissing(val);
+                            if (Float.isNaN(pixel))
                             {
-                                picData[picIndex] = (float)enhanced.convertScaleOffsetMissing(val);
+                                picData[picIndex] = fillValue;
+                            }
+                            else
+                            {
+                                picData[picIndex] = pixel;
                             }
                         }
                     }
@@ -147,15 +158,6 @@ public class DataReader
                 nc.close();
             }
         }
-    }
-    
-    private static boolean isValidData(VariableDS enhanced, float val)
-    {
-        if (enhanced.hasFillValue() && enhanced.isFillValue(val))
-        {
-            return false;
-        }
-        return true;
     }
     
     public static void main(String[] args) throws Exception

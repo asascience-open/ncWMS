@@ -2,14 +2,11 @@
 from ucar.nc2.dataset import NetcdfDataset
 from ucar.nc2.dataset.grid import GridDataset
 from ucar.nc2.units import DateFormatter
-from ucar.ma2 import Range
 
 from java.lang import Integer
 from java.util import Arrays
 
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
-from uk.ac.rdg.resc.ncwms.datareader import EnhancedCoordAxis
-from ucar.unidata.geoloc import LatLonPointImpl
 
 import jarray
 
@@ -88,69 +85,3 @@ def readData(location, varID, grid, fillValue=1e20):
     if not grid.isLatLon:
         raise "Can only read onto images in lat-lon projections"
     return DataReader.read(location, varID, fillValue, grid.lonValues, grid.latValues)
-
-    (nc, geogrid, coordSys) = openDataset(location, varID)
-    if not coordSys.isLatLon():
-        raise "Can only read data from lat-lon coordinate systems"
-
-    xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis()) # These should both be instances
-    yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis()) # of CoordinateAxis1D
-    # TODO: handle t and z properly
-    tRange = Range(0, 0)
-    zRange = Range(0, 0)
-    # Find the range of x indices
-    minX = Integer.MAX_VALUE
-    maxX = -Integer.MAX_VALUE
-    xIndices = []
-    for lon in grid.lonValues:
-        xIndex = xAxis.getIndex(LatLonPointImpl(0.0, lon))
-        xIndices.append(xIndex)
-        if xIndex >= 0:
-            if xIndex < minX : minX = xIndex
-            if xIndex > maxX : maxX = xIndex
-    xRange = Range(minX, maxX)
-    # Create an array to hold the data
-    # TODO: not sure this is the best way to do this
-    picData = makePicData(grid, fillValue)
-    # Cycle through the latitude values, extracting a scanline of
-    # data each time from minX to maxX
-    for j in xrange(len(grid.latValues)):
-        yIndex = yAxis.getIndex(LatLonPointImpl(grid.latValues[j], 0.0))
-        if yIndex >= 0:
-            yRange = Range(yIndex, yIndex)
-            subset = getSubset(geogrid, tRange, zRange, yRange, xRange)
-            array = readScanline(subset)
-            rawData = array.getStorage()
-            # Now copy the scanline's data to the picture array
-            for i in xrange(len(xIndices)):
-                if xIndices[i] >= 0:
-                    picIndex = j * grid.width + i
-                    picData[picIndex] = rawData[xIndices[i] - minX]
-
-    # Close the source file and return the data
-    nc.close()
-    return picData
-
-# Provided as separate functions to aid profiling
-def openDataset(location, varID):
-    nc = NetcdfDataset.openDataset(location)
-    gd = GridDataset(nc)
-    geogrid = gd.findGridByName(varID)
-    if geogrid is not None:
-        coordSys = geogrid.getCoordinateSystem()
-    return (nc, geogrid, coordSys)
-
-def findCoordElement(axis, val):
-    return axis.findCoordElement(val)
-
-def makePicData(grid, fillValue):
-    picData = jarray.zeros(grid.width * grid.height, 'f')
-    Arrays.fill(picData, fillValue)
-    return picData
-
-def getSubset(geogrid, tRange, zRange, yRange, xRange):
-    return geogrid.subset(tRange, zRange, yRange, xRange)
-
-def readScanline(subset):
-    return subset.readYXData(0, 0).reduce()
-    
