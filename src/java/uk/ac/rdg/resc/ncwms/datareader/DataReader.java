@@ -30,14 +30,13 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.util.Arrays;
 import ucar.ma2.Range;
-import ucar.nc2.Variable;
+import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPointImpl;
-import uk.ac.rdg.resc.ncwms.dataprovider.DataChunk;
-import uk.ac.rdg.resc.ncwms.dataprovider.EnhancedCoordAxis;
 
 /**
  * Provides static methods for reading data and returning as float arrays.
@@ -69,13 +68,20 @@ public class DataReader
         NetcdfDataset nc = null;
         try
         {
-            nc = NetcdfDataset.openDataset(location);
+            // Open the dataset but don't enhance it
+            nc = NetcdfDataset.openDataset(location, false, null);
+            // Add the coordinate systems
+            CoordSysBuilder.addCoordinateSystems(nc, null);
             GridDataset gd = new GridDataset(nc);
             GeoGrid geogrid = gd.findGridByName(varID);
             if (geogrid == null)
             {
                 return null;
             }
+            // Get an enhanced version of the variable
+            // TODO is getRootGroup() OK here?
+            VariableDS enhanced = new VariableDS(nc.getRootGroup(),
+                geogrid.getVariable().getOriginalVariable(), true);
             GridCoordSys coordSys = geogrid.getCoordinateSystem();
             if (!coordSys.isLatLon())
             {
@@ -108,22 +114,25 @@ public class DataReader
             Arrays.fill(picData, fillValue);
             // Cycle through the latitude values, extracting a scanline of
             // data each time from minX to maxX
-            SimpleGeoGrid sgg = new SimpleGeoGrid(geogrid);
             for (int j = 0; j < latValues.length; j++)
             {
                 int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
                 if (yIndex >= 0)
                 {
                     Range yRange = new Range(yIndex, yIndex);
-                    DataChunk dataChunk = sgg.readDataChunk(tRange, zRange,
-                        yRange, xRange);
+                    GeoGrid subset = geogrid.subset(tRange, zRange, yRange, xRange);
+                    DataChunk dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
                     // Now copy the scanline's data to the picture array
                     for (int i = 0; i < xIndices.length; i++)
                     {
                         if (xIndices[i] >= 0)
                         {
                             int picIndex = j * lonValues.length + i;
-                            picData[picIndex] = dataChunk.getValue(xIndices[i] - minX);
+                            float val = dataChunk.getValue(xIndices[i] - minX);
+                            if (isValidData(enhanced, val))
+                            {
+                                picData[picIndex] = (float)enhanced.convertScaleOffsetMissing(val);
+                            }
                         }
                     }
                 }
@@ -138,6 +147,15 @@ public class DataReader
                 nc.close();
             }
         }
+    }
+    
+    private static boolean isValidData(VariableDS enhanced, float val)
+    {
+        if (enhanced.hasFillValue() && enhanced.isFillValue(val))
+        {
+            return false;
+        }
+        return true;
     }
     
     public static void main(String[] args) throws Exception

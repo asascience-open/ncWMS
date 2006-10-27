@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.dataprovider;
+package uk.ac.rdg.resc.ncwms.datareader;
 
 /**
  * Simple class holding the x and y coordinates of a point in a source

@@ -8,7 +8,7 @@ from java.lang import Integer
 from java.util import Arrays
 
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
-from uk.ac.rdg.resc.ncwms.dataprovider import EnhancedCoordAxis
+from uk.ac.rdg.resc.ncwms.datareader import EnhancedCoordAxis
 from ucar.unidata.geoloc import LatLonPointImpl
 
 import jarray
