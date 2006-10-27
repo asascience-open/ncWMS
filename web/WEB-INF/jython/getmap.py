@@ -54,6 +54,14 @@ def getMap(req, params, datasets):
     format = params.getParamValue("format")
     if format not in SUPPORTED_IMAGE_FORMATS:
         raise InvalidFormat(format)
+
+    zValue = params.getParamValue("elevation", "")
+    if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
+        raise WMSException("You may only request a single value of ELEVATION")
+
+    tValue = params.getParamValue("time", "")
+    if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
+        raise WMSException("You may only request a single value of TIME")
     
     # Generate a grid of lon,lat points, one for each image pixel
     crs = params.getParamValue("crs")
@@ -71,7 +79,7 @@ def getMap(req, params, datasets):
         varID = dsAndVar[1]
         fillValue = 1e20 # Can't use NaN due to lack of portability
         # Extract the data from the data source using the requested grid
-        picData = nj22dataset.readData(location, varID, grid, fillValue)
+        picData = nj22dataset.readData(location, varID, tValue, zValue, grid, fillValue)
         # TODO: cache the data array
     if picData is None:
         raise LayerNotDefined(layers[0])

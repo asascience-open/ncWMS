@@ -49,13 +49,27 @@ class InvalidFormat(WMSException):
     """ Exception that is raised when a client requests an unsupported
        image format """
     def __init__(self, format):
-        WMSException.__init__(self, "The image format \"" + format + "\" is not supported by this server",
-            "InvalidFormat")
+        WMSException.__init__(self, "The image format \"" + format +
+            "\" is not supported by this server", "InvalidFormat")
 
 class LayerNotDefined(WMSException):
     """ Exception that is raised when a client requests a layer that is not
         provided by the server """
     def __init__(self, layer):
-        WMSException.__init__(self, "The layer \"" + layer + "\" is not provided by this server",
-            "LayerNotDefined")
+        WMSException.__init__(self, "The layer \"" + layer +
+            "\" is not provided by this server", "LayerNotDefined")
 
+class MissingDimensionValue(WMSException):
+    """ Exception that is raised when a client fails to provide a value
+        for a dimension that does not have a default value """
+    def __init__(self, dimName):
+        WMSException.__init__(self, "You must provide a value for the " +
+            dimName.upper() + " dimension", "MissingDimensionValue")
+
+class InvalidDimensionValue(WMSException):
+    """ Exception that is raised when a client provides an invalid
+        value for a dimension """
+    def __init__(self, dimName, value):
+        WMSException.__init__(self, "The value \"" + str(value) +
+            "\" is not valid for the " + dimName.upper() + " dimension",
+            "InvalidDimensionValue")

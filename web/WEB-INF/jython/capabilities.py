@@ -101,6 +101,10 @@ def getCapabilities(req, params, datasets):
             if vars[vid].zValues is not None:
                 output.write("<Dimension name=\"elevation\" units=\"%s\"" 
                     % vars[vid].zUnits)
+                # Use the first value in the array as the default
+                # If the default value is removed, you also need to edit
+                # the data reading code (e.g. DataReader.java) to
+                # disallow default z values
                 output.write(" default=\"%s\">" % vars[vid].zValues[0])
                 firstTime = 1
                 for z in vars[vid].zValues:

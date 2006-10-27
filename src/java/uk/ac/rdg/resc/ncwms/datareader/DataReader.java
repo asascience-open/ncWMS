@@ -28,15 +28,20 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.io.IOException;
 import java.util.Arrays;
+import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordSysBuilder;
+import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
+import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
  * Provides static methods for reading data and returning as float arrays.
@@ -53,17 +58,19 @@ public class DataReader
     /**
      * Read an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.
+     * 
      * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
      * @param varID Unique identifier for the required variable in the file
-     * @param fillValue Value to use for missing data
-     * @param lonValues Array of longitude values
+     * @param tValue The value of time as specified by the client
+     * @param zValue The value of elevation as specified by the client
      * @param latValues Array of latitude values
-     * @throws Exception if the variable is not in a lat-lon coordinate system,
-     * or if some other error occurs (file not found etc)
+     * @param lonValues Array of longitude values
+     * @param fillValue Value to use for missing data
+     * @throws WMSExceptionInJava if an error occurs
      */
     public static float[] read(String location, String varID,
-        float fillValue, float[] lonValues, float[] latValues)
-        throws Exception
+        String tValue, String zValue, float[] latValues, float[] lonValues,
+        float fillValue) throws WMSExceptionInJava
     {
         NetcdfDataset nc = null;
         try
@@ -83,9 +90,10 @@ public class DataReader
                 return null;
             }
             GridCoordSys coordSys = geogrid.getCoordinateSystem();
+            coordSys.isZPositive();
             if (!coordSys.isLatLon())
             {
-                throw new Exception("Can only read data from lat-lon coordinate systems");
+                throw new WMSExceptionInJava("Can only read data from lat-lon coordinate systems");
             }
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = new EnhanceScaleMissingImpl((VariableDS)geogrid.getVariable());
@@ -94,9 +102,16 @@ public class DataReader
             EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
             EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
             
-            // TODO: handle t and z properly
+            // TODO: handle t properly
             Range tRange = new Range(0, 0);
-            Range zRange = new Range(0, 0);
+            int zIndex = 0; // Default value of z is the first in the axis
+            if (zValue != null && !zValue.equals("") && coordSys.hasVerticalAxis())
+            {
+                zIndex = findZIndex(coordSys.getVerticalAxis().getCoordValues(),
+                    zValue, coordSys.isZPositive());
+            }
+            Range zRange = new Range(zIndex, zIndex);
+            
             // Find the range of x indices
             int minX = Integer.MAX_VALUE;
             int maxX = -Integer.MAX_VALUE;
@@ -114,6 +129,7 @@ public class DataReader
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
+            DataChunk dataChunk;
             // Cycle through the latitude values, extracting a scanline of
             // data each time from minX to maxX
             for (int j = 0; j < latValues.length; j++)
@@ -125,7 +141,7 @@ public class DataReader
                     // Read a chunk of data - values will not be unpacked or
                     // checked for missing values yet
                     GeoGrid subset = geogrid.subset(tRange, zRange, yRange, xRange);
-                    DataChunk dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
+                    dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
                     // Now copy the scanline's data to the picture array
                     for (int i = 0; i < xIndices.length; i++)
                     {
@@ -136,14 +152,7 @@ public class DataReader
                             // We unpack and check for missing values just for 
                             // the points we need to display.
                             float pixel = (float)enhanced.convertScaleOffsetMissing(val);
-                            if (Float.isNaN(pixel))
-                            {
-                                picData[picIndex] = fillValue;
-                            }
-                            else
-                            {
-                                picData[picIndex] = pixel;
-                            }
+                            picData[picIndex] = Float.isNaN(pixel) ? fillValue : pixel;
                         }
                     }
                 }
@@ -151,12 +160,62 @@ public class DataReader
 
             return picData;
         }
+        catch(IOException e)
+        {
+            throw new WMSExceptionInJava("IOException: " + e.getMessage());
+        }
+        catch(InvalidRangeException ire)
+        {
+            throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
+        }
         finally
         {
             if (nc != null)
             {
-                nc.close();
+                try
+                {
+                    nc.close();
+                }
+                catch (IOException ex)
+                {
+                    // Ignore this error
+                }
             }
+        }
+    }
+    
+    /**
+     * Finds the index of a certain z value by brute-force search
+     * @param zValues Array of values of the z coordinate
+     * @param targetVal Value to search for
+     * @param zIsPositive True if z values increase upwards
+     * @return the z index corresponding with the given targetVal, or -1 if the
+     * targetVal does not match (within tolerance) a given axis point
+     * @throws InvalidDimensionValueException if targetVal could not be found
+     * within zValues
+     */
+    private static int findZIndex(double[] zValues, String targetVal,
+        boolean zIsPositive) throws InvalidDimensionValueException
+    {
+        try
+        {
+            float zVal = Float.parseFloat(targetVal);
+            if (!zIsPositive)
+            {
+                zVal = -zVal;
+            }
+            for (int i = 0; i < zValues.length; i++)
+            {
+                if (Math.abs((zValues[i] - zVal) / zVal) < 1e-5)
+                {
+                    return i;
+                }
+            }
+            throw new InvalidDimensionValueException("elevation", targetVal);
+        }
+        catch(NumberFormatException nfe)
+        {
+            throw new InvalidDimensionValueException("elevation", targetVal);
         }
     }
     
@@ -172,6 +231,6 @@ public class DataReader
             lonValues[i] = i * 90.0f / 256 - 90;
             latValues[i] = i * 90.0f / 256;
         }
-        float[] data = read(location, varID, Float.NaN, lonValues, latValues);
+        float[] data = read(location, varID, "tvalue", "zvalue", latValues, lonValues, Float.NaN);
     }
 }

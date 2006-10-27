@@ -7,7 +7,9 @@ from java.lang import Integer
 from java.util import Arrays
 
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
+from uk.ac.rdg.resc.ncwms.exceptions import *
 
+from wmsExceptions import *
 import jarray
 
 class VariableMetadata: pass # simple class containing a variable's metadata
@@ -67,7 +69,7 @@ def getVariableMetadata(location):
     return vars
 
 
-def readData(location, varID, grid, fillValue=1e20):
+def readData(location, varID, tValue, zValue, grid, fillValue=1e20):
     """ Reads data from this variable, projected on to the given grid.
         location = location of dataset (full file path, OPeNDAP URL etc)
         varID = unique ID for a variable
@@ -75,13 +77,14 @@ def readData(location, varID, grid, fillValue=1e20):
         fillvalue = value to use for missing data
         returns an array of floating-point numbers representing the data,
             or None if the variable with id varID does not exist. """
-
-    #nc, geogrid, coordSys = openDataset(location, varID)
-    #if geogrid is None:
-    #    nc.close()
-    #    return None
     
-    # TODO: relax these limitations:
     if not grid.isLatLon:
-        raise "Can only read onto images in lat-lon projections"
-    return DataReader.read(location, varID, fillValue, grid.lonValues, grid.latValues)
+        # TODO: relax this limitation:
+        raise "Can only read data onto grids in lat-lon projections"
+    try:
+        return DataReader.read(location, varID, tValue, zValue,
+            grid.latValues, grid.lonValues, fillValue)
+    except InvalidDimensionValueException, e:
+        raise InvalidDimensionValue(e.getDimName(), e.getValue())
+    except WMSExceptionInJava, e:
+        raise WMSException(e.getMessage())

@@ -50,11 +50,10 @@ public abstract class EnhancedCoordAxis
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
      * latitude or longitude axis
      * @return an EnhancedCoordAxis
-     * @throws Exception if the provided axis cannot be turned into
+     * @throws IllegalArgumentException if the provided axis cannot be turned into
      * an EnhancedCoordAxis
      */
     public static EnhancedCoordAxis create(CoordinateAxis axis)
-        throws Exception
     {
         if (axis instanceof CoordinateAxis1D)
         {
@@ -70,7 +69,7 @@ public abstract class EnhancedCoordAxis
         }
         else
         {
-            throw new Exception("Cannot yet deal with coordinate" +
+            throw new IllegalArgumentException("Cannot yet deal with coordinate" +
                 " axes of >1 dimension");
         }
     }
