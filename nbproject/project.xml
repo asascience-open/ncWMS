@@ -15,12 +15,7 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>
-            <web-module-additional-libraries>
-                <library dirs="1">
-                    <file>${file.reference.jython-2.1-Lib}</file>
-                    <path-in-war>WEB-INF/lib/Lib</path-in-war>
-                </library>
-            </web-module-additional-libraries>
+            <web-module-additional-libraries/>
             <source-roots>
                 <root id="src.dir"/>
             </source-roots>

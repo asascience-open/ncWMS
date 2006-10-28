@@ -393,9 +393,6 @@
         <copy-ear-war file="${libs.NetCDF.classpath}" propname="included.lib.libs.NetCDF.classpath.X"/>
         <basename property="included.lib.file.reference.jython.jar" file="${file.reference.jython.jar}"/>
         <copy-ear-war file="${file.reference.jython.jar}" propname="included.lib.file.reference.jython.jar.X"/>
-        <copy todir="${build.web.dir.real}/WEB-INF/lib/Lib">
-            <fileset dir="${file.reference.jython-2.1-Lib}" includes="**/*"/>
-        </copy>
         <mkdir dir="${build.web.dir.real}/META-INF"/>
         <manifest file="${build.web.dir.real}/META-INF/MANIFEST.MF" mode="update">
             <attribute name="Class-Path" value="${included.lib.libs.NetCDF.classpath} ${included.lib.file.reference.jython.jar} "/>
@@ -405,9 +402,6 @@
     <target name="library-inclusion-in-archive" depends="init" unless="dist.ear.dir">
         <copy file="${libs.NetCDF.classpath}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.jython.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
-        <copy todir="${build.web.dir.real}/WEB-INF/lib/Lib">
-            <fileset dir="${file.reference.jython-2.1-Lib}" includes="**/*"/>
-        </copy>
     </target>
     <target name="do-ear-dist" depends="init,compile,compile-jsps,-pre-dist,library-inclusion-in-manifest">
         <dirname property="dist.jar.dir" file="${dist.ear.war}"/>
