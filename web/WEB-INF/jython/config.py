@@ -5,8 +5,9 @@
 datasets = [
     ['MRCS', 'POLCOMS MRCS data', 'C:\\data\\POLCOMS_MRCS_NOWCAST_20060731.nc'],
     ['OSTIA', 'OSTIA SST Analysis', 'C:\\data\\20061017-UKMO-L4UHfnd-GLOB-v01.nc'],
-    ['FOAM', 'FOAM one degree', 'C:\\data\\FOAM_one.ncml'],
-    ['Ifremer', 'Ifremer CORIOLIS data', 'C:\\data\\OA_20060830.nc']
+    #['FOAM', 'FOAM one degree', 'C:\\data\\FOAM_one.ncml'],
+    ['Ifremer_temp', 'CORIOLIS temperature data', 'C:\\data\\temp_OA_20061030.nc'],
+    ['Ifremer_sal', 'CORIOLIS salinity data', 'C:\\data\\psal_OA_20061030.nc']
 ]
 title = "Web Map Service for NetCDF data"
 url = "http://www.nerc-essc.ac.uk"

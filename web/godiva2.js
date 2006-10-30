@@ -82,7 +82,7 @@ function datasetSelected(expandedTab)
 function variableSelected(datasetName, variableName)
 {
     newVariable = true;
-    GDownloadUrl('getVariableDetails.jsp?dataset=' + datasetName +
+    GDownloadUrl('Metadata.py?item=variableDetails&dataset=' + datasetName +
         '&variable=' + variableName,
         function(data, responseCode) {
             var xmldoc = GXml.parse(data);
