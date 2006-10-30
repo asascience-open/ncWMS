@@ -1,0 +1,193 @@
+/* Style for all fonts */
+div
+{
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+}
+
+/* Style for the left-hand menu */
+div.leftmenu
+{
+    position: absolute;
+    overflow: auto;
+    margin: 8px;
+    padding: 0px;
+    width: 300px;
+}
+
+div.leftmenu a:link
+{
+    color: blue;
+    text-decoration: none;
+}
+
+div.leftmenu a:visited
+{
+    color: blue;
+    text-decoration: none;
+}
+
+div.leftmenu a:hover
+{
+    cursor: pointer;
+    color: red;
+}
+
+div.help
+{
+    position: absolute;
+    top: 420px;
+    left: 20px;
+    width: 280px;
+    height: 160px;
+    overflow: auto;
+    background-color: #dadee9;
+    font-size: 10pt;
+}
+
+#resclogo
+{
+    position: absolute;
+    top: 600px;
+    left: 20px;
+    border: 0;
+}
+
+/* Style for the main panel */
+div.mainPanel
+{
+    position: absolute;
+    margin: 8px;
+    padding: 0px;
+    left: 330px;
+}
+
+div.panelHeader
+{
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 500px;
+}
+
+#calendar
+{
+    position: absolute;
+    top: 0px;
+    left: 330px;
+    font-size: 10pt;
+    text-align: center;
+}
+
+#calendar a:link
+{
+    color: blue;
+    text-decoration: none;
+}
+
+#calendar a:visited
+{
+    color: blue;
+    text-decoration: none;
+}
+
+#zValues
+{
+    visibility: hidden;
+} 
+
+#tValues
+{
+    visibility: hidden;
+}
+
+td
+{
+    padding: 0;
+}
+
+div.imagePanel
+{
+    position: absolute;
+    left: 0px;
+    top: 150px;
+    width: 600px;
+}
+
+#pleaseWait
+{
+    position: absolute;
+    left: 0px;
+    top: 25px;
+    background-color: red;
+    /*visibility: hidden;*/
+}
+
+div.map
+{
+    position: absolute;
+    left: 0px;
+    top: 25px;
+    width: 500px;
+    height: 400px;
+}
+
+#imageURL
+{
+    position: absolute;
+    left: 0px;
+    top: 440px;
+}
+
+#opacityControl
+{
+    position: absolute;
+    top: 440px;
+    left: 335px;
+    visibility: hidden; /* Will make visible when we load the page if we need this control */
+}
+
+img.scaleBar
+{
+    position: absolute;
+    left: 510px;
+    top: 25px;
+    width: 40px;
+    height: 400px;
+    visibility: hidden;
+}
+
+div.scaleMarkers
+{
+    position: absolute;
+    left: 555px;
+    top: 25px;
+    height: 400px;
+    font-size: 10pt;
+}
+
+input.scaleMax
+{
+    position: absolute;
+    top: -10px;
+    visibility: hidden;
+}
+
+input.scaleMin
+{
+    position: absolute;
+    top: 388px;
+    visibility: hidden;
+}
+
+#scaleOneThird
+{
+    position: absolute;
+    top: 255px;
+}
+
+#scaleTwoThirds
+{
+    position: absolute;
+    top: 121px;
+}
