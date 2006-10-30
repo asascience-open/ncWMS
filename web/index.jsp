@@ -17,7 +17,7 @@
     <%-- TODO: how do we get the context path of the WMS servlet automatically? --%>
     <a href="./WMS.py?SERVICE=WMS&REQUEST=GetCapabilities">GetCapabilities</a><br />
     <a href="./WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=FOAM/TMP&STYLES=&CRS=CRS:84&BBOX=-90,0,0,90&WIDTH=256&HEIGHT=256&FORMAT=image/png">GetMap</a><br />
-    
+    <a href="./godiva2.jsp">Godiva2 interface</a>
     </p>
     
     </body>

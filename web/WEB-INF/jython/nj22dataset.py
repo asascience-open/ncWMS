@@ -10,7 +10,7 @@ from uk.ac.rdg.resc.ncwms.datareader import DataReader
 from uk.ac.rdg.resc.ncwms.exceptions import *
 
 from wmsExceptions import *
-import jarray
+import ncWMS
 
 class VariableMetadata: pass # simple class containing a variable's metadata
 
@@ -65,6 +65,18 @@ def getVariableMetadata(location):
         # Add to the dictionary
         vars[geogrid.getName()] = var
         
+    nc.close()
+    return vars
+
+def getVariableList(location):
+    """ Returns a list of the titles of the variables in the given
+        dataset (not the full variable metadata), for the web
+        interface """
+    nc = NetcdfDataset.openDataset(location)
+    gd = GridDataset(nc)
+    vars = []
+    for geogrid in gd.getGrids():
+        vars.append(geogrid.getDescription())
     nc.close()
     return vars
 

@@ -15,12 +15,7 @@ def wms(req):
        
     try:
         # Populate the dictionary that links unique IDs to dataset objects
-        datasets = {}
-        for d in config.datasets:
-            dataset = Dataset()
-            dataset.title = d[1]
-            dataset.location = d[2]
-            datasets[d[0]] = dataset # d[0] is the dataset's unique ID
+        datasets = getDatasets()
         params = RequestParser(req.args)
         service = params.getParamValue("service")
         request = params.getParamValue("request")
@@ -38,6 +33,15 @@ def wms(req):
         req.content_type="text/xml"
         e.write(req)
 
+def getDatasets():
+    """ Return dictionary of Dataset objects, keyed by the unique ID """
+    datasets = {}
+    for d in config.datasets:
+        dataset = Dataset()
+        dataset.title = d[1]
+        dataset.location = d[2]
+        datasets[d[0]] = dataset # d[0] is the dataset's unique ID
+    return datasets
 
 class RequestParser:
     """ Parses request parameters from the URL.  Parameter values are
