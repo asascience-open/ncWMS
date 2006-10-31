@@ -5,7 +5,7 @@ except ImportError:
     from StringIO import StringIO
 
 from xml.utils import iso8601
-import time, math
+import time, math, calendar
 import ncWMS
 import config
 import nj22dataset
@@ -94,7 +94,6 @@ def getCalendar(dataset, varID, dateTime):
     # TODO: binary search would be more efficient
     reqTime = iso8601.parse(dateTime) # Gives seconds since the epoch
     diff = 1e20
-    nearestIndex = 0
     for i in xrange(len(tValues)):
         testDiff = math.fabs(tValues[i] - reqTime)
         if testDiff < diff:
@@ -105,11 +104,13 @@ def getCalendar(dataset, varID, dateTime):
         elif i > 0:
             # We've moved past the closest date
             break
+    # create a struct_time tuple with zero timezone offset (i.e. GMT)
+    stime = time.gmtime(tValues[i])
     
     str.write("<root>")
-    str.write("<nearestValue>%s</nearestValue>" % iso8601.tostring(tValues[nearestIndex]))
+    str.write("<nearestValue>%s</nearestValue>" % iso8601.tostring(tValues[i]))
     # TODO pretty-printed value for display
-    str.write("<prettyNearestValue>%s</prettyNearestValue>" % iso8601.tostring(tValues[nearestIndex]))
+    str.write("<prettyNearestValue>%s</prettyNearestValue>" % iso8601.tostring(tValues[i]))
     # TODO: do we need this?
     str.write("<nearestIndex>%d</nearestIndex>" % nearestIndex)
 
@@ -118,15 +119,42 @@ def getCalendar(dataset, varID, dateTime):
     str.write("<table><tbody>")
     # Add the navigation buttons at the top of the month view
     str.write("<tr>")
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dataset, varID, _getYearBefore(tValues[i])))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dataset, varID, varID))
-    str.write("<td colspan=\"3\">%s</td>" % ("heading")) # TODO
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dataset, varID, varID))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(tValues[i])))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dataset, varID, _getYearBefore(stime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dataset, varID, _getMonthBefore(stime)))
+    str.write("<td colspan=\"3\">%s</td>" % _getHeading(stime))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dataset, varID, _getMonthAfter(stime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(stime)))
     str.write("</tr>")
     # Add the day-of-week headings
     str.write("<tr><th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th></tr>")
-    # TODO: add the calendar body
+    # Add the calendar body
+    tValIndex = 0 # index in tvalues array
+    for week in calendar.monthcalendar(stime[0], stime[1]):
+        str.write("<tr>")
+        for day in week:
+            if day > 0:
+                # Search through the t axis and find out whether we have
+                # any data for this particular day
+                found = 0
+                calendarDay = (stime[0], stime[1], day, 0, 0, 0, 0, 0, 0)
+                while not found and tValIndex < len(tValues):
+                    axisDay = time.gmtime(tValues[tValIndex])
+                    res = _compareDays(axisDay, calendarDay)
+                    if res == 0:
+                        found = 1 # Found data on this day
+                    elif res < 0:
+                        tValIndex = tValIndex + 1 # Date on axis is before target day
+                    else:
+                        break # Date on axis is after target day: no point searching further
+                if found:
+                    tValue = iso8601.tostring(tValues[tValIndex])
+                    prettyTValue = "Pretty T value"
+                    str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, tValIndex, tValue, prettyTValue, day))
+                else:
+                    str.write("<td>%d</td>" % day)
+            else:
+                str.write("<td></td>")
+        str.write("</tr>")
 
     str.write("</tbody></table>")
     str.write("</calendar>")
@@ -136,19 +164,60 @@ def getCalendar(dataset, varID, dateTime):
     str.close()
     return s
 
+def _getHeading(date):
+    """ Returns a string, e.g. "Oct 2006" for the given date """
+    month = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")[date[1] - 1]
+    return "%s %d" % (month, date[0])
+
 def _getYearBefore(date):
-    """ Returns an ISO8601-formatted date which is exactly one year earlier than
-        the given date, expressed in seconds since the epoch """
+    """ Returns an ISO8601-formatted date that is exactly one year earlier than
+        the given date """
     # Get the tuple of year, month, day etc
-    tup = time.gmtime(date)
-    newDate = tuple([tup[0] - 1] + list(tup[1:]))
+    newDate = tuple([date[0] - 1] + list(date[1:]))
     return iso8601.tostring(time.mktime(newDate))
 
 def _getYearAfter(date):
-    """ Returns an ISO8601-formatted date which is exactly one year later than
-        the given date, expressed in seconds since the epoch """
+    """ Returns an ISO8601-formatted date that is exactly one year later than
+        the given date """
     # Get the tuple of year, month, day etc
-    tup = time.gmtime(date)
-    newDate = tuple([tup[0] + 1] + list(tup[1:]))
+    newDate = tuple([date[0] + 1] + list(date[1:]))
     return iso8601.tostring(time.mktime(newDate))
+
+def _getMonthBefore(date):
+    """ Returns an ISO8601-formatted date that is exactly one month earlier than
+        the given date """
+    if date[1] == 1:
+        month = 12
+        year = date[0] - 1
+    else:
+        month = date[1] - 1
+        year = date[0]
+    newDate = tuple([year] + [month] + list(date[2:]))
+    return iso8601.tostring(time.mktime(newDate))
+
+def _getMonthAfter(date):
+    """ Returns an ISO8601-formatted date that is exactly one month later than
+        the given date """
+    if date[1] == 12:
+        month = 1
+        year = date[0] + 1
+    else:
+        month = date[1] + 1
+        year = date[0]
+    newDate = tuple([year] + [month] + list(date[2:]))
+    return iso8601.tostring(time.mktime(newDate))
+
+def _compareDays(d1, d2):
+    """ Both arguments are struct_time tuples.  Returns 0 if both dates fall
+        on the same day.  Returns -1 if d1 falls before d2 and +1 if d1 falls
+        after d2 """
+    if d1[0] == d2[0] and d1[1] == d2[1] and d1[2] == d2[2]:
+        return 0
+    else:
+        d1s = time.mktime(d1)
+        d2s = time.mktime(d2)
+        if d1s < d2s:
+            return -1
+        else:
+            return 1
     
