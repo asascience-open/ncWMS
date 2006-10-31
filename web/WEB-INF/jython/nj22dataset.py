@@ -15,7 +15,7 @@ import ncWMS
 class VariableMetadata: pass # simple class containing a variable's metadata
 
 def getVariableMetadata(location):
-    """ returns a dictionary of Variable objects.  The keys
+    """ returns a dictionary of VariableMetadata objects.  The keys
         in the dictionary are the unique ids of the variables and
         the values are Variable objects
         location = location of dataset (full file path, OPeNDAP URL etc) """
@@ -112,7 +112,7 @@ def getVariableDetails(location, varID):
     return var
 
 def getTimeAxisValues(location, varID):
-    """ Returns the values along the time axis as an array of numbers
+    """ Returns the values along the time axis as an array of floats
         in *seconds* since the epoch, or None if the given variable
         does not have a time axis """
     nc = NetcdfDataset.openDataset(location)

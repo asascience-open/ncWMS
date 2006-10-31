@@ -154,9 +154,9 @@ function variableSelected(datasetName, variableName)
             {
                 var now = new Date();
                 tValue = now.getFullYear() + '-' + (now.getMonth() + 1) +
-                    '-' + now.getDate() + 'T00:00:00';
+                    '-' + now.getDate() + 'T00:00:00Z';
             }
-            setCalendar(dataset, variable, tValue);
+            setCalendar(dataset, variableName, tValue);
         }
     );
 }
@@ -168,7 +168,7 @@ function variableSelected(datasetName, variableName)
 function setCalendar(dataset, variable, dateTime)
 {
     // Set the calendar. When the calendar arrives the map will be updated
-    GDownloadUrl('getCalendar.jsp?dataset=' + dataset + '&variable=' + 
+    GDownloadUrl('Metadata.py?item=calendar&dataset=' + dataset + '&variable=' + 
         variable + '&dateTime=' + dateTime,
         function(data, responseCode) {
             var xmldoc = GXml.parse(data);
