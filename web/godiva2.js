@@ -153,8 +153,11 @@ function variableSelected(datasetName, variableName)
             if (tValue == null)
             {
                 var now = new Date();
-                tValue = now.getFullYear() + '-' + (now.getMonth() + 1) +
-                    '-' + now.getDate() + 'T00:00:00Z';
+                // Format the date in ISO8601 format
+                tValue = now.getFullYear();
+                tValue += '-' + (now.getMonth() < 9 ? '0' : '') + (now.getMonth() + 1);
+                tValue += '-' + (now.getDate() < 10 ? '0' : '') + now.getDate();
+                tValue += 'T00:00:00Z';
             }
             setCalendar(dataset, variableName, tValue);
         }
@@ -295,13 +298,12 @@ function updateMap()
     }
 
     // Get the base url
-    var url = serverURL + 'GmapsServlet?'
-        + 'dataset=' + dataset + '&variable=' + variable + '&z=' + zIndex +
-        '&t=' + timestep + '&scale=' + $('scaleMin').value + ',' +
-        $('scaleMax').value + '&';
+    var url = 'http://localhost:8084/ncWMS/WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
+        '&LAYERS=OSTIA/sst_foundation&STYLES=&CRS=EPSG:41001&WIDTH=256&HEIGHT=256' +
+        '&FORMAT=image/png&SCALE=' + $('scaleMin').value + ',' + $('scaleMax').value;
 
     // Create the URL of a test image (single image of North Atlantic)
-    var testImageURL = url + 'x=1&y=1&zoom=2';
+    var testImageURL = url + '&BBOX=-90,0,0,70';
 
     // Create the URL to launch this dataset in Google Earth
     var gEarthURL = serverURL + 'gearth/genkml1.kml?'

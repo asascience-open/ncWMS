@@ -89,6 +89,7 @@ def getCalendar(dataset, varID, dateTime):
     tValues = nj22dataset.getTimeAxisValues(datasets[dataset].location, varID)
     # TODO: check for tValues == None
     str = StringIO()
+    prettyDateFormat = "%d %b %Y %H:%M:%S"
 
     # Find the closest time step to the given dateTime value
     # TODO: binary search would be more efficient
@@ -104,39 +105,38 @@ def getCalendar(dataset, varID, dateTime):
         elif i > 0:
             # We've moved past the closest date
             break
-    # create a struct_time tuple with zero timezone offset (i.e. GMT)
-    stime = time.gmtime(tValues[i])
     
     str.write("<root>")
-    str.write("<nearestValue>%s</nearestValue>" % iso8601.tostring(tValues[i]))
-    # TODO pretty-printed value for display
-    str.write("<prettyNearestValue>%s</prettyNearestValue>" % iso8601.tostring(tValues[i]))
-    # TODO: do we need this?
+    str.write("<nearestValue>%s</nearestValue>" % iso8601.tostring(tValues[nearestIndex]))
+    str.write("<prettyNearestValue>%s</prettyNearestValue>" % time.strftime(prettyDateFormat, time.gmtime(tValues[nearestIndex])))
     str.write("<nearestIndex>%d</nearestIndex>" % nearestIndex)
+
+    # create a struct_time tuple with zero timezone offset (i.e. GMT)
+    nearesttime = time.gmtime(tValues[nearestIndex])
 
     # Now print out the calendar in HTML
     str.write("<calendar>")
     str.write("<table><tbody>")
     # Add the navigation buttons at the top of the month view
     str.write("<tr>")
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dataset, varID, _getYearBefore(stime)))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dataset, varID, _getMonthBefore(stime)))
-    str.write("<td colspan=\"3\">%s</td>" % _getHeading(stime))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dataset, varID, _getMonthAfter(stime)))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(stime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dataset, varID, _getYearBefore(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dataset, varID, _getMonthBefore(nearesttime)))
+    str.write("<td colspan=\"3\">%s</td>" % _getHeading(nearesttime))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dataset, varID, _getMonthAfter(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(nearesttime)))
     str.write("</tr>")
     # Add the day-of-week headings
     str.write("<tr><th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th></tr>")
     # Add the calendar body
     tValIndex = 0 # index in tvalues array
-    for week in calendar.monthcalendar(stime[0], stime[1]):
+    for week in calendar.monthcalendar(nearesttime[0], nearesttime[1]):
         str.write("<tr>")
         for day in week:
             if day > 0:
                 # Search through the t axis and find out whether we have
                 # any data for this particular day
                 found = 0
-                calendarDay = (stime[0], stime[1], day, 0, 0, 0, 0, 0, 0)
+                calendarDay = (nearesttime[0], nearesttime[1], day, 0, 0, 0, 0, 0, 0)
                 while not found and tValIndex < len(tValues):
                     axisDay = time.gmtime(tValues[tValIndex])
                     res = _compareDays(axisDay, calendarDay)
@@ -148,7 +148,7 @@ def getCalendar(dataset, varID, dateTime):
                         break # Date on axis is after target day: no point searching further
                 if found:
                     tValue = iso8601.tostring(tValues[tValIndex])
-                    prettyTValue = "Pretty T value"
+                    prettyTValue = time.strftime(prettyDateFormat, axisDay)
                     str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, tValIndex, tValue, prettyTValue, day))
                 else:
                     str.write("<td>%d</td>" % day)
