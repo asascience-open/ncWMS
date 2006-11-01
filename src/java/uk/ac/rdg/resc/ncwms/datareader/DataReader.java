@@ -30,17 +30,19 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.CoordSysBuilder;
-import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
+import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
+import uk.ac.rdg.resc.ncwms.exceptions.MissingDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
@@ -54,6 +56,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
  */
 public class DataReader
 {
+    private static DateFormatter dateFormatter = new DateFormatter();
     
     /**
      * Read an array of data from a NetCDF file and projects onto a rectangular
@@ -102,8 +105,36 @@ public class DataReader
             EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
             EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
             
-            // TODO: handle t properly
-            Range tRange = new Range(0, 0);
+            // Find the index along the time axis
+            int tIndex = 0;
+            if (coordSys.isDate())
+            {
+                if (tValue == null || tValue.trim().equals(""))
+                {
+                    throw new MissingDimensionValueException("time");
+                }
+                Date reqDate = dateFormatter.getISODate(tValue);
+                if (reqDate == null)
+                {
+                    throw new InvalidDimensionValueException("time", tValue);
+                }
+                Date[] axisDates = coordSys.getTimeDates();
+                boolean found = false;
+                for (int i = 0; i < axisDates.length && !found; i++)
+                {
+                    // We don't look for the nearest value
+                    if (reqDate.equals(axisDates[i]))
+                    {
+                        tIndex = i;
+                        found = true;
+                    }
+                }
+                if (!found)
+                {
+                    throw new InvalidDimensionValueException("time", tValue);
+                }
+            }
+            Range tRange = new Range(tIndex, tIndex);
             
             // Find the index along the depth axis
             int zIndex = 0; // Default value of z is the first in the axis

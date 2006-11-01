@@ -29,37 +29,29 @@
 package uk.ac.rdg.resc.ncwms.exceptions;
 
 /**
- * Exception that is thrown when a user requests an invalid depth or time value
+ * Exception that is thrown when a user does not specify a value for a required axis
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class InvalidDimensionValueException extends WMSExceptionInJava
+public class MissingDimensionValueException extends WMSExceptionInJava
 {
     private String dimName;
-    private String value;
     
     /**
-     * Creates a new instance of InvalidDimensionValueException
-     * @param dimName The name of the dimension for which the value is invalid
-     * @param value The invalid value
+     * Creates a new instance of MissingDimensionValueException
+     * @param dimName The name of the dimension for which the value is missing
      */
-    public InvalidDimensionValueException(String dimName, String value)
+    public MissingDimensionValueException(String dimName)
     {
         this.dimName = dimName;
-        this.value = value;
     }
 
     public String getDimName()
     {
         return dimName;
-    }
-
-    public String getValue()
-    {
-        return value;
     }
     
 }

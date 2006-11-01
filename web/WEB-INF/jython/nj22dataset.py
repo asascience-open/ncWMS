@@ -145,5 +145,7 @@ def readData(location, varID, tValue, zValue, grid, fillValue=1e20):
             grid.latValues, grid.lonValues, fillValue)
     except InvalidDimensionValueException, e:
         raise InvalidDimensionValue(e.getDimName(), e.getValue())
+    except MissingDimensionValueException, e:
+        raise MissingDimensionValue(e.getDimName())
     except WMSExceptionInJava, e:
         raise WMSException(e.getMessage())
