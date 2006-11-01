@@ -84,6 +84,7 @@ def getCapabilities(req, params, datasets):
             output.write("<Layer>")
             output.write("<Name>%s/%s</Name>" % (dsid, vid))
             output.write("<Title>%s</Title>" % vars[vid].title)
+            output.write("<Abstract>%s</Abstract>" % vars[vid].abstract)
 
             # Set the bounding box
             minLon, minLat, maxLon, maxLat = vars[vid].bbox

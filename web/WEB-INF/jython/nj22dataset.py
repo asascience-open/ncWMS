@@ -25,7 +25,9 @@ def getVariableMetadata(location):
     vars = {}
     for geogrid in gd.getGrids():
         var = VariableMetadata()
-        var.title = geogrid.getDescription()
+        stdName = geogrid.findAttributeIgnoreCase("standard_name")
+        var.title = _getStandardName(geogrid)
+        var.abstract = geogrid.getDescription()
         coordSys = geogrid.getCoordinateSystem()
 
         # Set the vertical dimension as array of doubles 
@@ -68,6 +70,15 @@ def getVariableMetadata(location):
     nc.close()
     return vars
 
+def _getStandardName(geogrid):
+    """ returns the value of the standard_name attribute of the geogrid,
+        or the unique name if it does not exist """
+    stdNameAtt = geogrid.findAttributeIgnoreCase("standard_name")
+    if stdNameAtt is None:
+        return geogrid.getName()
+    else:
+        return stdNameAtt.getStringValue()
+
 def getVariables(location):
     """ Returns a dictionary of the titles of the variables in the given
         dataset (not the full variable metadata), keyed by the ID of
@@ -76,7 +87,7 @@ def getVariables(location):
     gd = GridDataset(nc)
     vars = {}
     for geogrid in gd.getGrids():
-        vars[geogrid.getName()] = geogrid.getDescription()
+        vars[geogrid.getName()] = _getStandardName(geogrid)
     nc.close()
     return vars
 
@@ -89,7 +100,7 @@ def getVariableDetails(location, varID):
     geogrid = gd.findGridByName(varID)
     coordSys = geogrid.getCoordinateSystem()
     var = VariableDetails()
-    var.title = geogrid.getDescription()
+    var.title = _getStandardName(geogrid)
     var.units = geogrid.getUnitsString()
     # Set the vertical dimension as array of doubles 
     # TODO: repeats code from above: refactor

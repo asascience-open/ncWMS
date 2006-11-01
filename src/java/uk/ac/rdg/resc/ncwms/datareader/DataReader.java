@@ -120,9 +120,10 @@ public class DataReader
                 }
                 Date[] axisDates = coordSys.getTimeDates();
                 boolean found = false;
+                // TODO: do a binary search (axis could be very long)
                 for (int i = 0; i < axisDates.length && !found; i++)
                 {
-                    // We don't look for the nearest value
+                    // We look for precise matches, not nearest value
                     if (reqDate.equals(axisDates[i]))
                     {
                         tIndex = i;
@@ -158,6 +159,8 @@ public class DataReader
                     if (xIndices[i] > maxX) maxX = xIndices[i];
                 }
             }
+            // TODO: subsample if we are going to read very many more points
+            // than we actually need
             Range xRange = new Range(minX, maxX);
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
