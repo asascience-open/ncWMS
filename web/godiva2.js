@@ -3,9 +3,8 @@
 // included in any page that uses this script
 //
 
-var dataset = '';
+var layerName = '';
 var prettyDsName = ''; // The dataset name, formatted for human reading
-var variable = '';
 var zValue = 0; // The currently-selected depth *value* (not the index)
 var tValue = null; // The currently-selected time *value* as a string in yyyy-MM-ddThh:mm:ss format
 var prettyTValue = null; // The t value, formatted for human reading
@@ -39,7 +38,7 @@ window.onload = function()
 // Populates the left-hand menu with a set of datasets
 function loadDatasets(dsDivId)
 {
-    GDownloadUrl('Metadata.py?item=datasets' + dataset,
+    GDownloadUrl('Metadata.py?item=datasets',
         function(data, responseCode) {
             $(dsDivId).innerHTML = data;
             var accordion = new Rico.Accordion
@@ -90,11 +89,11 @@ function variableSelected(datasetName, variableName)
             // See getVariableDetails.jsp
             var varDetails = xmldoc.getElementsByTagName('variableDetails')[0];
             // Set the global variables for dataset and variable name
-            dataset = varDetails.getAttribute('dataset');
-            variable = varDetails.getAttribute('variable');
+            var dataset = varDetails.getAttribute('dataset');
+            layerName = dataset + '/' + variableName;
             var units = varDetails.getAttribute('units');
-            $('datasetName').innerHTML = prettyDsName; //dataset;
-            $('variableName').innerHTML = variable;
+            $('datasetName').innerHTML = prettyDsName;
+            $('variableName').innerHTML = varDetails.getAttribute('variable');
             $('units').innerHTML = units;
             
             // clear the list of z values
@@ -171,8 +170,8 @@ function variableSelected(datasetName, variableName)
 function setCalendar(dataset, variable, dateTime)
 {
     // Set the calendar. When the calendar arrives the map will be updated
-    GDownloadUrl('Metadata.py?item=calendar&dataset=' + dataset + '&variable=' + 
-        variable + '&dateTime=' + dateTime,
+    GDownloadUrl('Metadata.py?item=calendar&dataset=' +  dataset + 
+        '&variable=' + variable + '&dateTime=' + dateTime,
         function(data, responseCode) {
             var xmldoc = GXml.parse(data);
             $('calendar').innerHTML =
@@ -299,7 +298,8 @@ function updateMap()
 
     // Get the base url
     var url = 'http://localhost:8084/ncWMS/WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
-        '&LAYERS=OSTIA/sst_foundation&STYLES=&CRS=EPSG:41001&WIDTH=256&HEIGHT=256' +
+        '&LAYERS=' + layerName + '&STYLES=&CRS=EPSG:41001&WIDTH=256&HEIGHT=256' +
+        '&ELEVATION=' + zValue + '&TIME=' + tValue +
         '&FORMAT=image/png&SCALE=' + $('scaleMin').value + ',' + $('scaleMax').value;
 
     // Create the URL of a test image (single image of North Atlantic)
@@ -307,7 +307,7 @@ function updateMap()
 
     // Create the URL to launch this dataset in Google Earth
     var gEarthURL = serverURL + 'gearth/genkml1.kml?'
-        + 'dataset=' + dataset + '&variable=' + variable + '&z=' + zIndex +
+        + 'layer=' + layerName + '&z=' + zIndex +
         '&t=' + timestep + '&scale=' + $('scaleMin').value + ',' + $('scaleMax').value;
 
     $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>'
