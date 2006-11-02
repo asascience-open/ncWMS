@@ -87,7 +87,9 @@ def getCalendar(dataset, varID, dateTime):
     datasets = ncWMS.getDatasets()
     # Get an array of time axis values in seconds since the epoch
     tValues = nj22dataset.getTimeAxisValues(datasets[dataset].location, varID)
-    # TODO: check for tValues == None
+    # TODO: is this the right thing to do here?
+    if tValues is None:
+        return ""
     str = StringIO()
     prettyDateFormat = "%d %b %Y %H:%M:%S"
 

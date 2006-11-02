@@ -116,9 +116,9 @@ def getVariableDetails(location, varID):
     else:
         var.zValues = None
         var.zUnits = None
-    # TODO: set valid_min and valid_max properly
-    var.valid_min = 0.0
-    var.valid_max = 50.0
+    # TODO: what happens if these properties are not set?
+    var.valid_min = geogrid.getVariable().getValidMin()
+    var.valid_max = geogrid.getVariable().getValidMax()
     nc.close()
     return var
 

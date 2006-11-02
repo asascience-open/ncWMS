@@ -173,6 +173,12 @@ function setCalendar(dataset, variable, dateTime)
     GDownloadUrl('Metadata.py?item=calendar&dataset=' +  dataset + 
         '&variable=' + variable + '&dateTime=' + dateTime,
         function(data, responseCode) {
+            if (data == '') {
+                // There is no calendar data.  Just update the map
+                $('calendar').innerHTML = '';
+                $('date').innerHTML = '';
+                updateMap();
+            }
             var xmldoc = GXml.parse(data);
             $('calendar').innerHTML =
                 RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
