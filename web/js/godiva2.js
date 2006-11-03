@@ -95,7 +95,7 @@ function variableSelected(datasetName, variableName)
             var units = varDetails.getAttribute('units');
             $('datasetName').innerHTML = prettyDsName;
             $('variableName').innerHTML = varDetails.getAttribute('variable');
-            $('units').innerHTML = units;
+            $('units').innerHTML = '<b>Units: </b>' + units;
             
             // clear the list of z values
             $('zValues').options.length = 0; 
@@ -139,7 +139,12 @@ function variableSelected(datasetName, variableName)
                 }
             }
 
-            $('zValues').style.visibility = (zFound) ? 'visible' : 'hidden';
+            if (zFound) {
+                $('zValues').style.visibility = 'visible';
+            } else {
+                $('zAxis').innerHTML = ''
+                $('zValues').style.visibility = 'hidden';
+            }
             
             $('scaleBar').style.visibility = 'visible';
             $('scaleMin').style.visibility = 'visible';
@@ -226,7 +231,7 @@ function getTimesteps(tIndex, tVal, prettyTVal)
     timestep = tIndex;
     tValue = tVal;
     $('t' + timestep).style.backgroundColor = '#dadee9';
-    $('date').innerHTML = '' + prettyTVal;
+    $('date').innerHTML = '<b>Date/time: </b>' + prettyTVal;
     updateMap();
     
     
@@ -315,7 +320,7 @@ function updateMap()
     }
 
     // Get the base url
-    var url = 'http://localhost:8084/ncWMS/WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
+    var url = serverURL + 'WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
         '&LAYERS=' + layerName + '&STYLES=&CRS=EPSG:41001&WIDTH=256&HEIGHT=256' +
         '&ELEVATION=' + zValue + '&TIME=' + tValue +
         '&FORMAT=image/png&SCALE=' + $('scaleMin').value + ',' + $('scaleMax').value;
@@ -328,8 +333,8 @@ function updateMap()
         + 'layer=' + layerName + '&z=' + zIndex +
         '&t=' + timestep + '&scale=' + $('scaleMin').value + ',' + $('scaleMax').value;
 
-    $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>'
-        + '&nbsp;&nbsp;&nbsp;<a href=\'' + gEarthURL + '\'>Open in Google Earth</a>';
+    $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>';
+        //+ '&nbsp;&nbsp;&nbsp;<a href=\'' + gEarthURL + '\'>Open in Google Earth</a>';
 
     // Notify the Google Maps widget
     set_tile_url(url);

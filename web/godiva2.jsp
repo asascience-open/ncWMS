@@ -1,4 +1,9 @@
 <%@page contentType="text/html"%><%@page pageEncoding="UTF-8"%><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<%
+   java.net.URL reqURL = new java.net.URL(request.getRequestURL().toString());
+   String serverURL = "http://" + reqURL.getHost() + ":" + reqURL.getPort() + 
+       request.getContextPath() + "/";
+%>
 <html>
 
     <head>
@@ -8,7 +13,7 @@
         <script type="text/javascript" src="js/prototype.js"></script>
         <script type="text/javascript" src="js/rico.js"></script>
         <script type="text/javascript">
-            var serverURL = '';
+            var serverURL = '<%=serverURL%>';
         </script>
         <script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=<%
             if (request.getServerPort() == 9080)
@@ -60,9 +65,9 @@
         <div class="panelHeader">
             <b>Dataset:</b> <span id="datasetName">Please select from the left panel</span><br />
             <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
-            <b>Units:</b> <span id="units"></span><br />
-            <span id="zAxis"><b>Depth (m): </b></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
-            <b>Date/time: </b><span id="date"></span>&nbsp;<select id="tValues" onchange="javascript:updateTimestep()"><option value="0">dummy</option></select><br />
+            <span id="units"></span><br />
+            <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
+            <span id="date"></span>&nbsp;<select id="tValues" onchange="javascript:updateTimestep()"><option value="0">dummy</option></select><br />
             <br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>

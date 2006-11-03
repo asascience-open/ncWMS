@@ -90,7 +90,8 @@ public class DataReader
             GeoGrid geogrid = gd.findGridByName(varID);
             if (geogrid == null)
             {
-                return null;
+                throw new WMSExceptionInJava("Could not find variable called "
+                    + varID + " in " + location);
             }
             GridCoordSys coordSys = geogrid.getCoordinateSystem();
             coordSys.isZPositive();
