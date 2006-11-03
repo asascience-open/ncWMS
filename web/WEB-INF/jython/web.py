@@ -10,44 +10,44 @@ import ncWMS
 import config
 import nj22dataset
 
-def metadata(req):
+def metadata(req, configLines):
     """ Processes a request for metadata from the Godiva2 web interface """
     params = ncWMS.RequestParser(req.args)
+    datasets = ncWMS.getDatasets(configLines)
     metadataItem = params.getParamValue("item")
     if (metadataItem == "datasets"):
-        req.write(getDatasetsDiv())
+        req.write(getDatasetsDiv(datasets))
     elif (metadataItem == "variables"):
         dataset = params.getParamValue("dataset")
-        req.write(getVariables(dataset))
+        req.write(getVariables(datasets, dataset))
     elif (metadataItem == "variableDetails"):
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
-        req.write(getVariableDetails(dataset, varID))
+        req.write(getVariableDetails(datasets, dataset, varID))
     elif (metadataItem == "calendar"):
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         dateTime = params.getParamValue("dateTime")
-        req.write(getCalendar(dataset, varID, dateTime))
+        req.write(getCalendar(datasets, dataset, varID, dateTime))
 
-def getDatasetsDiv():
+def getDatasetsDiv(datasets):
     """ returns a string with a set of divs representing the datasets.
         Quick and dirty. """
     str = StringIO()
-    for dataset in config.datasets:
-        str.write("<div id=\"%sDiv\">" % dataset[0])
-        str.write("<div id=\"%s\">%s</div>" % (dataset[0], dataset[1]))
-        str.write("<div id=\"%sContent\">" % dataset[0])
-        str.write("Variables in the %s dataset will appear here" % dataset[1])
+    for ds in datasets.keys():
+        str.write("<div id=\"%sDiv\">" % ds)
+        str.write("<div id=\"%s\">%s</div>" % (ds, datasets[ds].title))
+        str.write("<div id=\"%sContent\">" % ds)
+        str.write("Variables in the %s dataset will appear here" % datasets[ds].title)
         str.write("</div>")
         str.write("</div>")
     s = str.getvalue()
     str.close()
     return s
 
-def getVariables(dataset):
+def getVariables(datasets, dataset):
     """ returns an HTML table containing a set of variables for the given dataset. """
-    datasets = ncWMS.getDatasets()
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
     vars = nj22dataset.getVariables(datasets[dataset].location)
@@ -60,16 +60,15 @@ def getVariables(dataset):
     str.close()
     return s
 
-def getVariableDetails(dataset, varID):
+def getVariableDetails(datasets, dataset, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
-    datasets = ncWMS.getDatasets()
     str = StringIO()
     var = nj22dataset.getVariableDetails(datasets[dataset].location, varID)
     str.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
     str.write("<axes>")
     if var.zValues is not None:
-        str.write("<axis type=\"z\" units=\"%s\">")
+        str.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zUnits, var.zPositive))
         for z in var.zValues:
             str.write("<value>%f</value>" % z)
         str.write("</axis>")
@@ -80,11 +79,10 @@ def getVariableDetails(dataset, varID):
     str.close()
     return s
 
-def getCalendar(dataset, varID, dateTime):
+def getCalendar(datasets, dataset, varID, dateTime):
     """ returns an HTML calendar for the given dataset and variable.
         dateTime is a string in ISO 8601 format with the required
         'focus time' """
-    datasets = ncWMS.getDatasets()
     # Get an array of time axis values in seconds since the epoch
     tValues = nj22dataset.getTimeAxisValues(datasets[dataset].location, varID)
     # TODO: is this the right thing to do here?

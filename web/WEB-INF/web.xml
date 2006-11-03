@@ -5,9 +5,17 @@
         <servlet-class>org.python.util.PyServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
+    <servlet>
+        <servlet-name>NewServlet</servlet-name>
+        <servlet-class>uk.ac.rdg.resc.ncwms.datareader.NewServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>PyServlet</servlet-name>
         <url-pattern>*.py</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>NewServlet</servlet-name>
+        <url-pattern>/NewServlet</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

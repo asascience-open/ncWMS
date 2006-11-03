@@ -6,6 +6,7 @@
 var layerName = '';
 var prettyDsName = ''; // The dataset name, formatted for human reading
 var zValue = 0; // The currently-selected depth *value* (not the index)
+var zPositive = 0; // Will be 1 if the selected z axis is positive
 var tValue = null; // The currently-selected time *value* as a string in yyyy-MM-ddThh:mm:ss format
 var prettyTValue = null; // The t value, formatted for human reading
 var isIE;
@@ -106,6 +107,13 @@ function variableSelected(datasetName, variableName)
                 var axisType = theAxes[i].getAttribute('type');
                 if (axisType == 'z')
                 {
+                    zPositive = parseInt(theAxes[i].getAttribute('positive'));
+                    var zUnits = theAxes[i].getAttribute('units');
+                    if (zPositive) {
+                        $('zAxis').innerHTML = '<b>Elevation (' + zUnits + '): </b>';
+                    } else {
+                        $('zAxis').innerHTML = '<b>Depth (' + zUnits + '): </b>';
+                    }
                     // Populate the drop-down list of z values
                     var values = theAxes[i].getElementsByTagName('value');
                     // Make z range selector invisible if there are no z values
@@ -132,6 +140,7 @@ function variableSelected(datasetName, variableName)
             }
 
             $('zValues').style.visibility = (zFound) ? 'visible' : 'hidden';
+            
             $('scaleBar').style.visibility = 'visible';
             $('scaleMin').style.visibility = 'visible';
             $('scaleMax').style.visibility = 'visible';
@@ -292,7 +301,7 @@ function updateMap()
     $('scaleOneThird').innerHTML = toNSigFigs(scaleOneThird, 4);
     $('scaleTwoThirds').innerHTML = toNSigFigs(scaleTwoThirds, 4);
 
-    // Get the z and t values
+    // Get the z value
     var zIndex = $('zValues').selectedIndex;
     if ($('zValues').options.length == 0) {
         // If we have no depth information, assume we're at the surface.  This
@@ -300,6 +309,9 @@ function updateMap()
         zValue = 0;
     } else {
         zValue = $('zValues').options[zIndex].firstChild.nodeValue;
+    }
+    if (!zPositive) {
+        zValue = -zValue;
     }
 
     // Get the base url

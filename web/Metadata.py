@@ -2,13 +2,10 @@
 
 from javax.servlet.http import HttpServlet
 
-from WMS import FakeModPythonRequestObject
+from WMS import FakeModPythonRequestObject, WMS
 
 import web
 
-class Metadata (HttpServlet):
+class Metadata (WMS):
     def doGet(self,request,response):
-        web.metadata(FakeModPythonRequestObject(request, response))
-
-    def doPost(self,request,response):
-        raise ServletException("POST method is not supported on this server")
+        web.metadata(FakeModPythonRequestObject(request, response), self.getConfigFileLines())

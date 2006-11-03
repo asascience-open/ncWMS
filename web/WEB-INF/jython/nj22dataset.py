@@ -103,20 +103,16 @@ def getVariableDetails(location, varID):
     var.title = _getStandardName(geogrid)
     var.units = geogrid.getUnitsString()
     # Set the vertical dimension as array of doubles 
-    # TODO: repeats code from above: refactor
     if coordSys.hasVerticalAxis():
         zAxis = coordSys.getVerticalAxis()
         var.zUnits = zAxis.getUnitsString()
-        if coordSys.isZPositive():
-            var.zValues = zAxis.getCoordValues()
-        else:
-            var.zValues = []
-            for z in zAxis.getCoordValues():
-                var.zValues.append(-z)
+        var.zPositive = coordSys.isZPositive()
+        var.zValues = zAxis.getCoordValues()
     else:
+        var.zPositive = 0
         var.zValues = None
         var.zUnits = None
-    # TODO: what happens if these properties are not set?
+    # TODO: what happens if these properties are not set in the source files?
     var.valid_min = geogrid.getVariable().getValidMin()
     var.valid_max = geogrid.getVariable().getValidMax()
     nc.close()

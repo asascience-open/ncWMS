@@ -2,6 +2,7 @@
 
 from javax.servlet.http import HttpServlet
 from javax.servlet import ServletException
+from java.io import InputStreamReader, BufferedReader
 from java.net import URL
 
 import ncWMS
@@ -42,7 +43,25 @@ class WMS (HttpServlet):
 
     def doGet(self,request,response):
         """ Perform the WMS operation """
-        ncWMS.wms(FakeModPythonRequestObject(request, response))
+        ncWMS.wms(FakeModPythonRequestObject(request, response), self.getConfigFileLines())
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")
+
+    def getConfigFileLines(self):
+        """ Gets the lines of text (ignoring comments) from the config file """
+        # First get the location of the config file
+        configFileURL = self.getServletContext().getResource("/WEB-INF/conf/config.txt")
+        # TODO: check for configFileURL == None
+        configReader = BufferedReader(InputStreamReader(configFileURL.openStream()))
+        lines = []
+        done = 0
+        while not done:
+            line = configReader.readLine()
+            if line is None:
+                done = 1
+            elif line.strip() != "" and not line.startswith('#'):
+                # Ignore blank lines and comment lines
+                lines.append(line)
+        return lines
+        

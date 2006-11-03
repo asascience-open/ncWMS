@@ -4,18 +4,21 @@ import re
 from wmsExceptions import *
 from capabilities import getCapabilities
 from getmap import getMap
-import config
 
 class Dataset: pass # Simple class that will hold a dataset's title and location
 
-def wms(req):
+def wms(req, datasetLines):
     """ Does the WMS operation.
         req = mod_python request object (or FakeModPythonRequestObject
-        from Jython servlet) """
+            from Jython servlet)
+        datasetLines = array of lines in the dataset configuration.
+            Each line is a comma-delimited string of the form
+            "id,title,location"
+        TODO: under mod_python, how can we identify where the config file is? """
        
     try:
         # Populate the dictionary that links unique IDs to dataset objects
-        datasets = getDatasets()
+        datasets = getDatasets(datasetLines)
         params = RequestParser(req.args)
         service = params.getParamValue("service")
         request = params.getParamValue("request")
@@ -33,14 +36,16 @@ def wms(req):
         req.content_type="text/xml"
         e.write(req)
 
-def getDatasets():
+def getDatasets(lines):
     """ Return dictionary of Dataset objects, keyed by the unique ID """
+    # TODO error checking
     datasets = {}
-    for d in config.datasets:
+    for line in lines:
+        els = line.split(",")
         dataset = Dataset()
-        dataset.title = d[1]
-        dataset.location = d[2]
-        datasets[d[0]] = dataset # d[0] is the dataset's unique ID
+        dataset.title = els[1].strip()
+        dataset.location = els[2].strip()
+        datasets[els[0].strip()] = dataset # els[0] is the dataset's unique ID
     return datasets
 
 class RequestParser:

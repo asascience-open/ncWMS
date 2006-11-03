@@ -26,7 +26,7 @@
                 out.print("ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg");
             }%>"></script>
         <script type="text/javascript" src="js/gmaps.js"></script>
-        <script type="text/javascript" src="godiva2.js"></script>
+        <script type="text/javascript" src="js/godiva2.js"></script>
     </head>
     
     <body onunload="GUnload()">
@@ -61,7 +61,7 @@
             <b>Dataset:</b> <span id="datasetName">Please select from the left panel</span><br />
             <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
             <b>Units:</b> <span id="units"></span><br />
-            <b>Depth (m): </b><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
+            <span id="zAxis"><b>Depth (m): </b></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
             <b>Date/time: </b><span id="date"></span>&nbsp;<select id="tValues" onchange="javascript:updateTimestep()"><option value="0">dummy</option></select><br />
             <br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
