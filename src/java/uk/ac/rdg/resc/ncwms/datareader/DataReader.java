@@ -222,13 +222,65 @@ public class DataReader
     }
     
     /**
+     * Finds the index of a certain t value by binary search (the axis may be
+     * very long, so a brute-force search is inappropriate)
+     * @param tValues Array of {@link Date} objects representing the t axis values
+     * @param target Date to search for
+     * @return the t index corresponding with the given targetVal
+     * @throws InvalidDimensionValueException if targetVal could not be found
+     * within tValues
+     * @todo almost repeats code in {@link Irregular1DCoordAxis}
+     */
+    private static int findTIndex(Date[] tValues, Date target)
+        throws InvalidDimensionValueException
+    {
+        // Check that the point is within range
+        if (target.before(tValues[0]) || target.after(tValues[tValues.length - 1]))
+        {
+            throw new InvalidDimensionValueException("time", target.toString());
+        }
+        
+        // do a binary search to find the nearest index
+        int low = 0;
+        int high = tValues.length - 1;
+        while (low <= high)
+        {
+            int mid = (low + high) >> 1;
+            Date midVal = tValues[mid];
+            if (midVal.equals(target))
+            {
+                return mid;
+            }
+            else if (midVal.before(target))
+            {
+                low = mid + 1;
+            }
+            else if (midVal.after(target))
+            {
+                high = mid - 1;
+            }
+        }
+        
+        // If we've got this far we have to decide between values[low]
+        // and values[high]
+        if (tValues[low].equals(target))
+        {
+            return low;
+        }
+        else if (tValues[high].equals(target))
+        {
+            return high;
+        }
+        throw new InvalidDimensionValueException("time", target.toString());
+    }
+        
+    /**
      * Finds the index of a certain z value by brute-force search.  We can afford
      * to be inefficient here because z axes are not likely to be large.
      * @param zValues Array of values of the z coordinate
      * @param targetVal Value to search for
      * @param zIsPositive True if z values increase upwards
-     * @return the z index corresponding with the given targetVal, or -1 if the
-     * targetVal does not match (within tolerance) a given axis point
+     * @return the z index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
      * within zValues
      */

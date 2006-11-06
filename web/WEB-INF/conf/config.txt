@@ -2,8 +2,8 @@
 # Each line is a dataset, comma-separated, with the form:
 # id,title,location
 
-#MRCS,POLCOMS MRCS data,C:\\data\\POLCOMS_MRCS_NOWCAST_20060731.nc
+MRCS,POLCOMS MRCS data,C:\\data\\POLCOMS_MRCS_NOWCAST_20060731.nc
 #OSTIA,OSTIA SST Analysis,C:\\data\\20061017-UKMO-L4UHfnd-GLOB-v01.nc
-FOAM,FOAM one degree,E:/data/cadfael/marine/FOAM/FOAM_one/FOAM_20040412.0.nc
+FOAM,FOAM one degree,C:\\data\\FOAM_one.ncml
 #IFREMER_TMP,CORIOLIS temperatures,c:\\data\\temp_OA_20061030.nc
 #IFREMER_SAL,CORIOLIS salinity,c:\\data\\psal_OA_20061030.nc

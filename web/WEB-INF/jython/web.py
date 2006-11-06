@@ -126,7 +126,7 @@ def getCalendar(datasets, dataset, varID, dateTime):
     str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(nearesttime)))
     str.write("</tr>")
     # Add the day-of-week headings
-    str.write("<tr><th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th></tr>")
+    str.write("<tr><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th><th>S</th></tr>")
     # Add the calendar body
     tValIndex = 0 # index in tvalues array
     for week in calendar.monthcalendar(nearesttime[0], nearesttime[1]):
