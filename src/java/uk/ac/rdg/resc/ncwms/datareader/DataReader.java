@@ -31,14 +31,13 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Hashtable;
+import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.CoordSysBuilder;
+import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.VariableDS;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
@@ -78,72 +77,33 @@ public class DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Open the dataset but don't enhance it.  We do this to avoid 
-            // the performance penalty of unpacking data and checking for
-            // missing values for every data point we read.  We will create
-            // and enhanced variable and use this for unpacking and missing-value
-            // checks, just for the data points we need to display.
-            nc = NetcdfDataset.openDataset(location, false, null);
-            // Add the coordinate systems
-            CoordSysBuilder.addCoordinateSystems(nc, null);
-            GridDataset gd = new GridDataset(nc);
-            GeoGrid geogrid = gd.findGridByName(varID);
-            if (geogrid == null)
+            DatasetCache ds = DatasetCache.acquire(location);
+            Hashtable<String, VariableMetadata> vars = ds.getVariableMetadata();
+            if (!vars.containsKey(varID))
             {
                 throw new WMSExceptionInJava("Could not find variable called "
                     + varID + " in " + location);
             }
-            GridCoordSys coordSys = geogrid.getCoordinateSystem();
-            coordSys.isZPositive();
-            if (!coordSys.isLatLon())
-            {
-                throw new WMSExceptionInJava("Can only read data from lat-lon coordinate systems");
-            }
-            // Get an enhanced version of the variable for fast reading of data
-            EnhanceScaleMissingImpl enhanced = new EnhanceScaleMissingImpl((VariableDS)geogrid.getVariable());
-
-            // EnhancedCoordAxis gives us a fast method for reading index values
-            EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
-            EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
+            // TODO: check for a lat-lon coordinate system
+            VariableMetadata vm = vars.get(varID);
             
             // Find the index along the time axis
             int tIndex = 0;
-            if (coordSys.isDate())
+            if (vm.getTvalues() != null)
             {
                 if (tValue == null || tValue.trim().equals(""))
                 {
                     throw new MissingDimensionValueException("time");
                 }
-                Date reqDate = dateFormatter.getISODate(tValue);
-                if (reqDate == null)
-                {
-                    throw new InvalidDimensionValueException("time", tValue);
-                }
-                Date[] axisDates = coordSys.getTimeDates();
-                boolean found = false;
-                // TODO: do a binary search (axis could be very long)
-                for (int i = 0; i < axisDates.length && !found; i++)
-                {
-                    // We look for precise matches, not nearest value
-                    if (reqDate.equals(axisDates[i]))
-                    {
-                        tIndex = i;
-                        found = true;
-                    }
-                }
-                if (!found)
-                {
-                    throw new InvalidDimensionValueException("time", tValue);
-                }
+                tIndex = findTIndex(vm.getTvalues(), tValue);
             }
             Range tRange = new Range(tIndex, tIndex);
             
             // Find the index along the depth axis
             int zIndex = 0; // Default value of z is the first in the axis
-            if (zValue != null && !zValue.equals("") && coordSys.hasVerticalAxis())
+            if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
             {
-                zIndex = findZIndex(coordSys.getVerticalAxis().getCoordValues(),
-                    zValue, coordSys.isZPositive());
+                zIndex = findZIndex(vm.getZvalues(), zValue);
             }
             Range zRange = new Range(zIndex, zIndex);
             
@@ -153,7 +113,7 @@ public class DataReader
             int[] xIndices = new int[lonValues.length];
             for (int i = 0; i < lonValues.length; i++)
             {
-                xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
+                xIndices[i] = vm.getXaxis().getIndex(new LatLonPointImpl(0.0, lonValues[i]));
                 if (xIndices[i] >= 0)
                 {
                     if (xIndices[i] < minX) minX = xIndices[i];
@@ -166,19 +126,31 @@ public class DataReader
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
+            
+            // Open the data file
+            nc = NetcdfDataset.openDataset(location, false, null);
+            Variable var = nc.findVariable(varID);
+            if (var == null)
+            {
+                throw new WMSExceptionInJava("Could not find variable called "
+                    + varID + " in " + location);
+            }
+            // Get an enhanced version of the variable for fast reading of data
+            EnhanceScaleMissingImpl enhanced = new EnhanceScaleMissingImpl((VariableDS)var);
+            
             DataChunk dataChunk;
             // Cycle through the latitude values, extracting a scanline of
             // data each time from minX to maxX
             for (int j = 0; j < latValues.length; j++)
             {
-                int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
+                int yIndex = vm.getYaxis().getIndex(new LatLonPointImpl(latValues[j], 0.0));
                 if (yIndex >= 0)
                 {
                     Range yRange = new Range(yIndex, yIndex);
                     // Read a chunk of data - values will not be unpacked or
                     // checked for missing values yet
-                    GeoGrid subset = geogrid.subset(tRange, zRange, yRange, xRange);
-                    dataChunk = new DataChunk(subset.readYXData(0, 0).reduce());
+                    Array arr = var.read(vm.getRangesList(tRange, zRange, yRange, xRange)).reduce();
+                    dataChunk = new DataChunk(arr);
                     // Now copy the scanline's data to the picture array
                     for (int i = 0; i < xIndices.length; i++)
                     {
@@ -224,20 +196,28 @@ public class DataReader
     /**
      * Finds the index of a certain t value by binary search (the axis may be
      * very long, so a brute-force search is inappropriate)
-     * @param tValues Array of {@link Date} objects representing the t axis values
-     * @param target Date to search for
+     * @param tValues Array of floats representing the t axis values in
+     * seconds since the epoch
+     * @param tValue Date to search for as an ISO8601-formatted String
      * @return the t index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
      * within tValues
-     * @todo almost repeats code in {@link Irregular1DCoordAxis}
+     * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
      */
-    private static int findTIndex(Date[] tValues, Date target)
+    private static int findTIndex(float[] tValues, String tValue)
         throws InvalidDimensionValueException
     {
-        // Check that the point is within range
-        if (target.before(tValues[0]) || target.after(tValues[tValues.length - 1]))
+        Date d = dateFormatter.getISODate(tValue);
+        if (d == null)
         {
-            throw new InvalidDimensionValueException("time", target.toString());
+            throw new InvalidDimensionValueException("time", tValue);
+        }
+        float target = d.getTime() / 1000.0f;
+        
+        // Check that the point is within range
+        if (target < tValues[0] || target > tValues[tValues.length - 1])
+        {
+            throw new InvalidDimensionValueException("time", tValue);
         }
         
         // do a binary search to find the nearest index
@@ -246,16 +226,16 @@ public class DataReader
         while (low <= high)
         {
             int mid = (low + high) >> 1;
-            Date midVal = tValues[mid];
-            if (midVal.equals(target))
+            float midVal = tValues[mid];
+            if (midVal == target)
             {
                 return mid;
             }
-            else if (midVal.before(target))
+            else if (midVal < target)
             {
                 low = mid + 1;
             }
-            else if (midVal.after(target))
+            else if (midVal > target)
             {
                 high = mid - 1;
             }
@@ -263,15 +243,15 @@ public class DataReader
         
         // If we've got this far we have to decide between values[low]
         // and values[high]
-        if (tValues[low].equals(target))
+        if (tValues[low] == target)
         {
             return low;
         }
-        else if (tValues[high].equals(target))
+        else if (tValues[high] == target)
         {
             return high;
         }
-        throw new InvalidDimensionValueException("time", target.toString());
+        throw new InvalidDimensionValueException("time", tValue);
     }
         
     /**
@@ -279,21 +259,16 @@ public class DataReader
      * to be inefficient here because z axes are not likely to be large.
      * @param zValues Array of values of the z coordinate
      * @param targetVal Value to search for
-     * @param zIsPositive True if z values increase upwards
      * @return the z index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
      * within zValues
      */
-    private static int findZIndex(double[] zValues, String targetVal,
-        boolean zIsPositive) throws InvalidDimensionValueException
+    private static int findZIndex(double[] zValues, String targetVal)
+        throws InvalidDimensionValueException
     {
         try
         {
             float zVal = Float.parseFloat(targetVal);
-            if (!zIsPositive)
-            {
-                zVal = -zVal;
-            }
             for (int i = 0; i < zValues.length; i++)
             {
                 if (Math.abs((zValues[i] - zVal) / zVal) < 1e-5)

@@ -61,6 +61,8 @@ class RequestParser:
         self._urlCodes = {}
         self._urlCodes[re.compile("%2f", re.IGNORECASE)] = "/"
         self._urlCodes[re.compile("%20", re.IGNORECASE)] = " "
+        self._urlCodes[re.compile("%3a", re.IGNORECASE)] = ":"
+        self._urlCodes[re.compile("%2c", re.IGNORECASE)] = ","
 
         self._params = {} # Hashtable for query parameters and values
         if queryString is not None:

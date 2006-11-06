@@ -41,25 +41,11 @@
     </div>
 
     <div id="help" class="help">
-    <p><b>Welcome</b> to the <a href="http://www.resc.rdg.ac.uk">Reading e-Science Centre</a>'s GODIVA2 site.  This site
-    demonstrates the visualization of ocean forecast and analysis data using
-    Google Maps and Google Earth.  This site works best in Mozilla Firefox
-    but also works in most modern browsers such as Internet Explorer 6.0 and Opera 8.5.</p>
-    <p><b>How to use:</b> Select a dataset and variable (field) from the menu
-    above. The data will be extracted and projected onto the Google Map (right).
-    Navigate around the map by dragging it and using the zoom controls in the top
-    left corner of the map. Change the date and time of the data being displayed
-    by using the calendar control (top right).  Change the depth of the data
-    being displayed by using the Depth drop-down box (if applicable).  Change
-    the colour range by editing the boxes at the top and bottom of the colour 
-    scale to the right of the map. (Firefox only: change the opacity of the 
-    data overlay by using the control at the bottom right corner of the map.
-    This allows you to see the bathymetry through the data.)</p>
-    <p>At any time, click "Open in Google Earth" to view the data in <a href="http://earth.google.com">Google Earth</a>.
-    You will need to install Google Earth first.</p>
+    <p><a href="info.html">More info</a></p>
     </div>
     
     <a href="http://www.resc.rdg.ac.uk/"><img id="resclogo" src="http://www.resc.rdg.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
+    <a href="http://www.jcomm-services.org/"><img id="jcommlogo" width="187" src="images/jcomm_logo.png" alt="JCOMM logo"></a>
     
     <div id="mainPanel" class="mainPanel">
         <div class="panelHeader">

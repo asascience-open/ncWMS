@@ -50,10 +50,10 @@ def getVariables(datasets, dataset):
     """ returns an HTML table containing a set of variables for the given dataset. """
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
-    vars = nj22dataset.getVariables(datasets[dataset].location)
+    vars = nj22dataset.getVariableMetadata(datasets[dataset].location)
     for varID in vars.keys():
         str.write("<tr><td>")
-        str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dataset, varID, vars[varID]))
+        str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dataset, varID, vars[varID].title))
         str.write("</td></tr>")
     str.write("</tbody></table>")
     s = str.getvalue()
@@ -64,16 +64,16 @@ def getVariableDetails(datasets, dataset, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
     str = StringIO()
-    var = nj22dataset.getVariableDetails(datasets[dataset].location, varID)
+    var = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID]
     str.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
     str.write("<axes>")
-    if var.zValues is not None:
-        str.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zUnits, var.zPositive))
-        for z in var.zValues:
-            str.write("<value>%f</value>" % z)
+    if var.zvalues is not None:
+        str.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zunits, var.zpositive))
+        for z in var.zvalues:
+            str.write("<value>%f</value>" % math.fabs(z))
         str.write("</axis>")
     str.write("</axes>")
-    str.write("<range><min>%f</min><max>%f</max></range>" % (var.valid_min, var.valid_max))
+    str.write("<range><min>%f</min><max>%f</max></range>" % (var.validMin, var.validMax))
     str.write("</variableDetails>")
     s = str.getvalue()
     str.close()
@@ -84,7 +84,7 @@ def getCalendar(datasets, dataset, varID, dateTime):
         dateTime is a string in ISO 8601 format with the required
         'focus time' """
     # Get an array of time axis values in seconds since the epoch
-    tValues = nj22dataset.getTimeAxisValues(datasets[dataset].location, varID)
+    tValues = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""

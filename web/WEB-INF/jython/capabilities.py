@@ -4,6 +4,8 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+from xml.utils import iso8601
+
 import config, time
 import nj22dataset # TODO import other modules for CDMS server
 
@@ -99,16 +101,16 @@ def getCapabilities(req, params, datasets):
                 % (minLon, maxLon, minLat, maxLat))
 
             # Set the level dimension
-            if vars[vid].zValues is not None:
+            if vars[vid].zvalues is not None:
                 output.write("<Dimension name=\"elevation\" units=\"%s\"" 
-                    % vars[vid].zUnits)
+                    % vars[vid].zunits)
                 # Use the first value in the array as the default
                 # If the default value is removed, you also need to edit
                 # the data reading code (e.g. DataReader.java) to
                 # disallow default z values
-                output.write(" default=\"%s\">" % vars[vid].zValues[0])
+                output.write(" default=\"%s\">" % vars[vid].zvalues[0])
                 firstTime = 1
-                for z in vars[vid].zValues:
+                for z in vars[vid].zvalues:
                     if firstTime:
                         firstTime = 0
                     else:
@@ -117,17 +119,17 @@ def getCapabilities(req, params, datasets):
                 output.write("</Dimension>")
 
             # Set the time dimension
-            if vars[vid].tValues is not None:
+            if vars[vid].tvalues is not None:
                 output.write("<Dimension name=\"time\" units=\"ISO8601\">")
                 # If we change this to support the "current" attribute
                 # we must also change the data reading code
                 firstTime = 1
-                for t in vars[vid].tValues:
+                for t in vars[vid].tvalues:
                     if firstTime:
                         firstTime = 0
                     else:
                         output.write(",")
-                    output.write(t)
+                    output.write(iso8601.tostring(t))
                 output.write("</Dimension>")
 
             output.write("</Layer>") # end of variable Layer

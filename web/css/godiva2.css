@@ -38,17 +38,21 @@ div.help
     position: absolute;
     top: 420px;
     left: 20px;
-    width: 280px;
-    height: 160px;
-    overflow: auto;
-    background-color: #dadee9;
     font-size: 10pt;
 }
 
 #resclogo
 {
     position: absolute;
-    top: 600px;
+    top: 470px;
+    left: 20px;
+    border: 0;
+}
+
+#jcommlogo
+{
+    position: absolute;
+    top: 520px;
     left: 20px;
     border: 0;
 }
