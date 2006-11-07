@@ -45,7 +45,8 @@ import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 
 /**
- * Description of DatasetCache.
+ * Contains a store of metadata for a dataset - used by GetCapabilities and by
+ * the metadata-reading operations that populate the menus on the website.
  *
  * @author Jon Blower
  * $Revision$
@@ -66,6 +67,9 @@ public class DatasetCache
         this.location = location;
     }
     
+    /**
+     * @return a DatasetCache for the dataset at the given location
+     */
     public static DatasetCache acquire(String location)
     {
         synchronized(caches)
@@ -86,7 +90,7 @@ public class DatasetCache
     /**
      * @return a {@link Collection} of all the metadata in this DatasetCache
      * @throws IOException if there was an error reading from the underlying
-     * data sirce
+     * data source
      */
     public Hashtable<String, VariableMetadata> getVariableMetadata()
         throws IOException

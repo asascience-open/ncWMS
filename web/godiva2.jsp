@@ -53,7 +53,7 @@
             <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
             <span id="units"></span><br />
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
-            <span id="date"></span>&nbsp;<select id="tValues" onchange="javascript:updateTimestep()"><option value="0">dummy</option></select><br />
+            <span id="date"></span>&nbsp;<span id="time"></span><br />
             <br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>

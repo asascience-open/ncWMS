@@ -15,21 +15,26 @@ def metadata(req, configLines):
     params = ncWMS.RequestParser(req.args)
     datasets = ncWMS.getDatasets(configLines)
     metadataItem = params.getParamValue("item")
-    if (metadataItem == "datasets"):
+    if metadataItem == "datasets":
         req.write(getDatasetsDiv(datasets))
-    elif (metadataItem == "variables"):
+    elif metadataItem == "variables":
         dataset = params.getParamValue("dataset")
         req.write(getVariables(datasets, dataset))
-    elif (metadataItem == "variableDetails"):
+    elif metadataItem == "variableDetails":
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         req.write(getVariableDetails(datasets, dataset, varID))
-    elif (metadataItem == "calendar"):
+    elif metadataItem == "calendar":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         dateTime = params.getParamValue("dateTime")
         req.write(getCalendar(datasets, dataset, varID, dateTime))
+    elif metadataItem == "timesteps":
+        dataset = params.getParamValue("dataset")
+        varID = params.getParamValue("variable")
+        tIndex = int(params.getParamValue("tIndex"))
+        req.write(getTimesteps(datasets, dataset, varID, tIndex))
 
 def getDatasetsDiv(datasets):
     """ returns a string with a set of divs representing the datasets.
@@ -89,7 +94,7 @@ def getCalendar(datasets, dataset, varID, dateTime):
     if tValues is None:
         return ""
     str = StringIO()
-    prettyDateFormat = "%d %b %Y %H:%M:%S"
+    prettyDateFormat = "%d %b %Y"
 
     # Find the closest time step to the given dateTime value
     # TODO: binary search would be more efficient
@@ -149,7 +154,7 @@ def getCalendar(datasets, dataset, varID, dateTime):
                 if found:
                     tValue = iso8601.tostring(tValues[tValIndex])
                     prettyTValue = time.strftime(prettyDateFormat, axisDay)
-                    str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, tValIndex, tValue, prettyTValue, day))
+                    str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%s','%s','%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, dataset, varID, tValIndex, tValue, prettyTValue, day))
                 else:
                     str.write("<td>%d</td>" % day)
             else:
@@ -206,6 +211,41 @@ def _getMonthAfter(date):
         year = date[0]
     newDate = tuple([year] + [month] + list(date[2:]))
     return iso8601.tostring(time.mktime(newDate))
+
+def getTimesteps(datasets, dataset, varID, tIndex):
+    """ Returns an HTML select box allowing the user to select a 
+        set of times for a given day """
+    # Get an array of time axis values in seconds since the epoch
+    tValues = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID].tvalues
+    # TODO: is this the right thing to do here?
+    if tValues is None:
+        return ""
+    str = StringIO()
+    
+    # We find a list of indices of timesteps that are on the same day
+    # as the provided tIndex
+    indices = {}
+    reftime = time.gmtime(tValues[tIndex])
+    indices[tIndex] = "%02d:%02d:%02d" % (reftime[3], reftime[4], reftime[5])
+    for i in xrange(tIndex + 1, len(tValues)):
+        t = time.gmtime(tValues[i])
+        diff = _compareDays(reftime, t)
+        if diff == 0:
+            indices[i] = "%02d:%02d:%02d" % (t[3], t[4], t[5])
+        else:
+            break
+
+    # Write the selection box with the timesteps
+    str.write("<select id=\"tValues\" onchange=\"javascript:updateMap()\">")
+    keys = indices.keys()
+    keys.sort()
+    for i in keys:
+        str.write("<option value=\"%s\">%s</option>" % (iso8601.tostring(tValues[i]), indices[i]))
+    str.write("</select>")
+
+    s = str.getvalue()
+    str.close()
+    return s
 
 def _compareDays(d1, d2):
     """ Both arguments are struct_time tuples.  Returns 0 if both dates fall

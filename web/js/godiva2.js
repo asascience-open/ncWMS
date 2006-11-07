@@ -7,7 +7,7 @@ var layerName = '';
 var prettyDsName = ''; // The dataset name, formatted for human reading
 var zValue = 0; // The currently-selected depth *value* (not the index)
 var zPositive = 0; // Will be 1 if the selected z axis is positive
-var tValue = null; // The currently-selected time *value* as a string in yyyy-MM-ddThh:mm:ss format
+var tValue = null;
 var prettyTValue = null; // The t value, formatted for human reading
 var isIE;
 var scaleMinVal;
@@ -192,6 +192,7 @@ function setCalendar(dataset, variable, dateTime)
                 $('calendar').innerHTML = '';
                 $('date').innerHTML = '';
                 updateMap();
+                return;
             }
             var xmldoc = GXml.parse(data);
             $('calendar').innerHTML =
@@ -206,7 +207,7 @@ function setCalendar(dataset, variable, dateTime)
                 var tVal = xmldoc.getElementsByTagName('nearestValue')[0].firstChild.nodeValue;
                 var prettyTVal = xmldoc.getElementsByTagName('prettyNearestValue')[0].firstChild.nodeValue;
                 // Get the timesteps for this day and update the map
-                getTimesteps(tIndex, tVal, prettyTVal);
+                getTimesteps(dataset, variable, tIndex, tVal, prettyTVal);
             }
             else if ($('t' + timestep))
             {
@@ -221,7 +222,7 @@ function setCalendar(dataset, variable, dateTime)
 // Updates the time selector control.  Finds all the timesteps that occur on
 // the same day as the timestep with the given index.   Called from the calendar
 // control (see getCalendar.jsp)
-function getTimesteps(tIndex, tVal, prettyTVal)
+function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
 {
     // Forget about the time control for the moment.  Just set the new timestep
     if ($('t' + timestep))
@@ -229,40 +230,21 @@ function getTimesteps(tIndex, tVal, prettyTVal)
         $('t' + timestep).style.backgroundColor = 'white';
     }
     timestep = tIndex;
-    tValue = tVal;
-    $('t' + timestep).style.backgroundColor = '#dadee9';
+    if ($('t' + timestep))
+    {
+        $('t' + timestep).style.backgroundColor = '#dadee9';
+    }
     $('date').innerHTML = '<b>Date/time: </b>' + prettyTVal;
-    updateMap();
     
-    
-    // Set the calendar. When the calendar arrives the map will be updated
-    /*request.open('GET', 'getTimesteps.jsp?dataset=' + dataset + '&variable=' + 
-        variable + '&tIndex=' + tIndex, true);
-    
-    request.onreadystatechange = function() {
-        if (request.readyState == 4) {
-            var xmldoc = GXml.parse(request.responseText);
-            $('date').innerHTML = xmldoc.getElementsByTagName('date')[0].firstChild.nodeValue;
-            var options = xmldoc.getElementsByTagName('option');
-            for (var i = 0; i < options.length; i++)
-            {
-                $('tValues').options[i] = new Option(options[i].firstChild.nodeValue,
-                    options[i].getAttribute('value'));
-            }
-            timestep = options[0].getAttribute('value');
+    // Get the timesteps
+    GDownloadUrl('Metadata.py?item=timesteps&dataset=' +  dataset + 
+        '&variable=' + variable + '&tIndex=' + tIndex,
+        function(data, responseCode) {
+            $('time').innerHTML = data; // the data will be the selection box
             updateMap();
         }
-    }
-    request.send(null);*/
+    );
 }
-
-// Sets the timestep.  Called from the time selector control (see index.jsp)
-/*function updateTimestep()
-{
-    timestep = $('tValues').value;
-    alert('Setting timestep to ' + timestep);
-    updateMap();
-}*/
 
 // Validates the entries for the scale bar
 function validateScale()
@@ -318,6 +300,9 @@ function updateMap()
     if (!zPositive) {
         zValue = -zValue;
     }
+    
+    tValue = $('tValues').value;
+    alert(tValue);
 
     // Get the base url
     var url = serverURL + 'WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
