@@ -1,9 +1,11 @@
 # Entry point (Jython servlet) for the WMS
 
 from javax.servlet.http import HttpServlet
-from javax.servlet import ServletException
+from javax.servlet import GenericServlet, ServletException
 from java.io import InputStreamReader, BufferedReader
 from java.net import URL
+
+from ucar.nc2.dataset import NetcdfDatasetCache
 
 import ncWMS
 
@@ -40,6 +42,17 @@ class FakeModPythonRequestObject:
 
 # Entry point for the Jython WMS servlet
 class WMS (HttpServlet):
+
+    def init(self, cfg=None):
+        if cfg:
+            GenericServlet.init(self, cfg)
+        else:
+            GenericServlet.init(self)
+        # Initialize the cache of NetcdfDatasets
+        NetcdfDatasetCache.init()
+
+    def destroy(self):
+        NetcdfDatasetCache.exit()
 
     def doGet(self,request,response):
         """ Perform the WMS operation """

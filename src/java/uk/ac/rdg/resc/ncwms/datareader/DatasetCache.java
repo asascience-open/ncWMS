@@ -108,6 +108,8 @@ public class DatasetCache
             NetcdfDataset nc = null;
             try
             {
+                // We use openDataset() rather than acquiring from cache 
+                // because we need to enhance the dataset
                 nc = NetcdfDataset.openDataset(this.location);
                 GridDataset gd = new GridDataset(nc);
                 for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )

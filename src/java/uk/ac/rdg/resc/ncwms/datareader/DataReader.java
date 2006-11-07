@@ -37,6 +37,7 @@ import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.NetcdfDatasetCache;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPointImpl;
@@ -76,7 +77,7 @@ public class DataReader
     {
         NetcdfDataset nc = null;
         try
-        {
+        {            
             DatasetCache ds = DatasetCache.acquire(location);
             Hashtable<String, VariableMetadata> vars = ds.getVariableMetadata();
             if (!vars.containsKey(varID))
@@ -127,8 +128,9 @@ public class DataReader
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
             
-            // Open the data file
-            nc = NetcdfDataset.openDataset(location, false, null);
+            // Get the dataset from the cache, without enhancing it
+            nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
+            
             Variable var = nc.findVariable(varID);
             if (var == null)
             {
