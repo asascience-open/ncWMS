@@ -127,7 +127,13 @@ function variableSelected(datasetName, variableName)
                         $('zValues').options[j] = new Option(optionZValue, j);
                         // Find the nearest value to the currently-selected
                         // depth level
-                        var diff = Math.abs(parseFloat(optionZValue) - zValue);
+                        var diff;
+                        // This is nasty: improve!
+                        if (zPositive) {
+                            diff = Math.abs(parseFloat(optionZValue) - zValue);
+                        } else {
+                            diff = Math.abs(parseFloat(optionZValue) + zValue);
+                        }
                         if (diff < zDiff)
                         {
                             zDiff = diff;
@@ -191,6 +197,7 @@ function setCalendar(dataset, variable, dateTime)
                 // There is no calendar data.  Just update the map
                 $('calendar').innerHTML = '';
                 $('date').innerHTML = '';
+                $('time').innerHTML = '';
                 updateMap();
                 return;
             }
@@ -224,23 +231,24 @@ function setCalendar(dataset, variable, dateTime)
 // control (see getCalendar.jsp)
 function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
 {
-    // Forget about the time control for the moment.  Just set the new timestep
-    if ($('t' + timestep))
-    {
-        $('t' + timestep).style.backgroundColor = 'white';
-    }
-    timestep = tIndex;
-    if ($('t' + timestep))
-    {
-        $('t' + timestep).style.backgroundColor = '#dadee9';
-    }
     $('date').innerHTML = '<b>Date/time: </b>' + prettyTVal;
     
     // Get the timesteps
     GDownloadUrl('Metadata.py?item=timesteps&dataset=' +  dataset + 
         '&variable=' + variable + '&tIndex=' + tIndex,
         function(data, responseCode) {
-            $('time').innerHTML = data; // the data will be the selection box
+            $('time').innerHTML = data; // the data will be a selection box
+            // Make sure the correct day is highlighted in the calendar
+            // TODO: doesn't work if there are many timesteps on the same day!
+            if ($('t' + timestep))
+            {
+                $('t' + timestep).style.backgroundColor = 'white';
+            }
+            timestep = tIndex;
+            if ($('t' + timestep))
+            {
+                $('t' + timestep).style.backgroundColor = '#dadee9';
+            }
             updateMap();
         }
     );
@@ -301,8 +309,9 @@ function updateMap()
         zValue = -zValue;
     }
     
-    tValue = $('tValues').value;
-    alert(tValue);
+    if ($('tValues')) {
+        tValue = $('tValues').value;
+    }
 
     // Get the base url
     var url = serverURL + 'WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
@@ -312,14 +321,7 @@ function updateMap()
 
     // Create the URL of a test image (single image of North Atlantic)
     var testImageURL = url + '&BBOX=-90,0,0,70';
-
-    // Create the URL to launch this dataset in Google Earth
-    var gEarthURL = serverURL + 'gearth/genkml1.kml?'
-        + 'layer=' + layerName + '&z=' + zIndex +
-        '&t=' + timestep + '&scale=' + $('scaleMin').value + ',' + $('scaleMax').value;
-
     $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>';
-        //+ '&nbsp;&nbsp;&nbsp;<a href=\'' + gEarthURL + '\'>Open in Google Earth</a>';
 
     // Notify the Google Maps widget
     set_tile_url(url);

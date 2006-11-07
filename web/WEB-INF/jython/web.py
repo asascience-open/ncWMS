@@ -234,6 +234,13 @@ def getTimesteps(datasets, dataset, varID, tIndex):
             indices[i] = "%02d:%02d:%02d" % (t[3], t[4], t[5])
         else:
             break
+    for i in xrange(tIndex - 1, -1, -1): # count backwards through the axis indices to zero
+        t = time.gmtime(tValues[i])
+        diff = _compareDays(reftime, t)
+        if diff == 0:
+            indices[i] = "%02d:%02d:%02d" % (t[3], t[4], t[5])
+        else:
+            break
 
     # Write the selection box with the timesteps
     str.write("<select id=\"tValues\" onchange=\"javascript:updateMap()\">")
