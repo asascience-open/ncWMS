@@ -21,6 +21,7 @@ def metadata(req, configLines):
         dataset = params.getParamValue("dataset")
         req.write(getVariables(datasets, dataset))
     elif metadataItem == "variableDetails":
+        req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         req.write(getVariableDetails(datasets, dataset, varID))

@@ -28,12 +28,14 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasetFactory;
 import ucar.nc2.util.CancelTask;
 
 /**
- * A {@link NetcdfDatasetFactory} that opens datasets without enhancing them
+ * A {@link NetcdfDatasetFactory} that opens datasets without enhancing them,
+ * but adds the coordinate systems
  *
  * @author Jon Blower
  * $Revision$
@@ -58,12 +60,14 @@ public class DatasetFactory implements NetcdfDatasetFactory
     }
 
     /**
-     * Opens the dataset without enhancement
+     * Opens the dataset without enhancement and adds the coordinate systems
      */
     public NetcdfDataset openDataset(String location, CancelTask cancelTask)
         throws java.io.IOException
     {
-        return NetcdfDataset.openDataset(location, false, cancelTask);
+        NetcdfDataset nc = NetcdfDataset.openDataset(location, false, cancelTask);
+        CoordSysBuilder.addCoordinateSystems(nc, null);
+        return nc;
     }
     
 }

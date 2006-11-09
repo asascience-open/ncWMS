@@ -160,10 +160,10 @@ public class DatasetCache
                     {
                         tPos = findDimensionPos(dims, coordSys.getTimeAxis().getDimension(0));
                         Date[] tVals = coordSys.getTimeDates();
-                        float[] sse = new float[tVals.length]; // Seconds since the epoch
+                        double[] sse = new double[tVals.length]; // Seconds since the epoch
                         for (int i = 0; i < tVals.length; i++)
                         {
-                            sse[i] = tVals[i].getTime() / 1000.0f;
+                            sse[i] = tVals[i].getTime() / 1000.0;
                         }
                         vm.setTvalues(sse);
                     }

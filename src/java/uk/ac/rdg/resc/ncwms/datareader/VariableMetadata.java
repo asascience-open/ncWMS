@@ -51,7 +51,7 @@ public class VariableMetadata
     private String zUnits;
     private double[] zValues;
     private boolean zPositive;
-    private float[] tValues; // Seconds since the epoch
+    private double[] tValues; // Seconds since the epoch
     private double[] bbox; // Bounding box : minx, miny, maxx, maxy
     private double validMin;
     private double validMax;
@@ -112,12 +112,12 @@ public class VariableMetadata
         this.zValues = zValues;
     }
 
-    public float[] getTvalues()
+    public double[] getTvalues()
     {
         return tValues;
     }
 
-    public void setTvalues(float[] tValues)
+    public void setTvalues(double[] tValues)
     {
         this.tValues = tValues;
     }

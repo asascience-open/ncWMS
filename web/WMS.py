@@ -64,6 +64,7 @@ class WMS (HttpServlet):
     def getConfigFileLines(self):
         """ Gets the lines of text (ignoring comments) from the config file """
         # First get the location of the config file
+        # TODO: check last modified date to see if we need to read again
         configFileURL = self.getServletContext().getResource("/WEB-INF/conf/config.txt")
         # TODO: check for configFileURL == None
         configReader = BufferedReader(InputStreamReader(configFileURL.openStream()))
