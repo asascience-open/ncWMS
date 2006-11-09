@@ -32,8 +32,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Hashtable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
@@ -62,7 +61,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 public class DataReader
 {
     private static DateFormatter dateFormatter = new DateFormatter();
-    private static final Logger logger = LoggerFactory.getLogger(DataReader.class);
+    private static final Logger logger = Logger.getLogger(DataReader.class);
     
     /**
      * Read an array of data from a NetCDF file and projects onto a rectangular
@@ -85,8 +84,11 @@ public class DataReader
         try
         {
             // Get the dataset from the cache, without enhancing it
+            long start = System.currentTimeMillis();
             nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
-            logger.debug("Opened NetcdfDataset in {} milliseconds", 3);
+            long openedDS = System.currentTimeMillis();
+            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - start));
+            
             GridDataset gd = new GridDataset(nc);
             GeoGrid gg = gd.findGridByName(varID);
             if (gg == null)
@@ -141,6 +143,10 @@ public class DataReader
             // TODO: subsample if we are going to read very many more points
             // than we actually need
             Range xRange = new Range(minX, maxX);
+            
+            long readMetadata = System.currentTimeMillis();
+            logger.debug("Read metadata in {} milliseconds", (readMetadata - openedDS));
+                        
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
@@ -173,6 +179,10 @@ public class DataReader
                     }
                 }
             }
+            
+            long builtPic = System.currentTimeMillis();
+            logger.debug("Built picture in {} milliseconds", (builtPic - readMetadata));
+            logger.info("Whole read() operation took {} milliseconds", (builtPic - start));
 
             return picData;
         }

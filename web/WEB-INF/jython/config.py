@@ -30,3 +30,11 @@ MAX_IMAGE_HEIGHT = 1000
 
 # The separator used when generating unique layer IDs
 LAYER_SEPARATOR = "/"
+
+# The interval in minutes at which to clear the cache of NetcdfDatasets
+# Setting this too small will affect performance (probably not hugely)
+# Setting this too large will result in information being out of date
+# (e.g. a new file added to an NcML aggregation will not appear until
+# the cache is cleared)
+# This does not have to be an integer
+CACHE_REFRESH_INTERVAL = 1

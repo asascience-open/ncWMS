@@ -3,6 +3,11 @@
     <servlet>
         <servlet-name>PyServlet</servlet-name>
         <servlet-class>org.python.util.PyServlet</servlet-class>
+        <init-param>
+            <description>Log4j configuration file</description>
+            <param-name>log4j-init-file</param-name>
+            <param-value>WEB-INF/conf/log4j.properties</param-value>
+        </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>

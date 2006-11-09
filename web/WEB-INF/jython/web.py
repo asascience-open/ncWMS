@@ -18,6 +18,7 @@ def metadata(req, configLines):
     if metadataItem == "datasets":
         req.write(getDatasetsDiv(datasets))
     elif metadataItem == "variables":
+        req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         req.write(getVariables(datasets, dataset))
     elif metadataItem == "variableDetails":
@@ -32,6 +33,7 @@ def metadata(req, configLines):
         dateTime = params.getParamValue("dateTime")
         req.write(getCalendar(datasets, dataset, varID, dateTime))
     elif metadataItem == "timesteps":
+        req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         tIndex = int(params.getParamValue("tIndex"))
