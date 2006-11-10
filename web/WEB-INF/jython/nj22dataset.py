@@ -1,8 +1,8 @@
 # Dataset that is connected to NetCDF files via the Java NetCDF (nj22) library
-from ucar.nc2.dataset import NetcdfDatasetCache
+from ucar.nc2.dataset import NetcdfDatasetCache, EnhanceScaleMissingImpl
 from ucar.nc2.dataset.grid import GridDataset
 
-from uk.ac.rdg.resc.ncwms.datareader import DataReader, DatasetFactory, EnhanceScaleMissingImpl
+from uk.ac.rdg.resc.ncwms.datareader import DataReader, DatasetFactory
 from uk.ac.rdg.resc.ncwms.exceptions import *
 
 from wmsExceptions import *

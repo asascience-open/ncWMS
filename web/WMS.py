@@ -77,6 +77,8 @@ class WMS (HttpServlet):
 
     def destroy(self):
         NetcdfDatasetCache.exit()
+        if WMS.timer is not None:
+            WMS.timer.cancel()
         WMS.logger.debug("ncWMS Servlet destroyed")
 
     def doGet(self,request,response):
