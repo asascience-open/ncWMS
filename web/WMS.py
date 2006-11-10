@@ -48,10 +48,6 @@ class WMS (HttpServlet):
 
     logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.WMS")
     timer = None
-    count = 0
-
-    def __init__(self):
-        WMS.count = WMS.count + 1
 
     def init(self, cfg=None):
         """ This method will be called twice, once with a cfg parameter
@@ -77,7 +73,7 @@ class WMS (HttpServlet):
             intervalInMs = int(config.CACHE_REFRESH_INTERVAL * 60 * 1000)
             WMS.timer.scheduleAtFixedRate(CacheWiper(), intervalInMs, intervalInMs)
             WMS.logger.debug("Initialized NetcdfDatasetCache refresher")
-            WMS.logger.debug("ncWMS Servlet {} initialized", WMS.count)
+            WMS.logger.debug("ncWMS Servlet initialized")
 
     def destroy(self):
         NetcdfDatasetCache.exit()
