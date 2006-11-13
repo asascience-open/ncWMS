@@ -15,6 +15,21 @@ var scaleMaxVal;
 var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
 
+// Ajax call using the Prototype library
+// url: The URL of the data source
+// params: The parameters to append to the URL
+// onsuccess: A function that will be called with the original request object
+function downloadUrl(url, params, onsuccess)
+{
+    var myAjax = new Ajax.Request(
+        url, 
+        {
+            method: 'get', 
+            parameters: params, 
+            onComplete: onsuccess
+        });
+}
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -29,8 +44,20 @@ window.onload = function()
     // the option to have partial overlay opacity)
     isIE = navigator.appVersion.indexOf('MSIE') >= 0;
 
-    // Set up the Google Maps widget
-    setup_map($('map'));
+    // Set up the OpenLayers map widget
+    map = new OpenLayers.Map('map');
+    var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS", 
+        "http://labs.metacarta.com/wms/vmap0?", {layers: 'basic'} );
+    var jpl_wms = new OpenLayers.Layer.WMS( "NASA Global Mosaic",
+        "http://wms.jpl.nasa.gov/wms.cgi?", {layers: "modis,global_mosaic"});
+    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone", "http://ws.cadcorp.com/seazone/wms.exe?",
+        {layers: 'Barts_50km', transparent: 'true'});
+    seazone_wms.setVisibility(false);
+    map.addLayers([ol_wms, jpl_wms]); //, jpl_wms, seazone_wms]);
+    map.addControl(new OpenLayers.Control.LayerSwitcher());
+    // For some reason we have to call zoomToMaxExtent() before calling zoomTo()
+    map.zoomToMaxExtent();
+    map.zoomTo(1);
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv');
@@ -39,9 +66,9 @@ window.onload = function()
 // Populates the left-hand menu with a set of datasets
 function loadDatasets(dsDivId)
 {
-    GDownloadUrl('Metadata.py?item=datasets',
-        function(data, responseCode) {
-            $(dsDivId).innerHTML = data;
+    downloadUrl('Metadata.py', 'item=datasets',
+        function(req) {
+            $(dsDivId).innerHTML = req.responseText;
             var accordion = new Rico.Accordion
             (
                 dsDivId,
@@ -65,14 +92,14 @@ function datasetSelected(expandedTab)
     // Get the pretty-printed name of the dataset
     prettyDsName = expandedTab.titleBar.firstChild.nodeValue;
     // getVariables.jsp returns a table of variable names in HTML format
-    GDownloadUrl('Metadata.py?item=variables&dataset=' + dataset,
-        function(data, responseCode) {
-            var xmldoc = GXml.parse(data);
+    downloadUrl('Metadata.py', 'item=variables&dataset=' + dataset,
+        function(req) {
+            var xmldoc = req.responseXML;
             // set the size of the panel to match the number of variables
             var panel = $(dataset + 'Content');
             var varList = xmldoc.getElementsByTagName('tr');
             panel.style.height = varList.length * 20 + 'px';
-            panel.innerHTML = data;
+            panel.innerHTML = req.responseText;
         }
     );
 }
@@ -82,10 +109,10 @@ function datasetSelected(expandedTab)
 function variableSelected(datasetName, variableName)
 {
     newVariable = true;
-    GDownloadUrl('Metadata.py?item=variableDetails&dataset=' + datasetName +
+    downloadUrl('Metadata.py', 'item=variableDetails&dataset=' + datasetName +
         '&variable=' + variableName,
-        function(data, responseCode) {
-            var xmldoc = GXml.parse(data);
+        function(req) {
+            var xmldoc = req.responseXML;
             
             // See getVariableDetails.jsp
             var varDetails = xmldoc.getElementsByTagName('variableDetails')[0];
@@ -190,18 +217,19 @@ function variableSelected(datasetName, variableName)
 function setCalendar(dataset, variable, dateTime)
 {
     // Set the calendar. When the calendar arrives the map will be updated
-    GDownloadUrl('Metadata.py?item=calendar&dataset=' +  dataset + 
+    downloadUrl('Metadata.py', 'item=calendar&dataset=' +  dataset + 
         '&variable=' + variable + '&dateTime=' + dateTime,
-        function(data, responseCode) {
-            if (data == '') {
+        function(req) {
+            if (req.responseText == '') {
                 // There is no calendar data.  Just update the map
                 $('calendar').innerHTML = '';
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
+                $('utc').style.visibility = 'hidden';
                 updateMap();
                 return;
             }
-            var xmldoc = GXml.parse(data);
+            var xmldoc = req.responseXML;
             $('calendar').innerHTML =
                 RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
             
@@ -232,12 +260,13 @@ function setCalendar(dataset, variable, dateTime)
 function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
 {
     $('date').innerHTML = '<b>Date/time: </b>' + prettyTVal;
+    $('utc').style.visibility = 'visible';
     
     // Get the timesteps
-    GDownloadUrl('Metadata.py?item=timesteps&dataset=' +  dataset + 
+    downloadUrl('Metadata.py', 'item=timesteps&dataset=' +  dataset + 
         '&variable=' + variable + '&tIndex=' + tIndex,
-        function(data, responseCode) {
-            $('time').innerHTML = data; // the data will be a selection box
+        function(req) {
+            $('time').innerHTML = req.responseText; // the data will be a selection box
             // Make sure the correct day is highlighted in the calendar
             // TODO: doesn't work if there are many timesteps on the same day!
             if ($('t' + timestep))

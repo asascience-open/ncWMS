@@ -100,6 +100,11 @@ div.panelHeader
     visibility: hidden;
 }
 
+#utc
+{
+    visibility: hidden;
+}
+
 td
 {
     padding: 0;

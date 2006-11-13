@@ -10,31 +10,19 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>GODIVA2 Data Access and Analysis demo page</title>
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
-        <script type="text/javascript" src="js/prototype.js"></script>
+        <script type="text/javascript" src="js/OpenLayers-2.1.js"></script>
+        <script type="text/javascript" src="js/WMS1_3.js"></script>
+        <!--<script type="text/javascript" src="js/prototype.js"></script>-->
         <script type="text/javascript" src="js/rico.js"></script>
         <script type="text/javascript">
             var serverURL = '<%=serverURL%>';
         </script>
-        <script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=<%
-            if (request.getServerPort() == 9080)
-            {
-                // This is the test server
-                out.print("ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxReA-wKwO_5JdwC5myEJFBQQHe_XBRzV2_S1wpru4MBkCzDmuA4Lj8jnA");
-            }
-            else if (request.getServerPort() == 8080)
-            {
-                out.print("ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxSwjBCFN6caz8FNNh4puT4ThxF1chRFPKTCfeE2PRcErWgrLTcnmGWlkw");
-            }
-            else if (request.getServerPort() == 8084)
-            {
-                // key for http://localhost:8084
-                out.print("ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg");
-            }%>"></script>
-        <script type="text/javascript" src="js/gmaps.js"></script>
+        <!--<script type="text/javascript" src="js/OpenLayers-2.1.js"></script>
+        <script type="text/javascript" src="js/WMS1_3.js"></script>-->
         <script type="text/javascript" src="js/godiva2.js"></script>
     </head>
     
-    <body onunload="GUnload()">
+    <body>
 
     <!-- This is the left menu bar that will contain the list of datasets and variables -->
     <div id="accordionDiv" class="leftmenu">
@@ -53,7 +41,7 @@
             <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
             <span id="units"></span><br />
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
-            <span id="date"></span>&nbsp;<span id="time"></span><br />
+            <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span><br />
             <br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>
