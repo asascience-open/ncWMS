@@ -63,6 +63,23 @@ def getMap(req, params, datasets):
     if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
         raise WMSException("You may only request a single value of TIME")
 
+    # Get the requested transparency and background colour for the layer
+    trans = params.getParamValue("transparent", "false").lower()
+    if trans == "false":
+        transparent = 0
+    elif trans == "true":
+        transparent = 1
+    else:
+        raise WMSException("The value of TRANSPARENT must be \"TRUE\" or \"FALSE\"")
+    
+    bgc = params.getParamValue("bgcolor", "0xFFFFFF")
+    if len(bgc) != 8 or not bgc.startswith("0x"):
+        raise WMSException("Invalid format for BGCOLOR")
+    try:
+        bgcolor = eval(bgc) # Parses hex string into an integer
+    except:
+        raise WMSException("Invalid format for BGCOLOR")
+
     # Get the scale for colouring the map: this is an extension to the
     # WMS specification
     scale = params.getParamValue("scale", "0,0") # 0,0 signals auto-scale
@@ -97,7 +114,7 @@ def getMap(req, params, datasets):
         raise LayerNotDefined(layers[0])
     else:
         # Turn the data into an image and output to the client
-        javagraphics.makePic(req, picData, width, height, fillValue, scaleMin, scaleMax)
+         javagraphics.makePic(req, picData, width, height, fillValue, transparent, bgcolor, scaleMin, scaleMax)
     
     return
 

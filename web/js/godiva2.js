@@ -367,12 +367,11 @@ function updateMap()
     if (essc_wms == null) {
         essc_wms = new OpenLayers.Layer.WMS1_3("NCOF",
             serverURL + 'WMS.py', {layers: layerName, elevation: zValue, time: tValue,
-             scale: scaleMinVal + "," + scaleMaxVal});
-        essc_wms.setIsBaseLayer(false);
+            transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal});
         map.addLayers([essc_wms]);
     } else {
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
-             scale: scaleMinVal + "," + scaleMaxVal});
+            scale: scaleMinVal + "," + scaleMaxVal});
     }
 }
 

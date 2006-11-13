@@ -10,7 +10,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>GODIVA2 Data Access and Analysis demo page</title>
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
-        <script type="text/javascript" src="js/OpenLayers.js"></script>
+        <script type="text/javascript" src="js/OpenLayers-2.1.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <script type="text/javascript">
             var serverURL = '<%=serverURL%>';
