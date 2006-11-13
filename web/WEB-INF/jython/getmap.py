@@ -90,6 +90,15 @@ def getMap(req, params, datasets):
             raise WMSException("Invalid number in SCALE parameter")
     else:     
         raise WMSException("The SCALE parameter must be of the form SCALEMIN,SCALEMAX")
+
+    # Get the percentage opacity of the map layer: another WMS extension
+    opa = params.getParamValue("opacity", "100")
+    try:
+        opacity = int(opa)
+    except:
+        raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
+    if opacity < 0 or opacity > 100:
+        raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
     
     # Generate a grid of lon,lat points, one for each image pixel
     crs = params.getParamValue("crs")
@@ -114,7 +123,7 @@ def getMap(req, params, datasets):
         raise LayerNotDefined(layers[0])
     else:
         # Turn the data into an image and output to the client
-         javagraphics.makePic(req, picData, width, height, fillValue, transparent, bgcolor, scaleMin, scaleMax)
+         javagraphics.makePic(req, picData, width, height, fillValue, transparent, bgcolor, opacity, scaleMin, scaleMax)
     
     return
 

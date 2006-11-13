@@ -14,6 +14,7 @@ var scaleMinVal;
 var scaleMaxVal;
 var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
+var opacity = "100";
 var essc_wms = null; // The WMS layer for the ocean data
 
 // Ajax call using the Prototype library
@@ -322,7 +323,8 @@ function validateScale()
 // TODO: can we change the opacity of an image without reloading it (in FF at least)?
 function changeOpacity(newValue)
 {
-    alert(newValue);
+    opacity = newValue;
+    updateMap();
 }
 
 function updateMap()
@@ -363,15 +365,19 @@ function updateMap()
     // Notify the OpenLayers widget
     // SCALE=minval,maxval is a non-standard extension to WMS, describing how
     // the map is to be coloured.
+    // OPACITY=[0,100] is another non-standard extension to WMS, giving the opacity
+    // of the data pixels
     // TODO get the map projection from the base layer
+    // TODO use a more informative title
     if (essc_wms == null) {
-        essc_wms = new OpenLayers.Layer.WMS1_3("NCOF",
+        essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
             serverURL + 'WMS.py', {layers: layerName, elevation: zValue, time: tValue,
-            transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal});
+            transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
+            opacity: opacity});
         map.addLayers([essc_wms]);
     } else {
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
-            scale: scaleMinVal + "," + scaleMaxVal});
+            scale: scaleMinVal + "," + scaleMaxVal, opacity: opacity});
     }
 }
 
