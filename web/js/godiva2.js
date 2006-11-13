@@ -14,6 +14,7 @@ var scaleMinVal;
 var scaleMaxVal;
 var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
+var essc_wms = null; // The WMS layer for the ocean data
 
 // Ajax call using the Prototype library
 // url: The URL of the data source
@@ -317,6 +318,13 @@ function validateScale()
     }
 }
 
+// Changes the opacity of the layer
+// TODO: can we change the opacity of an image without reloading it (in FF at least)?
+function changeOpacity(newValue)
+{
+    alert(newValue);
+}
+
 function updateMap()
 {    
     // Update the intermediate scale markers
@@ -329,7 +337,7 @@ function updateMap()
     var zIndex = $('zValues').selectedIndex;
     if ($('zValues').options.length == 0) {
         // If we have no depth information, assume we're at the surface.  This
-        // will be ignored by the Google Maps server
+        // will be ignored by the map server
         zValue = 0;
     } else {
         zValue = $('zValues').options[zIndex].firstChild.nodeValue;
@@ -344,7 +352,7 @@ function updateMap()
 
     // Get the base url
     var url = serverURL + 'WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
-        '&LAYERS=' + layerName + '&STYLES=&CRS=EPSG:41001&WIDTH=256&HEIGHT=256' +
+        '&LAYERS=' + layerName + '&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256' +
         '&ELEVATION=' + zValue + '&TIME=' + tValue +
         '&FORMAT=image/png&SCALE=' + $('scaleMin').value + ',' + $('scaleMax').value;
 
@@ -352,8 +360,20 @@ function updateMap()
     var testImageURL = url + '&BBOX=-90,0,0,70';
     $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>';
 
-    // Notify the Google Maps widget
-    set_tile_url(url);
+    // Notify the OpenLayers widget
+    // SCALE=minval,maxval is a non-standard extension to WMS, describing how
+    // the map is to be coloured.
+    // TODO get the map projection from the base layer
+    if (essc_wms == null) {
+        essc_wms = new OpenLayers.Layer.WMS1_3("NCOF",
+            serverURL + 'WMS.py', {layers: layerName, elevation: zValue, time: tValue,
+             scale: scaleMinVal + "," + scaleMaxVal});
+        essc_wms.setIsBaseLayer(false);
+        map.addLayers([essc_wms]);
+    } else {
+        essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
+             scale: scaleMinVal + "," + scaleMaxVal});
+    }
 }
 
 // Formats the given value to numSigFigs significant figures
