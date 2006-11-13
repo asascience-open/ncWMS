@@ -28,7 +28,7 @@ public abstract class PicMaker
     protected float scaleMin;
     protected float scaleMax;
     // The percentage opacity of the picture
-    protected int opacity;
+    protected float opacity;
     // The fill value of the data.  Set to GmapsDataReader.FILL_VALUE by default
     protected float fillValue;
     

@@ -396,8 +396,6 @@
     <target name="library-inclusion-in-manifest" depends="init" if="dist.ear.dir">
         <basename property="included.lib.file.reference.jython.jar" file="${file.reference.jython.jar}"/>
         <copy-ear-war file="${file.reference.jython.jar}" propname="included.lib.file.reference.jython.jar.X"/>
-        <basename property="included.lib.file.reference.bufr.jar" file="${file.reference.bufr.jar}"/>
-        <copy-ear-war file="${file.reference.bufr.jar}" propname="included.lib.file.reference.bufr.jar.X"/>
         <basename property="included.lib.file.reference.grib.jar-1" file="${file.reference.grib.jar-1}"/>
         <copy-ear-war file="${file.reference.grib.jar-1}" propname="included.lib.file.reference.grib.jar-1.X"/>
         <basename property="included.lib.file.reference.jdom.jar-2" file="${file.reference.jdom.jar-2}"/>
@@ -406,19 +404,21 @@
         <copy-ear-war file="${file.reference.netcdfUI-2.2.16.jar}" propname="included.lib.file.reference.netcdfUI-2.2.16.jar.X"/>
         <basename property="included.lib.file.reference.nlog4j-1.2.21.jar-2" file="${file.reference.nlog4j-1.2.21.jar-2}"/>
         <copy-ear-war file="${file.reference.nlog4j-1.2.21.jar-2}" propname="included.lib.file.reference.nlog4j-1.2.21.jar-2.X"/>
+        <basename property="included.lib.file.reference.bufr.jar-2" file="${file.reference.bufr.jar-2}"/>
+        <copy-ear-war file="${file.reference.bufr.jar-2}" propname="included.lib.file.reference.bufr.jar-2.X"/>
         <mkdir dir="${build.web.dir.real}/META-INF"/>
         <manifest file="${build.web.dir.real}/META-INF/MANIFEST.MF" mode="update">
-            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.bufr.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} "/>
+            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} ${included.lib.file.reference.bufr.jar-2} "/>
         </manifest>
         <delete dir="${dist.ear.dir}/temp"/>
     </target>
     <target name="library-inclusion-in-archive" depends="init" unless="dist.ear.dir">
         <copy file="${file.reference.jython.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
-        <copy file="${file.reference.bufr.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.grib.jar-1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.jdom.jar-2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.netcdfUI-2.2.16.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.nlog4j-1.2.21.jar-2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.bufr.jar-2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
     </target>
     <target name="do-ear-dist" depends="init,compile,compile-jsps,-pre-dist,library-inclusion-in-manifest">
         <dirname property="dist.jar.dir" file="${dist.ear.war}"/>

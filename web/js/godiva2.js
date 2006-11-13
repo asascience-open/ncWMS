@@ -3,6 +3,7 @@
 // included in any page that uses this script
 //
 
+var map = null;
 var layerName = '';
 var prettyDsName = ''; // The dataset name, formatted for human reading
 var zValue = 0; // The currently-selected depth *value* (not the index)
@@ -14,7 +15,6 @@ var scaleMinVal;
 var scaleMaxVal;
 var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
-var opacity = "100";
 var essc_wms = null; // The WMS layer for the ocean data
 
 // Ajax call using the Prototype library
@@ -55,7 +55,7 @@ window.onload = function()
     var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone", "http://ws.cadcorp.com/seazone/wms.exe?",
         {layers: 'Barts_50km', transparent: 'true'});
     seazone_wms.setVisibility(false);
-    map.addLayers([ol_wms, jpl_wms]); //, jpl_wms, seazone_wms]);
+    map.addLayers([ol_wms, jpl_wms]); //, seazone_wms]);
     map.addControl(new OpenLayers.Control.LayerSwitcher());
     // For some reason we have to call zoomToMaxExtent() before calling zoomTo()
     map.zoomToMaxExtent();
@@ -319,14 +319,6 @@ function validateScale()
     }
 }
 
-// Changes the opacity of the layer
-// TODO: can we change the opacity of an image without reloading it (in FF at least)?
-function changeOpacity(newValue)
-{
-    opacity = newValue;
-    updateMap();
-}
-
 function updateMap()
 {    
     // Update the intermediate scale markers
@@ -351,16 +343,8 @@ function updateMap()
     if ($('tValues')) {
         tValue = $('tValues').value;
     }
-
-    // Get the base url
-    var url = serverURL + 'WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
-        '&LAYERS=' + layerName + '&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256' +
-        '&ELEVATION=' + zValue + '&TIME=' + tValue +
-        '&FORMAT=image/png&SCALE=' + $('scaleMin').value + ',' + $('scaleMax').value;
-
-    // Create the URL of a test image (single image of North Atlantic)
-    var testImageURL = url + '&BBOX=-90,0,0,70';
-    $('imageURL').innerHTML = '<a href=\'' + testImageURL + '\'>link to test image</a>';
+    
+    var opacity = $('opacityValue').value;
 
     // Notify the OpenLayers widget
     // SCALE=minval,maxval is a non-standard extension to WMS, describing how
@@ -379,6 +363,8 @@ function updateMap()
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
             scale: scaleMinVal + "," + scaleMaxVal, opacity: opacity});
     }
+    var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
+    $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>';
 }
 
 // Formats the given value to numSigFigs significant figures

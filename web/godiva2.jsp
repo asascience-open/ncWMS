@@ -59,7 +59,7 @@
             </div>
             <span id="imageURL" class="imageURL"></span>
             <span id="opacityControl">Overlay opacity:
-                <select id="opacityValue" onchange="javascript:changeOpacity(this.value)">
+                <select id="opacityValue" onchange="javascript:updateMap()">
                     <option value="100" selected>100%</option>
                     <option value="66">66%</option>
                     <option value="33">33%</option>

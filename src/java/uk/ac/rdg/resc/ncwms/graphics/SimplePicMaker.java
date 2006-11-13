@@ -44,19 +44,8 @@ import java.io.IOException;
 public class SimplePicMaker extends PicMaker
 {
     private byte[] pixels;
-    
-    /**
-     * Creates a new SimplePicMaker, automatically creating a colour scale
-     * @param data The raw data to turn into a picture
-     * @param width The width of the picture in pixels
-     * @param height The height of the picture in pixels
-     * @param fillValue The value to use for missing data
-     * @throws IllegalArgumentException if width * height != data.length
-     */
-    public SimplePicMaker(float[] data, int width, int height, float fillValue)
-    {
-        this(data, width, height, fillValue, 0.0f, 0.0f);
-    }
+    private boolean transparent;
+    private Color bgColor;
     
     /**
      * Creates a new instance of SimplePicMaker, manually setting the scale.  If scaleMin
@@ -65,14 +54,21 @@ public class SimplePicMaker extends PicMaker
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
      * @param fillValue The value to use for missing data
+     * @param transparent True if the background (missing data) pixels will be transparent
+     * @param bgcolor Colour of background pixels if not transparent
+     * @param opacity Percentage opacity of the data pixels
      * @param scaleMin The minimum value for the scale
      * @param scaleMax The maximum value for the scale
      * @throws IllegalArgumentException if width * height != data.length
      */
     public SimplePicMaker(float[] data, int width, int height, 
-        float fillValue, float scaleMin, float scaleMax)
+        float fillValue, boolean transparent, int bgcolor, float opacity,
+        float scaleMin, float scaleMax)
     {
         super(data, width, height, fillValue, scaleMin, scaleMax);
+        this.transparent = transparent;
+        this.bgColor = new Color(bgcolor);
+        this.opacity = opacity;
         if (scaleMin == 0.0f && scaleMax == 0.0f)
         {
             this.setScaleAuto();
@@ -114,11 +110,6 @@ public class SimplePicMaker extends PicMaker
         this.pixels = new byte[this.data.length];
         for (int i = 0; i < this.data.length; i++)
         {
-            //int row = i / this.picWidth;
-            //int col = i % this.picWidth;
-            //int newRow = this.picHeight - 1 - row;
-            //int newLoc = newRow * this.picWidth + col;
-            //this.pixels[newLoc] = getColourIndex(this.data[i]);
             this.pixels[i] = getColourIndex(this.data[i]);
         }
     }
@@ -183,7 +174,7 @@ public class SimplePicMaker extends PicMaker
         // Set the alpha value based on the percentage transparency
         byte alpha = (byte)(255);
         
-        // Colour with index 0 is fully transparent
+        // Colour with index 0 is background
         r[0] = 0;   g[0] = 0;   b[0] = 0;   a[0] = 0;
         // Colour with index 1 is black
         r[1] = 0;   g[1] = 0;   b[1] = 0;   a[1] = alpha;
@@ -218,11 +209,11 @@ public class SimplePicMaker extends PicMaker
         byte alpha;
         // Here we are playing safe and avoiding rounding errors that might
         // cause the alpha to be set to zero instead of 255
-        if (this.opacity == 100)
+        if (this.opacity >= 100)
         {
             alpha = (byte)255;
         }
-        else if (this.opacity == 0)
+        else if (this.opacity <= 0)
         {
             alpha = 0;
         }
@@ -231,9 +222,20 @@ public class SimplePicMaker extends PicMaker
             alpha = (byte)(2.55 * this.opacity);
         }
         
-        // Colour with index 0 is fully transparent
-        r[0] = 0;   g[0] = 0;   b[0] = 0;   a[0] = 0;
-        // Colour with index 1 is black
+        if (this.transparent)
+        {
+            // Colour with index 0 is fully transparent
+            r[0] = 0;   g[0] = 0;   b[0] = 0;   a[0] = 0;
+        }
+        else
+        {
+            // Use the supplied background color
+            r[0] = (byte)this.bgColor.getRed();
+            g[0] = (byte)this.bgColor.getGreen();
+            b[0] = (byte)this.bgColor.getBlue();
+            a[0] = alpha;
+        }
+        // Colour with index 1 is black (represents out-of-range data)
         r[1] = 0;   g[1] = 0;   b[1] = 0;   a[1] = alpha;
         
         int[] red =

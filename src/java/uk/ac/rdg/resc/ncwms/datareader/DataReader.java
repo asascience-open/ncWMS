@@ -125,29 +125,34 @@ public class DataReader
             }
             Range zRange = new Range(zIndex, zIndex);
             
+            // Create an array to hold the data
+            float[] picData = new float[lonValues.length * latValues.length];
+            Arrays.fill(picData, fillValue);
+        
             // Find the range of x indices
-            int minX = Integer.MAX_VALUE;
-            int maxX = -Integer.MAX_VALUE;
+            int minX = -1;
+            int maxX = -1;
             int[] xIndices = new int[lonValues.length];
             for (int i = 0; i < lonValues.length; i++)
             {
                 xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
                 if (xIndices[i] >= 0)
                 {
-                    if (xIndices[i] < minX) minX = xIndices[i];
-                    if (xIndices[i] > maxX) maxX = xIndices[i];
+                    if (minX < 0 || xIndices[i] < minX) minX = xIndices[i];
+                    if (maxX < 0 || xIndices[i] > maxX) maxX = xIndices[i];
                 }
             }
             // TODO: subsample if we are going to read very many more points
             // than we actually need
+            if (minX < 0 || maxX < 0)
+            {
+                // We haven't found any valid data
+                return picData;
+            }
             Range xRange = new Range(minX, maxX);
             
             long readMetadata = System.currentTimeMillis();
             logger.debug("Read metadata in {} milliseconds", (readMetadata - openedDS));
-                        
-            // Create an array to hold the data
-            float[] picData = new float[lonValues.length * latValues.length];
-            Arrays.fill(picData, fillValue);
             
             DataChunk dataChunk;
             // Cycle through the latitude values, extracting a scanline of
