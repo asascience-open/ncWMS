@@ -14,8 +14,11 @@ def metadata(req, configLines):
     """ Processes a request for metadata from the Godiva2 web interface """
     params = ncWMS.RequestParser(req.args)
     datasets = ncWMS.getDatasets(configLines)
-    metadataItem = params.getParamValue("item")
-    if metadataItem == "datasets":
+    metadataItem = params.getParamValue("item", "frontpage")
+    if metadataItem == "frontpage":
+        req.content_type = "text/html"
+        req.write(getFrontPage(datasets))
+    elif metadataItem == "datasets":
         req.write(getDatasetsDiv(datasets))
     elif metadataItem == "variables":
         req.content_type = "text/xml"
@@ -38,6 +41,35 @@ def metadata(req, configLines):
         varID = params.getParamValue("variable")
         tIndex = int(params.getParamValue("tIndex"))
         req.write(getTimesteps(datasets, dataset, varID, tIndex))
+
+def getFrontPage(datasets):
+    """ Returns a front page for the WMS, containing example links """
+    doc = StringIO()
+    doc.write("<html><head><title>%s</title></head>" % config.title)
+    doc.write("<body><h1>%s</h1>" % config.title)
+    doc.write("<p><a href=\"WMS.py?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
+    doc.write("<p><a href=\"./godiva2.jsp\">Godiva2 interface</a></p>")
+    doc.write("<h2>Example maps:</h2>")
+    # Print a GetMap link for every dataset we have
+    doc.write("<table border=\"1\"><tbody>")
+    for ds in datasets.keys():
+        doc.write("<tr><th>%s</th><td>" % datasets[ds].title)
+        vars = nj22dataset.getVariableMetadata(datasets[ds].location)
+        for varID in vars.keys():
+            doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=image/png")
+            doc.write("&LAYERS=%s/%s" % (ds, varID))
+            bbox = vars[varID].bbox
+            doc.write("&BBOX=%f,%f,%f,%f" % (bbox[0], bbox[1], bbox[2], bbox[3]))
+            if vars[varID].tvalues is not None:
+                doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
+            doc.write("\">%s</a><br />" % vars[varID].title)
+        doc.write("</td></tr>")
+    doc.write("</tbody></table>")
+    doc.write("</body></html>")
+    s = doc.getvalue()
+    doc.close()
+    return s
+    
 
 def getDatasetsDiv(datasets):
     """ returns a string with a set of divs representing the datasets.

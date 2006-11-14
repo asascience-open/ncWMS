@@ -21,7 +21,7 @@
     </session-config>
     <welcome-file-list>
 	<welcome-file>
-            index.jsp
+            Metadata.py
         </welcome-file>
     </welcome-file-list>
 </web-app>
