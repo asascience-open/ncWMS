@@ -43,6 +43,7 @@ import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.MissingDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
@@ -315,8 +316,15 @@ public class DataReader
     
     public static void main(String[] args) throws Exception
     {
-        String location = "C:\\data\\20061017-UKMO-L4UHfnd-GLOB-v01.nc";
-        String varID = "sst_foundation";
+        String location = "C:\\data\\Waves\\UKWaters_waves_00Z_20061111.nc";
+        NetcdfDataset nc = NetcdfDataset.openDataset(location);
+        GridDataset gd = new GridDataset(nc);
+        GeoGrid gg = gd.findGridByName("wind_speed");
+        LatLonRect bbox = gg.getCoordinateSystem().getLatLonBoundingBox();
+        System.out.println("" + bbox.getLowerLeftPoint().getLatitude());
+        System.out.println("" + bbox.getUpperRightPoint().getLatitude());
+        nc.close();
+        /*String varID = "sst_foundation";
         float fillValue = Float.NaN;
         float[] lonValues = new float[256];
         float[] latValues = new float[256];
@@ -325,6 +333,6 @@ public class DataReader
             lonValues[i] = i * 90.0f / 256 - 90;
             latValues[i] = i * 90.0f / 256;
         }
-        float[] data = read(location, varID, "tvalue", "zvalue", latValues, lonValues, Float.NaN);
+        float[] data = read(location, varID, "tvalue", "zvalue", latValues, lonValues, Float.NaN);*/
     }
 }

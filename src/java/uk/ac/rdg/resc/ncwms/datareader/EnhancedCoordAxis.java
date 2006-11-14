@@ -83,14 +83,5 @@ public abstract class EnhancedCoordAxis
      */
     public abstract int getIndex(LatLonPoint point);
     
-    /**
-     * Gets the range of values covered by this axis, as will appear in the
-     * DataLayer.getLatLonBoundingBox().  Note that this will
-     * not simply include the minimum and maximum values along the axis: we 
-     * also take into account the "cell size" of each axis point.
-     * @return array of two doubles [minVal,maxVal]
-     */
-    public abstract double[] getBboxRange();
-    
     
 }

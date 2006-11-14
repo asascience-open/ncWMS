@@ -44,12 +44,8 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
     
     protected int count; // The number of points along the axis
     
-    protected double[] bboxRange; // The minimum and maximum values covered
-                                  // by this axis 
-    
     protected boolean isLongitude; // True if this is a longitude axis
-    protected boolean wrapsWholeGlobe; // True if this is a longitude axis
-                                       // that encircles the whole globe
+    protected CoordinateAxis1D axis1D;
     
     /**
      * Creates a new instance of OneDCoordAxis
@@ -57,43 +53,9 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
      */
     protected OneDCoordAxis(CoordinateAxis1D axis1D)
     {
+        this.axis1D = axis1D;
         this.count = (int)axis1D.getSize();
         this.isLongitude = (axis1D.getAxisType() == AxisType.Lon);
-        
-        // The range is from the "left" edge of the first coordinate to the
-        // "right" edge of the last coordinate
-        double leftEdge = axis1D.getCoordEdges(0)[0];
-        double rightEdge = axis1D.getCoordEdges(this.count - 1)[1];
-        
-        this.wrapsWholeGlobe = false;
-        this.bboxRange = new double[]{leftEdge, rightEdge};
-        if (this.isLongitude)
-        {
-            Longitude startLon = new Longitude(leftEdge);
-            Longitude endLon = new Longitude(rightEdge);
-            double lonRange = startLon.getClockwiseDistanceTo(endLon);
-            double distTo180 = startLon.getClockwiseDistanceTo(180.0);
-            if (startLon.equals(endLon) || distTo180 < lonRange)
-            {
-                // The data cover the whole globe, or the +/-180 degrees line
-                // comes in the middle of the data range.  The data therefore
-                // span the range -180 to 180, even though there may be a gap
-                // in the data in this range
-                this.wrapsWholeGlobe = true;
-                this.bboxRange = new double[]{-180.0, 180.0};
-            }
-        }
-    }
-    
-    /**
-     * Gets the range of values covered by this axis.  Note that this will
-     * not simply include the minimum and maximum values along the axis: we 
-     * also take into account the "cell size" of each axis point.
-     * @return array of two doubles [min,max]
-     */
-    public double[] getBboxRange()
-    {
-        return this.bboxRange;
     }
     
 }

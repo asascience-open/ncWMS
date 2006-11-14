@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import org.apache.log4j.Logger;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -43,8 +44,11 @@ import ucar.unidata.geoloc.LatLonPoint;
  */
 public class Regular1DCoordAxis extends OneDCoordAxis
 {
+    private static final Logger logger = Logger.getLogger(Regular1DCoordAxis.class);
+    
     private double start;  // The first value along the axis
     private double stride; // The stride length along the axis
+    private boolean wraps; // True if this is a longitude axis that wraps the globe
     
     /**
      * Creates a new instance of Regular1DCoordAxis
@@ -56,6 +60,20 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         super(axis1D);
         this.start = axis1D.getStart();
         this.stride = axis1D.getIncrement();
+        this.wraps = false;
+        if (this.isLongitude)
+        {
+            Longitude st = new Longitude(this.start);
+            // Find the longitude of the point that is just off the end of the axis
+            Longitude end = new Longitude(this.start + this.stride * this.count);
+            logger.debug("Longitudes: st = {}, end = {}", st.getValue(), end.getValue());
+            if (st.equals(end))
+            {
+                this.wraps = true;
+            }
+        }
+        logger.debug("Created regular {} axis, wraps = {}",
+            (this.isLongitude ? "longitude" : "latitude"), this.wraps);
     }
     
     /**
@@ -68,32 +86,35 @@ public class Regular1DCoordAxis extends OneDCoordAxis
      */
     public int getIndex(LatLonPoint point)
     {
-        double distance;
         if (this.isLongitude)
         {
-            Longitude startLon = new Longitude(this.start);
-            distance = startLon.getClockwiseDistanceTo(point.getLongitude());
+            Longitude lon = new Longitude(point.getLongitude());
+            if (this.wraps || lon.isBetween(this.start, this.axis1D.getMaxValue()))
+            {
+                Longitude startLon = new Longitude(this.start);
+                double distance = startLon.getClockwiseDistanceTo(lon);
+                double exactNumSteps = distance / this.stride;
+                // This axis might wrap, so we make sure that the returned index
+                // is within range
+                return ((int)Math.round(exactNumSteps)) % this.count;                
+            }
+            else
+            {
+                return -1;
+            }
         }
         else
         {
             // this is a latitude axis
-            distance = point.getLatitude() - this.start;
-        }
-        double exactNumSteps = distance / this.stride;
-        int index = (int)Math.round(exactNumSteps);
-        if (this.isLongitude && this.wrapsWholeGlobe)
-        {
-            // Longitude cannot be out of range if it encircles the globe
-            index = index % this.count;
-            if (index < 0)
+            double distance = point.getLatitude() - this.start;
+            double exactNumSteps = distance / this.stride;
+            int index = (int)Math.round(exactNumSteps);
+            if (index < 0 || index >= this.count)
             {
-                index += this.count;
+                return -1;
             }
+            return index;
         }
-        if (index < 0 || index >= this.count)
-        {
-            return -1;
-        }
-        return index;
+        
     }
 }

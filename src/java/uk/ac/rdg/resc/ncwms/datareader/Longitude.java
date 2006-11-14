@@ -91,6 +91,20 @@ public class Longitude
     }
     
     /**
+     * Tests to see if this Longitude value is between two others
+     * @param v1 The first bracketing longitude value
+     * @param v2 The second bracketing longitude value
+     * @return true if this Longitude value is between the bracketing values, or
+     * is equal to one of them
+     */
+    public boolean isBetween(double v1, double v2)
+    {
+        Longitude lon1 = new Longitude(v1);
+        Longitude lon2 = new Longitude(v2);
+        return lon1.getClockwiseDistanceTo(this) <= lon1.getClockwiseDistanceTo(lon2);
+    }
+    
+    /**
      * Test to see if this Longitude is equal to another to within a fractional
      * tolerance of 1e-6 (i.e. 0.0001%)
      * @param other The other Longitude value
@@ -98,8 +112,13 @@ public class Longitude
      */
     public boolean equals(Longitude other)
     {
+        // Check for equality, avoiding divide-by-zero error
+        if (this.getValue() == 0.0)
+        {
+            return (Math.abs(other.getValue()) < 1.0e-6);
+        }
         double fracDiff = (this.getValue() - other.getValue()) / this.getValue();
-        return fracDiff < 1.0e-6;
+        return Math.abs(fracDiff) < 1.0e-6;
     }
     
     /**
