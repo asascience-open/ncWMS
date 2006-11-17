@@ -49,6 +49,8 @@
         </div>
         
         <div id="imagePanel" class="imagePanel">
+            <div id="poweredBy"><p>Powered by <a href="http://www.openlayers.org">OpenLayers</a> and <a href="http://www.opengeospatial.org">OGC</a> standards</p></div>
+        
             <div id="map" class="map"></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
             <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar"/>
