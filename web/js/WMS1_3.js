@@ -5,8 +5,7 @@
 * @class
 */
 OpenLayers.Layer.WMS1_3 = Class.create();
-OpenLayers.Layer.WMS1_3.prototype = 
-  Object.extend( new OpenLayers.Layer.WMS(), {
+OpenLayers.Layer.WMS1_3.prototype = Object.extend( new OpenLayers.Layer.WMS(), {
 
     /** @final @type hash */
     DEFAULT_PARAMS: { service: "WMS",

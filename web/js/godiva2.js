@@ -56,10 +56,21 @@ window.onload = function()
         {layers: 'Barts_50km', transparent: 'true'});
     seazone_wms.setVisibility(false);
     map.addLayers([ol_wms, jpl_wms]); //, seazone_wms]);
+    
+    // If we have loaded Google Maps and the browser is compatible, add it as a base layer
+    if (typeof GBrowserIsCompatible == 'function' && GBrowserIsCompatible()) {
+        var gmapLayer = new OpenLayers.Layer.Google("Google Maps (satellite)", {type: G_SATELLITE_MAP});
+        var gmapLayer2 = new OpenLayers.Layer.Google("Google Maps (political)", {type: G_NORMAL_MAP});
+        map.addLayers([gmapLayer, gmapLayer2]);
+    }
+        
     map.addControl(new OpenLayers.Control.LayerSwitcher());
     // For some reason we have to call zoomToMaxExtent() before calling zoomTo()
     map.zoomToMaxExtent();
     map.zoomTo(1);
+    
+    // Add a listener for changing the base map
+    map.events.register("changebaselayer", map, function() { alert(this.projection) });
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv');

@@ -12,6 +12,7 @@
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
         <script type="text/javascript" src="js/OpenLayers.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
+        <script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg"></script>
         <script type="text/javascript">
             var serverURL = '<%=serverURL%>';
         </script>
