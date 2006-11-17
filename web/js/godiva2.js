@@ -70,7 +70,7 @@ window.onload = function()
     map.zoomTo(1);
     
     // Add a listener for changing the base map
-    map.events.register("changebaselayer", map, function() { alert(this.projection) });
+    //map.events.register("changebaselayer", map, function() { alert(this.projection) });
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv');

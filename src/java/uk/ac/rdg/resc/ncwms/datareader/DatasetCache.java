@@ -38,6 +38,7 @@ import ucar.nc2.Attribute;
 import ucar.nc2.Dimension;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.NetcdfDatasetCache;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
@@ -55,6 +56,39 @@ import ucar.unidata.geoloc.LatLonRect;
  */
 public class DatasetCache
 {
+    
+    /**
+     * Gets the {@link NetcdfDataset} at the given location from the cache.
+     * @throws IOException if there was an error opening the dataset
+     */
+    public static synchronized NetcdfDataset getDataset(String location)
+        throws IOException
+    {
+        return NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
+    }
+    
+    /**
+     * Gets the metadata for the variable with the given ID from the file at the
+     * given location
+     * @param location Location of the NetcdfDataset containing the variable
+     * @param varID the unique ID of the variable
+     */
+    public static synchronized VariableMetadata getVariableMetadata(String location, String varID)
+    {
+        return null;
+    }
+    
+    /**
+     * Clears the cache of datasets and metadata.  This is called periodically
+     * by a Timer, to make sure we are synchronized with the disk.
+     * @todo if a dataset is already open, it will not be removed from the cache
+     */
+    public static synchronized void clear()
+    {
+        NetcdfDatasetCache.clearCache(false);
+    }
+    
+    
     private static Hashtable<String, DatasetCache> caches =
         new Hashtable<String, DatasetCache>();
     

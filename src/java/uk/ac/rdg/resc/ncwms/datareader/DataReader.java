@@ -192,10 +192,12 @@ public class DataReader
         }
         catch(IOException e)
         {
+            logger.error("IOException reading from " + nc.getLocation(), e);
             throw new WMSExceptionInJava("IOException: " + e.getMessage());
         }
         catch(InvalidRangeException ire)
         {
+            logger.error("InvalidRangeException reading from " + nc.getLocation(), ire);
             throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
         }
         finally
@@ -208,7 +210,7 @@ public class DataReader
                 }
                 catch (IOException ex)
                 {
-                    // Ignore this error
+                    logger.error("IOException closing " + nc.getLocation(), ex);
                 }
             }
         }
@@ -316,14 +318,20 @@ public class DataReader
     
     public static void main(String[] args) throws Exception
     {
+        // TODO: check to see if new datasets are reloaded after a clear-out
+        // of the cache if force=false and datasets were open when the clear-out
+        // was performed.
         String location = "C:\\data\\Waves\\UKWaters_waves_00Z_20061111.nc";
-        NetcdfDataset nc = NetcdfDataset.openDataset(location);
+        NetcdfDataset nc = NetcdfDataset.acquireDataset(location, null);
+        NetcdfDataset nc2 = NetcdfDataset.acquireDataset(location, null);
+        
+        /*NetcdfDataset nc = NetcdfDataset.openDataset(location);
         GridDataset gd = new GridDataset(nc);
         GeoGrid gg = gd.findGridByName("wind_speed");
         LatLonRect bbox = gg.getCoordinateSystem().getLatLonBoundingBox();
         System.out.println("" + bbox.getLowerLeftPoint().getLatitude());
         System.out.println("" + bbox.getUpperRightPoint().getLatitude());
-        nc.close();
+        nc.close();*/
         /*String varID = "sst_foundation";
         float fillValue = Float.NaN;
         float[] lonValues = new float[256];
