@@ -8,8 +8,9 @@ from java.util import Timer, TimerTask
 
 from org.apache.log4j import PropertyConfigurator, Logger
 
-from ucar.nc2.dataset import NetcdfDatasetCache
+from uk.ac.rdg.resc.ncwms.datareader import DatasetCache
 
+import time
 import ncWMS, config
 
 class FakeModPythonServerObject:
@@ -48,6 +49,7 @@ class WMS (HttpServlet):
 
     logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.WMS")
     timer = None
+    cacheWiper = None
 
     def init(self, cfg=None):
         """ This method will be called twice, once with a cfg parameter
@@ -65,18 +67,19 @@ class WMS (HttpServlet):
             if file is not None:
                 PropertyConfigurator.configure(prefix + file)
             WMS.logger.debug("Initialized logging system")
-            # Initialize the cache of NetcdfDatasets
-            NetcdfDatasetCache.init()
-            WMS.logger.debug("Initialized NetcdfDatasetCache")
+            # Initialize the cache of datasets
+            DatasetCache.init()
+            WMS.logger.debug("Initialized DatasetCache")
             # Start a timer that will clear the cache at regular intervals
             # so that NcML aggregations are reloaded
             intervalInMs = int(config.CACHE_REFRESH_INTERVAL * 60 * 1000)
-            WMS.timer.scheduleAtFixedRate(CacheWiper(), intervalInMs, intervalInMs)
+            WMS.cacheWiper = CacheWiper()
+            WMS.timer.scheduleAtFixedRate(WMS.cacheWiper, intervalInMs, intervalInMs)
             WMS.logger.debug("Initialized NetcdfDatasetCache refresher")
             WMS.logger.debug("ncWMS Servlet initialized")
 
     def destroy(self):
-        NetcdfDatasetCache.exit()
+        DatasetCache.exit()
         if WMS.timer is not None:
             WMS.timer.cancel()
         WMS.logger.debug("ncWMS Servlet destroyed")
@@ -84,7 +87,7 @@ class WMS (HttpServlet):
     def doGet(self,request,response):
         """ Perform the WMS operation """
         WMS.logger.debug("GET operation called")
-        ncWMS.wms(FakeModPythonRequestObject(request, response), getConfigFileLines(self))
+        ncWMS.wms(FakeModPythonRequestObject(request, response), getConfigFileLines(self), WMS.cacheWiper.timeLastRan)
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")
@@ -113,7 +116,9 @@ class CacheWiper(TimerTask):
     """ Clears the NetcdfDatasetCache at regular intervals """
     def __init__(self):
         self.logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.CacheWiper")
+        self.timeLastRan = time.time() # Will be used as UpdateSequence in capabilities doc
     def run(self):
-        NetcdfDatasetCache.clearCache(1)
+        DatasetCache.clear()
+        self.timeLastRan = time.time()
         self.logger.debug("Cleared cache")
         

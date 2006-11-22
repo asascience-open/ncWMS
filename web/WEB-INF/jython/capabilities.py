@@ -8,17 +8,36 @@ from xml.utils import iso8601
 
 import config, time
 import nj22dataset # TODO import other modules for CDMS server
+from wmsExceptions import *
 
-def getCapabilities(req, params, datasets):
+def getCapabilities(req, params, datasets, lastUpdateTime):
     """ Returns the Capabilities document.
         req = mod_python request object or WMS.FakeModPythonRequest object
         params = ncWMS.RequestParser object containing the request parameters
-        datasets = dictionary of dataset.AbstractDatasets, indexed by unique id """
+        datasets = dictionary of dataset.AbstractDatasets, indexed by unique id 
+        lastUpdateTime = time at which cache of data and metadata was last updated """
 
     version = params.getParamValue("version", "")
     format = params.getParamValue("format", "")
-    updatesequence = params.getParamValue("updatesequence", "")    
-    # TODO: deal with version, format and updatesequence
+    # TODO: deal with version and format
+
+    updatesequence = params.getParamValue("updatesequence", "")
+    if updatesequence != "":
+        # Client has requested a specific update sequence
+        try:
+            # TODO: why does iso8601.parse(iso8601.tostring(x)) == x - 3600?
+            # Problem in Jython's time.mktime() - INVESTIGATE
+            # TODO: make sure the precision matches
+            us = iso8601.parse(updatesequence)
+            if us == lastUpdateTime:
+                raise CurrentUpdateSequence(updatesequence)
+            elif us > lastUpdateTime:
+                raise InvalidUpdateSequence(updatesequence)
+        except ValueError:
+            # Client didn't supply a valid ISO8601 date
+            # According to the spec, InvalidUpdateSequence is not the
+            # right error code here so we use the generic one
+            raise WMSException("UpdateSequence must be a valid ISO8601 date")
     
     output = StringIO()
     output.write(config.XML_HEADER)
@@ -26,7 +45,7 @@ def getCapabilities(req, params, datasets):
     # UpdateSequence is always the current time, representing the fact
     # that the capabilities doc is always generated dynamically
     # TODO: change this to help caches
-    output.write(" updateSequence=\"%04d-%02d-%02dT%02d:%02d:%02dZ\"" % time.gmtime()[:-3])
+    output.write(" updateSequence=\"%s\"" % iso8601.tostring(lastUpdateTime))
     output.write(" xmlns=\"http://www.opengis.net/wms\"")
     output.write(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
     # The next two lines should be commented out if you wish to load this document
@@ -41,9 +60,9 @@ def getCapabilities(req, params, datasets):
     output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
-    output.write("<LayerLimit>%s</LayerLimit>" % str(config.LAYER_LIMIT))
-    output.write("<MaxWidth>%s</MaxWidth>" % str(config.MAX_IMAGE_WIDTH))
-    output.write("<MaxHeight>%s</MaxHeight>" % str(config.MAX_IMAGE_HEIGHT))
+    output.write("<LayerLimit>%d</LayerLimit>" % config.LAYER_LIMIT)
+    output.write("<MaxWidth>%d</MaxWidth>" % config.MAX_IMAGE_WIDTH)
+    output.write("<MaxHeight>%d</MaxHeight>" % config.MAX_IMAGE_HEIGHT)
     output.write("</Service>")
     
     output.write("<Capability>")
@@ -60,6 +79,13 @@ def getCapabilities(req, params, datasets):
     output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
+    if config.ALLOW_GET_FEATURE_INFO:
+        output.write("<GetFeatureInfo>")
+        for format in config.FEATURE_INFO_FORMATS:
+            output.write("<Format>%s</Format>" % format)
+        output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
+            url + "\"/></Get></HTTP></DCPType>")
+        output.write("</GetFeatureInfo>")
     output.write("</Request>")
     # TODO: support more exception types
     output.write("<Exception>")
@@ -83,18 +109,21 @@ def getCapabilities(req, params, datasets):
         # Now write the displayable data layers
         vars = nj22dataset.getVariableMetadata(datasets[dsid].location)
         for vid in vars.keys():
-            output.write("<Layer>")
-            output.write("<Name>%s/%s</Name>" % (dsid, vid))
+            output.write("<Layer")
+            if datasets[dsid].queryable:
+                output.write(" queryable=\"1\"")
+            output.write(">")
+            output.write("<Name>%s%s%s</Name>" % (dsid, config.LAYER_SEPARATOR, vid))
             output.write("<Title>%s</Title>" % vars[vid].title)
             output.write("<Abstract>%s</Abstract>" % vars[vid].abstract)
 
             # Set the bounding box
             minLon, minLat, maxLon, maxLat = vars[vid].bbox
             output.write("<EX_GeographicBoundingBox>")
-            output.write("<westBoundLongitude>%f</westBoundLongitude>" % minLon)
-            output.write("<eastBoundLongitude>%f</eastBoundLongitude>" % maxLon)
-            output.write("<southBoundLatitude>%f</southBoundLatitude>" % minLat)
-            output.write("<northBoundLatitude>%f</northBoundLatitude>" % maxLat)
+            output.write("<westBoundLongitude>%s</westBoundLongitude>" % str(minLon))
+            output.write("<eastBoundLongitude>%s</eastBoundLongitude>" % str(maxLon))
+            output.write("<southBoundLatitude>%s</southBoundLatitude>" % str(minLat))
+            output.write("<northBoundLatitude>%s</northBoundLatitude>" % str(maxLat))
             output.write("</EX_GeographicBoundingBox>")
             output.write("<BoundingBox CRS=\"CRS:84\" ")
             output.write("minx=\"%f\" maxx=\"%f\" miny=\"%f\" maxy=\"%f\"/>"

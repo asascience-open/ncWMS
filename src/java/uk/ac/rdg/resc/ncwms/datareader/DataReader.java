@@ -32,18 +32,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.taskdefs.CVSPass;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.NetcdfDatasetCache;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPointImpl;
-import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.MissingDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
@@ -65,7 +64,7 @@ public class DataReader
     /**
      * Read an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.
-     * 
+     *
      * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
      * @param varID Unique identifier for the required variable in the file
      * @param tValue The value of time as specified by the client
@@ -82,54 +81,42 @@ public class DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Get the dataset from the cache, without enhancing it
+            // Get the metadata from the cache
             long start = System.currentTimeMillis();
-            nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
-            long openedDS = System.currentTimeMillis();
-            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - start));
-            
-            GridDataset gd = new GridDataset(nc);
-            GeoGrid gg = gd.findGridByName(varID);
-            if (gg == null)
+            VariableMetadata vm = DatasetCache.getVariableMetadata(location, varID);
+            if (vm == null)
             {
                 throw new WMSExceptionInJava("Could not find variable called "
                     + varID + " in " + location);
             }
-            GridCoordSys coordSys = gg.getCoordinateSystem();
-            if (!coordSys.isLatLon())
-            {
-                throw new WMSExceptionInJava("Can only read data from lat-lon coordinate systems");
-            }
-            EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
-            EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
-            // Get an enhanced version of the variable for fast reading of data
-            EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
+            
+            EnhancedCoordAxis xAxis = vm.getXaxis();
+            EnhancedCoordAxis yAxis = vm.getYaxis();
             
             // Find the index along the time axis
             int tIndex = 0;
-            if (coordSys.isDate())
+            if (vm.getTvalues() != null)
             {
                 if (tValue == null || tValue.trim().equals(""))
                 {
                     throw new MissingDimensionValueException("time");
                 }
-                tIndex = findTIndex(coordSys.getTimeDates(), tValue);
+                tIndex = findTIndex(vm.getTvalues(), tValue);
             }
             Range tRange = new Range(tIndex, tIndex);
             
             // Find the index along the depth axis
             int zIndex = 0; // Default value of z is the first in the axis
-            if (zValue != null && !zValue.equals("") && coordSys.hasVerticalAxis())
+            if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
             {
-                zIndex = findZIndex(coordSys.getVerticalAxis().getCoordValues(),
-                    zValue, coordSys.isZPositive());
+                zIndex = findZIndex(vm.getZvalues(), zValue);
             }
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
-        
+            
             // Find the range of x indices
             int minX = -1;
             int maxX = -1;
@@ -153,7 +140,16 @@ public class DataReader
             Range xRange = new Range(minX, maxX);
             
             long readMetadata = System.currentTimeMillis();
-            logger.debug("Read metadata in {} milliseconds", (readMetadata - openedDS));
+            logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
+            
+            // Get the dataset from the cache, without enhancing it
+            nc = DatasetCache.getDataset(location);
+            long openedDS = System.currentTimeMillis();
+            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
+            GridDataset gd = new GridDataset(nc);
+            GeoGrid gg = gd.findGridByName(varID);
+            // Get an enhanced version of the variable for fast reading of data
+            EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
             
             DataChunk dataChunk;
             // Cycle through the latitude values, extracting a scanline of
@@ -175,7 +171,7 @@ public class DataReader
                         {
                             int picIndex = j * lonValues.length + i;
                             float val = dataChunk.getValue(xIndices[i] - minX);
-                            // We unpack and check for missing values just for 
+                            // We unpack and check for missing values just for
                             // the points we need to display.
                             float pixel = (float)enhanced.convertScaleOffsetMissing(val);
                             picData[picIndex] = Float.isNaN(pixel) ? fillValue : pixel;
@@ -187,7 +183,7 @@ public class DataReader
             long builtPic = System.currentTimeMillis();
             logger.debug("Built picture in {} milliseconds", (builtPic - readMetadata));
             logger.info("Whole read() operation took {} milliseconds", (builtPic - start));
-
+            
             return picData;
         }
         catch(IOException e)
@@ -219,24 +215,26 @@ public class DataReader
     /**
      * Finds the index of a certain t value by binary search (the axis may be
      * very long, so a brute-force search is inappropriate)
-     * @param tValues Array of Dates representing the t axis values
+     * @param tValues Array of doubles representing the t axis values in <b>seconds</b>
+     * since the epoch
      * @param tValue Date to search for as an ISO8601-formatted String
      * @return the t index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
      * within tValues
      * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
      */
-    private static int findTIndex(Date[] tValues, String tValue)
+    private static int findTIndex(double[] tValues, String tValue)
         throws InvalidDimensionValueException
     {
-        Date target = dateFormatter.getISODate(tValue);
-        if (target == null)
+        Date targetD = dateFormatter.getISODate(tValue);
+        if (targetD == null)
         {
             throw new InvalidDimensionValueException("time", tValue);
         }
+        double target = targetD.getTime() / 1000.0;
         
         // Check that the point is within range
-        if (target.before(tValues[0]) || target.after(tValues[tValues.length - 1]))
+        if (target < tValues[0] || target > tValues[tValues.length - 1])
         {
             throw new InvalidDimensionValueException("time", tValue);
         }
@@ -247,16 +245,16 @@ public class DataReader
         while (low <= high)
         {
             int mid = (low + high) >> 1;
-            Date midVal = tValues[mid];
-            if (midVal.equals(target))
+            double midVal = tValues[mid];
+            if (midVal == target)
             {
                 return mid;
             }
-            else if (midVal.before(target))
+            else if (midVal < target)
             {
                 low = mid + 1;
             }
-            else if (midVal.after(target))
+            else if (midVal > target)
             {
                 high = mid - 1;
             }
@@ -264,34 +262,32 @@ public class DataReader
         
         // If we've got this far we have to decide between values[low]
         // and values[high]
-        if (tValues[low].equals(target))
+        if (tValues[low] == target)
         {
             return low;
         }
-        else if (tValues[high].equals(target))
+        else if (tValues[high] == target)
         {
             return high;
         }
         throw new InvalidDimensionValueException("time", tValue);
     }
-        
+    
     /**
      * Finds the index of a certain z value by brute-force search.  We can afford
      * to be inefficient here because z axes are not likely to be large.
      * @param zValues Array of values of the z coordinate
      * @param targetVal Value to search for
-     * @param zPositive True if the z axis is positive
      * @return the z index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
      * within zValues
      */
-    private static int findZIndex(double[] zValues, String targetVal, boolean zPositive)
+    private static int findZIndex(double[] zValues, String targetVal)
         throws InvalidDimensionValueException
     {
         try
         {
             float zVal = Float.parseFloat(targetVal);
-            if (!zPositive) zVal = -zVal;
             for (int i = 0; i < zValues.length; i++)
             {
                 if (Math.abs((zValues[i] - zVal) / zVal) < 1e-5)

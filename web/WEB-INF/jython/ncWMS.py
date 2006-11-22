@@ -1,35 +1,49 @@
     # Entry point for the ncWMS (both CDAT and nj22 implementations)
 import re
+import config
 
 from wmsExceptions import *
 from capabilities import getCapabilities
 from getmap import getMap
+from getfeatureinfo import getFeatureInfo
+from web import getMetadata
 
 class Dataset: pass # Simple class that will hold a dataset's title and location
 
-def wms(req, datasetLines):
+def wms(req, datasetLines, lastUpdateTime):
     """ Does the WMS operation.
         req = mod_python request object (or FakeModPythonRequestObject
             from Jython servlet)
         datasetLines = array of lines in the dataset configuration.
             Each line is a comma-delimited string of the form
             "id,title,location"
+        lastUpdateTime = time at which cache of data and metadata was last updated
         TODO: under mod_python, how can we identify where the config file is? """
        
     try:
         # Populate the dictionary that links unique IDs to dataset objects
         datasets = getDatasets(datasetLines)
+        if req.args is None or req.args.strip() == "":
+            # If there is no request string, return the front page
+            req.args = "SERVICE=WMS&REQUEST=GetMetadata&item=frontpage"
         params = RequestParser(req.args)
         service = params.getParamValue("service")
         request = params.getParamValue("request")
         if service != "WMS":
-            raise WMSException("SERVICE parameter must be WMS")
+            raise WMSException("SERVICE parameter must be \"WMS\"")
         if request == "GetCapabilities":
-            getCapabilities(req, params, datasets)
+            getCapabilities(req, params, datasets, lastUpdateTime)
         elif request == "GetMap":
             getMap(req, params, datasets)
         elif request == "GetFeatureInfo":
-            raise OperationNotSupported("%s is not supported on this server" % request)
+            if config.ALLOW_GET_FEATURE_INFO:
+                getFeatureInfo(req, params, datasets)
+            else:
+                raise OperationNotSupported("GetFeatureInfo")
+        elif request == "GetMetadata":
+            # This is a convenience extension to WMS for reading smaller
+            # chunks of metadata
+            getMetadata(req, datasets)
         else:
             raise WMSException("Invalid operation")
     except WMSException, e:
@@ -45,6 +59,9 @@ def getDatasets(lines):
         dataset = Dataset()
         dataset.title = els[1].strip()
         dataset.location = els[2].strip()
+        dataset.queryable = 0
+        if len(els) > 3 and els[3].lower() == "true":
+            dataset.queryable = 1
         datasets[els[0].strip()] = dataset # els[0] is the dataset's unique ID
     return datasets
 
@@ -72,7 +89,7 @@ class RequestParser:
                     (key, value) = keyAndVal
                     # We always store the key in lower case and escape
                     # the URL % codes
-                    self._params[key.lower()] = self._escapeURLCodes(value)
+                    self._params[key.lower()] = self._escapeURLCodes(value).strip()
 
     def _escapeURLCodes(self, str):
         """ Replaces all the URL escape codes with their proper characters """

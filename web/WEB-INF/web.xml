@@ -21,7 +21,7 @@
     </session-config>
     <welcome-file-list>
 	<welcome-file>
-            Metadata.py
+            WMS.py
         </welcome-file>
     </welcome-file-list>
 </web-app>

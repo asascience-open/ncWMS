@@ -40,6 +40,7 @@
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
             <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span><br />
             <br />
+            Powered by <a href="http://www.openlayers.org">OpenLayers</a> and <a href="http://www.opengeospatial.org">OGC</a> standards<br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>
                 <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>
@@ -49,8 +50,6 @@
         </div>
         
         <div id="imagePanel" class="imagePanel">
-            <div id="poweredBy"><p>Powered by <a href="http://www.openlayers.org">OpenLayers</a> and <a href="http://www.opengeospatial.org">OGC</a> standards</p></div>
-        
             <div id="map" class="map"></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
             <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar"/>

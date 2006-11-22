@@ -42,7 +42,7 @@ import ucar.nc2.util.CancelTask;
  * $Date$
  * $Log$
  */
-public class DatasetFactory implements NetcdfDatasetFactory
+class DatasetFactory implements NetcdfDatasetFactory
 {
     private static DatasetFactory df = new DatasetFactory();
     

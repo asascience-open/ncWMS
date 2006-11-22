@@ -79,7 +79,7 @@ window.onload = function()
 // Populates the left-hand menu with a set of datasets
 function loadDatasets(dsDivId)
 {
-    downloadUrl('Metadata.py', 'item=datasets',
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=datasets',
         function(req) {
             $(dsDivId).innerHTML = req.responseText;
             var accordion = new Rico.Accordion
@@ -105,7 +105,7 @@ function datasetSelected(expandedTab)
     // Get the pretty-printed name of the dataset
     prettyDsName = expandedTab.titleBar.firstChild.nodeValue;
     // getVariables.jsp returns a table of variable names in HTML format
-    downloadUrl('Metadata.py', 'item=variables&dataset=' + dataset,
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=variables&dataset=' + dataset,
         function(req) {
             var xmldoc = req.responseXML;
             // set the size of the panel to match the number of variables
@@ -122,7 +122,7 @@ function datasetSelected(expandedTab)
 function variableSelected(datasetName, variableName)
 {
     newVariable = true;
-    downloadUrl('Metadata.py', 'item=variableDetails&dataset=' + datasetName +
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetName +
         '&variable=' + variableName,
         function(req) {
             var xmldoc = req.responseXML;
@@ -230,7 +230,7 @@ function variableSelected(datasetName, variableName)
 function setCalendar(dataset, variable, dateTime)
 {
     // Set the calendar. When the calendar arrives the map will be updated
-    downloadUrl('Metadata.py', 'item=calendar&dataset=' +  dataset + 
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=calendar&dataset=' +  dataset + 
         '&variable=' + variable + '&dateTime=' + dateTime,
         function(req) {
             if (req.responseText == '') {
@@ -276,7 +276,7 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
     $('utc').style.visibility = 'visible';
     
     // Get the timesteps
-    downloadUrl('Metadata.py', 'item=timesteps&dataset=' +  dataset + 
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=timesteps&dataset=' +  dataset + 
         '&variable=' + variable + '&tIndex=' + tIndex,
         function(req) {
             $('time').innerHTML = req.responseText; // the data will be a selection box

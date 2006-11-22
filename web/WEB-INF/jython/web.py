@@ -10,10 +10,9 @@ import ncWMS
 import config
 import nj22dataset
 
-def metadata(req, configLines):
+def getMetadata(req, datasets):
     """ Processes a request for metadata from the Godiva2 web interface """
     params = ncWMS.RequestParser(req.args)
-    datasets = ncWMS.getDatasets(configLines)
     metadataItem = params.getParamValue("item", "frontpage")
     if metadataItem == "frontpage":
         req.content_type = "text/html"
@@ -53,17 +52,34 @@ def getFrontPage(datasets):
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
     for ds in datasets.keys():
-        doc.write("<tr><th>%s</th><td>" % datasets[ds].title)
+        doc.write("<tr><th>%s</th>" % datasets[ds].title)
         vars = nj22dataset.getVariableMetadata(datasets[ds].location)
+        doc.write("<td>")
         for varID in vars.keys():
             doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=image/png")
-            doc.write("&LAYERS=%s/%s" % (ds, varID))
+            doc.write("&LAYERS=%s%s%s" % (ds, config.LAYER_SEPARATOR, varID))
             bbox = vars[varID].bbox
-            doc.write("&BBOX=%f,%f,%f,%f" % (bbox[0], bbox[1], bbox[2], bbox[3]))
+            doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
             if vars[varID].tvalues is not None:
                 doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
             doc.write("\">%s</a><br />" % vars[varID].title)
-        doc.write("</td></tr>")
+        doc.write("</td>")
+        if config.ALLOW_GET_FEATURE_INFO:
+            doc.write("<td>")
+            if datasets[ds].queryable:
+                for varID in vars.keys():
+                    doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml")
+                    doc.write("&QUERY_LAYERS=%s%s%s" % (ds, config.LAYER_SEPARATOR, varID))
+                    bbox = vars[varID].bbox
+                    doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
+                    doc.write("&I=128&J=128")
+                    if vars[varID].tvalues is not None:
+                        doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
+                    doc.write("\">%s</a><br />" % vars[varID].title)
+            else:
+                doc.write("Dataset not queryable")
+            doc.write("</td>")
+        doc.write("</tr>")
     doc.write("</tbody></table>")
     doc.write("</body></html>")
     s = doc.getvalue()

@@ -29,11 +29,11 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.log4j.Logger;
 import ucar.nc2.Attribute;
 import ucar.nc2.Dimension;
 import ucar.nc2.dataset.CoordinateAxis1D;
@@ -46,8 +46,7 @@ import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 
 /**
- * Contains a store of metadata for a dataset - used by GetCapabilities and by
- * the metadata-reading operations that populate the menus on the website.
+ * Contains caches of datasets and metadata for those datasets.
  *
  * @author Jon Blower
  * $Revision$
@@ -56,6 +55,26 @@ import ucar.unidata.geoloc.LatLonRect;
  */
 public class DatasetCache
 {
+    private static final Logger logger = Logger.getLogger(DatasetCache.class);
+    // Maps locations to hashtables that map variable IDs to VariableMetadata
+    // objects
+    private static Hashtable<String, Hashtable<String, VariableMetadata>> cache;
+        
+    
+    /**
+     * Initialize the cache. Must be called before trying to get datasets or
+     * metadata from the cache.  Does nothing if already called.
+     */
+    public static synchronized void init()
+    {
+        if (cache == null)
+        {
+            NetcdfDatasetCache.init();
+            cache = new Hashtable<String, Hashtable<String, VariableMetadata>>();
+        }
+        logger.debug("DatasetCache initialized");
+    }
+    
     
     /**
      * Gets the {@link NetcdfDataset} at the given location from the cache.
@@ -64,7 +83,9 @@ public class DatasetCache
     public static synchronized NetcdfDataset getDataset(String location)
         throws IOException
     {
-        return NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
+        NetcdfDataset nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
+        logger.debug("Returning NetcdfDataset at {} from cache", location);
+        return nc;
     }
     
     /**
@@ -72,83 +93,62 @@ public class DatasetCache
      * given location
      * @param location Location of the NetcdfDataset containing the variable
      * @param varID the unique ID of the variable
+     * @throws IOException if there was an error reading the metadata from disk
      */
     public static synchronized VariableMetadata getVariableMetadata(String location, String varID)
+        throws IOException
     {
-        return null;
+        return getVariableMetadata(location).get(varID);
     }
     
     /**
      * Clears the cache of datasets and metadata.  This is called periodically
-     * by a Timer, to make sure we are synchronized with the disk.
+     * by a Timer (see WMS.py), to make sure we are synchronized with the disk.
      * @todo if a dataset is already open, it will not be removed from the cache
      */
     public static synchronized void clear()
     {
         NetcdfDatasetCache.clearCache(false);
-    }
-    
-    
-    private static Hashtable<String, DatasetCache> caches =
-        new Hashtable<String, DatasetCache>();
-    
-    private String location;
-    private Hashtable<String, VariableMetadata> vars;
-    
-    /** Creates a new instance of DatasetCache */
-    private DatasetCache(String location)
-    {
-        this.location = location;
+        cache.clear();
+        logger.debug("DatasetCache cleared");
     }
     
     /**
-     * @return a DatasetCache for the dataset at the given location
+     * Cleans up the cache.
      */
-    public static DatasetCache acquire(String location)
+    public static synchronized void exit()
     {
-        synchronized(caches)
-        {
-            if (caches.containsKey(location))
-            {
-                return caches.get(location);
-            }
-            else
-            {
-                DatasetCache c = new DatasetCache(location);
-                caches.put(location, c);
-                return c;
-            }
-        }
+        NetcdfDatasetCache.exit();
+        logger.debug("Cleaned up DatasetCache");
+    }
+    
+    /** Private constructor so this class can't be instantiated */
+    private DatasetCache()
+    {
     }
     
     /**
-     * @return a {@link Collection} of all the metadata in this DatasetCache
-     * @throws IOException if there was an error reading from the underlying
-     * data source
-     */
-    public Hashtable<String, VariableMetadata> getVariableMetadata()
-        throws IOException
-    {
-        this.readVariableMetadata();
-        return this.vars;
-    }
-    
-    /**
-     * Checks to see if we need to read the metadata, then does so.
+     * Reads and returns the metadata for all the variables in the dataset
+     * at the given location.  Puts the metadata in the cache.
      * @throws IOException if there was an error reading from the data source
      */
-    private synchronized void readVariableMetadata() throws IOException
+    public static Hashtable<String, VariableMetadata>
+        getVariableMetadata(String location) throws IOException
     {
-        // TODO: check to see if underlying file has changed since last read
-        if (this.vars == null)
+        if (cache.containsKey(location))
         {
-            this.vars = new Hashtable<String, VariableMetadata>();
+            logger.debug("Metadata for {} already in cache", location);
+        }
+        else
+        {
+            logger.debug("Reading metadata for {}", location);
             NetcdfDataset nc = null;
+            Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
             try
             {
-                // We use openDataset() rather than acquiring from cache 
+                // We use openDataset() rather than acquiring from cache
                 // because we need to enhance the dataset
-                nc = NetcdfDataset.openDataset(this.location);
+                nc = NetcdfDataset.openDataset(location);
                 GridDataset gd = new GridDataset(nc);
                 for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
                 {
@@ -161,17 +161,17 @@ public class DatasetCache
                     GridCoordSys coordSys = gg.getCoordinateSystem();
                     vm.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
                     vm.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
-                    
+
                     List dims = gg.getDimensions();
-                    int xPos = findDimensionPos(dims, coordSys.getXHorizAxis().getDimension(0));
+                    /*int xPos = findDimensionPos(dims, coordSys.getXHorizAxis().getDimension(0));
                     int yPos = findDimensionPos(dims, coordSys.getYHorizAxis().getDimension(0));
                     int zPos = -1;
-                    int tPos = -1;
-                    
+                    int tPos = -1;*/
+
                     if (coordSys.hasVerticalAxis())
                     {
                         CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                        zPos = findDimensionPos(dims, zAxis.getDimension(0));
+                        //zPos = findDimensionPos(dims, zAxis.getDimension(0));
                         vm.setZunits(zAxis.getUnitsString());
                         double[] zVals = zAxis.getCoordValues();
                         vm.setZpositive(coordSys.isZPositive());
@@ -189,10 +189,10 @@ public class DatasetCache
                             vm.setZvalues(zVals2);
                         }
                     }
-                    
+
                     if (coordSys.isDate())
                     {
-                        tPos = findDimensionPos(dims, coordSys.getTimeAxis().getDimension(0));
+                        //tPos = findDimensionPos(dims, coordSys.getTimeAxis().getDimension(0));
                         Date[] tVals = coordSys.getTimeDates();
                         double[] sse = new double[tVals.length]; // Seconds since the epoch
                         for (int i = 0; i < tVals.length; i++)
@@ -201,9 +201,9 @@ public class DatasetCache
                         }
                         vm.setTvalues(sse);
                     }
-                    
-                    vm.setAxisPositions(tPos, zPos, yPos, xPos);
-                    
+
+                    //vm.setAxisPositions(tPos, zPos, yPos, xPos);
+
                     // Set the bounding box
                     // TODO: should take into account the cell bounds
                     LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
@@ -219,11 +219,12 @@ public class DatasetCache
                         maxLon = 180.0;
                     }
                     vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
-                    
+
                     vm.setValidMin(gg.getVariable().getValidMin());
                     vm.setValidMax(gg.getVariable().getValidMax());
-                    
-                    this.vars.put(vm.getId(), vm);
+
+                    vars.put(vm.getId(), vm);
+                    cache.put(location, vars);
                 }
             }
             finally
@@ -234,6 +235,8 @@ public class DatasetCache
                 }
             }
         }
+        
+        return cache.get(location);
     }
     
     private static int findDimensionPos(List dims, Dimension want)

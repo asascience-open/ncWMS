@@ -138,7 +138,7 @@ div.map
 {
     position: absolute;
     left: 0px;
-    top: 35px;
+    top: 25px;
     width: 500px;
     height: 400px;
 }
@@ -147,13 +147,13 @@ div.map
 {
     position: absolute;
     left: 0px;
-    top: 440px;
+    top: 430px;
 }
 
 #opacityControl
 {
     position: absolute;
-    top: 440px;
+    top: 430px;
     left: 335px;
     visibility: hidden; /* Will make visible when we load the page if we need this control */
 }

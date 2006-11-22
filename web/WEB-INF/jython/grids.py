@@ -12,7 +12,15 @@ class AbstractGrid:
         self.latValues = None # by subclasses if isLatLon == 1
         self.width = width
         self.height = height
-        # TODO: create iterator over all lon-lat values
+        
+    def getLonLat(self, i, j):
+        """ Returns the longitude and latitude of the point at the given
+            i and j indices in the grid """
+        if self.isLatLon:
+            return self.lonValues[i], self.latValues[j]
+        else:
+            # TODO: relax this
+            raise "getLonLat() only supported for latlon grids"
 
 
 class PlateCarreeGrid(AbstractGrid):

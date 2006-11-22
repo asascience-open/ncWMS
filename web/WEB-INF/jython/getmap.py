@@ -10,9 +10,7 @@ def getMap(req, params, datasets):
        params = ncWMS.RequestParser object containing the request parameters
        datasets = dictionary of ncWMS.Datasets, indexed by unique id """
     
-    version = params.getParamValue("version")
-    if version != WMS_VERSION:
-        raise WMSException("VERSION must be %s" % WMS_VERSION)
+    _checkVersion(params) # Checks the VERSION parameter
     
     layers = params.getParamValue("layers").split(",")
     if len(layers) > LAYER_LIMIT:
@@ -29,31 +27,13 @@ def getMap(req, params, datasets):
             # TODO: handle styles properly
             raise StyleNotDefined(style)
     
-    bboxEls = params.getParamValue("bbox").split(",")
-    if len(bboxEls) !=4:
-        raise WMSException("Invalid bounding box format: need four elements")
-    try:
-        bbox = [float(el) for el in bboxEls]
-    except ValueError:
-        raise WMSException("Invalid bounding box format: all elements must be numeric")
-    if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
-        raise WMSException("Invalid bounding box format")
-    
-    try:
-        width = int(params.getParamValue("width"))
-        height = int(params.getParamValue("height"))
-        if width < 1 or width > MAX_IMAGE_WIDTH:
-            raise WMSException("Image width must be between 1 and " +
-                str(MAX_IMAGE_WIDTH) + " pixels inclusive")
-        if height < 1 or height > MAX_IMAGE_HEIGHT:
-            raise WMSException("Image height must be between 1 and " +
-                str(MAX_IMAGE_HEIGHT) + " pixels inclusive")
-    except ValueError:
-        raise WMSException("Invalid integer provided for WIDTH or HEIGHT")
-    
     format = params.getParamValue("format")
     if format not in SUPPORTED_IMAGE_FORMATS:
-        raise InvalidFormat(format)
+        raise InvalidFormat("image", format, "GetMap")
+
+    exception_format = params.getParamValue("exceptions", "XML")
+    if exception_format not in SUPPORTED_EXCEPTION_FORMATS:
+        raise InvalidFormat("exception", exception_format, "GetMap")
 
     zValue = params.getParamValue("elevation", "")
     if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
@@ -61,6 +41,7 @@ def getMap(req, params, datasets):
 
     tValue = params.getParamValue("time", "")
     if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
+        # TODO: support animations
         raise WMSException("You may only request a single value of TIME")
 
     # Get the requested transparency and background colour for the layer
@@ -101,29 +82,66 @@ def getMap(req, params, datasets):
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
     
     # Generate a grid of lon,lat points, one for each image pixel
+    grid = _getGrid(params)
+
+    # Find the source of the requested data
+    location, varID, queryable = _getLocationAndVariableID(layers, datasets)
+    picData = nj22dataset.readData(location, varID, tValue, zValue, grid, FILL_VALUE)
+    # TODO: cache the data array
+    # Turn the data into an image and output to the client
+    javagraphics.makePic(req, picData, grid.width, grid.height, FILL_VALUE, transparent, bgcolor, opacity, scaleMin, scaleMax)
+
+    return
+
+def _checkVersion(params):
+    """ Checks that the VERSION parameter exists and is correct """
+    version = params.getParamValue("version")
+    if version != WMS_VERSION:
+        raise WMSException("VERSION must be %s" % WMS_VERSION)
+
+def _getGrid(params):
+    """ Gets the grid for the map """
+    # Get the bounding box
+    bboxEls = params.getParamValue("bbox").split(",")
+    if len(bboxEls) != 4:
+        raise WMSException("Invalid bounding box format: need four elements")
+    try:
+        bbox = [float(el) for el in bboxEls]
+    except ValueError:
+        raise WMSException("Invalid bounding box format: all elements must be numeric")
+    if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
+        raise WMSException("Invalid bounding box format")
+
+    # Get the image width and height
+    try:
+        width = int(params.getParamValue("width"))
+        height = int(params.getParamValue("height"))
+        if width < 1 or width > MAX_IMAGE_WIDTH:
+            raise WMSException("Image width must be between 1 and " +
+                str(MAX_IMAGE_WIDTH) + " pixels inclusive")
+        if height < 1 or height > MAX_IMAGE_HEIGHT:
+            raise WMSException("Image height must be between 1 and " +
+                str(MAX_IMAGE_HEIGHT) + " pixels inclusive")
+    except ValueError:
+        raise WMSException("Invalid integer provided for WIDTH or HEIGHT")
+
+    # Get the Grid object
     crs = params.getParamValue("crs")
     if SUPPORTED_CRSS.has_key(crs):
         GridClass = SUPPORTED_CRSS[crs] # see grids.py
-        grid = GridClass(bbox, width, height)
+        return GridClass(bbox, width, height)
     else:
         raise InvalidCRS(crs)
 
-    # Find the source of the requested data
+def _getLocationAndVariableID(layers, datasets):
+    """ Returns a (location, varID, queryable) tuple containing the location of the dataset,
+        the ID of the variable and a boolean which is true if the layer is queryable. 
+        Only deals with one layer at the moment """
     dsAndVar = layers[0].split(LAYER_SEPARATOR)
-    picData = None
     if len(dsAndVar) == 2 and datasets.has_key(dsAndVar[0]):
         location = datasets[dsAndVar[0]].location
         varID = dsAndVar[1]
-        fillValue = 1e20 # Can't use NaN due to lack of portability
-        # TODO: check the cache of extracted data arrays
-        # Extract the data from the data source using the requested grid
-        picData = nj22dataset.readData(location, varID, tValue, zValue, grid, fillValue)
-        # TODO: cache the data array
-    if picData is None:
-        raise LayerNotDefined(layers[0])
+        return location, varID, datasets[dsAndVar[0]].queryable
     else:
-        # Turn the data into an image and output to the client
-         javagraphics.makePic(req, picData, width, height, fillValue, transparent, bgcolor, opacity, scaleMin, scaleMax)
-    
-    return
-
+        raise LayerNotDefined(layers[0])
+        

@@ -21,15 +21,17 @@ class WMSException:
             f.write(" code=\"" + self.code + "\"")
         f.write(">")
         if self.message:
-            f.write(self.message)
+            # Replace quotation marks with XML escape code
+            f.write(self.message.replace("\"", "&quot;"))
         f.write("</ServiceException>")
         f.write("</ServiceExceptionReport>")
 
 class OperationNotSupported(WMSException):
     """ Exception that is raised when a client requests an unsupported
        operation """
-    def __init__(self, message=None):
-        WMSException.__init__(self, message, "OperationNotSupported")
+    def __init__(self, op):
+        WMSException.__init__(self, "The " + op + " operation is not supported by this server",
+            "OperationNotSupported")
 
 class InvalidCRS(WMSException):
     """ Exception that is raised when a client requests an unsupported
@@ -47,10 +49,10 @@ class StyleNotDefined(WMSException):
 
 class InvalidFormat(WMSException):
     """ Exception that is raised when a client requests an unsupported
-       image format """
-    def __init__(self, format):
-        WMSException.__init__(self, "The image format \"" + format +
-            "\" is not supported by this server", "InvalidFormat")
+       image or FeatureInfo format """
+    def __init__(self, type, format, operation):
+        WMSException.__init__(self, "The %s format %s is not supported by the %s operation" % (type, format, operation),
+            "InvalidFormat")
 
 class LayerNotDefined(WMSException):
     """ Exception that is raised when a client requests a layer that is not
@@ -73,3 +75,36 @@ class InvalidDimensionValue(WMSException):
         WMSException.__init__(self, "The value \"" + str(value) +
             "\" is not valid for the " + dimName.upper() + " dimension",
             "InvalidDimensionValue")
+
+class InvalidPoint(WMSException):
+    """ Exception that is raised when a client provides an invalid
+        value for I or J in GetFeatureInfo """
+    def __init__(self, value=None):
+        if value is None:
+            WMSException.__init__(self, "Invalid integer for I or J", "InvalidPoint")
+        else:
+            WMSException.__init__(self, "Invalid I or J value " + str(value) +
+                " in GetFeatureInfo", "InvalidPoint")
+
+class InvalidUpdateSequence(WMSException):
+    """ Exception that is raised when a client calls GetCapabilities
+        with an updateSequence that is later than the current update
+        sequence number """
+    def __init__(self, value):
+        WMSException.__init__(self, "The updateSequence value \"%s\" is greater than the current one" % value,
+            "InvalidUpdateSequence")
+
+class CurrentUpdateSequence(WMSException):
+    """ Exception that is raised when a client calls GetCapabilities
+        with an updateSequence that is equal to the current update
+        sequence number """
+    def __init__(self, value):
+        WMSException.__init__(self, "The updateSequence value \"%s\" is equal to the current one" % value,
+            "CurrentUpdateSequence")
+
+class LayerNotQueryable(WMSException):
+    """ Exception that is raised when a client tries to call
+        GetFeatureInfo on a layer that is not queryable """
+    def __init__(self, layer):
+        WMSException.__init__(self, "The layer \"%s\" is not queryable" % layer,
+            "LayerNotQueryable")
