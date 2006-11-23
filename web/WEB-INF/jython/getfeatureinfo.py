@@ -6,6 +6,7 @@
 # for GetMap's STYLES, FORMAT, TRANSPARENT or BGCOLOR parameters here.
 
 import sys
+
 if sys.platform.startswith("java"):
     # We're running on Jython
     import nj22dataset as datareader

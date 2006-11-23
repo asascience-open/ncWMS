@@ -1,6 +1,7 @@
 # Implements the GetMap operation
 
 import sys
+
 if sys.platform.startswith("java"):
     # We're running on Jython
     import nj22dataset as datareader
@@ -75,6 +76,8 @@ def getMap(req, params, datasets):
     if len(scale.split(",")) == 2:
         try:
             scaleMin, scaleMax = [float(x) for x in scale.split(",")]
+            if (scaleMin != 0 or scaleMax != 0) and scaleMin >= scaleMax:
+                raise WMSException("SCALE min value must be less than max value")
         except ValueError:
             raise WMSException("Invalid number in SCALE parameter")
     else:     

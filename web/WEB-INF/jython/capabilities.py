@@ -3,17 +3,16 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+import sys, time
 
-from xml.utils import iso8601
-
-import config, time
-import sys
+import config
 if sys.platform.startswith("java"):
     # We're running on Jython
     import nj22dataset as datareader
 else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
+import iso8601
 from wmsExceptions import *
 
 def getCapabilities(req, params, datasets, lastUpdateTime):
@@ -27,9 +26,9 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
     format = params.getParamValue("format", "")
     # TODO: deal with version and format
 
+    # Check the UPDATESEQUENCE (used for cache consistency)
     updatesequence = params.getParamValue("updatesequence", "")
     if updatesequence != "":
-        # Client has requested a specific update sequence
         try:
             us = iso8601.parse(updatesequence)
             if round(us) == round(lastUpdateTime):
@@ -40,7 +39,7 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
         except ValueError:
             # Client didn't supply a valid ISO8601 date
             # According to the spec, InvalidUpdateSequence is not the
-            # right error code here so we use the generic one
+            # right error code here so we use a generic exception
             raise WMSException("UPDATESEQUENCE must be a valid ISO8601 date")
     
     output = StringIO()

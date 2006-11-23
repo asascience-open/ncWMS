@@ -3,22 +3,24 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+import sys, time, math, calendar
 
-from xml.utils import iso8601
-import time, math, calendar
-import sys
 if sys.platform.startswith("java"):
     # We're running on Jython
     import nj22dataset as datareader
+    prefix = "WMS.py"
 else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
+    prefix = "ncWMS.py/wms"
+import iso8601
 import ncWMS
 import config
+import wmsUtils
 
 def getMetadata(req, datasets):
     """ Processes a request for metadata from the Godiva2 web interface """
-    params = ncWMS.RequestParser(req.args)
+    params = wmsUtils.RequestParser(req.args)
     metadataItem = params.getParamValue("item", "frontpage")
     if metadataItem == "frontpage":
         req.content_type = "text/html"
@@ -52,7 +54,7 @@ def getFrontPage(datasets):
     doc = StringIO()
     doc.write("<html><head><title>%s</title></head>" % config.title)
     doc.write("<body><h1>%s</h1>" % config.title)
-    doc.write("<p><a href=\"WMS.py?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
+    doc.write("<p><a href=\"" + prefix + "?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.jsp\">Godiva2 interface</a></p>")
     doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have

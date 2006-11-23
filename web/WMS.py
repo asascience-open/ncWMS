@@ -87,7 +87,7 @@ class WMS (HttpServlet):
     def doGet(self,request,response):
         """ Perform the WMS operation """
         WMS.logger.debug("GET operation called")
-        ncWMS.wms(FakeModPythonRequestObject(request, response), getConfigFileLines(self), WMS.cacheWiper.timeLastRan)
+        ncWMS.doWms(FakeModPythonRequestObject(request, response), getConfigFileLines(self), WMS.cacheWiper.timeLastRan)
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")
