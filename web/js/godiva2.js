@@ -1,6 +1,5 @@
 //
-// Javascript for GODIVA2 page.  Requires prototype.js and rico.js to be
-// included in any page that uses this script
+// Javascript for GODIVA2 page.
 //
 
 var map = null;
@@ -364,9 +363,10 @@ function updateMap()
     // of the data pixels
     // TODO get the map projection from the base layer
     // TODO use a more informative title
+    var baseURL = window.location.href.split("/").slice(0,-1).join("/");
     if (essc_wms == null) {
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
-            serverURL + 'WMS.py', {layers: layerName, elevation: zValue, time: tValue,
+            baseURL + '/WMS.py', {layers: layerName, elevation: zValue, time: tValue,
             transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
             opacity: opacity});
         map.addLayers([essc_wms]);
