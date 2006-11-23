@@ -12,9 +12,8 @@ if sys.platform.startswith("java"):
 else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
-    prefix = "ncWMS.py/wms"
+    prefix = "wms"
 import iso8601
-import ncWMS
 import config
 import wmsUtils
 
