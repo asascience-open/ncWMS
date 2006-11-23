@@ -1,8 +1,16 @@
 # Implements the GetMap operation
 
+import sys
+if sys.platform.startswith("java"):
+    # We're running on Jython
+    import nj22dataset as datareader
+    import javagraphics as graphics
+else:
+    # TODO: check for presence of CDAT
+    import cdmsdataset as datareader
+    import graphics
 from wmsExceptions import *
 from config import *
-import javagraphics, nj22dataset # TODO import other modules for CDMS server
 
 def getMap(req, params, datasets):
     """ The GetMap operation.
@@ -86,10 +94,10 @@ def getMap(req, params, datasets):
 
     # Find the source of the requested data
     location, varID, queryable = _getLocationAndVariableID(layers, datasets)
-    picData = nj22dataset.readData(location, varID, tValue, zValue, grid, FILL_VALUE)
+    picData = datareader.readImageData(location, varID, tValue, zValue, grid, FILL_VALUE)
     # TODO: cache the data array
     # Turn the data into an image and output to the client
-    javagraphics.makePic(req, picData, grid.width, grid.height, FILL_VALUE, transparent, bgcolor, opacity, scaleMin, scaleMax)
+    graphics.makePic(req, picData, grid.width, grid.height, FILL_VALUE, transparent, bgcolor, opacity, scaleMin, scaleMax)
 
     return
 

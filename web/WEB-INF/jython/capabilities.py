@@ -7,7 +7,13 @@ except ImportError:
 from xml.utils import iso8601
 
 import config, time
-import nj22dataset # TODO import other modules for CDMS server
+import sys
+if sys.platform.startswith("java"):
+    # We're running on Jython
+    import nj22dataset as datareader
+else:
+    # TODO: check for presence of CDAT
+    import cdmsdataset as datareader
 from wmsExceptions import *
 
 def getCapabilities(req, params, datasets, lastUpdateTime):
@@ -25,11 +31,9 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
     if updatesequence != "":
         # Client has requested a specific update sequence
         try:
-            # TODO: why does iso8601.parse(iso8601.tostring(x)) == x - 3600?
-            # Problem in Jython's time.mktime() - INVESTIGATE
-            # TODO: make sure the precision matches
             us = iso8601.parse(updatesequence)
-            if us == lastUpdateTime:
+            if round(us) == round(lastUpdateTime):
+                # Equal to the nearest second
                 raise CurrentUpdateSequence(updatesequence)
             elif us > lastUpdateTime:
                 raise InvalidUpdateSequence(updatesequence)
@@ -37,15 +41,13 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
             # Client didn't supply a valid ISO8601 date
             # According to the spec, InvalidUpdateSequence is not the
             # right error code here so we use the generic one
-            raise WMSException("UpdateSequence must be a valid ISO8601 date")
+            raise WMSException("UPDATESEQUENCE must be a valid ISO8601 date")
     
     output = StringIO()
     output.write(config.XML_HEADER)
     output.write("<WMS_Capabilities version=\"" + config.WMS_VERSION + "\"")
-    # UpdateSequence is always the current time, representing the fact
-    # that the capabilities doc is always generated dynamically
-    # TODO: change this to help caches
-    output.write(" updateSequence=\"%s\"" % iso8601.tostring(lastUpdateTime))
+    # UpdateSequence is accurate to the nearest second
+    output.write(" updateSequence=\"%s\"" % iso8601.tostring(round(lastUpdateTime)))
     output.write(" xmlns=\"http://www.opengis.net/wms\"")
     output.write(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
     # The next two lines should be commented out if you wish to load this document
@@ -107,10 +109,10 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
         output.write("<Layer>")
         output.write("<Title>%s</Title>" % datasets[dsid].title)
         # Now write the displayable data layers
-        vars = nj22dataset.getVariableMetadata(datasets[dsid].location)
+        vars = datareader.getVariableMetadata(datasets[dsid].location)
         for vid in vars.keys():
             output.write("<Layer")
-            if datasets[dsid].queryable:
+            if config.ALLOW_GET_FEATURE_INFO and datasets[dsid].queryable:
                 output.write(" queryable=\"1\"")
             output.write(">")
             output.write("<Name>%s%s%s</Name>" % (dsid, config.LAYER_SEPARATOR, vid))

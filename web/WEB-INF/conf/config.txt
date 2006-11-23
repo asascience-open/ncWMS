@@ -1,6 +1,6 @@
 # Contains list of datasets that will be exposed by this server
 # Each line is a dataset, comma-separated, with the form:
-# id,title,location,queryable
+# id,title,location
 # The last option (queryable) is optional and defaults to false.
 # If set to "true", the layers from that dataset will be queryable
 # through the GetFeatureInfo operation
@@ -8,8 +8,6 @@
 MRCS,POLCOMS MRCS data,C:\\data\\POLCOMS_MRCS_NOWCAST_20060731.nc
 OSTIA,OSTIA SST Analysis,C:\\data\\OSTIA.ncml,true
 FOAM,FOAM one degree,C:\\data\\FOAM_one.ncml
-WAVES,UK Waters waves,c:\\data\Waves.ncml
-IRISH,POLCOMS Irish Sea,c:\\data\\Irish.ncml
-AMM,POLCOMS AMM,c:\\data\\AMM.ncml
-FOAM_NATL,FOAM North Atlantic,c:\\data\\FOAM_NATL.ncml
-FOAM_MED,FOAM Mediterranean,c:\\data\\FOAM_Med.ncml
+WAVES,UK Waters Waves,C:\\data\\Waves.ncml
+#IFREMER_TMP,CORIOLIS temperatures,c:\\data\\temp_OA_20061030.nc
+#IFREMER_SAL,CORIOLIS salinity,c:\\data\\psal_OA_20061030.nc

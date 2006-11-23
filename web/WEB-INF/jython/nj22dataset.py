@@ -1,4 +1,4 @@
-# Dataset that is connected to NetCDF files via the Java NetCDF (nj22) library
+# Data reader that is connected to NetCDF files via the Java NetCDF (nj22) library
 from java.lang import Float
 
 from uk.ac.rdg.resc.ncwms.datareader import DatasetCache, DataReader
@@ -6,9 +6,6 @@ from uk.ac.rdg.resc.ncwms.exceptions import *
 
 from wmsExceptions import *
 from config import FILL_VALUE
-import ncWMS
-
-class VariableMetadata: pass
 
 def getVariableMetadata(location):
     """ returns a dictionary of VariableMetadata objects.  The keys
@@ -18,7 +15,7 @@ def getVariableMetadata(location):
     # Get the dataset from the cache
     return DatasetCache.getVariableMetadata(location)
 
-def readData(location, varID, tValue, zValue, grid, fillValue=1e20):
+def readImageData(location, varID, tValue, zValue, grid, fillValue=1e20):
     """ Reads data from this variable, projected on to the given grid.
         location = location of dataset (full file path, OPeNDAP URL etc)
         varID = unique ID for a variable
@@ -43,8 +40,8 @@ def readData(location, varID, tValue, zValue, grid, fillValue=1e20):
         raise WMSException(e.getMessage())
 
 
-def readValue(location, varID, tValue, zValue, lat, lon):
-    """ Reads an individual data point
+def readDataValue(location, varID, tValue, zValue, lat, lon):
+    """ Reads an individual data point for GetFeatureInfo
         location = location of dataset (full file path, OPeNDAP URL etc)
         varID = unique ID for a variable
         tValue = time stamp in ISO8601

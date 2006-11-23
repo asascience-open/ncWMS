@@ -6,9 +6,15 @@ except ImportError:
 
 from xml.utils import iso8601
 import time, math, calendar
+import sys
+if sys.platform.startswith("java"):
+    # We're running on Jython
+    import nj22dataset as datareader
+else:
+    # TODO: check for presence of CDAT
+    import cdmsdataset as datareader
 import ncWMS
 import config
-import nj22dataset
 
 def getMetadata(req, datasets):
     """ Processes a request for metadata from the Godiva2 web interface """
@@ -48,12 +54,16 @@ def getFrontPage(datasets):
     doc.write("<body><h1>%s</h1>" % config.title)
     doc.write("<p><a href=\"WMS.py?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.jsp\">Godiva2 interface</a></p>")
-    doc.write("<h2>Example maps:</h2>")
+    doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
+    doc.write("<tr><th>Dataset</th><th>Maps</th>")
+    if config.ALLOW_GET_FEATURE_INFO:
+        doc.write("<th>FeatureInfo</th>")
+    doc.write("</tr>")
     for ds in datasets.keys():
         doc.write("<tr><th>%s</th>" % datasets[ds].title)
-        vars = nj22dataset.getVariableMetadata(datasets[ds].location)
+        vars = datareader.getVariableMetadata(datasets[ds].location)
         doc.write("<td>")
         for varID in vars.keys():
             doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=image/png")
@@ -106,7 +116,7 @@ def getVariables(datasets, dataset):
     """ returns an HTML table containing a set of variables for the given dataset. """
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
-    vars = nj22dataset.getVariableMetadata(datasets[dataset].location)
+    vars = datareader.getVariableMetadata(datasets[dataset].location)
     for varID in vars.keys():
         str.write("<tr><td>")
         str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dataset, varID, vars[varID].title))
@@ -120,7 +130,7 @@ def getVariableDetails(datasets, dataset, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
     str = StringIO()
-    var = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID]
+    var = datareader.getVariableMetadata(datasets[dataset].location)[varID]
     str.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
     str.write("<axes>")
     if var.zvalues is not None:
@@ -140,7 +150,7 @@ def getCalendar(datasets, dataset, varID, dateTime):
         dateTime is a string in ISO 8601 format with the required
         'focus time' """
     # Get an array of time axis values in seconds since the epoch
-    tValues = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID].tvalues
+    tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""
@@ -267,7 +277,7 @@ def getTimesteps(datasets, dataset, varID, tIndex):
     """ Returns an HTML select box allowing the user to select a 
         set of times for a given day """
     # Get an array of time axis values in seconds since the epoch
-    tValues = nj22dataset.getVariableMetadata(datasets[dataset].location)[varID].tvalues
+    tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""
