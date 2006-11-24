@@ -17,21 +17,25 @@ import config
 from wmsExceptions import *
 from getmap import _getGrid, _checkVersion, _getLocationAndVariableID
 
-def getFeatureInfo(req, params, datasets):
+def getSupportedFormats():
+    """ returns list of output formats supported by GetFeatureInfo """
+    return ["text/xml"]
+
+def getFeatureInfo(req, params, config1):
     """ The GetFeatureInfo operation.
        req = mod_python request object (or FakeModPythonRequestObject from Jython servlet)
        params = ncWMS.RequestParser object containing the request parameters
-       datasets = dictionary of ncWMS.Datasets, indexed by unique id """
+       config = configuration object """
     
     _checkVersion(params)
-    grid = _getGrid(params)
+    grid = _getGrid(params, config1)
 
     query_layers = params.getParamValue("query_layers").split(",")
     if len(query_layers) > 1:
         raise WMSException("You may only perform GetFeatureInfo on a single layer")
 
     info_format = params.getParamValue("info_format")
-    if info_format not in config.FEATURE_INFO_FORMATS:
+    if info_format not in getSupportedFormats():
         raise InvalidFormat("info", info_format, "GetFeatureInfo")
 
     exception_format = params.getParamValue("exceptions", "XML")
@@ -68,14 +72,14 @@ def getFeatureInfo(req, params, datasets):
     lon, lat = grid.getLonLat(i, j)
 
     # Read the data point
-    location, varID, queryable = _getLocationAndVariableID(query_layers, datasets)
+    location, varID, queryable = _getLocationAndVariableID(query_layers, config1.datasets)
     if not queryable:
         raise LayerNotQueryable(query_layers[0])
     value = datareader.readDataValue(location, varID, tValue, zValue, lat, lon)
 
     # Output in simple XML
-    req.content_type = "text/xml"
-    req.write(XML_HEADER)
+    req.content_type = info_format
+    req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
     req.write("<FeatureInfoResponse>")
     req.write("<longitude>%f</longitude>" % lon)
     req.write("<latitude>%f</latitude>" % lat)

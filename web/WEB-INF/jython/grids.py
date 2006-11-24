@@ -2,6 +2,12 @@
 # image in a GetMap request
 import math
 
+# The supported map projections (coordinate reference systems). We map
+# the codes to implementations of AbstractGrid that generate the grid
+# objects themselves
+def getSupportedCRSs():
+    return { "CRS:84" : PlateCarreeGrid, "EPSG:41001" : MercatorGrid }
+
 class AbstractGrid:
     """ Abstract superclass for all grids.  All subclasses must provide
        an __init__ function like so: __init__(self, bbox, width, height) """

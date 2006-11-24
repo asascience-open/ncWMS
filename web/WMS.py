@@ -62,9 +62,9 @@ class WMS (HttpServlet):
         if WMS.timer is None:
             WMS.timer = Timer(1) # timer is a daemon
             # Load the Log4j configuration file
-            prefix = self.getServletContext().getRealPath("/")
             file = self.getInitParameter("log4j-init-file")
             if file is not None:
+                prefix = self.getServletContext().getRealPath("/")
                 PropertyConfigurator.configure(prefix + file)
             WMS.logger.debug("Initialized logging system")
             # Initialize the cache of datasets
@@ -87,30 +87,12 @@ class WMS (HttpServlet):
     def doGet(self,request,response):
         """ Perform the WMS operation """
         WMS.logger.debug("GET operation called")
-        ncWMS.doWms(FakeModPythonRequestObject(request, response), getConfigFileLines(self), WMS.cacheWiper.timeLastRan)
+        prefix = self.getServletContext().getRealPath("/")
+        ncWMS.doWms(FakeModPythonRequestObject(request, response),
+            prefix + "WEB-INF/conf/ncWMS.ini", WMS.cacheWiper.timeLastRan)
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")
-
-def getConfigFileLines(servlet):
-    """ Gets the lines of text (ignoring comments) from the config file """
-    # First get the location of the config file
-    # TODO: check last modified date to see if we need to read again
-    # TODO: get the config file location from a servlet init parameter
-    configFileURL = servlet.getServletContext().getResource("/WEB-INF/conf/config.txt")
-    # TODO: check for configFileURL == None
-    configReader = BufferedReader(InputStreamReader(configFileURL.openStream()))
-    lines = []
-    done = 0
-    while not done:
-        line = configReader.readLine()
-        if line is None:
-            done = 1
-        elif line.strip() != "" and not line.startswith('#'):
-            # Ignore blank lines and comment lines
-            lines.append(line)
-    configReader.close()
-    return lines
 
 class CacheWiper(TimerTask):
     """ Clears the NetcdfDatasetCache at regular intervals """

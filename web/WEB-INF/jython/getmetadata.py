@@ -17,13 +17,13 @@ import iso8601
 import config
 import wmsUtils
 
-def getMetadata(req, datasets):
+def getMetadata(req, config1):
     """ Processes a request for metadata from the Godiva2 web interface """
     params = wmsUtils.RequestParser(req.args)
     metadataItem = params.getParamValue("item", "frontpage")
     if metadataItem == "frontpage":
         req.content_type = "text/html"
-        req.write(getFrontPage(datasets))
+        req.write(getFrontPage(config1))
     elif metadataItem == "datasets":
         req.write(getDatasetsDiv(datasets))
     elif metadataItem == "variables":
@@ -48,20 +48,21 @@ def getMetadata(req, datasets):
         tIndex = int(params.getParamValue("tIndex"))
         req.write(getTimesteps(datasets, dataset, varID, tIndex))
 
-def getFrontPage(datasets):
+def getFrontPage(config1):
     """ Returns a front page for the WMS, containing example links """
     doc = StringIO()
-    doc.write("<html><head><title>%s</title></head>" % config.title)
-    doc.write("<body><h1>%s</h1>" % config.title)
+    doc.write("<html><head><title>%s</title></head>" % config1.title)
+    doc.write("<body><h1>%s</h1>" % config1.title)
     doc.write("<p><a href=\"" + prefix + "?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.html\">Godiva2 interface</a></p>")
     doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
     doc.write("<tr><th>Dataset</th><th>Maps</th>")
-    if config.ALLOW_GET_FEATURE_INFO:
+    if config1.allowFeatureInfo:
         doc.write("<th>FeatureInfo</th>")
     doc.write("</tr>")
+    datasets = config1.datasets
     for ds in datasets.keys():
         doc.write("<tr><th>%s</th>" % datasets[ds].title)
         vars = datareader.getVariableMetadata(datasets[ds].location)
@@ -75,7 +76,7 @@ def getFrontPage(datasets):
                 doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
             doc.write("\">%s</a><br />" % vars[varID].title)
         doc.write("</td>")
-        if config.ALLOW_GET_FEATURE_INFO:
+        if config1.allowFeatureInfo:
             doc.write("<td>")
             if datasets[ds].queryable:
                 for varID in vars.keys():

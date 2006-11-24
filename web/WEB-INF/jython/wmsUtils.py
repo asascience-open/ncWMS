@@ -2,6 +2,10 @@
 
 import urllib
 
+def getWMSVersion():
+    """ Returns the version of this WMS server """
+    return "1.3.0"
+
 class RequestParser:
     """ Parses request parameters from the URL.  Parameter values are
         case-sensitive, but their names are not.  Translates URL
@@ -30,3 +34,4 @@ class RequestParser:
             raise WMSException("Must provide a " + key.upper() + " argument")
         else:
             return default
+

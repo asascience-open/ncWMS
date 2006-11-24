@@ -103,7 +103,7 @@ function datasetSelected(expandedTab)
     var dataset = expandedTab.titleBar.id;
     // Get the pretty-printed name of the dataset
     prettyDsName = expandedTab.titleBar.firstChild.nodeValue;
-    // getVariables.jsp returns a table of variable names in HTML format
+    // returns a table of variable names in HTML format
     downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=variables&dataset=' + dataset,
         function(req) {
             var xmldoc = req.responseXML;
@@ -125,8 +125,6 @@ function variableSelected(datasetName, variableName)
         '&variable=' + variableName,
         function(req) {
             var xmldoc = req.responseXML;
-            
-            // See getVariableDetails.jsp
             var varDetails = xmldoc.getElementsByTagName('variableDetails')[0];
             // Set the global variables for dataset and variable name
             var dataset = varDetails.getAttribute('dataset');

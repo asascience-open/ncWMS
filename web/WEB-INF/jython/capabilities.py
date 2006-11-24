@@ -13,13 +13,17 @@ else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
 import iso8601
+import wmsUtils
+import grids
+import getfeatureinfo
+import getmap
 from wmsExceptions import *
 
-def getCapabilities(req, params, datasets, lastUpdateTime):
+def getCapabilities(req, params, config1, lastUpdateTime):
     """ Returns the Capabilities document.
         req = mod_python request object or WMS.FakeModPythonRequest object
         params = ncWMS.RequestParser object containing the request parameters
-        datasets = dictionary of dataset.AbstractDatasets, indexed by unique id 
+        config = ConfigParser object containing configuration info for this WMS
         lastUpdateTime = time at which cache of data and metadata was last updated """
 
     version = params.getParamValue("version", "")
@@ -41,10 +45,10 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
             # According to the spec, InvalidUpdateSequence is not the
             # right error code here so we use a generic exception
             raise WMSException("UPDATESEQUENCE must be a valid ISO8601 date")
-    
+
     output = StringIO()
-    output.write(config.XML_HEADER)
-    output.write("<WMS_Capabilities version=\"" + config.WMS_VERSION + "\"")
+    output.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+    output.write("<WMS_Capabilities version=\"" + wmsUtils.getWMSVersion() + "\"")
     # UpdateSequence is accurate to the nearest second
     output.write(" updateSequence=\"%s\"" % iso8601.tostring(round(lastUpdateTime)))
     output.write(" xmlns=\"http://www.opengis.net/wms\"")
@@ -57,13 +61,13 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
     
     output.write("<Service>")
     output.write("<Name>WMS</Name>")
-    output.write("<Title>%s</Title>" % config.title)
-    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
+    output.write("<Title>%s</Title>" % config1.title)
+    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config1.url)
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
-    output.write("<LayerLimit>%d</LayerLimit>" % config.LAYER_LIMIT)
-    output.write("<MaxWidth>%d</MaxWidth>" % config.MAX_IMAGE_WIDTH)
-    output.write("<MaxHeight>%d</MaxHeight>" % config.MAX_IMAGE_HEIGHT)
+    output.write("<LayerLimit>%d</LayerLimit>" % getmap.getLayerLimit())
+    output.write("<MaxWidth>%d</MaxWidth>" % config1.maxImageWidth)
+    output.write("<MaxHeight>%d</MaxHeight>" % config1.maxImageHeight)
     output.write("</Service>")
     
     output.write("<Capability>")
@@ -80,9 +84,9 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
     output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
-    if config.ALLOW_GET_FEATURE_INFO:
+    if config1.allowFeatureInfo:
         output.write("<GetFeatureInfo>")
-        for format in config.FEATURE_INFO_FORMATS:
+        for format in getfeatureinfo.getSupportedFormats():
             output.write("<Format>%s</Format>" % format)
         output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
             url + "\"/></Get></HTTP></DCPType>")
@@ -96,12 +100,13 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
 
     # Write the top-level container layer
     output.write("<Layer>")
-    output.write("<Title>%s</Title>" % config.title)
+    output.write("<Title>%s</Title>" % config1.title)
     # TODO: add styles
-    for crs in config.SUPPORTED_CRSS.keys():
+    for crs in grids.getSupportedCRSs().keys():
         output.write("<CRS>" + crs + "</CRS>")
     
     # Now for the dataset layers
+    datasets = config1.datasets
     for dsid in datasets.keys():
         # Write a container layer for this dataset. Container layers
         # do not have a Name
@@ -111,7 +116,7 @@ def getCapabilities(req, params, datasets, lastUpdateTime):
         vars = datareader.getVariableMetadata(datasets[dsid].location)
         for vid in vars.keys():
             output.write("<Layer")
-            if config.ALLOW_GET_FEATURE_INFO and datasets[dsid].queryable:
+            if config1.allowFeatureInfo and datasets[dsid].queryable:
                 output.write(" queryable=\"1\"")
             output.write(">")
             output.write("<Name>%s%s%s</Name>" % (dsid, config.LAYER_SEPARATOR, vid))

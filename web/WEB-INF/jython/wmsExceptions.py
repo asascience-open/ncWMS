@@ -1,6 +1,6 @@
 # Code relevant to exceptions
 
-from config import XML_HEADER, WMS_VERSION
+import wmsUtils
 
 class WMSException:
     """ Exception class for WMS exceptions: if an exception of this type
@@ -11,8 +11,8 @@ class WMSException:
     
     def write(self, f):
         """ writes this exception as XML using the f.write() method """
-        f.write(XML_HEADER)
-        f.write("<ServiceExceptionReport version=\"" + WMS_VERSION + "\"")
+        f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        f.write("<ServiceExceptionReport version=\"" + wmsUtils.getWMSVersion() + "\"")
         f.write(" xmlns=\"http://www.opengis.net/ogc\"")
         f.write(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"")
         f.write(" xsi:schemaLocation=\"http://www.opengis.net/ogc http://schemas.opengis.net/wms/1.3.0/exceptions_1_3_0.xsd\">")

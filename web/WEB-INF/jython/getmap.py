@@ -12,19 +12,25 @@ else:
     import graphics
 from wmsExceptions import *
 from config import *
+import wmsUtils
+import grids
 
-def getMap(req, params, datasets):
+def getLayerLimit():
+    """ returns the maximum number of layers that can be requested in GetMap """
+    return 1
+
+def getMap(req, params, config1):
     """ The GetMap operation.
        req = mod_python request object (or FakeModPythonRequestObject from Jython servlet)
        params = ncWMS.RequestParser object containing the request parameters
-       datasets = dictionary of ncWMS.Datasets, indexed by unique id """
+       config = configuration object """
     
     _checkVersion(params) # Checks the VERSION parameter
     
     layers = params.getParamValue("layers").split(",")
-    if len(layers) > LAYER_LIMIT:
+    if len(layers) > getLayerLimit():
         raise WMSException("You may only request a maximum of " +
-            str(LAYER_LIMIT) + " layer(s) simultaneously from this server")
+            str(getLayerLimit()) + " layer(s) simultaneously from this server")
     
     styles = params.getParamValue("styles").split(",")
     # We must either have one style per layer or else an empty parameter: "STYLES="
@@ -93,10 +99,10 @@ def getMap(req, params, datasets):
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
     
     # Generate a grid of lon,lat points, one for each image pixel
-    grid = _getGrid(params)
+    grid = _getGrid(params, config1)
 
     # Find the source of the requested data
-    location, varID, queryable = _getLocationAndVariableID(layers, datasets)
+    location, varID, queryable = _getLocationAndVariableID(layers, config1.datasets)
     picData = datareader.readImageData(location, varID, tValue, zValue, grid, FILL_VALUE)
     # TODO: cache the data array
     # Turn the data into an image and output to the client
@@ -107,10 +113,10 @@ def getMap(req, params, datasets):
 def _checkVersion(params):
     """ Checks that the VERSION parameter exists and is correct """
     version = params.getParamValue("version")
-    if version != WMS_VERSION:
-        raise WMSException("VERSION must be %s" % WMS_VERSION)
+    if version != wmsUtils.getWMSVersion():
+        raise WMSException("VERSION must be %s" % wmsUtils.getWMSVersion())
 
-def _getGrid(params):
+def _getGrid(params, config1):
     """ Gets the grid for the map """
     # Get the bounding box
     bboxEls = params.getParamValue("bbox").split(",")
@@ -127,19 +133,19 @@ def _getGrid(params):
     try:
         width = int(params.getParamValue("width"))
         height = int(params.getParamValue("height"))
-        if width < 1 or width > MAX_IMAGE_WIDTH:
+        if width < 1 or width > config1.maxImageWidth:
             raise WMSException("Image width must be between 1 and " +
-                str(MAX_IMAGE_WIDTH) + " pixels inclusive")
-        if height < 1 or height > MAX_IMAGE_HEIGHT:
+                str(config1.maxImageWidth) + " pixels inclusive")
+        if height < 1 or height > config1.maxImageHeight:
             raise WMSException("Image height must be between 1 and " +
-                str(MAX_IMAGE_HEIGHT) + " pixels inclusive")
+                str(config1.maxImageHeight) + " pixels inclusive")
     except ValueError:
         raise WMSException("Invalid integer provided for WIDTH or HEIGHT")
 
     # Get the Grid object
     crs = params.getParamValue("crs")
-    if SUPPORTED_CRSS.has_key(crs):
-        GridClass = SUPPORTED_CRSS[crs] # see grids.py
+    if grids.getSupportedCRSs().has_key(crs):
+        GridClass = grids.getSupportedCRSs()[crs] # see grids.py
         return GridClass(bbox, width, height)
     else:
         raise InvalidCRS(crs)
