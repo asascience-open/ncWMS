@@ -1,5 +1,5 @@
     # Entry point for the ncWMS (both CDAT and nj22 implementations)
-import time
+import time, os
 
 import ConfigParser
 import wmsUtils
@@ -12,7 +12,8 @@ from getmetadata import getMetadata
 def wms(req):
     """ Entry point with mod_python """
     # Config file is in this directory
-    doWms(req, "ncWMS.ini", time.time())
+    path = os.path.join(os.path.split(__file__)[0], "ncWMS.ini")
+    doWms(req, path, time.time())
 
 def doWms(req, configFile, lastUpdateTime):
     """ Does the WMS operation.
