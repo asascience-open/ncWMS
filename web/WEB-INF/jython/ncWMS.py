@@ -61,10 +61,16 @@ def _readConfig(configFile):
     configObj = NcWMSConfig()
     configObj.datasets = _getDatasets(config)
     configObj.title = config.get('server', 'title')
+    configObj.abstract = config.get('server', 'abstract')
     configObj.url = config.get('server', 'url')
+    configObj.keywords = config.get('server', 'keywords').split(',')
     configObj.allowFeatureInfo = config.getboolean('server', 'allowFeatureInfo')
     configObj.maxImageWidth = config.getint('server', 'maxImageWidth')
     configObj.maxImageHeight = config.getint('server', 'maxImageHeight')
+    configObj.contactName = config.get('contact', 'name')
+    configObj.contactOrg = config.get('contact', 'organization')
+    configObj.contactTel = config.get('contact', 'tel')
+    configObj.contactEmail = config.get('contact', 'email')
     return configObj
 
 class Dataset: pass # Simple class that will hold a dataset's title and location

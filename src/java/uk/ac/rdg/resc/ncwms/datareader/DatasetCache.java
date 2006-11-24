@@ -162,16 +162,9 @@ public class DatasetCache
                     vm.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
                     vm.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
 
-                    List dims = gg.getDimensions();
-                    /*int xPos = findDimensionPos(dims, coordSys.getXHorizAxis().getDimension(0));
-                    int yPos = findDimensionPos(dims, coordSys.getYHorizAxis().getDimension(0));
-                    int zPos = -1;
-                    int tPos = -1;*/
-
                     if (coordSys.hasVerticalAxis())
                     {
                         CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                        //zPos = findDimensionPos(dims, zAxis.getDimension(0));
                         vm.setZunits(zAxis.getUnitsString());
                         double[] zVals = zAxis.getCoordValues();
                         vm.setZpositive(coordSys.isZPositive());
@@ -192,7 +185,6 @@ public class DatasetCache
 
                     if (coordSys.isDate())
                     {
-                        //tPos = findDimensionPos(dims, coordSys.getTimeAxis().getDimension(0));
                         Date[] tVals = coordSys.getTimeDates();
                         double[] sse = new double[tVals.length]; // Seconds since the epoch
                         for (int i = 0; i < tVals.length; i++)
@@ -201,8 +193,6 @@ public class DatasetCache
                         }
                         vm.setTvalues(sse);
                     }
-
-                    //vm.setAxisPositions(tPos, zPos, yPos, xPos);
 
                     // Set the bounding box
                     // TODO: should take into account the cell bounds
@@ -237,19 +227,6 @@ public class DatasetCache
         }
         
         return cache.get(location);
-    }
-    
-    private static int findDimensionPos(List dims, Dimension want)
-    {
-        for (int i = 0; i < dims.size(); i++)
-        {
-            Dimension dim = (Dimension)dims.get(i);
-            if (dim.equals(want))
-            {
-                return i;
-            }
-        }
-        return -1;
     }
     
     /**

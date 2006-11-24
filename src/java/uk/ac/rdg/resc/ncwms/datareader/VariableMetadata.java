@@ -57,7 +57,6 @@ public class VariableMetadata
     private double validMax;
     private EnhancedCoordAxis xaxis;
     private EnhancedCoordAxis yaxis;
-    private int tPos, zPos, yPos, xPos;
     
     /** Creates a new instance of VariableMetadata */
     VariableMetadata()
@@ -200,39 +199,6 @@ public class VariableMetadata
     public void setYaxis(EnhancedCoordAxis yaxis)
     {
         this.yaxis = yaxis;
-    }
-    
-    public void setAxisPositions(int tPos, int zPos, int yPos, int xPos)
-    {
-        this.tPos = tPos;
-        this.zPos = zPos;
-        this.yPos = yPos;
-        this.xPos = xPos;
-    }
-    
-    public List getRangesList(Range tRange, Range zRange, Range yRange, Range xRange)
-    {
-        Vector<Range> ranges = new Vector<Range>();
-        for (int i = 0; i < 4; i++)
-        {
-            if (i == this.tPos)
-            {
-                ranges.add(tRange);
-            }
-            else if (i == this.zPos)
-            {
-                ranges.add(zRange);
-            }
-            else if (i == this.yPos)
-            {
-                ranges.add(yRange);
-            }
-            else if (i == this.xPos)
-            {
-                ranges.add(xRange);
-            }
-        }
-        return ranges;
     }
     
 }

@@ -31,7 +31,7 @@ def getSupportedExceptionFormats():
 def getMap(req, params, config):
     """ The GetMap operation.
        req = mod_python request object (or FakeModPythonRequestObject from Jython servlet)
-       params = ncWMS.RequestParser object containing the request parameters
+       params = wmsUtils.RequestParser object containing the request parameters
        config = configuration object """
     
     _checkVersion(params) # Checks the VERSION parameter
@@ -112,6 +112,7 @@ def getMap(req, params, config):
 
     # Find the source of the requested data
     location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
+    # Read the data for the image
     picData = datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue())
     # TODO: cache the data array
     # Turn the data into an image and output to the client

@@ -105,14 +105,18 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         }
         else
         {
+            logger.debug("Finding value for latitude {}", point.getLatitude());
             // this is a latitude axis
             double distance = point.getLatitude() - this.start;
             double exactNumSteps = distance / this.stride;
             int index = (int)Math.round(exactNumSteps);
+            logger.debug("index = {}, count = {}", index, this.count);
             if (index < 0 || index >= this.count)
             {
+                logger.debug("returning -1");
                 return -1;
             }
+            logger.debug("returning {}", index);
             return index;
         }
         

@@ -156,25 +156,29 @@ public class DataReader
             // data each time from minX to maxX
             for (int j = 0; j < latValues.length; j++)
             {
-                int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
-                if (yIndex >= 0)
+                // Check for out-of-range latitude values
+                if (latValues[j] >= -90.0 && latValues[j] <= 90.0)
                 {
-                    Range yRange = new Range(yIndex, yIndex);
-                    // Read a chunk of data - values will not be unpacked or
-                    // checked for missing values yet
-                    GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
-                    dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
-                    // Now copy the scanline's data to the picture array
-                    for (int i = 0; i < xIndices.length; i++)
+                    int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
+                    if (yIndex >= 0)
                     {
-                        if (xIndices[i] >= 0)
+                        Range yRange = new Range(yIndex, yIndex);
+                        // Read a chunk of data - values will not be unpacked or
+                        // checked for missing values yet
+                        GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
+                        dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
+                        // Now copy the scanline's data to the picture array
+                        for (int i = 0; i < xIndices.length; i++)
                         {
-                            int picIndex = j * lonValues.length + i;
-                            float val = dataChunk.getValue(xIndices[i] - minX);
-                            // We unpack and check for missing values just for
-                            // the points we need to display.
-                            float pixel = (float)enhanced.convertScaleOffsetMissing(val);
-                            picData[picIndex] = Float.isNaN(pixel) ? fillValue : pixel;
+                            if (xIndices[i] >= 0)
+                            {
+                                int picIndex = j * lonValues.length + i;
+                                float val = dataChunk.getValue(xIndices[i] - minX);
+                                // We unpack and check for missing values just for
+                                // the points we need to display.
+                                float pixel = (float)enhanced.convertScaleOffsetMissing(val);
+                                picData[picIndex] = Float.isNaN(pixel) ? fillValue : pixel;
+                            }
                         }
                     }
                 }

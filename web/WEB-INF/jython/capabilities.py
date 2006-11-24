@@ -21,7 +21,7 @@ from wmsExceptions import *
 def getCapabilities(req, params, config, lastUpdateTime):
     """ Returns the Capabilities document.
         req = mod_python request object or WMS.FakeModPythonRequest object
-        params = ncWMS.RequestParser object containing the request parameters
+        params = wmsUtils.RequestParser object containing the request parameters
         config = ConfigParser object containing configuration info for this WMS
         lastUpdateTime = time at which cache of data and metadata was last updated """
 
@@ -61,7 +61,22 @@ def getCapabilities(req, params, config, lastUpdateTime):
     output.write("<Service>")
     output.write("<Name>WMS</Name>")
     output.write("<Title>%s</Title>" % config.title)
+    output.write("<Abstract>%s</Abstract>" % config.abstract)
+    output.write("<KeywordList>")
+    for keyword in config.keywords:
+        output.write("<Keyword>%s</Keyword>" % keyword)
+    output.write("</KeywordList>")
     output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
+
+    output.write("<ContactInformation>")
+    output.write("<ContactPersonPrimary>")
+    output.write("<ContactPerson>%s</ContactPerson>" % config.contactName)
+    output.write("<ContactOrganization>%s</ContactOrganization>" % config.contactOrg)
+    output.write("</ContactPersonPrimary>")
+    output.write("<ContactVoiceTelephone>%s</ContactVoiceTelephone>" % config.contactTel)
+    output.write("<ContactElectronicMailAddress>%s</ContactElectronicMailAddress>" % config.contactEmail)
+    output.write("</ContactInformation>")
+
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
     output.write("<LayerLimit>%d</LayerLimit>" % getmap.getLayerLimit())

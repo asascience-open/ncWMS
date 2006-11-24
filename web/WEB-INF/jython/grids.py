@@ -18,6 +18,7 @@ class AbstractGrid:
         self.latValues = None # by subclasses if isLatLon == 1
         self.width = width
         self.height = height
+        self.size = width * height
         
     def getLonLat(self, i, j):
         """ Returns the longitude and latitude of the point at the given
@@ -46,7 +47,6 @@ class PlateCarreeGrid(AbstractGrid):
         dy = (maxLat - minLat) / height
         # The latitude axis is flipped
         self.latValues = [(minLat + (height - j - 0.5) * dy) for j in xrange(height)]
-        self.size = width * height
 
 
 class MercatorGrid(AbstractGrid):
@@ -66,7 +66,6 @@ class MercatorGrid(AbstractGrid):
         dy = (maxLat - minLat) / height
         # The latitude axis is flipped
         self.latValues = _getMercatorLatitudeArray(minLat, maxLat, height)
-        self.size = width * height
 
 def _getMercatorLatitudeArray(minlat, maxlat, n):
     """ Returns an array (list) of latitudes in Mercator projection where

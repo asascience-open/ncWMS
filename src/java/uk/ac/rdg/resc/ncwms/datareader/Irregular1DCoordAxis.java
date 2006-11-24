@@ -29,14 +29,12 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import ucar.ma2.Array;
-import ucar.ma2.Index;
 import ucar.ma2.IndexIterator;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
 
 /**
  * A one-dimensional coordinate axis, whose values are not equally spaced.
