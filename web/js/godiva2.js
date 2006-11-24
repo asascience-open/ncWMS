@@ -70,9 +70,56 @@ window.onload = function()
     
     // Add a listener for changing the base map
     //map.events.register("changebaselayer", map, function() { alert(this.projection) });
+    // Add a listener for GetFeatureInfo
+    map.events.register('click', map, getFeatureInfo);
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv');
+}
+
+// Event handler for when a user clicks on a map
+function getFeatureInfo(e)
+{
+    if (essc_wms != null)
+    {
+        $('featureInfo').innerHTML = "Getting feature info...";
+        var url = essc_wms.getFullRequestString({
+            REQUEST: "GetFeatureInfo",
+            BBOX: essc_wms.map.getExtent().toBBOX(),
+            I: e.xy.x,
+            J: e.xy.y,
+            INFO_FORMAT: 'text/xml',
+            QUERY_LAYERS: essc_wms.params.LAYERS,
+            WIDTH: essc_wms.map.size.w,
+            HEIGHT: essc_wms.map.size.h
+            });
+        OpenLayers.loadURL(url, '', this, gotFeatureInfo);
+        Event.stop(e);
+    }
+}
+
+// Called when we have received some feature info
+function gotFeatureInfo(response)
+{
+    var xmldoc = response.responseXML;
+    var lon = xmldoc.getElementsByTagName('longitude')[0];
+    var lat = xmldoc.getElementsByTagName('latitude')[0];
+    var val = xmldoc.getElementsByTagName('value')[0];
+    if (lon) {
+        $('featureInfo').innerHTML = "<b>Lon:</b> " + toNSigFigs(lon.firstChild.nodeValue, 4) + 
+            "&nbsp;&nbsp;<b>Lat:</b> " + toNSigFigs(lat.firstChild.nodeValue, 4) + "&nbsp;&nbsp;<b>Value:</b> " +
+            toNSigFigs(val.firstChild.nodeValue, 4);
+    } else {
+        $('featureInfo').innerHTML = "Can't get feature info data for this layer <a href=\"javascript:popUp('whynot.html')\">(why not?)</a>";
+    }
+    
+}
+
+function popUp(URL)
+{
+    day = new Date();
+    id = day.getTime();
+    eval("page" + id + " = window.open(URL, '" + id + "', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width=200,height=200,left = 540,top = 412');");
 }
 
 // Populates the left-hand menu with a set of datasets
@@ -372,6 +419,8 @@ function updateMap()
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
             scale: scaleMinVal + "," + scaleMaxVal, opacity: opacity});
     }
+    $('featureInfo').innerHTML = "<font color=\"red\"><b>NEW!</b></font> Click on the map to get more information";
+    $('featureInfo').style.visibility = 'visible';
     var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
     $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>';
 }

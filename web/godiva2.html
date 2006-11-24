@@ -8,18 +8,17 @@
         <script type="text/javascript" src="js/OpenLayers.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <!-- Comment out the line below to stop using Google Maps -->
-        <script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg"></script>
+        <!--<script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg"></script>-->
         <script type="text/javascript" src="js/godiva2.js"></script>
     </head>
     
     <body>
 
     <!-- This is the left menu bar that will contain the list of datasets and variables -->
-    <div id="accordionDiv" class="leftmenu">
-    </div>
+    <div id="accordionDiv" class="leftmenu"></div>
 
     <div id="help" class="help">
-    <p><a href="info.html">More info</a></p>
+        <p><a href="info.html">More info</a></p>
     </div>
     
     <a href="http://www.resc.rdg.ac.uk/"><img id="resclogo" src="http://www.resc.rdg.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
@@ -33,7 +32,7 @@
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
             <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span><br />
             <br />
-            Powered by <a href="http://www.openlayers.org">OpenLayers</a> and <a href="http://www.opengeospatial.org">OGC</a> standards<br />
+            <span id="featureInfo"></span>
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>
                 <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>
@@ -60,6 +59,8 @@
                     <option value="33">33%</option>
                 </select>
             </span>
+            <span id="poweredBy">Powered by <a href="http://www.openlayers.org">OpenLayers</a> and <a href="http://www.opengeospatial.org">OGC</a> standards</span>
+            
         </div>
     </div>
     

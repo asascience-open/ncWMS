@@ -110,6 +110,11 @@ td
     padding: 0;
 }
 
+#featureInfo
+{
+    visibility: hidden;
+}
+
 div.imagePanel
 {
     position: absolute;
@@ -125,13 +130,6 @@ div.imagePanel
     top: 25px;
     background-color: red;
     /*visibility: hidden;*/
-}
-
-div.poweredBy
-{
-    position: absolute;
-    top: 0px;
-    left: 0px;
 }
 
 div.map
@@ -156,6 +154,13 @@ div.map
     top: 430px;
     left: 335px;
     visibility: hidden; /* Will make visible when we load the page if we need this control */
+}
+
+#poweredBy
+{
+    position: absolute;
+    top: 460px;
+    left: 0px;
 }
 
 img.scaleBar
