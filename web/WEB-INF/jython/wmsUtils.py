@@ -2,6 +2,8 @@
 
 import urllib
 
+from wmsExceptions import WMSException
+
 def getWMSVersion():
     """ Returns the version of this WMS server """
     return "1.3.0"
