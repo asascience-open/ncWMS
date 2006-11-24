@@ -5,7 +5,6 @@ from uk.ac.rdg.resc.ncwms.datareader import DatasetCache, DataReader
 from uk.ac.rdg.resc.ncwms.exceptions import *
 
 from wmsExceptions import *
-from config import FILL_VALUE
 
 def getVariableMetadata(location):
     """ returns a dictionary of VariableMetadata objects.  The keys
@@ -15,7 +14,7 @@ def getVariableMetadata(location):
     # Get the dataset from the cache
     return DatasetCache.getVariableMetadata(location)
 
-def readImageData(location, varID, tValue, zValue, grid, fillValue=1e20):
+def readImageData(location, varID, tValue, zValue, grid, fillValue):
     """ Reads data from this variable, projected on to the given grid.
         location = location of dataset (full file path, OPeNDAP URL etc)
         varID = unique ID for a variable
@@ -40,7 +39,7 @@ def readImageData(location, varID, tValue, zValue, grid, fillValue=1e20):
         raise WMSException(e.getMessage())
 
 
-def readDataValue(location, varID, tValue, zValue, lat, lon):
+def readDataValue(location, varID, tValue, zValue, lat, lon, fillValue):
     """ Reads an individual data point for GetFeatureInfo
         location = location of dataset (full file path, OPeNDAP URL etc)
         varID = unique ID for a variable
@@ -51,10 +50,10 @@ def readDataValue(location, varID, tValue, zValue, lat, lon):
         returns the value at the given point, or None if there is no data at the point """
     try:
         # We can re-use the read() method
-        value = DataReader.read(location, varID, tValue, zValue, [lat], [lon], FILL_VALUE)[0]
+        value = DataReader.read(location, varID, tValue, zValue, [lat], [lon], fillValue)[0]
         # If data is missing, read() will return the fill value, having converted
         # it from a double to a float
-        if value == Float(FILL_VALUE).floatValue():
+        if value == Float(fillValue).floatValue():
             return None
         else:
             return value

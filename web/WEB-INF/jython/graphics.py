@@ -2,6 +2,10 @@
 
 import struct, types, zlib
 
+def getSupportedImageFormats():
+    """ Returns the list of supported image formats as MIME types """
+    return ["image/png"]
+
 ##### The routines below are copied or adapted from the minipng library, with
 ##### thanks to Dan Sandler: see http://dsandler.org/soft/python/minipng.py
 ##### for original source

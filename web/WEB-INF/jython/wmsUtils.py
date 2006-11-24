@@ -35,3 +35,8 @@ class RequestParser:
         else:
             return default
 
+def getLayerSeparator():
+    """ Returns the string used to delimit dataset and variable names in the
+        construction of a layer's name """
+    return "/"
+

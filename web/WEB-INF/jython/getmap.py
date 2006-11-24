@@ -11,7 +11,6 @@ else:
     import cdmsdataset as datareader
     import graphics
 from wmsExceptions import *
-from config import *
 import wmsUtils
 import grids
 
@@ -19,7 +18,17 @@ def getLayerLimit():
     """ returns the maximum number of layers that can be requested in GetMap """
     return 1
 
-def getMap(req, params, config1):
+def getSupportedImageFormats():
+    """ returns the image formats supported by this operation """
+    return graphics.getSupportedImageFormats()
+
+def getSupportedExceptionFormats():
+    """ The exception formats supported by this operation """
+    # Supporting other exception formats (e.g. INIMAGE) will take a bit
+    # of work in the exception-handling code
+    return ["XML"]
+
+def getMap(req, params, config):
     """ The GetMap operation.
        req = mod_python request object (or FakeModPythonRequestObject from Jython servlet)
        params = ncWMS.RequestParser object containing the request parameters
@@ -43,11 +52,11 @@ def getMap(req, params, config1):
             raise StyleNotDefined(style)
     
     format = params.getParamValue("format")
-    if format not in SUPPORTED_IMAGE_FORMATS:
+    if format not in graphics.getSupportedImageFormats():
         raise InvalidFormat("image", format, "GetMap")
 
     exception_format = params.getParamValue("exceptions", "XML")
-    if exception_format not in SUPPORTED_EXCEPTION_FORMATS:
+    if exception_format not in getSupportedExceptionFormats():
         raise InvalidFormat("exception", exception_format, "GetMap")
 
     zValue = params.getParamValue("elevation", "")
@@ -99,14 +108,14 @@ def getMap(req, params, config1):
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
     
     # Generate a grid of lon,lat points, one for each image pixel
-    grid = _getGrid(params, config1)
+    grid = _getGrid(params, config)
 
     # Find the source of the requested data
-    location, varID, queryable = _getLocationAndVariableID(layers, config1.datasets)
-    picData = datareader.readImageData(location, varID, tValue, zValue, grid, FILL_VALUE)
+    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
+    picData = datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue())
     # TODO: cache the data array
     # Turn the data into an image and output to the client
-    graphics.makePic(req, picData, grid.width, grid.height, FILL_VALUE, transparent, bgcolor, opacity, scaleMin, scaleMax)
+    graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
 
     return
 
@@ -116,7 +125,7 @@ def _checkVersion(params):
     if version != wmsUtils.getWMSVersion():
         raise WMSException("VERSION must be %s" % wmsUtils.getWMSVersion())
 
-def _getGrid(params, config1):
+def _getGrid(params, config):
     """ Gets the grid for the map """
     # Get the bounding box
     bboxEls = params.getParamValue("bbox").split(",")
@@ -133,12 +142,12 @@ def _getGrid(params, config1):
     try:
         width = int(params.getParamValue("width"))
         height = int(params.getParamValue("height"))
-        if width < 1 or width > config1.maxImageWidth:
+        if width < 1 or width > config.maxImageWidth:
             raise WMSException("Image width must be between 1 and " +
-                str(config1.maxImageWidth) + " pixels inclusive")
-        if height < 1 or height > config1.maxImageHeight:
+                str(config.maxImageWidth) + " pixels inclusive")
+        if height < 1 or height > config.maxImageHeight:
             raise WMSException("Image height must be between 1 and " +
-                str(config1.maxImageHeight) + " pixels inclusive")
+                str(config.maxImageHeight) + " pixels inclusive")
     except ValueError:
         raise WMSException("Invalid integer provided for WIDTH or HEIGHT")
 
@@ -154,11 +163,16 @@ def _getLocationAndVariableID(layers, datasets):
     """ Returns a (location, varID, queryable) tuple containing the location of the dataset,
         the ID of the variable and a boolean which is true if the layer is queryable. 
         Only deals with one layer at the moment """
-    dsAndVar = layers[0].split(LAYER_SEPARATOR)
+    dsAndVar = layers[0].split(wmsUtils.getLayerSeparator())
     if len(dsAndVar) == 2 and datasets.has_key(dsAndVar[0]):
         location = datasets[dsAndVar[0]].location
         varID = dsAndVar[1]
         return location, varID, datasets[dsAndVar[0]].queryable
     else:
         raise LayerNotDefined(layers[0])
+
+def _getFillValue():
+    """ returns the fill value to be used internally - can't be NaN because NaN is 
+        not portable across Python versions or Jython """
+    return 1.0e20 
         

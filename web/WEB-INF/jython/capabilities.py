@@ -5,7 +5,6 @@ except ImportError:
     from StringIO import StringIO
 import sys, time
 
-import config
 if sys.platform.startswith("java"):
     # We're running on Jython
     import nj22dataset as datareader
@@ -19,7 +18,7 @@ import getfeatureinfo
 import getmap
 from wmsExceptions import *
 
-def getCapabilities(req, params, config1, lastUpdateTime):
+def getCapabilities(req, params, config, lastUpdateTime):
     """ Returns the Capabilities document.
         req = mod_python request object or WMS.FakeModPythonRequest object
         params = ncWMS.RequestParser object containing the request parameters
@@ -61,13 +60,13 @@ def getCapabilities(req, params, config1, lastUpdateTime):
     
     output.write("<Service>")
     output.write("<Name>WMS</Name>")
-    output.write("<Title>%s</Title>" % config1.title)
-    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config1.url)
+    output.write("<Title>%s</Title>" % config.title)
+    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
     output.write("<LayerLimit>%d</LayerLimit>" % getmap.getLayerLimit())
-    output.write("<MaxWidth>%d</MaxWidth>" % config1.maxImageWidth)
-    output.write("<MaxHeight>%d</MaxHeight>" % config1.maxImageHeight)
+    output.write("<MaxWidth>%d</MaxWidth>" % config.maxImageWidth)
+    output.write("<MaxHeight>%d</MaxHeight>" % config.maxImageHeight)
     output.write("</Service>")
     
     output.write("<Capability>")
@@ -79,12 +78,12 @@ def getCapabilities(req, params, config1, lastUpdateTime):
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetCapabilities>")
     output.write("<GetMap>")
-    for format in config.SUPPORTED_IMAGE_FORMATS:
+    for format in getmap.getSupportedImageFormats():
         output.write("<Format>%s</Format>" % format)
     output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
-    if config1.allowFeatureInfo:
+    if config.allowFeatureInfo:
         output.write("<GetFeatureInfo>")
         for format in getfeatureinfo.getSupportedFormats():
             output.write("<Format>%s</Format>" % format)
@@ -94,19 +93,19 @@ def getCapabilities(req, params, config1, lastUpdateTime):
     output.write("</Request>")
     # TODO: support more exception types
     output.write("<Exception>")
-    for ex_format in config.SUPPORTED_EXCEPTION_FORMATS:
+    for ex_format in getmap.getSupportedExceptionFormats():
         output.write("<Format>%s</Format>" % ex_format)
     output.write("</Exception>")
 
     # Write the top-level container layer
     output.write("<Layer>")
-    output.write("<Title>%s</Title>" % config1.title)
+    output.write("<Title>%s</Title>" % config.title)
     # TODO: add styles
     for crs in grids.getSupportedCRSs().keys():
         output.write("<CRS>" + crs + "</CRS>")
     
     # Now for the dataset layers
-    datasets = config1.datasets
+    datasets = config.datasets
     for dsid in datasets.keys():
         # Write a container layer for this dataset. Container layers
         # do not have a Name
@@ -116,10 +115,10 @@ def getCapabilities(req, params, config1, lastUpdateTime):
         vars = datareader.getVariableMetadata(datasets[dsid].location)
         for vid in vars.keys():
             output.write("<Layer")
-            if config1.allowFeatureInfo and datasets[dsid].queryable:
+            if config.allowFeatureInfo and datasets[dsid].queryable:
                 output.write(" queryable=\"1\"")
             output.write(">")
-            output.write("<Name>%s%s%s</Name>" % (dsid, config.LAYER_SEPARATOR, vid))
+            output.write("<Name>%s%s%s</Name>" % (dsid, wmsUtils.getLayerSeparator(), vid))
             output.write("<Title>%s</Title>" % vars[vid].title)
             output.write("<Abstract>%s</Abstract>" % vars[vid].abstract)
 

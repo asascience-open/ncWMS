@@ -14,74 +14,73 @@ else:
     import cdmsdataset as datareader
     prefix = "wms"
 import iso8601
-import config
 import wmsUtils
 
-def getMetadata(req, config1):
+def getMetadata(req, config):
     """ Processes a request for metadata from the Godiva2 web interface """
     params = wmsUtils.RequestParser(req.args)
     metadataItem = params.getParamValue("item", "frontpage")
     if metadataItem == "frontpage":
         req.content_type = "text/html"
-        req.write(getFrontPage(config1))
+        req.write(getFrontPage(config))
     elif metadataItem == "datasets":
-        req.write(getDatasetsDiv(datasets))
+        req.write(getDatasetsDiv(config))
     elif metadataItem == "variables":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
-        req.write(getVariables(datasets, dataset))
+        req.write(getVariables(config, dataset))
     elif metadataItem == "variableDetails":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
-        req.write(getVariableDetails(datasets, dataset, varID))
+        req.write(getVariableDetails(config, dataset, varID))
     elif metadataItem == "calendar":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         dateTime = params.getParamValue("dateTime")
-        req.write(getCalendar(datasets, dataset, varID, dateTime))
+        req.write(getCalendar(config, dataset, varID, dateTime))
     elif metadataItem == "timesteps":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
         varID = params.getParamValue("variable")
         tIndex = int(params.getParamValue("tIndex"))
-        req.write(getTimesteps(datasets, dataset, varID, tIndex))
+        req.write(getTimesteps(config, dataset, varID, tIndex))
 
-def getFrontPage(config1):
+def getFrontPage(config):
     """ Returns a front page for the WMS, containing example links """
     doc = StringIO()
-    doc.write("<html><head><title>%s</title></head>" % config1.title)
-    doc.write("<body><h1>%s</h1>" % config1.title)
+    doc.write("<html><head><title>%s</title></head>" % config.title)
+    doc.write("<body><h1>%s</h1>" % config.title)
     doc.write("<p><a href=\"" + prefix + "?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.html\">Godiva2 interface</a></p>")
     doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
     doc.write("<tr><th>Dataset</th><th>Maps</th>")
-    if config1.allowFeatureInfo:
+    if config.allowFeatureInfo:
         doc.write("<th>FeatureInfo</th>")
     doc.write("</tr>")
-    datasets = config1.datasets
+    datasets = config.datasets
     for ds in datasets.keys():
         doc.write("<tr><th>%s</th>" % datasets[ds].title)
         vars = datareader.getVariableMetadata(datasets[ds].location)
         doc.write("<td>")
         for varID in vars.keys():
             doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=image/png")
-            doc.write("&LAYERS=%s%s%s" % (ds, config.LAYER_SEPARATOR, varID))
+            doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
             bbox = vars[varID].bbox
             doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
             if vars[varID].tvalues is not None:
                 doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
             doc.write("\">%s</a><br />" % vars[varID].title)
         doc.write("</td>")
-        if config1.allowFeatureInfo:
+        if config.allowFeatureInfo:
             doc.write("<td>")
             if datasets[ds].queryable:
                 for varID in vars.keys():
                     doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml")
-                    doc.write("&QUERY_LAYERS=%s%s%s" % (ds, config.LAYER_SEPARATOR, varID))
+                    doc.write("&QUERY_LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                     bbox = vars[varID].bbox
                     doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
                     doc.write("&I=128&J=128")
@@ -99,10 +98,11 @@ def getFrontPage(config1):
     return s
     
 
-def getDatasetsDiv(datasets):
+def getDatasetsDiv(config):
     """ returns a string with a set of divs representing the datasets.
         Quick and dirty. """
     str = StringIO()
+    datasets = config.datasets
     for ds in datasets.keys():
         str.write("<div id=\"%sDiv\">" % ds)
         str.write("<div id=\"%s\">%s</div>" % (ds, datasets[ds].title))
@@ -114,10 +114,11 @@ def getDatasetsDiv(datasets):
     str.close()
     return s
 
-def getVariables(datasets, dataset):
+def getVariables(config, dataset):
     """ returns an HTML table containing a set of variables for the given dataset. """
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
+    datasets = config.datasets
     vars = datareader.getVariableMetadata(datasets[dataset].location)
     for varID in vars.keys():
         str.write("<tr><td>")
@@ -128,10 +129,11 @@ def getVariables(datasets, dataset):
     str.close()
     return s
 
-def getVariableDetails(datasets, dataset, varID):
+def getVariableDetails(config, dataset, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
     str = StringIO()
+    datasets = config.datasets
     var = datareader.getVariableMetadata(datasets[dataset].location)[varID]
     str.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
     str.write("<axes>")
@@ -147,10 +149,11 @@ def getVariableDetails(datasets, dataset, varID):
     str.close()
     return s
 
-def getCalendar(datasets, dataset, varID, dateTime):
+def getCalendar(config, dataset, varID, dateTime):
     """ returns an HTML calendar for the given dataset and variable.
         dateTime is a string in ISO 8601 format with the required
         'focus time' """
+    datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
     tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
     # TODO: is this the right thing to do here?
@@ -275,9 +278,10 @@ def _getMonthAfter(date):
     newDate = tuple([year] + [month] + list(date[2:]))
     return iso8601.tostring(time.mktime(newDate))
 
-def getTimesteps(datasets, dataset, varID, tIndex):
+def getTimesteps(config, dataset, varID, tIndex):
     """ Returns an HTML select box allowing the user to select a 
         set of times for a given day """
+    datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
     tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
     # TODO: is this the right thing to do here?

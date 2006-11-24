@@ -11,7 +11,7 @@ from org.apache.log4j import PropertyConfigurator, Logger
 from uk.ac.rdg.resc.ncwms.datareader import DatasetCache
 
 import time
-import ncWMS, config
+import ncWMS
 
 class FakeModPythonServerObject:
     """ Class that fakes up the req.server mod_python object """
@@ -72,7 +72,8 @@ class WMS (HttpServlet):
             WMS.logger.debug("Initialized DatasetCache")
             # Start a timer that will clear the cache at regular intervals
             # so that NcML aggregations are reloaded
-            intervalInMs = int(config.CACHE_REFRESH_INTERVAL * 60 * 1000)
+            # TODO: get the interval value from a config file
+            intervalInMs = int(60 * 1000) # Runs once a minute
             WMS.cacheWiper = CacheWiper()
             WMS.timer.scheduleAtFixedRate(WMS.cacheWiper, intervalInMs, intervalInMs)
             WMS.logger.debug("Initialized NetcdfDatasetCache refresher")
