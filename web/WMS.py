@@ -32,15 +32,26 @@ class FakeModPythonRequestObject:
         reqURL = URL(request.getRequestURL().toString())
         self.server = FakeModPythonServerObject("%s:%d" % (reqURL.getHost(), reqURL.getPort()))
         self.unparsed_uri = str(reqURL.getPath())
+        self.headers_out = {} # Dictionary of HTTP headers
+        self.headers_set = 0
+
+    def _setHeaders(self):
+        """ Sets the content type and other HTTP headers.  Does nothing
+            in subsequent invocations """
+        if not self.headers_set:
+            self.headers_set = 1
+            for key in self.headers_out.keys():
+                self._response.setHeader(key, self.headers_out[key])
+            self._response.setContentType(self.content_type)
  
     def write(self, str):
-        """ Sets the content type and writes data to the client """
-        self._response.setContentType(self.content_type)
+        """ Writes data to the client."""
+        self._setHeaders()
         self._response.getWriter().write(str)
 
     def getOutputStream(self):
         """ Gets an OutputStream for writing binary data. """
-        self._response.setContentType(self.content_type)
+        self._setHeaders()
         return self._response.getOutputStream()
 
 # Entry point for the Jython WMS servlet

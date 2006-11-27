@@ -15,6 +15,7 @@ else:
     prefix = "wms"
 import iso8601
 import wmsUtils
+import getmap
 
 def getMetadata(req, config):
     """ Processes a request for metadata from the Godiva2 web interface """
@@ -57,7 +58,9 @@ def getFrontPage(config):
     doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
-    doc.write("<tr><th>Dataset</th><th>Maps</th>")
+    doc.write("<tr><th>Dataset</th>")
+    for format in getmap.getSupportedImageFormats():
+        doc.write("<th>%s</th>" % format)
     if config.allowFeatureInfo:
         doc.write("<th>FeatureInfo</th>")
     doc.write("</tr>")
@@ -65,16 +68,17 @@ def getFrontPage(config):
     for ds in datasets.keys():
         doc.write("<tr><th>%s</th>" % datasets[ds].title)
         vars = datareader.getVariableMetadata(datasets[ds].location)
-        doc.write("<td>")
-        for varID in vars.keys():
-            doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=image/png")
-            doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
-            bbox = vars[varID].bbox
-            doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
-            if vars[varID].tvalues is not None:
-                doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
-            doc.write("\">%s</a><br />" % vars[varID].title)
-        doc.write("</td>")
+        for format in getmap.getSupportedImageFormats():
+            doc.write("<td>")
+            for varID in vars.keys():
+                doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s" % format)
+                doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
+                bbox = vars[varID].bbox
+                doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
+                if vars[varID].tvalues is not None:
+                    doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
+                doc.write("\">%s</a><br />" % vars[varID].title)
+            doc.write("</td>")
         if config.allowFeatureInfo:
             doc.write("<td>")
             if datasets[ds].queryable:

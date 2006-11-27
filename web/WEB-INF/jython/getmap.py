@@ -20,7 +20,11 @@ def getLayerLimit():
 
 def getSupportedImageFormats():
     """ returns the image formats supported by this operation """
-    return graphics.getSupportedImageFormats()
+    return graphics.getSupportedImageFormats() + [_getGoogleEarthFormat()]
+
+def _getGoogleEarthFormat():
+    """ MIME type for KML """
+    return "application/vnd.google-earth.kml+xml"
 
 def getSupportedExceptionFormats():
     """ The exception formats supported by this operation """
@@ -51,8 +55,10 @@ def getMap(req, params, config):
             # TODO: handle styles properly
             raise StyleNotDefined(style)
     
-    format = params.getParamValue("format")
-    if format not in graphics.getSupportedImageFormats():
+    # RequestParser replaces pluses with spaces: we must change back
+    # to parse the format correctly
+    format = params.getParamValue("format").replace(" ", "+")
+    if format not in getSupportedImageFormats():
         raise InvalidFormat("image", format, "GetMap")
 
     exception_format = params.getParamValue("exceptions", "XML")
@@ -96,17 +102,69 @@ def getMap(req, params, config):
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
     if opacity < 0 or opacity > 100:
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
-    
-    # Generate a grid of lon,lat points, one for each image pixel
-    grid = _getGrid(params, config)
 
     # Find the source of the requested data
     location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
-    # Read the data for the image
-    picData = datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue())
-    # TODO: cache the data array
-    # Turn the data into an image and output to the client
-    graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
+
+    if format == _getGoogleEarthFormat():
+        # This is a special case: we don't actually render the image,
+        # we just return a KML document containing a link to the image
+
+        # Set a suggested filename in the header
+        # "inline" means "don't force a download dialog box in web browser"
+        req.headers_out["Content-Disposition"] = "inline; filename=%s.kml" % layers[0].replace("/", "_")
+        req.content_type = format
+
+        req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        req.write("<kml xmlns=\"http://earth.google.com/kml/2.0\">")
+        req.write("<Folder>")
+        req.write("<visibility>1</visibility>")
+        req.write("<GroundOverlay>")
+        # Get the variable metadata
+        vars = datareader.getVariableMetadata(location)
+        req.write("<name>%s</name>" % vars[varID].title)
+        req.write("<description>%s</description>" % vars[varID].abstract)
+        req.write("<visibility>1</visibility>")
+
+        req.write("<Icon><href>")
+        req.write("http://%s%s?SERVICE=WMS&amp;REQUEST=GetMap" %
+            (req.server.server_hostname, req.unparsed_uri.split("?")[0]))
+        req.write("&amp;VERSION=%s" % wmsUtils.getWMSVersion())
+        req.write("&amp;LAYERS=%s" % layers[0])
+        if styles == ['']:
+            req.write("&amp;STYLES=")
+        else:
+            req.write("&amp;STYLES=%s" % styles[i])
+        # TODO: get the FORMAT string properly
+        req.write("&amp;FORMAT=image/png&amp;CRS=CRS:84")
+        bboxEls = tuple([str(f) for f in _getBbox(params)])
+        req.write("&amp;BBOX=%s,%s,%s,%s" % bboxEls)
+        if zValue != "":
+            req.write("&amp;ELEVATION=%s" % zValue)
+        if tValue != "":
+            req.write("&amp;TIME=%s" % tValue)
+        # TODO get width and height more intelligently
+        req.write("&amp;WIDTH=500&amp;HEIGHT=500")
+        if not (scaleMin == 0.0 and scaleMax == 0.0):
+            # TODO add an auto-scaled layer
+            req.write("&amp;SCALE=%s,%s" % (scaleMin, scaleMax))
+        req.write("</href></Icon>")
+
+        req.write("<LatLonBox id=\"1\">")
+        req.write("<west>%s</west><south>%s</south><east>%s</east><north>%s</north>" % bboxEls)
+        req.write("<rotation>0</rotation>")
+        req.write("</LatLonBox>")
+        req.write("</GroundOverlay>")
+        req.write("</Folder>")
+        req.write("</kml>")
+    else:
+        # Generate a grid of lon,lat points, one for each image pixel
+        grid = _getGrid(params, config)
+        # Read the data for the image
+        picData = datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue())
+        # TODO: cache the data array
+        # Turn the data into an image and output to the client
+        graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
 
     return
 
@@ -116,9 +174,8 @@ def _checkVersion(params):
     if version != wmsUtils.getWMSVersion():
         raise WMSException("VERSION must be %s" % wmsUtils.getWMSVersion())
 
-def _getGrid(params, config):
-    """ Gets the grid for the map """
-    # Get the bounding box
+def _getBbox(params):
+    """ Gets the bounding box as a list of four floating-point numbers """
     bboxEls = params.getParamValue("bbox").split(",")
     if len(bboxEls) != 4:
         raise WMSException("Invalid bounding box format: need four elements")
@@ -128,6 +185,12 @@ def _getGrid(params, config):
         raise WMSException("Invalid bounding box format: all elements must be numeric")
     if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
         raise WMSException("Invalid bounding box format")
+    return bbox
+
+def _getGrid(params, config):
+    """ Gets the grid for the map """
+    # Get the bounding box
+    bbox = _getBbox(params)
 
     # Get the image width and height
     try:
@@ -180,5 +243,6 @@ def _getLocationAndVariableID(layers, datasets):
 def _getFillValue():
     """ returns the fill value to be used internally - can't be NaN because NaN is 
         not portable across Python versions or Jython """
-    return 1.0e20 
+    return 1.0e20
+    
         

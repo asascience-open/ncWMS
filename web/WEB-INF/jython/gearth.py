@@ -7,6 +7,7 @@ import urllib
 
 from wmsUtils import RequestParser
 from wmsExceptions import WMSException
+from getmap import _getBbox
 
 def gearth(req):
     """ Entry point with mod_python """
@@ -53,28 +54,24 @@ def doStageOne(req, params):
     s.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
     s.write("<kml xmlns=\"http://earth.google.com/kml/2.0\">")
     s.write("<Folder>")
+    s.write("<NetworkLink>")
+    s.write("<description>%s</description>" % "Description")
+    s.write("<name>%s</name>" % "Name")
+    s.write("<visibility>1</visibility>")
+    s.write("<open>0</open>")
+    s.write("<refreshVisibility>0</refreshVisibility>")
+    s.write("<flyToView>0</flyToView>")
 
-    for i in xrange(len(layers)):
-        # Serve each layer as a separate NetworkLink
-        # TODO: is this right? Isn't a single NL sufficient?
-        s.write("<NetworkLink>")
-        s.write("<description>%s</description>" % layers[i])
-        s.write("<name>%s</name>" % layers[i])
-        s.write("<visibility>1</visibility>")
-        s.write("<open>0</open>")
-        s.write("<refreshVisibility>0</refreshVisibility>")
-        s.write("<flyToView>0</flyToView>")
+    s.write("<Url>")
+    s.write("<href>http://%s%s?STAGE=2&amp;URL=%s&amp;LAYERS=%s&amp;STYLES=%s&amp;ELEVATION=%s&amp;TIME=%s</href>" %
+        (req.server.server_hostname, req.unparsed_uri.split("?")[0],
+        url, ",".join(layers), ",".join(styles), zValue, tValue))
+    s.write("<refreshInterval>1</refreshInterval>")
+    s.write("<viewRefreshMode>onStop</viewRefreshMode>")
+    s.write("<viewRefreshTime>0</viewRefreshTime>")
+    s.write("</Url>")
 
-        s.write("<Url>")
-        s.write("<href>http://%s%s?STAGE=2&amp;URL=%s&amp;LAYERS=%s&amp;STYLES=%s&amp;ELEVATION=%s&amp;TIME=%s</href>" %
-            (req.server.server_hostname, req.unparsed_uri.split("?")[0],
-            url, ",".join(layers), ",".join(styles), zValue, tValue))
-        s.write("<refreshInterval>1</refreshInterval>")
-        s.write("<viewRefreshMode>onStop</viewRefreshMode>")
-        s.write("<viewRefreshTime>0</viewRefreshTime>")
-        s.write("</Url>")
-
-        s.write("</NetworkLink>")
+    s.write("</NetworkLink>")
 
     s.write("</Folder>")
     s.write("</kml>")
@@ -90,6 +87,9 @@ def doStageTwo(req, params):
     # Get the URL to the Web Map Server
     url = params.getParamValue("url")
 
+    # Get the bounding box (this is appended by Google Earth itself)
+    bbox = _getBbox(params)
+
     s = StringIO()
     s.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
     s.write("<kml xmlns=\"http://earth.google.com/kml/2.0\">")
@@ -104,7 +104,7 @@ def doStageTwo(req, params):
     s.write("<Icon><href>%s</href></Icon>" % url)
     s.write("<LatLonBox id=\"1\">")
     s.write("<north>%s</north><south>%s</south><east>%s</east><west>%s</west>" %
-        ("n", "s", "e", "w"))
+        tuple([str(f) for f in bbox]))
     s.write("<rotation>0</rotation>")
     s.write("</LatLonBox>")
     s.write("</GroundOverlay>")

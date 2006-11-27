@@ -51,7 +51,7 @@ class InvalidFormat(WMSException):
     """ Exception that is raised when a client requests an unsupported
        image or FeatureInfo format """
     def __init__(self, type, format, operation):
-        WMSException.__init__(self, "The %s format %s is not supported by the %s operation" % (type, format, operation),
+        WMSException.__init__(self, "The %s format \"%s\" is not supported by the %s operation" % (type, format, operation),
             "InvalidFormat")
 
 class LayerNotDefined(WMSException):
