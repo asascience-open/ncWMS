@@ -11,7 +11,7 @@ from getmetadata import getMetadata
 
 def wms(req):
     """ Entry point with mod_python """
-    # Config file is in this directory
+    # Config file is in the same directory as this script
     path = os.path.join(os.path.split(__file__)[0], "ncWMS.ini")
     doWms(req, path, time.time())
 
@@ -25,6 +25,7 @@ def doWms(req, configFile, lastUpdateTime):
     try:
         # Read the config file
         config = _readConfig(configFile)
+        # Parse the URL parameters
         args = req.args
         if req.args is None or req.args.strip() == "":
             # If there is no request string, return the front page

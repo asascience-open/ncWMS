@@ -85,18 +85,8 @@ def getMap(req, params, config):
     except:
         raise WMSException("Invalid format for BGCOLOR")
 
-    # Get the scale for colouring the map: this is an extension to the
-    # WMS specification
-    scale = params.getParamValue("scale", "0,0") # 0,0 signals auto-scale
-    if len(scale.split(",")) == 2:
-        try:
-            scaleMin, scaleMax = [float(x) for x in scale.split(",")]
-            if (scaleMin != 0 or scaleMax != 0) and scaleMin >= scaleMax:
-                raise WMSException("SCALE min value must be less than max value")
-        except ValueError:
-            raise WMSException("Invalid number in SCALE parameter")
-    else:     
-        raise WMSException("The SCALE parameter must be of the form SCALEMIN,SCALEMAX")
+    # Get the extremes of the colour scale
+    scaleMin, scaleMax = _getScale(params)
 
     # Get the percentage opacity of the map layer: another WMS extension
     opa = params.getParamValue("opacity", "100")
@@ -159,6 +149,21 @@ def _getGrid(params, config):
         return GridClass(bbox, width, height)
     else:
         raise InvalidCRS(crs)
+
+def _getScale(params):
+    # Get the scale for colouring the map: this is an extension to the
+    # WMS specification
+    scale = params.getParamValue("scale", "0,0") # 0,0 signals auto-scale
+    if len(scale.split(",")) == 2:
+        try:
+            scaleMin, scaleMax = [float(x) for x in scale.split(",")]
+            if (scaleMin != 0 or scaleMax != 0) and scaleMin >= scaleMax:
+                raise WMSException("SCALE min value must be less than max value")
+            return scaleMin, scaleMax
+        except ValueError:
+            raise WMSException("Invalid number in SCALE parameter")
+    else:     
+        raise WMSException("The SCALE parameter must be of the form SCALEMIN,SCALEMAX")
 
 def _getLocationAndVariableID(layers, datasets):
     """ Returns a (location, varID, queryable) tuple containing the location of the dataset,

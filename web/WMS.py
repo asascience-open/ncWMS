@@ -1,8 +1,7 @@
 # Entry point (Jython servlet) for the WMS
 
 from javax.servlet.http import HttpServlet
-from javax.servlet import GenericServlet, ServletException
-from java.io import InputStreamReader, BufferedReader
+from javax.servlet import ServletException
 from java.net import URL
 from java.util import Timer, TimerTask
 
