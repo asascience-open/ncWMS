@@ -159,7 +159,7 @@ div.map
 {
     position: absolute;
     top: 430px;
-    left: 335px;
+    left: 350px;
     visibility: hidden; /* Will make visible when we load the page if we need this control */
 }
 
