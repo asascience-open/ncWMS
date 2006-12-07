@@ -54,7 +54,7 @@ window.onload = function()
     var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone", "http://ws.cadcorp.com/seazone/wms.exe?",
         {layers: 'Barts_50km', transparent: 'true'});
     seazone_wms.setVisibility(false);
-    map.addLayers([ol_wms, jpl_wms]); //, seazone_wms]);
+    map.addLayers([jpl_wms, ol_wms]); //, seazone_wms]);
     
     // If we have loaded Google Maps and the browser is compatible, add it as a base layer
     if (typeof GBrowserIsCompatible == 'function' && GBrowserIsCompatible()) {
@@ -119,7 +119,7 @@ function popUp(URL)
 {
     day = new Date();
     id = day.getTime();
-    eval("page" + id + " = window.open(URL, '" + id + "', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width=200,height=200,left = 540,top = 412');");
+    eval("page" + id + " = window.open(URL, '" + id + "', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width=200,height=200,left = 300,top = 300');");
 }
 
 // Populates the left-hand menu with a set of datasets
@@ -251,6 +251,10 @@ function variableSelected(datasetName, variableName)
             scaleMinVal = $('scaleMin').value;
             scaleMaxVal = $('scaleMax').value;
             
+            // Set the auto-zoom box
+            var bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
+            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Auto-zoom</a>";
+            
             // Get the currently-selected time and date or the current time if
             // none has been selected
             if (tValue == null)
@@ -265,6 +269,11 @@ function variableSelected(datasetName, variableName)
             setCalendar(dataset, variableName, tValue);
         }
     );
+}
+
+function autoZoom(bbox)
+{
+    map.zoomToExtent(new OpenLayers.Bounds(-90,0,0,70));
 }
 
 // This requests a calendar for the given date and time for the given dataset

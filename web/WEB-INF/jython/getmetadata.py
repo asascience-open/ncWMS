@@ -136,22 +136,23 @@ def getVariables(config, dataset):
 def getVariableDetails(config, dataset, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
-    str = StringIO()
+    s = StringIO()
     datasets = config.datasets
     var = datareader.getVariableMetadata(datasets[dataset].location)[varID]
-    str.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
-    str.write("<axes>")
+    s.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
+    s.write("<axes>")
     if var.zvalues is not None:
-        str.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zunits, var.zpositive))
+        s.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zunits, var.zpositive))
         for z in var.zvalues:
-            str.write("<value>%f</value>" % math.fabs(z))
-        str.write("</axis>")
-    str.write("</axes>")
-    str.write("<range><min>%f</min><max>%f</max></range>" % (var.validMin, var.validMax))
-    str.write("</variableDetails>")
-    s = str.getvalue()
-    str.close()
-    return s
+            s.write("<value>%f</value>" % math.fabs(z))
+        s.write("</axis>")
+    s.write("</axes>")
+    s.write("<range><min>%f</min><max>%f</max></range>" % (var.validMin, var.validMax))
+    s.write("<bbox>%s,%s,%s,%s</bbox>" % tuple([str(f) for f in var.bbox]))
+    s.write("</variableDetails>")
+    doc = s.getvalue()
+    s.close()
+    return doc
 
 def getCalendar(config, dataset, varID, dateTime):
     """ returns an HTML calendar for the given dataset and variable.

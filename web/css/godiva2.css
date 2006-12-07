@@ -132,6 +132,13 @@ div.imagePanel
     /*visibility: hidden;*/
 }
 
+div.autoZoom
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
+
 div.map
 {
     position: absolute;
