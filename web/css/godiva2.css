@@ -2,7 +2,7 @@
 div
 {
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 11pt;
+    font-size: 10pt;
 }
 
 /* Style for the left-hand menu */
@@ -144,7 +144,7 @@ div.map
     position: absolute;
     left: 0px;
     top: 25px;
-    width: 500px;
+    width: 512px;
     height: 400px;
 }
 
@@ -168,6 +168,7 @@ div.map
     position: absolute;
     top: 460px;
     left: 0px;
+    font-size: 9pt;
 }
 
 img.scaleBar

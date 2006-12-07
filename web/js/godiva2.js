@@ -45,16 +45,26 @@ window.onload = function()
     // the option to have partial overlay opacity)
     isIE = navigator.appVersion.indexOf('MSIE') >= 0;
 
+    // Stop the pink tiles appearing on error
+    OpenLayers.Util.onImageLoadError = function() {  this.style.display = ""; this.src="./images/blank.png"; }
+    
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
     var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS", 
-        "http://labs.metacarta.com/wms/vmap0?", {layers: 'basic'} );
-    var jpl_wms = new OpenLayers.Layer.WMS( "NASA Global Mosaic",
-        "http://wms.jpl.nasa.gov/wms.cgi?", {layers: "modis,global_mosaic"});
-    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone", "http://ws.cadcorp.com/seazone/wms.exe?",
-        {layers: 'Barts_50km', transparent: 'true'});
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' } );
+    var bluemarble_wms = new OpenLayers.Layer.WMS( "Blue Marble", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' } );
+    var osm_wms = new OpenLayers.Layer.WMS( "Openstreetmap", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' } );
+    var human_wms = new OpenLayers.Layer.WMS( "Human Footprint", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' } );
+            
+            
+    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
+        {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);
-    map.addLayers([jpl_wms, ol_wms]); //, seazone_wms]);
+    
+    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms]);
     
     // If we have loaded Google Maps and the browser is compatible, add it as a base layer
     if (typeof GBrowserIsCompatible == 'function' && GBrowserIsCompatible()) {
@@ -253,7 +263,7 @@ function variableSelected(datasetName, variableName)
             
             // Set the auto-zoom box
             var bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
-            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Auto-zoom</a>";
+            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Zoom to data</a>";
             
             // Get the currently-selected time and date or the current time if
             // none has been selected
