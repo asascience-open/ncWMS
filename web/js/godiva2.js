@@ -442,8 +442,9 @@ function updateMap()
     $('featureInfo').style.visibility = 'visible';
     var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
     $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>'
-        + '&nbsp;&nbsp;<a href=\'GEarth.py?stage=1&LAYERS=' + layerName + 
-        '&STYLES=&ELEVATION=' + zValue + '&TIME=' + tValue + '\'>Open in Google Earth</a>';
+        + '&nbsp;&nbsp;<a href=\'GEarth.py?LAYERS=' + layerName + 
+        '&STYLES=&ELEVATION=' + zValue + '&TIME=' + tValue + 
+        '&SCALE=' + scaleMinVal + ',' + scaleMaxVal + '\'>Open in Google Earth</a>';
 }
 
 // Formats the given value to numSigFigs significant figures

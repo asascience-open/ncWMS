@@ -136,7 +136,7 @@ def getMap(req, params, config):
         else:
             req.write("&amp;STYLES=%s" % styles[i])
         # TODO: get the FORMAT string properly
-        req.write("&amp;FORMAT=image/png&amp;CRS=CRS:84")
+        req.write("&amp;FORMAT=image/png&amp;CRS=CRS:84&amp;TRANSPARENT=true")
         bboxEls = tuple([str(f) for f in _getBbox(params)])
         req.write("&amp;BBOX=%s,%s,%s,%s" % bboxEls)
         if zValue != "":
