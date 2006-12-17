@@ -15,6 +15,7 @@ var scaleMaxVal;
 var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
 var essc_wms = null; // The WMS layer for the ocean data
+var autoLoad = null; // Will contain data for auto-loading data from a permalink
 
 // Ajax call using the Prototype library
 // url: The URL of the data source
@@ -41,7 +42,7 @@ window.onload = function()
     // Make sure 100% opacity is selected
     $('opacityValue').value = '100';
 
-    // Detect the browser (IE doesn't render PNGs properly so we don't provide
+    // Detect the browser (IE6 doesn't render PNGs properly so we don't provide
     // the option to have partial overlay opacity)
     isIE = navigator.appVersion.indexOf('MSIE') >= 0;
 
@@ -82,6 +83,26 @@ window.onload = function()
     //map.events.register("changebaselayer", map, function() { alert(this.projection) });
     // Add a listener for GetFeatureInfo
     map.events.register('click', map, getFeatureInfo);
+    
+    if (window.location.search != '') {
+        autoLoad = new Object();
+        autoLoad.dataset = null;
+        autoLoad.variable = null;
+        // strip off the leading question mark
+        var queryString = window.location.search.split('?')[1];
+        var kvps = queryString.split('&');
+        // TODO What is "for each" in Javascript?
+        for (var i = 0; i < kvps.length; i++) {
+            keyAndVal = kvps[i].split('=');
+            if (keyAndVal.length > 1) {
+                if (keyAndVal[0] == 'dataset') {
+                    autoLoad.dataset = keyAndVal[1];
+                } else if (keyAndVal[0] == 'variable') {
+                    autoLoad.variable = keyAndVal[1];
+                }
+            }
+        }
+    }       
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv');
@@ -122,7 +143,6 @@ function gotFeatureInfo(response)
     } else {
         $('featureInfo').innerHTML = "Can't get feature info data for this layer <a href=\"javascript:popUp('whynot.html')\">(why not?)</a>";
     }
-    
 }
 
 function popUp(URL)
@@ -138,17 +158,27 @@ function loadDatasets(dsDivId)
     downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=datasets',
         function(req) {
             $(dsDivId).innerHTML = req.responseText;
-            var accordion = new Rico.Accordion
-            (
+            var accordion = new Rico.Accordion (
                 dsDivId,
                 { onShowTab: datasetSelected, panelHeight: 200 }
             );
-            // Make sure that the variables are loaded for the first data set
-            datasetSelected( accordion.accordionTabs[0] );
+            if (autoLoad != null && autoLoad.dataset != null) {
+                // We are automatically loading a dataset from a permalink
+                for (var i = 0; i < accordion.accordionTabs.length; i++) {
+                    if (autoLoad.dataset == accordion.accordionTabs[i].titleBar.id) {
+                        // TODO: why doesn't showExpanded() work as expected?
+                        accordion.accordionTabs[i].showExpanded();
+                        datasetSelected(accordion.accordionTabs[i]);
+                        break;
+                    }
+                }
+            } else {
+                // Make sure that the variables are loaded for the first data set
+                datasetSelected( accordion.accordionTabs[0] );
+            }
         }
     );
-}
-    
+}    
 
 // Called when a new tab has been selected in the left-hand menu
 // TODO: Cache the results so we don't have to query the server again when the
@@ -169,6 +199,9 @@ function datasetSelected(expandedTab)
             var varList = xmldoc.getElementsByTagName('tr');
             panel.style.height = varList.length * 20 + 'px';
             panel.innerHTML = req.responseText;
+            if (autoLoad != null && autoLoad.variable != null) {
+                variableSelected(dataset, autoLoad.variable);
+            }
         }
     );
 }
@@ -263,7 +296,7 @@ function variableSelected(datasetName, variableName)
             
             // Set the auto-zoom box
             var bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
-            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Zoom to data</a>";
+            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Fit data to window</a>";
             
             // Get the currently-selected time and date or the current time if
             // none has been selected
@@ -279,11 +312,6 @@ function variableSelected(datasetName, variableName)
             setCalendar(dataset, variableName, tValue);
         }
     );
-}
-
-function autoZoom(bbox)
-{
-    map.zoomToExtent(new OpenLayers.Bounds(-90,0,0,70));
 }
 
 // This requests a calendar for the given date and time for the given dataset
@@ -438,11 +466,13 @@ function updateMap()
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
             scale: scaleMinVal + "," + scaleMaxVal, opacity: opacity});
     }
+    
     $('featureInfo').innerHTML = "<font color=\"red\"><b>NEW!</b></font> Click on the map to get more information";
     $('featureInfo').style.visibility = 'visible';
+    
     var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
     $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>'
-        + '&nbsp;&nbsp;<a href=\'GEarth.py?LAYERS=' + layerName + 
+        + '&nbsp;&nbsp;<a href=\'WMS.py?SERVICE=WMS&REQUEST=GetKML&LAYERS=' + layerName + 
         '&STYLES=&ELEVATION=' + zValue + '&TIME=' + tValue + 
         '&SCALE=' + scaleMinVal + ',' + scaleMaxVal + '\'>Open in Google Earth</a>';
 }

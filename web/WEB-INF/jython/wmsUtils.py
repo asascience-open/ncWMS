@@ -16,6 +16,7 @@ class RequestParser:
     def __init__(self, queryString):
         """ queryString is the unprocessed query string from the URL """
         self._params = {} # Hashtable for query parameters and values
+        self.queryString = queryString
         if queryString is not None:
             for kvp in queryString.split("&"):
                 keyAndVal = kvp.split("=")

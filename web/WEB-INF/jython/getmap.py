@@ -120,6 +120,9 @@ def getMap(req, params, config):
         req.write("<Folder>")
         req.write("<visibility>1</visibility>")
         req.write("<GroundOverlay>")
+        #if tValue != "":
+            # TODO: GE doesn't understand something about ISO times
+            #req.write("<TimeStamp><when>%s</when></TimeStamp>" % tValue)
         # Get the variable metadata
         vars = datareader.getVariableMetadata(location)
         req.write("<name>%s</name>" % vars[varID].title)

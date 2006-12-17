@@ -71,7 +71,7 @@ def getFrontPage(config):
         for format in getmap.getSupportedImageFormats():
             doc.write("<td>")
             for varID in vars.keys():
-                doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s" % format)
+                doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s" % (prefix, format))
                 doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                 bbox = vars[varID].bbox
                 doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
@@ -83,7 +83,7 @@ def getFrontPage(config):
             doc.write("<td>")
             if datasets[ds].queryable:
                 for varID in vars.keys():
-                    doc.write("<a href=\"WMS.py?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml")
+                    doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml" % prefix)
                     doc.write("&QUERY_LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                     bbox = vars[varID].bbox
                     doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
