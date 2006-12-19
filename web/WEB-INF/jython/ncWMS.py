@@ -90,8 +90,8 @@ def _getDatasets(config):
         dataset = Dataset()
         dataset.title = els[0].strip()
         dataset.location = els[1].strip()
-        dataset.queryable = 0
-        if len(els) > 2 and els[2].lower() == "true":
-            dataset.queryable = 1
+        dataset.queryable = 1
+        if len(els) > 2 and els[2].lower() == "false":
+            dataset.queryable = 0
         datasets[dsID] = dataset
     return datasets

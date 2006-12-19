@@ -59,7 +59,7 @@ def _doTopLevelKML(req, var, params, layers):
 
     s.write("</kml>")
     req.content_type = _getGoogleEarthFormat()
-    req.headers_out["Content-Disposition"] = "inline; filename=%s_%s.kml" % tuple(layers[0].split("/"))
+    req.headers_out["Content-Disposition"] = "inline; filename=%s.kml" % layers[0].replace("/", "_")
     req.write(s.getvalue())
     s.close()
     return
