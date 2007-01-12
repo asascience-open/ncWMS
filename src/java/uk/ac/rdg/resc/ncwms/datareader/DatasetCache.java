@@ -32,10 +32,9 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.List;
 import org.apache.log4j.Logger;
 import ucar.nc2.Attribute;
-import ucar.nc2.Dimension;
+import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasetCache;
@@ -71,6 +70,7 @@ public class DatasetCache
         {
             NetcdfDatasetCache.init();
             cache = new Hashtable<String, Hashtable<String, VariableMetadata>>();
+            CoordSysBuilder.registerConvention("NEMO", NemoCoordSysBuilder.class);
         }
         logger.debug("DatasetCache initialized");
     }
@@ -148,7 +148,7 @@ public class DatasetCache
             {
                 // We use openDataset() rather than acquiring from cache
                 // because we need to enhance the dataset
-                nc = NetcdfDataset.openDataset(location);
+                nc = NetcdfDataset.openDataset(location, true, null);
                 GridDataset gd = new GridDataset(nc);
                 for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
                 {
