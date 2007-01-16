@@ -410,9 +410,17 @@
         <copy-ear-war file="${file.reference.commons-httpclient-3.0.jar}" propname="included.lib.file.reference.commons-httpclient-3.0.jar.X"/>
         <basename property="included.lib.file.reference.commons-codec-1.3.jar" file="${file.reference.commons-codec-1.3.jar}"/>
         <copy-ear-war file="${file.reference.commons-codec-1.3.jar}" propname="included.lib.file.reference.commons-codec-1.3.jar.X"/>
+        <basename property="included.lib.file.reference.netcdfUI-2.2.16.jar-1" file="${file.reference.netcdfUI-2.2.16.jar-1}"/>
+        <copy-ear-war file="${file.reference.netcdfUI-2.2.16.jar-1}" propname="included.lib.file.reference.netcdfUI-2.2.16.jar-1.X"/>
+        <basename property="included.lib.file.reference.commons-httpclient-3.0.jar-1" file="${file.reference.commons-httpclient-3.0.jar-1}"/>
+        <copy-ear-war file="${file.reference.commons-httpclient-3.0.jar-1}" propname="included.lib.file.reference.commons-httpclient-3.0.jar-1.X"/>
+        <basename property="included.lib.file.reference.commons-codec-1.3.jar-1" file="${file.reference.commons-codec-1.3.jar-1}"/>
+        <copy-ear-war file="${file.reference.commons-codec-1.3.jar-1}" propname="included.lib.file.reference.commons-codec-1.3.jar-1.X"/>
+        <basename property="included.lib.file.reference.gif89encoder.jar" file="${file.reference.gif89encoder.jar}"/>
+        <copy-ear-war file="${file.reference.gif89encoder.jar}" propname="included.lib.file.reference.gif89encoder.jar.X"/>
         <mkdir dir="${build.web.dir.real}/META-INF"/>
         <manifest file="${build.web.dir.real}/META-INF/MANIFEST.MF" mode="update">
-            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} ${included.lib.file.reference.bufr.jar-2} ${included.lib.file.reference.commons-httpclient-3.0.jar} ${included.lib.file.reference.commons-codec-1.3.jar} "/>
+            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} ${included.lib.file.reference.bufr.jar-2} ${included.lib.file.reference.commons-httpclient-3.0.jar} ${included.lib.file.reference.commons-codec-1.3.jar} ${included.lib.file.reference.netcdfUI-2.2.16.jar-1} ${included.lib.file.reference.commons-httpclient-3.0.jar-1} ${included.lib.file.reference.commons-codec-1.3.jar-1} ${included.lib.file.reference.gif89encoder.jar} "/>
         </manifest>
         <delete dir="${dist.ear.dir}/temp"/>
     </target>
@@ -425,6 +433,10 @@
         <copy file="${file.reference.bufr.jar-2}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.commons-httpclient-3.0.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.commons-codec-1.3.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.netcdfUI-2.2.16.jar-1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.commons-httpclient-3.0.jar-1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.commons-codec-1.3.jar-1}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.gif89encoder.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
     </target>
     <target name="do-ear-dist" depends="init,compile,compile-jsps,-pre-dist,library-inclusion-in-manifest">
         <dirname property="dist.jar.dir" file="${dist.ear.war}"/>

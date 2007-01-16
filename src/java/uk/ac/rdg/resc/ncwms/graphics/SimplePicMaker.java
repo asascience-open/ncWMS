@@ -34,6 +34,7 @@ import java.awt.Color;
 
 import java.io.OutputStream;
 import java.io.IOException;
+import net.jmge.gif.Gif89Encoder;
 
 /**
  * Makes a picture from an array of raw data, using a rainbow colour model.
@@ -47,10 +48,23 @@ public class SimplePicMaker extends PicMaker
     private boolean transparent;
     private Color bgColor;
     
+    public static final String GIF_FORMAT = "image/gif";
+    public static final String PNG_FORMAT = "image/png";
+    
+    /**
+     * @return array of Strings representing the MIME types of supported image
+     * formats
+     */
+    public static final String[] getSupportedImageFormats()
+    {
+        return new String[]{GIF_FORMAT, PNG_FORMAT};
+    }
+    
     /**
      * Creates a new instance of SimplePicMaker, manually setting the scale.  If scaleMin
      * and scaleMax are both zero (0.0f) the picture will be auto-scaled.
      * @param data The raw data to turn into a picture
+     * @param mimeType The MIME type for the image
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
      * @param fillValue The value to use for missing data
@@ -61,11 +75,19 @@ public class SimplePicMaker extends PicMaker
      * @param scaleMax The maximum value for the scale
      * @throws IllegalArgumentException if width * height != data.length
      */
-    public SimplePicMaker(float[] data, int width, int height, 
+    public SimplePicMaker(float[] data, String mimeType, int width, int height, 
         float fillValue, boolean transparent, int bgcolor, float opacity,
         float scaleMin, float scaleMax)
     {
-        super(data, width, height, fillValue, scaleMin, scaleMax);
+        super(data, mimeType, width, height, fillValue, scaleMin, scaleMax);
+        if (!mimeType.equals(GIF_FORMAT) && !mimeType.equals(PNG_FORMAT))
+        {
+            // TODO This should really be an InvalidFormatException, but
+            // this error should have been caught in the Jython code (getmap.py)
+            // so this check is just being safe
+            throw new IllegalArgumentException("The image format " + mimeType + 
+                " is not supported by this server");
+        }
         this.transparent = transparent;
         this.bgColor = new Color(bgcolor);
         this.opacity = opacity;
@@ -157,7 +179,17 @@ public class SimplePicMaker extends PicMaker
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
         BufferedImage image = new BufferedImage(getRainbowColorModel(), raster, false, null);
         // Now write the image
-        ImageIO.write(image, "png", out);
+        if (this.mimeType.equals(GIF_FORMAT))
+        {
+            Gif89Encoder gifenc = new Gif89Encoder(image);
+            gifenc.encode(out);
+        }
+        else
+        {
+            // Default to a PNG: we have already checked that the format
+            // is either gif or png.
+            ImageIO.write(image, "png", out);
+        }
     }
     
     /**

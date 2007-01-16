@@ -21,6 +21,8 @@ public abstract class PicMaker
 {
     // Data to turn into an image
     protected float[] data;
+    // Image MIME type
+    protected String mimeType;
     // Width and height of the resulting picture
     protected int picWidth;
     protected int picHeight;
@@ -36,6 +38,7 @@ public abstract class PicMaker
      * Creates a new instance of PicMaker, manually setting the scale.  If scaleMin
      * and scaleMax are both zero (0.0f) the picture will be auto-scaled.
      * @param data The raw data to turn into a picture
+     * @param mimeType The MIME type for the image
      * @param width The width of the picture in pixels
      * @param height The height of the picture in pixels
      * @param fillValue The value to use for missing data
@@ -43,7 +46,7 @@ public abstract class PicMaker
      * @param scaleMax The maximum value for the scale
      * @throws IllegalArgumentException if width * height != data.length
      */
-    public PicMaker(float[] data, int width, int height, float fillValue,
+    public PicMaker(float[] data, String mimeType, int width, int height, float fillValue,
         float scaleMin, float scaleMax)
     {
         if (data != null && width * height != data.length)
@@ -53,6 +56,7 @@ public abstract class PicMaker
                 " data array (" + data.length + " elements)");
         }
         this.data = data;
+        this.mimeType = mimeType;
         this.picWidth = width;
         this.picHeight = height;
         this.scaleMin = scaleMin;
