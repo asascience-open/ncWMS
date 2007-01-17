@@ -42,9 +42,24 @@ import net.jmge.gif.Gif89Encoder;
  * are represented as black pixels.
  * @author jdb
  */
-public class SimplePicMaker extends PicMaker
+public class SimplePicMaker
 {
-    private byte[] pixels;
+    // Data to turn into an image
+    protected float[] data;
+    private int numFrames;
+    // Image MIME type
+    protected String mimeType;
+    // Width and height of the resulting picture
+    protected int picWidth;
+    protected int picHeight;
+    // Scale range of the picture
+    protected float scaleMin;
+    protected float scaleMax;
+    // The percentage opacity of the picture
+    protected float opacity;
+    // The fill value of the data.
+    protected float fillValue;
+    
     private boolean transparent;
     private Color bgColor;
     
@@ -73,13 +88,21 @@ public class SimplePicMaker extends PicMaker
      * @param opacity Percentage opacity of the data pixels
      * @param scaleMin The minimum value for the scale
      * @param scaleMax The maximum value for the scale
-     * @throws IllegalArgumentException if width * height != data.length
+     * @throws IllegalArgumentException if the <code>mimeType</code> is not
+     * supported or if data.length / (width * height) is not an integer or if
+     * we have tried to create a PNG of an animation
      */
-    public SimplePicMaker(float[] data, String mimeType, int width, int height, 
-        float fillValue, boolean transparent, int bgcolor, float opacity,
+    public SimplePicMaker(float[] data, String mimeType, int width,
+        int height, float fillValue, boolean transparent, int bgcolor, float opacity,
         float scaleMin, float scaleMax)
     {
-        super(data, mimeType, width, height, fillValue, scaleMin, scaleMax);
+        if (data.length % (width * height) != 0)
+        {
+            throw new IllegalArgumentException("The given width and height are " +
+                "inconsistent with the data size");
+        }
+        this.data = data;
+        this.numFrames = data.length / (width * height);
         if (!mimeType.equals(GIF_FORMAT) && !mimeType.equals(PNG_FORMAT))
         {
             // TODO This should really be an InvalidFormatException, but
@@ -88,6 +111,18 @@ public class SimplePicMaker extends PicMaker
             throw new IllegalArgumentException("The image format " + mimeType + 
                 " is not supported by this server");
         }
+        if (this.numFrames > 1 && !mimeType.equals(GIF_FORMAT))
+        {
+            throw new IllegalArgumentException("Cannot create an animation in "
+                + mimeType + " format");
+        }
+        this.mimeType = mimeType;
+        this.picWidth = width;
+        this.picHeight = height;
+        this.scaleMin = scaleMin;
+        this.scaleMax = scaleMax;
+        this.opacity = 100;
+        this.fillValue = fillValue;
         this.transparent = transparent;
         this.bgColor = new Color(bgcolor);
         this.opacity = opacity;
@@ -95,6 +130,20 @@ public class SimplePicMaker extends PicMaker
         {
             this.setScaleAuto();
         }
+    }
+    
+    /**
+     * Sets the percentage transparency of the picture (100 = fully opaque,
+     * 0 = fully transparent)
+     * @throws IllegalArgumentException if the transparency is out of the range 0 - 100
+     */
+    public void setOpacity(int opacity)
+    {
+        if (opacity < 0 || opacity > 100)
+        {
+            throw new IllegalArgumentException("Opacity must be in the range 0 to 100");
+        }
+        this.opacity = opacity;
     }
     
     /**
@@ -125,15 +174,16 @@ public class SimplePicMaker extends PicMaker
     }
     
     /**
-     * Makes the picture (array of pixels) from the data array.
+     * Makes a picture (array of pixels) from the data array.
      */
-    private void makePicture()
+    private byte[] makePicture(int frame)
     {
-        this.pixels = new byte[this.data.length];
-        for (int i = 0; i < this.data.length; i++)
+        byte[] pixels = new byte[this.picWidth * this.picHeight];
+        for (int i = 0; i < pixels.length; i++)
         {
-            this.pixels[i] = getColourIndex(this.data[i]);
+            pixels[i] = getColourIndex(this.data[frame * this.picWidth * this.picHeight + i]);
         }
+        return pixels;
     }
     
     /**
@@ -156,39 +206,45 @@ public class SimplePicMaker extends PicMaker
     }
     
     /**
-     * Sets the array of pixels that make up this picture
-     */
-    public void setPixels(byte[] pixels)
-    {
-        this.pixels = pixels;
-    }
-    
-    /**
      * Creates the picture and writes it to the given OutputStream
      * @throws IOException if the picture could not be written to the stream
+     * @todo could be neater: refactor?
      */
     public void createAndOutputPicture(OutputStream out) throws IOException
     {
-        if (this.pixels == null)
+        Gif89Encoder gifenc = null;
+        for (int i = 0; i < this.numFrames; i++)
         {
-            this.makePicture();
+            byte[] pixels = this.makePicture(i);
+            DataBuffer buf = new DataBufferByte(pixels, pixels.length);
+            SampleModel sampleModel = new SinglePixelPackedSampleModel(
+                DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
+            WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
+            BufferedImage image = new BufferedImage(getRainbowColorModel(), raster, false, null);
+            // Now write the image
+            if (this.mimeType.equals(GIF_FORMAT))
+            {
+                if (gifenc == null)
+                {
+                    gifenc = new Gif89Encoder();
+                }
+                gifenc.addFrame(image);
+            }
+            else
+            {
+                // Default to a PNG: we have already checked that the format
+                // is either gif or png.
+                // We have already checked that there is only one frame
+                ImageIO.write(image, "png", out);
+            }
         }
-        DataBuffer buf = new DataBufferByte(this.pixels, this.pixels.length);
-        SampleModel sampleModel = new SinglePixelPackedSampleModel(
-            DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
-        WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
-        BufferedImage image = new BufferedImage(getRainbowColorModel(), raster, false, null);
-        // Now write the image
         if (this.mimeType.equals(GIF_FORMAT))
         {
-            Gif89Encoder gifenc = new Gif89Encoder(image);
+            if (this.numFrames > 1)
+            {
+                gifenc.setLoopCount(-1); // Infinite looping of animated GIFs
+            }
             gifenc.encode(out);
-        }
-        else
-        {
-            // Default to a PNG: we have already checked that the format
-            // is either gif or png.
-            ImageIO.write(image, "png", out);
         }
     }
     

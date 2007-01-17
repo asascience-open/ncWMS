@@ -67,12 +67,37 @@ def getMap(req, params, config):
 
     zValue = params.getParamValue("elevation", "")
     if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
-        raise WMSException("You may only request a single value of ELEVATION")
+        raise InvalidDimensionValue("elevation", "You may only request a single value")
 
-    tValue = params.getParamValue("time", "")
-    if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
-        # TODO: support animations
-        raise WMSException("You may only request a single value of TIME")
+    # Find the source of the requested data
+    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
+    # Get the metadata
+    vars = datareader.getVariableMetadata(location)
+
+    # Find the requested index/indices along the time axis
+    tAxisValues = vars[varID].tvalues
+    # TODO: check that a value has been provided if the axis doesn't have
+    # a default.  Also check that if a value has been provided the time
+    # axis actually exists
+    tValues = []
+    for tSpec in params.getParamValue("time", "").split(","):
+        startStopPeriod = tSpec.split("/")
+        if len(startStopPeriod) == 1:
+            # This is a single time value
+            tValues.append(tSpec)
+        elif len(startStopPeriod) == 2:
+            # Extract all time values from start to stop inclusive
+            start, stop = startStopPeriod
+            tValues.append(start)
+            # TODO
+        elif len(startStopPeriod) == 3:
+            # Extract time values from start to stop inclusive
+            # with a set periodicity
+            start, stop, period = startStopPeriod
+            tValues.append(start)
+            # TODO
+        else:
+            raise InvalidDimensionValue("time", tSpec)
 
     # Get the requested transparency and background colour for the layer
     trans = params.getParamValue("transparent", "false").lower()
@@ -103,12 +128,12 @@ def getMap(req, params, config):
     if opacity < 0 or opacity > 100:
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
 
-    # Find the source of the requested data
-    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
-
     if format == _getGoogleEarthFormat():
         # This is a special case: we don't actually render the image,
         # we just return a KML document containing a link to the image
+        if len(tValues) > 1:
+            # TODO: fix this - animations in GE are now possible!
+            raise WMSException("Cannot display animations in Google Earth")
 
         # Set a suggested filename in the header
         # "inline" means "don't force a download dialog box in web browser"
@@ -123,8 +148,6 @@ def getMap(req, params, config):
         #if tValue != "":
             # TODO: GE doesn't understand something about ISO times
             #req.write("<TimeStamp><when>%s</when></TimeStamp>" % tValue)
-        # Get the variable metadata
-        vars = datareader.getVariableMetadata(location)
         req.write("<name>%s</name>" % vars[varID].title)
         req.write("<description>%s</description>" % vars[varID].abstract)
         req.write("<visibility>1</visibility>")
@@ -145,7 +168,7 @@ def getMap(req, params, config):
         if zValue != "":
             req.write("&amp;ELEVATION=%s" % zValue)
         if tValue != "":
-            req.write("&amp;TIME=%s" % tValue)
+            req.write("&amp;TIME=%s" % tValues[0])
         # TODO get width and height more intelligently
         req.write("&amp;WIDTH=500&amp;HEIGHT=500")
         if not (scaleMin == 0.0 and scaleMax == 0.0):
@@ -163,9 +186,14 @@ def getMap(req, params, config):
     else:
         # Generate a grid of lon,lat points, one for each image pixel
         grid = _getGrid(params, config)
-        # Read the data for the image
-        picData = datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue())
-        # TODO: cache the data array
+        # Read the data for the image frames
+        # We do this as one large array so that the picture render can
+        # automatically generate a colour scale if necessary
+        picData = []
+        for tValue in tValues:
+            # TODO: see if we already have this image in cache
+            picData.extend(datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue()))
+        # TODO: cache the data array(s)
         # Turn the data into an image and output to the client
         graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
 
