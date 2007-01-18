@@ -76,28 +76,35 @@ def getMap(req, params, config):
 
     # Find the requested index/indices along the time axis
     tAxisValues = vars[varID].tvalues
-    # TODO: check that a value has been provided if the axis doesn't have
-    # a default.  Also check that if a value has been provided the time
-    # axis actually exists
-    tValues = []
-    for tSpec in params.getParamValue("time", "").split(","):
-        startStopPeriod = tSpec.split("/")
-        if len(startStopPeriod) == 1:
-            # This is a single time value
-            tValues.append(tSpec)
-        elif len(startStopPeriod) == 2:
-            # Extract all time values from start to stop inclusive
-            start, stop = startStopPeriod
-            tValues.append(start)
-            # TODO
-        elif len(startStopPeriod) == 3:
-            # Extract time values from start to stop inclusive
-            # with a set periodicity
-            start, stop, period = startStopPeriod
-            tValues.append(start)
-            # TODO
-        else:
-            raise InvalidDimensionValue("time", tSpec)
+    if tAxisValues is None:
+        # Ignore any time value that was given by the client (TODO OK?)
+        tIndices = [0] # This layer has no time dimension
+    else:
+        # The time axis exists
+        if params.getParamValue("time", "") == "":
+            raise MissingDimensionValue("time")
+        # Interpret the time specification
+        tIndices = []
+        for tSpec in params.getParamValue("time", "").split(","):
+            startStopPeriod = tSpec.split("/")
+            if len(startStopPeriod) == 1:
+                # This is a single time value
+                tIndex = datareader.findTIndex(tAxisValues, startStopPeriod[0])
+                tIndices.append(tIndex)
+            elif len(startStopPeriod) == 2:
+                # Extract all time values from start to stop inclusive
+                start, stop = startStopPeriod
+                startIndex = datareader.findTIndex(tAxisValues, startStopPeriod[0])
+                stopIndex = datareader.findTIndex(tAxisValues, startStopPeriod[1])
+                for i in xrange(startIndex, stopIndex + 1):
+                    tIndices.append(i)
+            elif len(startStopPeriod) == 3:
+                # Extract time values from start to stop inclusive
+                # with a set periodicity
+                start, stop, period = startStopPeriod
+                raise WMSException("Cannot yet handle animations with a set periodicity")
+            else:
+                raise InvalidDimensionValue("time", tSpec)
 
     # Get the requested transparency and background colour for the layer
     trans = params.getParamValue("transparent", "false").lower()
@@ -190,9 +197,9 @@ def getMap(req, params, config):
         # We do this as one large array so that the picture render can
         # automatically generate a colour scale if necessary
         picData = []
-        for tValue in tValues:
+        for tIndex in tIndices:
             # TODO: see if we already have this image in cache
-            picData.extend(datareader.readImageData(location, varID, tValue, zValue, grid, _getFillValue()))
+            picData.extend(datareader.readImageData(location, varID, tIndex, zValue, grid, _getFillValue()))
         # TODO: cache the data array(s)
         # Turn the data into an image and output to the client
         graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)

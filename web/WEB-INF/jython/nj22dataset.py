@@ -14,6 +14,16 @@ def getVariableMetadata(location):
     # Get the dataset from the cache
     return DatasetCache.getVariableMetadata(location)
 
+def findTIndex(tValues, target):
+    """ returns the index of the given target t value in the given
+        array of t values, raising an InvalidDimensionValue exception
+        if the target value does not exist """
+    # TODO: make this a function of the VariableMetadata object?
+    try:
+        return DataReader.findTIndex(tValues, target)
+    except InvalidDimensionValueException, e:
+        raise InvalidDimensionValue(e.getDimName(), e.getValue())
+
 def readImageData(location, varID, tValue, zValue, grid, fillValue):
     """ Reads data from this variable, projected on to the given grid.
         location = location of dataset (full file path, OPeNDAP URL etc)

@@ -63,11 +63,11 @@ public class DataReader
     
     /**
      * Read an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.
+     * lat-lon grid.  Reads data for a single time index only.
      *
      * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
      * @param varID Unique identifier for the required variable in the file
-     * @param tValue The value of time as specified by the client
+     * @param tIndex The index along the time axis as found in getmap.py
      * @param zValue The value of elevation as specified by the client
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
@@ -75,7 +75,7 @@ public class DataReader
      * @throws WMSExceptionInJava if an error occurs
      */
     public static float[] read(String location, String varID,
-        String tValue, String zValue, float[] latValues, float[] lonValues,
+        int tIndex, String zValue, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
         NetcdfDataset nc = null;
@@ -93,16 +93,6 @@ public class DataReader
             EnhancedCoordAxis xAxis = vm.getXaxis();
             EnhancedCoordAxis yAxis = vm.getYaxis();
             
-            // Find the index along the time axis
-            int tIndex = 0;
-            if (vm.getTvalues() != null)
-            {
-                if (tValue == null || tValue.trim().equals(""))
-                {
-                    throw new MissingDimensionValueException("time");
-                }
-                tIndex = findTIndex(vm.getTvalues(), tValue);
-            }
             Range tRange = new Range(tIndex, tIndex);
             
             // Find the index along the depth axis
@@ -227,9 +217,14 @@ public class DataReader
      * within tValues
      * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
      */
-    private static int findTIndex(double[] tValues, String tValue)
+    public static int findTIndex(double[] tValues, String tValue)
         throws InvalidDimensionValueException
     {
+        if (tValue.equals("current"))
+        {
+            // Return the last index in the array
+            return tValues.length - 1;
+        }
         Date targetD = dateFormatter.getISODate(tValue);
         if (targetD == null)
         {
