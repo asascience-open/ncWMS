@@ -53,9 +53,19 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
      */
     protected OneDCoordAxis(CoordinateAxis1D axis1D)
     {
+        this((int)axis1D.getSize(), (axis1D.getAxisType() == AxisType.Lon));
         this.axis1D = axis1D;
-        this.count = (int)axis1D.getSize();
-        this.isLongitude = (axis1D.getAxisType() == AxisType.Lon);
+    }
+    
+    /**
+     * Creates a new instance of OneDCoordAxis
+     * @param axis1D A {@link CoordinateAxis1D}
+     */
+    protected OneDCoordAxis(int count, boolean isLongitude)
+    {
+        this.count = count;
+        this.isLongitude = isLongitude;
+        this.axis1D = null;
     }
     
 }

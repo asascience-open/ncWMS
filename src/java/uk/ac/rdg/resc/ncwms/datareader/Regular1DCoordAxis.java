@@ -48,6 +48,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     
     private double start;  // The first value along the axis
     private double stride; // The stride length along the axis
+    private double maxValue; // The maximum value along the axis
     private boolean wraps; // True if this is a longitude axis that wraps the globe
     
     /**
@@ -58,8 +59,23 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     public Regular1DCoordAxis(CoordinateAxis1D axis1D)
     {
         super(axis1D);
-        this.start = axis1D.getStart();
-        this.stride = axis1D.getIncrement();
+        this.init(axis1D.getStart(), axis1D.getIncrement());
+    }
+    
+    /**
+     * Creates a Regular1DCoordAxis "from scratch"
+     */
+    public Regular1DCoordAxis(double start, double stride, int count, boolean isLongitude)
+    {
+        super(count, isLongitude);
+        this.init(start, stride);
+    }
+    
+    private void init(double start, double stride)
+    {
+        this.start = start;
+        this.stride = stride;
+        this.maxValue = this.start + this.stride * (this.count - 1);
         this.wraps = false;
         if (this.isLongitude)
         {
@@ -89,7 +105,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         if (this.isLongitude)
         {
             Longitude lon = new Longitude(point.getLongitude());
-            if (this.wraps || lon.isBetween(this.start, this.axis1D.getMaxValue()))
+            if (this.wraps || lon.isBetween(this.start, this.maxValue))
             {
                 Longitude startLon = new Longitude(this.start);
                 double distance = startLon.getClockwiseDistanceTo(lon);

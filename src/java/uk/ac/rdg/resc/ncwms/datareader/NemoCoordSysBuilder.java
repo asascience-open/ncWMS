@@ -29,12 +29,23 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
 import org.apache.log4j.Logger;
-import thredds.ui.SuperComboBox;
 import ucar.nc2.NetcdfFile;
+import ucar.nc2.VariableIF;
 import ucar.nc2.dataset.CoordSysBuilder;
+import ucar.nc2.dataset.CoordinateAxis;
+import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.nc2.dataset.CoordinateSystem;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dt.grid.GridCoordSys;
 import ucar.nc2.util.CancelTask;
+import ucar.unidata.geoloc.LatLonPointImpl;
+import ucar.unidata.geoloc.LatLonRect;
+import ucar.unidata.geoloc.ProjectionImpl;
+import ucar.unidata.geoloc.ProjectionRect;
+import ucar.unidata.geoloc.vertical.VerticalTransform;
 
 /**
  * Class that builds a coordinate system for NEMO data
@@ -63,7 +74,7 @@ public class NemoCoordSysBuilder extends CoordSysBuilder
 
     public void setConventionUsed(String string)
     {
-        logger.debug("Called dgsdfg sdfgsfdg setConventionUsed({})", string);
+        logger.debug("Called setConventionUsed({})", string);
     }
 
     public void addUserAdvice(String string)
@@ -75,11 +86,198 @@ public class NemoCoordSysBuilder extends CoordSysBuilder
     {
         logger.debug("Called buildCoordinateSystems()");
         super.buildCoordinateSystems(netcdfDataset);
+        
     }
 
     public void augmentDataset(NetcdfDataset netcdfDataset, CancelTask cancelTask) throws IOException
     {
         logger.debug("Called augmentDataset()");
+        for (Object csObj : netcdfDataset.getCoordinateSystems())
+        {
+            CoordinateSystem cs = (CoordinateSystem)csObj;
+            logger.debug(cs.toString());
+        }
+        
     }
     
 }
+
+/*class NemoCoordSys //implements GridCoordSys
+{
+    public NemoCoordSys()
+    {
+        
+    }
+
+    public int findTimeCoordElement(Date date)
+    {
+        return 0; //TODO
+    }
+
+    public String getLevelName(int i)
+    {
+        return null; //TODO
+    }
+
+    public String getTimeName(int i)
+    {
+        return null; // TODO
+    }
+
+    public int[] findXYCoordElement(double d, double d0, int[] i)
+    {
+        // TODO
+    }
+
+    public boolean isComplete(VariableIF variableIF)
+    {
+    }
+
+    public boolean isZPositive()
+    {
+        return false;
+    }
+
+    public boolean isRegular()
+    {
+    }
+    public boolean isProductSet()
+    {
+        return false;
+    }
+
+    public boolean isLatLon()
+    {
+    }
+
+    public boolean isImplicit()
+    {
+    }
+
+    public boolean isGeoXY()
+    {
+        return true;
+    }
+
+    public boolean isGeoReferencing()
+    {
+        return true;
+    }
+
+    public boolean isDate()
+    {
+        return true;
+    }
+
+    public boolean hasVerticalAxis()
+    {
+        return true;
+    }
+
+    public boolean hasTimeAxis()
+    {
+        return true;
+    }
+
+    public CoordinateAxis getZaxis()
+    {
+    }
+
+    public CoordinateAxis getYaxis()
+    {
+    }
+
+    public CoordinateAxis getYHorizAxis()
+    {
+    }
+
+    public CoordinateAxis getXaxis()
+    {
+    }
+
+    public String getName()
+    {
+    }
+
+    public CoordinateAxis getLonAxis()
+    {
+    }
+
+    public ArrayList getLevels()
+    {
+    }
+
+    public LatLonRect getLatLonBoundingBox()
+    {
+        return new LatLonRect(new LatLonPointImpl(-90,-180), new LatLonPointImpl(90,180));
+    }
+
+    public CoordinateAxis getLatAxis()
+    {
+    }
+
+    public CoordinateAxis getHeightAxis()
+    {
+    }
+
+    public ArrayList getDomain()
+    {
+    }
+
+    public ArrayList getCoordinateTransforms()
+    {
+        return new ArrayList();
+    }
+
+    public ArrayList getCoordinateAxes()
+    {
+    }
+
+    public ProjectionRect getBoundingBox()
+    {
+    }
+
+    public CoordinateAxis getPressureAxis()
+    {
+    }
+
+    public ProjectionImpl getProjection()
+    {
+    }
+
+    public int getRankDomain()
+    {
+    }
+
+    public int getRankRange()
+    {
+    }
+
+    public CoordinateAxis getTaxis()
+    {
+    }
+
+    public CoordinateAxis1D getTimeAxis()
+    {
+    }
+
+    public Date[] getTimeDates()
+    {
+    }
+
+    public ArrayList getTimes()
+    {
+    }
+
+    public CoordinateAxis1D getVerticalAxis()
+    {
+    }
+
+    public VerticalTransform getVerticalTransform()
+    {
+    }
+
+    public CoordinateAxis getXHorizAxis()
+    {
+    }
+}*/
