@@ -30,19 +30,24 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Hashtable;
+import java.util.Vector;
 import org.apache.log4j.Logger;
+import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
+import ucar.nc2.Variable;
 import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.nc2.units.DateFormatter;
+import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.exceptions.MissingDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
@@ -88,9 +93,6 @@ public class DataReader
                     + varID + " in " + location);
             }
             
-            EnhancedCoordAxis xAxis = vm.getXaxis();
-            EnhancedCoordAxis yAxis = vm.getYaxis();
-            
             Range tRange = new Range(tIndex, tIndex);
             
             // Find the index along the depth axis
@@ -100,6 +102,15 @@ public class DataReader
                 zIndex = findZIndex(vm.getZvalues(), zValue);
             }
             Range zRange = new Range(zIndex, zIndex);
+            
+            if (location.contains("NEMO"))
+            {
+                // Lousy logic but a quick-fix
+                return getNemoData(location, vm, tRange, zRange, latValues, lonValues, fillValue);
+            }
+            
+            EnhancedCoordAxis xAxis = vm.getXaxis();
+            EnhancedCoordAxis yAxis = vm.getYaxis();
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
@@ -133,7 +144,7 @@ public class DataReader
             // Get the dataset from the cache, without enhancing it
             nc = DatasetCache.getDataset(location);
             long openedDS = System.currentTimeMillis();
-            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
+            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
             GridDataset gd = new GridDataset(nc);
             GeoGrid gg = gd.findGridByName(varID);
             // Get an enhanced version of the variable for fast reading of data
@@ -307,6 +318,160 @@ public class DataReader
     public static EnhanceScaleMissingImpl getEnhanced(GeoGrid gg)
     {
         return new EnhanceScaleMissingImpl((VariableDS)gg.getVariable());
+    }
+    
+    private static float[] getNemoData(String location, VariableMetadata vm,
+        Range tRange, Range zRange, float[] latValues, float[] lonValues,
+        float fillValue) throws IOException, WMSExceptionInJava
+    {
+        // Create an array to hold the data
+        float[] picData = new float[lonValues.length * latValues.length];
+        Arrays.fill(picData, fillValue);
+        
+        EnhancedCoordAxis xAxis = vm.getXaxis();
+        EnhancedCoordAxis yAxis = vm.getYaxis();
+        
+        long start = System.currentTimeMillis();        
+        // Maps y indices to scanlines
+        Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
+        // Cycle through each pixel in the picture and work out which
+        // x and y index in the source data it corresponds to
+        int pixelIndex = 0;
+        for (float lat : latValues)
+        {
+            for (float lon : lonValues)
+            {
+                LatLonPoint latLon = new LatLonPointImpl(lat, lon);
+                // Translate lat-lon to projection coordinates
+                int xCoord = xAxis.getIndex(latLon);
+                int yCoord = yAxis.getIndex(latLon);
+                //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
+                if (xCoord >= 0 && yCoord >= 0)
+                {
+                    // Get the scanline for this y index
+                    Scanline scanline = scanlines.get(yCoord);
+                    if (scanline == null)
+                    {
+                        scanline = new Scanline();
+                        scanlines.put(yCoord, scanline);
+                    }
+                    scanline.put(xCoord, pixelIndex);
+                }
+                pixelIndex++;
+            }
+        }
+        logger.debug("Built scanlines in {} ms", System.currentTimeMillis() - start);
+        start = System.currentTimeMillis();
+        
+        // Now build the picture
+        NetcdfDataset nc = DatasetCache.getDataset(location);
+        Variable var = nc.findVariable(vm.getId());
+        float scaleFactor = var.findAttribute("scale_factor").getNumericValue().floatValue();
+        float addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();
+        float missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
+        logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
+        
+        int yAxisIndex = 1;
+        int xAxisIndex = 2;
+        Vector<Range> ranges = new Vector<Range>();
+        ranges.add(tRange);
+        // TODO: logic is fragile here
+        if (var.getRank() == 4)
+        {
+            ranges.add(zRange);
+            yAxisIndex = 2;
+            xAxisIndex = 3;
+        }
+        
+        try
+        {
+            // Add dummy ranges for x and y
+            ranges.add(new Range(0,0));
+            ranges.add(new Range(0,0));
+
+            // Iterate through the scanlines, the order doesn't matter
+            for (int yIndex : scanlines.keySet())
+            {
+                Scanline scanline = scanlines.get(yIndex);
+                ranges.setElementAt(new Range(yIndex, yIndex), yAxisIndex);
+                Vector<Integer> xIndices = scanline.getSortedXIndices();
+                Range xRange = new Range(xIndices.firstElement(), xIndices.lastElement());
+                ranges.setElementAt(xRange, xAxisIndex);
+
+                // Read the scanline from the disk, from the first to the last x index
+                Array data = var.read(ranges);
+                short[] arr = (short[])data.copyTo1DJavaArray();
+                
+                for (int xIndex : xIndices)
+                {
+                    for (int p : scanline.getPixelIndices(xIndex))
+                    {
+                        float val = addOffset + arr[xIndex - xIndices.firstElement()] * scaleFactor;
+                        if (val != missingValue && val >= vm.getValidMin() && val <= vm.getValidMax())
+                        {
+                            // TODO: allow tolerance on missing value comparison
+                            picData[p] = val;
+                        }
+                    }
+                }
+            }
+            logger.debug("Read data in {} ms", System.currentTimeMillis() - start);
+
+            nc.close();
+        }
+        catch(InvalidRangeException ire)
+        {
+            logger.error("InvalidRangeException reading from " + nc.getLocation(), ire);
+            throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
+        }
+        return picData;
+    }
+    
+    private static class Scanline
+    {
+        // Maps x indices to a collection of pixel indices
+        //                  x          pixels
+        private Hashtable<Integer, Vector<Integer>> xIndices;
+        
+        public Scanline()
+        {
+            this.xIndices = new Hashtable<Integer, Vector<Integer>>();
+        }
+        
+        /**
+         * @param xIndex The x index of the point in the source data
+         * @param pixelIndex The index of the corresponding point in the picture
+         */
+        public void put(int xIndex, int pixelIndex)
+        {
+            Vector<Integer> pixelIndices = this.xIndices.get(xIndex);
+            if (pixelIndices == null)
+            {
+                pixelIndices = new Vector<Integer>();
+                this.xIndices.put(xIndex, pixelIndices);
+            }
+            pixelIndices.add(pixelIndex);
+        }
+        
+        /**
+         * @return a Vector of all the x indices in this scanline, sorted in
+         * ascending order
+         */
+        public Vector<Integer> getSortedXIndices()
+        {
+            Vector<Integer> v = new Vector<Integer>(this.xIndices.keySet());
+            Collections.sort(v);
+            return v;
+        }
+        
+        /**
+         * @return a Vector of all the pixel indices that correspond to the
+         * given x index, or null if the x index does not exist in the scanline
+         */
+        public Vector<Integer> getPixelIndices(int xIndex)
+        {
+            return this.xIndices.get(xIndex);
+        }
     }
     
     public static void main(String[] args) throws Exception

@@ -74,7 +74,15 @@ def getFeatureInfo(req, params, config):
     location, varID, queryable = _getLocationAndVariableID(query_layers, config.datasets)
     if not queryable:
         raise LayerNotQueryable(query_layers[0])
-    value = datareader.readDataValue(location, varID, tValue, zValue, lat, lon, _getFillValue())
+    # Get the index along the time axis
+    # Get the metadata
+    vars = datareader.getVariableMetadata(location)
+    if vars[varID].tvalues is None:
+        tIndex = 0
+    else:
+        tIndex = datareader.findTIndex(vars[varID].tvalues, tValue)
+    # Read the data point
+    value = datareader.readDataValue(location, varID, tIndex, zValue, lat, lon, _getFillValue())
 
     # Output in simple XML
     req.content_type = info_format

@@ -268,7 +268,7 @@ public class DatasetCache
             double[] zVals = new double[fzVals.length];
             for (int i = 0; i < fzVals.length; i++)
             {
-                zVals[i] = fzVals[i];
+                zVals[i] = -fzVals[i];
             }
             String zUnits = depth.getUnitsString();
 
@@ -292,9 +292,12 @@ public class DatasetCache
                         vm.setZvalues(zVals);
                         vm.setZunits(zUnits);
                     }
+                    // TODO: should check these values exist
+                    vm.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
+                    vm.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
                     // TODO: create these axes properly
-                    vm.setXaxis(new Regular1DCoordAxis(0, 1441 / 360.0, 1442, true));
-                    vm.setYaxis(new Regular1DCoordAxis(-90, 1020 / 180.0, 1021, false));
+                    vm.setXaxis(new Regular1DCoordAxis(0, 360.0 / 1442, 1442, true));
+                    vm.setYaxis(new Regular1DCoordAxis(-90, 180.0 / 1021, 1021, false));
 
                     vars.put(vm.getId(), vm);
                 }
