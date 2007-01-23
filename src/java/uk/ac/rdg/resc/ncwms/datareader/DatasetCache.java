@@ -72,9 +72,9 @@ public class DatasetCache
         {
             NetcdfDatasetCache.init();
             cache = new Hashtable<String, Hashtable<String, VariableMetadata>>();
-            CoordSysBuilder.registerConvention("NEMO", NemoCoordSysBuilder.class);
+            //CoordSysBuilder.registerConvention("NEMO", NemoCoordSysBuilder.class);
+            logger.debug("DatasetCache initialized");
         }
-        logger.debug("DatasetCache initialized");
     }
     
     
@@ -295,9 +295,10 @@ public class DatasetCache
                     // TODO: should check these values exist
                     vm.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
                     vm.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
-                    // TODO: create these axes properly
-                    vm.setXaxis(new Regular1DCoordAxis(0, 360.0 / 1442, 1442, true));
-                    vm.setYaxis(new Regular1DCoordAxis(-90, 180.0 / 1021, 1021, false));
+                    
+                    // Create the coordinate axes
+                    vm.setXaxis(NemoCoordAxis.I_AXIS);
+                    vm.setYaxis(NemoCoordAxis.J_AXIS);
 
                     vars.put(vm.getId(), vm);
                 }

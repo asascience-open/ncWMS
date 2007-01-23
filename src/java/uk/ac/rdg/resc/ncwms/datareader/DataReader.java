@@ -406,11 +406,17 @@ public class DataReader
                 {
                     for (int p : scanline.getPixelIndices(xIndex))
                     {
-                        float val = addOffset + arr[xIndex - xIndices.firstElement()] * scaleFactor;
-                        if (val != missingValue && val >= vm.getValidMin() && val <= vm.getValidMax())
+                        short val = arr[xIndex - xIndices.firstElement()];
+                        // The missing value is calculated based on the compressed,
+                        // not the uncompressed, data, despite the fact that it's
+                        // recorded as a float
+                        if (val != missingValue)
                         {
-                            // TODO: allow tolerance on missing value comparison
-                            picData[p] = val;
+                            float realVal = addOffset + val * scaleFactor;
+                            if (realVal >= vm.getValidMin() && realVal <= vm.getValidMax())
+                            {
+                                picData[p] = realVal;
+                            }
                         }
                     }
                 }

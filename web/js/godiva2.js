@@ -469,8 +469,8 @@ function updateMap()
     
     $('featureInfo').innerHTML = "Click on the map to get more information";
     $('featureInfo').style.visibility = 'visible';
-    $('animation').innerHTML = "<font color=\"red\"><b>NEW!</b></font> <a href=\"javascript:popUp('animation.html')\">Make an animation</a>";
-    $('animation').style.visibility = 'visible';
+    //$('animation').innerHTML = "<font color=\"red\"><b>NEW!</b></font> <a href=\"javascript:popUp('animation.html')\">Make an animation</a>";
+    //$('animation').style.visibility = 'visible';
     
     var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
     $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>'
