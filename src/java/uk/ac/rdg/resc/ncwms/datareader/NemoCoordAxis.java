@@ -29,8 +29,9 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -55,12 +56,14 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     private static final NemoCoordAxis createAxis(String axis)
     {
         // Read the relevant axis data from the lookup tables
-        String filename = "C:\\data\\NEMO\\ORCA025_" + axis + "lt_4x4.dat";
+        String filename = "ORCA025_" + axis + "lt_4x4.dat";
+        InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(
+            "/uk/ac/rdg/resc/ncwms/datareader/" + filename);
         logger.debug("Reading lookup data from {}", filename);
         BufferedReader reader = null;
         try
         {
-            reader = new BufferedReader(new FileReader(filename));
+            reader = new BufferedReader(new InputStreamReader(in));
             String line = null;
             int i = 0;
             short[] indices = new short[1441 * 721];
