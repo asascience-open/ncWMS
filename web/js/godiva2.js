@@ -16,6 +16,7 @@ var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
 var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
+var bbox = null; // The bounding box of the currently-displayed layer
 
 // Ajax call using the Prototype library
 // url: The URL of the data source
@@ -295,7 +296,7 @@ function variableSelected(datasetName, variableName)
             scaleMaxVal = $('scaleMax').value;
             
             // Set the auto-zoom box
-            var bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
+            bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
             $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Fit data to window</a>";
             
             // Get the currently-selected time and date or the current time if
@@ -472,7 +473,10 @@ function updateMap()
     //$('animation').innerHTML = "<font color=\"red\"><b>NEW!</b></font> <a href=\"javascript:popUp('animation.html')\">Make an animation</a>";
     //$('animation').style.visibility = 'visible';
     
-    var imageURL = essc_wms.getURL(new OpenLayers.Bounds(-90,0,0,70));
+    var bboxEls = bbox.split(",");
+    var bounds = new OpenLayers.Bounds(parseFloat(bboxEls[0]), 
+        parseFloat(bboxEls[1]), parseFloat(bboxEls[2]), parseFloat(bboxEls[3]));
+    var imageURL = essc_wms.getURL(bounds);
     $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>'
         + '&nbsp;&nbsp;<a href=\'WMS.py?SERVICE=WMS&REQUEST=GetKML&LAYERS=' + layerName + 
         '&STYLES=&ELEVATION=' + zValue + '&TIME=' + tValue + 
