@@ -1,7 +1,7 @@
 # Data reader that is connected to NetCDF files via the Java NetCDF (nj22) library
 from java.lang import Float
 
-from uk.ac.rdg.resc.ncwms.datareader import DatasetCache, DataReader
+from uk.ac.rdg.resc.ncwms.datareader import DatasetCache, DefaultDataReader
 from uk.ac.rdg.resc.ncwms.exceptions import *
 
 from wmsExceptions import *
@@ -20,7 +20,7 @@ def findTIndex(tValues, target):
         if the target value does not exist """
     # TODO: make this a function of the VariableMetadata object?
     try:
-        return DataReader.findTIndex(tValues, target)
+        return DefaultDataReader.findTIndex(tValues, target)
     except InvalidDimensionValueException, e:
         raise InvalidDimensionValue(e.getDimName(), e.getValue())
 
@@ -39,7 +39,7 @@ def readImageData(location, varID, tIndex, zValue, grid, fillValue):
         # TODO: relax this limitation:
         raise "Can only read data onto grids in lat-lon projections"
     try:
-        return DataReader.read(location, varID, tIndex, zValue,
+        return DefaultDataReader().read(location, varID, tIndex, zValue,
            grid.latValues, grid.lonValues, fillValue)
     except InvalidDimensionValueException, e:
         raise InvalidDimensionValue(e.getDimName(), e.getValue())
@@ -59,7 +59,7 @@ def readDataValue(location, varID, tIndex, zValue, lat, lon, fillValue):
         returns the value at the given point, or None if there is no data at the point """
     try:
         # We can re-use the read() method
-        value = DataReader.read(location, varID, tIndex, zValue, [lat], [lon], fillValue)[0]
+        value = DefaultDataReader().read(location, varID, tIndex, zValue, [lat], [lon], fillValue)[0]
         # If data is missing, read() will return the fill value, having converted
         # it from a double to a float
         if value == Float(fillValue).floatValue():
