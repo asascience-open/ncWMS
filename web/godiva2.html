@@ -30,10 +30,12 @@
             <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
             <span id="units"></span><br />
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
-            <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span><br />
-            <br />
+            <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span>
+                <span id="setFirstFrame"><a href="#" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
+                <span id="setLastFrame"><a href="#" onclick="javascript:setLastAnimationFrame()">last frame</a></span><br />
+                <span id="animation"><span id="createAnimation"><a href="#" onclick="javascript:createAnimation()">Create animation</a></span> from 
+                <span id="firstFrame"></span> to <span id="lastFrame"></span></span><br />
             <span id="featureInfo"></span><br />
-            <span id="animation"></span><br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>
                 <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>
@@ -45,6 +47,8 @@
         <div id="imagePanel" class="imagePanel">
             <div id="autoZoom"></div>
             <div id="map" class="map"></div>
+            <!-- The mapOverlay will contain the animations -->
+            <div class="map"><img id="mapOverlay"/></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
             <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar"/>
             <div class="scaleMarkers">

@@ -233,20 +233,6 @@ def getCalendar(config, dataset, varID, dateTime):
 
     str.write("</tbody></table>")
     str.write("</calendar>")
-
-    # Now write the contents of the animation div.  What types of
-    # animation do we allow the user to do from here?
-    str.write("<animation>")
-    if len(tValues) - nearestIndex > 1:
-        # There is at least one timestep after the currently-selected one
-        str.write("Animate forwards for: <select onchange=\"javascript:createAnimation(this.value)\">")
-        str.write("<option value=\"0\">Choose...</option>")
-        str.write("<option value=\"10\">10 days</option>")
-        str.write("<option value=\"30\">30 days</option>")
-        str.write("<option value=\"90\">90 days</option>")
-        str.write("</select>")
-
-    str.write("</animation>")
     str.write("</root>")
 
     s = str.getvalue()

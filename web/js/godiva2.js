@@ -330,7 +330,6 @@ function setCalendar(dataset, variable, dateTime)
                 $('calendar').innerHTML = '';
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
-                $('animation').innerHTML = '';
                 $('utc').style.visibility = 'hidden';
                 updateMap();
                 return;
@@ -338,8 +337,6 @@ function setCalendar(dataset, variable, dateTime)
             var xmldoc = req.responseXML;
             $('calendar').innerHTML =
                 RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
-            $('animation').innerHTML = 
-                RicoUtil.getContentAsString(xmldoc.getElementsByTagName('animation')[0]);
             // If this call has resulted from the selection of a new variable,
             // choose the timestep based on the result from the server
             if (newVariable)
@@ -390,14 +387,6 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
     );
 }
 
-// Creates a pop-up window with an animation
-function createAnimation(n)
-{
-    if (n > 0) {
-        alert("Creating animation for " + n + " days");
-    }
-}
-
 // Validates the entries for the scale bar
 function validateScale()
 {
@@ -430,6 +419,38 @@ function validateScale()
         scaleMaxVal = fMax;
         updateMap();
     }
+}
+
+function setFirstAnimationFrame()
+{
+    $('firstFrame').innerHTML = $('tValues').value;
+}
+function setLastAnimationFrame()
+{
+    $('lastFrame').innerHTML = $('tValues').value;
+}
+function createAnimation()
+{
+    var urlEls = essc_wms.getURL(map.getExtent()).split('&');
+    // Replace the parameters as needed.  We generate a map that is half the
+    // width and height of the viewport, otherwise it takes too long
+    var newURL = urlEls[0];
+    for (var i = 1; i < urlEls.length; i++) {
+        if (urlEls[i].startsWith('TIME=')) {
+            newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+        } else if (urlEls[i].startsWith('FORMAT')) {
+            newURL += '&FORMAT=image/gif';
+        } else if (urlEls[i].startsWith('WIDTH')) {
+            newURL += '&WIDTH=' + $('map').clientWidth / 2;
+        } else if (urlEls[i].startsWith('HEIGHT')) {
+            newURL += '&HEIGHT=' + $('map').clientHeight / 2;
+        } else {
+            newURL += '&' + urlEls[i];
+        }
+    }
+    $('mapOverlay').src = newURL;
+    $('mapOverlay').width = $('map').clientWidth;
+    $('mapOverlay').height = $('map').clientHeight;
 }
 
 function updateMap()
@@ -480,8 +501,6 @@ function updateMap()
     
     $('featureInfo').innerHTML = "Click on the map to get more information";
     $('featureInfo').style.visibility = 'visible';
-    //$('animation').innerHTML = "<font color=\"red\"><b>NEW!</b></font> <a href=\"javascript:popUp('animation.html')\">Make an animation</a>";
-    //$('animation').style.visibility = 'visible';
     
     var bboxEls = bbox.split(",");
     var bounds = new OpenLayers.Bounds(parseFloat(bboxEls[0]), 
