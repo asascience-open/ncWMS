@@ -14,7 +14,7 @@ else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
 from wmsExceptions import *
-from getmap import _getGrid, _checkVersion, _getLocationAndVariableID, _getFillValue
+from getmap import _getGrid, _checkVersion, _getDatasetAndVariableID, _getFillValue
 
 def getSupportedFormats():
     """ returns list of output formats supported by GetFeatureInfo """
@@ -71,18 +71,18 @@ def getFeatureInfo(req, params, config):
     lon, lat = grid.getLonLat(i, j)
 
     # Read the data point
-    location, varID, queryable = _getLocationAndVariableID(query_layers, config.datasets)
-    if not queryable:
+    dataset, varID = _getDatasetAndVariableID(query_layers, config.datasets)
+    if not dataset.queryable:
         raise LayerNotQueryable(query_layers[0])
     # Get the index along the time axis
     # Get the metadata
-    vars = datareader.getVariableMetadata(location)
+    vars = datareader.getAllVariableMetadata(dataset)
     if vars[varID].tvalues is None:
         tIndex = 0
     else:
         tIndex = datareader.findTIndex(vars[varID].tvalues, tValue)
     # Read the data point
-    value = datareader.readDataValue(location, varID, tIndex, zValue, lat, lon, _getFillValue())
+    value = datareader.readDataValue(dataset, varID, tIndex, zValue, lat, lon, _getFillValue())
 
     # Output in simple XML
     req.content_type = info_format

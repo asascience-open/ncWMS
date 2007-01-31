@@ -67,7 +67,7 @@ def getFrontPage(config):
     datasets = config.datasets
     for ds in datasets.keys():
         doc.write("<tr><th>%s</th>" % datasets[ds].title)
-        vars = datareader.getVariableMetadata(datasets[ds].location)
+        vars = datareader.getAllVariableMetadata(datasets[ds])
         for format in getmap.getSupportedImageFormats():
             doc.write("<td>")
             for varID in vars.keys():
@@ -100,7 +100,6 @@ def getFrontPage(config):
     s = doc.getvalue()
     doc.close()
     return s
-    
 
 def getDatasetsDiv(config):
     """ returns a string with a set of divs representing the datasets.
@@ -123,7 +122,7 @@ def getVariables(config, dataset):
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
     datasets = config.datasets
-    vars = datareader.getVariableMetadata(datasets[dataset].location)
+    vars = datareader.getAllVariableMetadata(datasets[dataset])
     for varID in vars.keys():
         str.write("<tr><td>")
         str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dataset, varID, vars[varID].title))
@@ -138,7 +137,7 @@ def getVariableDetails(config, dataset, varID):
         in the given dataset. """
     s = StringIO()
     datasets = config.datasets
-    var = datareader.getVariableMetadata(datasets[dataset].location)[varID]
+    var = datareader.getAllVariableMetadata(datasets[dataset])[varID]
     s.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
     s.write("<axes>")
     if var.zvalues is not None:
@@ -160,7 +159,7 @@ def getCalendar(config, dataset, varID, dateTime):
         'focus time' """
     datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
-    tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
+    tValues = datareader.getAllVariableMetadata(datasets[dataset])[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""
@@ -234,6 +233,20 @@ def getCalendar(config, dataset, varID, dateTime):
 
     str.write("</tbody></table>")
     str.write("</calendar>")
+
+    # Now write the contents of the animation div.  What types of
+    # animation do we allow the user to do from here?
+    str.write("<animation>")
+    if len(tValues) - nearestIndex > 1:
+        # There is at least one timestep after the currently-selected one
+        str.write("Animate forwards for: <select onchange=\"javascript:createAnimation(this.value)\">")
+        str.write("<option value=\"0\">Choose...</option>")
+        str.write("<option value=\"10\">10 days</option>")
+        str.write("<option value=\"30\">30 days</option>")
+        str.write("<option value=\"90\">90 days</option>")
+        str.write("</select>")
+
+    str.write("</animation>")
     str.write("</root>")
 
     s = str.getvalue()
@@ -288,7 +301,7 @@ def getTimesteps(config, dataset, varID, tIndex):
         set of times for a given day """
     datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
-    tValues = datareader.getVariableMetadata(datasets[dataset].location)[varID].tvalues
+    tValues = datareader.getAllVariableMetadata(datasets[dataset])[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""

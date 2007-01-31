@@ -51,7 +51,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
  * $Date$
  * $Log$
  */
-public class NemoDataReader extends DefaultDataReader
+public class NemoDataReader extends DataReader
 {
     private static final Logger logger = Logger.getLogger(NemoDataReader.class);
     
@@ -60,7 +60,7 @@ public class NemoDataReader extends DefaultDataReader
      * lat-lon grid.  Reads data for a single time index only.
      *
      * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
-     * @param varID Unique identifier for the required variable in the file
+     * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
      * @param zValue The value of elevation as specified by the client
      * @param latValues Array of latitude values
@@ -69,20 +69,37 @@ public class NemoDataReader extends DefaultDataReader
      * @throws WMSExceptionInJava if an error occurs
      */
     public float[] read(String location, VariableMetadata vm,
-        Range tRange, Range zRange, float[] latValues, float[] lonValues,
+        int tIndex, String zValue, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
         NetcdfDataset nc = null;
         try
         {
+            // Get the metadata from the cache
+            long start = System.currentTimeMillis();
+            if (vm == null)
+            {
+                throw new WMSExceptionInJava("Could not find variable called "
+                    + vm.getId() + " in " + location);
+            }
+            
+            Range tRange = new Range(tIndex, tIndex);
+            
+            // Find the index along the depth axis
+            int zIndex = 0; // Default value of z is the first in the axis
+            if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
+            {
+                zIndex = findZIndex(vm.getZvalues(), zValue);
+            }
+            Range zRange = new Range(zIndex, zIndex);
+            
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, fillValue);
 
             EnhancedCoordAxis xAxis = vm.getXaxis();
             EnhancedCoordAxis yAxis = vm.getYaxis();
-
-            long start = System.currentTimeMillis();        
+      
             // Maps y indices to scanlines
             Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
             // Cycle through each pixel in the picture and work out which
@@ -115,7 +132,7 @@ public class NemoDataReader extends DefaultDataReader
             start = System.currentTimeMillis();
 
             // Now build the picture
-            nc = DatasetCache.getDataset(location);
+            nc = getDataset(location);
             Variable var = nc.findVariable(vm.getId());
             float scaleFactor = var.findAttribute("scale_factor").getNumericValue().floatValue();
             float addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();

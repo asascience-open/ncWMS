@@ -127,7 +127,7 @@ def getCapabilities(req, params, config, lastUpdateTime):
         output.write("<Layer>")
         output.write("<Title>%s</Title>" % datasets[dsid].title)
         # Now write the displayable data layers
-        vars = datareader.getVariableMetadata(datasets[dsid].location)
+        vars = datareader.getAllVariableMetadata(datasets[dsid])
         for vid in vars.keys():
             output.write("<Layer")
             if config.allowFeatureInfo and datasets[dsid].queryable:

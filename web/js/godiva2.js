@@ -330,6 +330,7 @@ function setCalendar(dataset, variable, dateTime)
                 $('calendar').innerHTML = '';
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
+                $('animation').innerHTML = '';
                 $('utc').style.visibility = 'hidden';
                 updateMap();
                 return;
@@ -337,7 +338,8 @@ function setCalendar(dataset, variable, dateTime)
             var xmldoc = req.responseXML;
             $('calendar').innerHTML =
                 RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
-            
+            $('animation').innerHTML = 
+                RicoUtil.getContentAsString(xmldoc.getElementsByTagName('animation')[0]);
             // If this call has resulted from the selection of a new variable,
             // choose the timestep based on the result from the server
             if (newVariable)
@@ -386,6 +388,14 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
             updateMap();
         }
     );
+}
+
+// Creates a pop-up window with an animation
+function createAnimation(n)
+{
+    if (n > 0) {
+        alert("Creating animation for " + n + " days");
+    }
 }
 
 // Validates the entries for the scale bar

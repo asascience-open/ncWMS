@@ -45,11 +45,9 @@ import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
-import ucar.nc2.units.DateFormatter;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
@@ -60,9 +58,8 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
  * $Date$
  * $Log$
  */
-public class DefaultDataReader implements DataReader
+public class DefaultDataReader extends DataReader
 {
-    private static DateFormatter dateFormatter = new DateFormatter();
     private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
     
     /**
@@ -70,7 +67,7 @@ public class DefaultDataReader implements DataReader
      * lat-lon grid.  Reads data for a single time index only.
      *
      * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
-     * @param varID Unique identifier for the required variable in the file
+     * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
      * @param zValue The value of elevation as specified by the client
      * @param latValues Array of latitude values
@@ -78,7 +75,7 @@ public class DefaultDataReader implements DataReader
      * @param fillValue Value to use for missing data
      * @throws WMSExceptionInJava if an error occurs
      */
-    public float[] read(String location, String varID,
+    public float[] read(String location, VariableMetadata vm,
         int tIndex, String zValue, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
@@ -87,11 +84,10 @@ public class DefaultDataReader implements DataReader
         {
             // Get the metadata from the cache
             long start = System.currentTimeMillis();
-            VariableMetadata vm = DatasetCache.getVariableMetadata(location, varID);
             if (vm == null)
             {
                 throw new WMSExceptionInJava("Could not find variable called "
-                    + varID + " in " + location);
+                    + vm.getId() + " in " + location);
             }
             
             Range tRange = new Range(tIndex, tIndex);
@@ -137,11 +133,11 @@ public class DefaultDataReader implements DataReader
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
             // Get the dataset from the cache, without enhancing it
-            nc = DatasetCache.getDataset(location);
+            nc = getDataset(location);
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
             GridDataset gd = new GridDataset(nc);
-            GeoGrid gg = gd.findGridByName(varID);
+            GeoGrid gg = gd.findGridByName(vm.getId());
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
             
@@ -207,102 +203,6 @@ public class DefaultDataReader implements DataReader
                     logger.error("IOException closing " + nc.getLocation(), ex);
                 }
             }
-        }
-    }
-    
-    /**
-     * Finds the index of a certain t value by binary search (the axis may be
-     * very long, so a brute-force search is inappropriate)
-     * @param tValues Array of doubles representing the t axis values in <b>seconds</b>
-     * since the epoch
-     * @param tValue Date to search for as an ISO8601-formatted String
-     * @return the t index corresponding with the given targetVal
-     * @throws InvalidDimensionValueException if targetVal could not be found
-     * within tValues
-     * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
-     */
-    public static int findTIndex(double[] tValues, String tValue)
-        throws InvalidDimensionValueException
-    {
-        if (tValue.equals("current"))
-        {
-            // Return the last index in the array
-            return tValues.length - 1;
-        }
-        Date targetD = dateFormatter.getISODate(tValue);
-        if (targetD == null)
-        {
-            throw new InvalidDimensionValueException("time", tValue);
-        }
-        double target = targetD.getTime() / 1000.0;
-        
-        // Check that the point is within range
-        if (target < tValues[0] || target > tValues[tValues.length - 1])
-        {
-            throw new InvalidDimensionValueException("time", tValue);
-        }
-        
-        // do a binary search to find the nearest index
-        int low = 0;
-        int high = tValues.length - 1;
-        while (low <= high)
-        {
-            int mid = (low + high) >> 1;
-            double midVal = tValues[mid];
-            if (midVal == target)
-            {
-                return mid;
-            }
-            else if (midVal < target)
-            {
-                low = mid + 1;
-            }
-            else if (midVal > target)
-            {
-                high = mid - 1;
-            }
-        }
-        
-        // If we've got this far we have to decide between values[low]
-        // and values[high]
-        if (tValues[low] == target)
-        {
-            return low;
-        }
-        else if (tValues[high] == target)
-        {
-            return high;
-        }
-        throw new InvalidDimensionValueException("time", tValue);
-    }
-    
-    /**
-     * Finds the index of a certain z value by brute-force search.  We can afford
-     * to be inefficient here because z axes are not likely to be large.
-     * @param zValues Array of values of the z coordinate
-     * @param targetVal Value to search for
-     * @return the z index corresponding with the given targetVal
-     * @throws InvalidDimensionValueException if targetVal could not be found
-     * within zValues
-     */
-    private static int findZIndex(double[] zValues, String targetVal)
-        throws InvalidDimensionValueException
-    {
-        try
-        {
-            float zVal = Float.parseFloat(targetVal);
-            for (int i = 0; i < zValues.length; i++)
-            {
-                if (Math.abs((zValues[i] - zVal) / zVal) < 1e-5)
-                {
-                    return i;
-                }
-            }
-            throw new InvalidDimensionValueException("elevation", targetVal);
-        }
-        catch(NumberFormatException nfe)
-        {
-            throw new InvalidDimensionValueException("elevation", targetVal);
         }
     }
     

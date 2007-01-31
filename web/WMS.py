@@ -7,7 +7,7 @@ from java.util import Timer, TimerTask
 
 from org.apache.log4j import PropertyConfigurator, Logger
 
-from uk.ac.rdg.resc.ncwms.datareader import DatasetCache
+from uk.ac.rdg.resc.ncwms.datareader import DataReader
 
 import time
 import ncWMS
@@ -78,7 +78,7 @@ class WMS (HttpServlet):
                 PropertyConfigurator.configure(prefix + file)
             WMS.logger.debug("Initialized logging system")
             # Initialize the cache of datasets
-            DatasetCache.init()
+            DataReader.init()
             WMS.logger.debug("Initialized DatasetCache")
             # Start a timer that will clear the cache at regular intervals
             # so that NcML aggregations are reloaded
@@ -90,7 +90,7 @@ class WMS (HttpServlet):
             WMS.logger.debug("ncWMS Servlet initialized")
 
     def destroy(self):
-        DatasetCache.exit()
+        DataReader.exit()
         if WMS.timer is not None:
             WMS.timer.cancel()
         WMS.logger.debug("ncWMS Servlet destroyed")
@@ -111,7 +111,7 @@ class CacheWiper(TimerTask):
         self.logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.CacheWiper")
         self.timeLastRan = time.time() # Will be used as UpdateSequence in capabilities doc
     def run(self):
-        DatasetCache.clear()
+        DataReader.clear()
         self.timeLastRan = time.time()
         self.logger.debug("Cleared cache")
         

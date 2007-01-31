@@ -14,14 +14,14 @@ else:
     import cdmsdataset as datareader
 
 from wmsExceptions import WMSException
-from getmap import _getBbox, _getGoogleEarthFormat, _getLocationAndVariableID
+from getmap import _getBbox, _getGoogleEarthFormat, _getDatasetAndVariableID
 
 def doGEarth(req, params, config):
     """ Generates the KML for display in Google Earth """
     # Find the source of the requested data
     layers = params.getParamValue("layers").split(",")
-    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
-    vars = datareader.getVariableMetadata(location)
+    dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
+    vars = datareader.getAllVariableMetadata(dataset)
 
     # See if we're getting the top-level KML or not
     try:

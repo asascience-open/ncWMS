@@ -70,9 +70,9 @@ def getMap(req, params, config):
         raise InvalidDimensionValue("elevation", "You may only request a single value")
 
     # Find the source of the requested data
-    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
+    dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
     # Get the metadata
-    vars = datareader.getVariableMetadata(location)
+    vars = datareader.getAllVariableMetadata(dataset)
 
     # Find the requested index/indices along the time axis
     tAxisValues = vars[varID].tvalues
@@ -138,7 +138,7 @@ def getMap(req, params, config):
     if format == _getGoogleEarthFormat():
         # This is a special case: we don't actually render the image,
         # we just return a KML document containing a link to the image
-        if len(tValues) > 1:
+        if len(tIndices) > 1:
             # TODO: fix this - animations in GE are now possible!
             raise WMSException("Cannot display animations in Google Earth")
 
@@ -174,8 +174,8 @@ def getMap(req, params, config):
         req.write("&amp;BBOX=%s,%s,%s,%s" % bboxEls)
         if zValue != "":
             req.write("&amp;ELEVATION=%s" % zValue)
-        if tValue != "":
-            req.write("&amp;TIME=%s" % tValues[0])
+        if params.getParamValue("time", "") != "":
+            req.write("&amp;TIME=%s" % params.getParamValue("time", ""))
         # TODO get width and height more intelligently
         req.write("&amp;WIDTH=500&amp;HEIGHT=500")
         if not (scaleMin == 0.0 and scaleMax == 0.0):
@@ -199,7 +199,7 @@ def getMap(req, params, config):
         picData = []
         for tIndex in tIndices:
             # TODO: see if we already have this image in cache
-            picData.extend(datareader.readImageData(location, varID, tIndex, zValue, grid, _getFillValue()))
+            picData.extend(datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue()))
         # TODO: cache the data array(s)
         # Turn the data into an image and output to the client
         graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
@@ -266,15 +266,13 @@ def _getScale(params):
     else:     
         raise WMSException("The SCALE parameter must be of the form SCALEMIN,SCALEMAX")
 
-def _getLocationAndVariableID(layers, datasets):
-    """ Returns a (location, varID, queryable) tuple containing the location of the dataset,
-        the ID of the variable and a boolean which is true if the layer is queryable. 
+def _getDatasetAndVariableID(layers, datasets):
+    """ Returns a (dataset, varID) tuple containing the dataset and
+        the ID of the variable 
         Only deals with one layer at the moment """
     dsAndVar = layers[0].split(wmsUtils.getLayerSeparator())
     if len(dsAndVar) == 2 and datasets.has_key(dsAndVar[0]):
-        location = datasets[dsAndVar[0]].location
-        varID = dsAndVar[1]
-        return location, varID, datasets[dsAndVar[0]].queryable
+        return datasets[dsAndVar[0]], dsAndVar[1]
     else:
         raise LayerNotDefined(layers[0])
 

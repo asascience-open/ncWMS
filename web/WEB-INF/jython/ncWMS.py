@@ -93,9 +93,9 @@ def _getDatasets(config):
         dataset.queryable = 1
         if len(els) > 2 and els[2].lower() == "false":
             dataset.queryable = 0
-        # This is the default class that is used to read data and metadata
-        # TODO: this is Java-specific: allow for Python modules
-        dataset.reader = "uk.ac.rdg.resc.ncwms.datareader.DefaultDataReader"
+        # dataset.reader is set to an empty string: this will cause 
+        # the default data reader to be used
+        dataset.reader = ""
         datasets[dsID] = dataset
 
     # Now override the datareaders for those datasets that are specified
