@@ -31,10 +31,10 @@
             <span id="units"></span><br />
             <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
             <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span>
-                <span id="setFirstFrame"><a href="#" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
-                <span id="setLastFrame"><a href="#" onclick="javascript:setLastAnimationFrame()">last frame</a></span><br />
+                <span id="setFrames"><span id="setFirstFrame"><a href="#" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
+                <span id="setLastFrame"><a href="#" onclick="javascript:setLastAnimationFrame()">last frame</a></span></span><br />
                 <span id="animation"><span id="createAnimation"><a href="#" onclick="javascript:createAnimation()">Create animation</a></span> from 
-                <span id="firstFrame"></span> to <span id="lastFrame"></span></span><br />
+                <span id="firstFrame"></span>&nbsp;to&nbsp;<span id="lastFrame"></span></span><br /><br />
             <span id="featureInfo"></span><br />
             <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                 <option value="" selected>Other useful datasets...</option>
@@ -45,10 +45,13 @@
         </div>
         
         <div id="imagePanel" class="imagePanel">
-            <div id="autoZoom"></div>
+            <div id="autoZoom" class="aboveMap"></div>
+            <div id="hideAnimation" class="aboveMap"><a href="#" onclick="javascript:hideAnimation()">Unlock map (stops animation)</a></div>
             <div id="map" class="map"></div>
+            <!-- This holds the "loading animation..." image -->
+            <div class="map" id="loadingAnimationDiv"><img id="loadingAnimation" src="images/loading_animation.png" alt="loading animation"/></div>
             <!-- The mapOverlay will contain the animations -->
-            <div class="map"><img id="mapOverlay"/></div>
+            <div class="map" id="mapOverlayDiv"><img id="mapOverlay" alt="map overlay" onLoad="javascript:animationLoaded();"/></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
             <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar"/>
             <div class="scaleMarkers">

@@ -212,6 +212,7 @@ function datasetSelected(expandedTab)
 function variableSelected(datasetName, variableName)
 {
     newVariable = true;
+    resetAnimation();
     downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetName +
         '&variable=' + variableName,
         function(req) {
@@ -371,6 +372,7 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
         '&variable=' + variable + '&tIndex=' + tIndex,
         function(req) {
             $('time').innerHTML = req.responseText; // the data will be a selection box
+            $('setFrames').style.visibility = 'visible';
             // Make sure the correct day is highlighted in the calendar
             // TODO: doesn't work if there are many timesteps on the same day!
             if ($('t' + timestep))
@@ -421,16 +423,33 @@ function validateScale()
     }
 }
 
+function resetAnimation()
+{
+    hideAnimation();
+    $('featureInfo').style.visibility = 'visible';
+    $('setFrames').style.visibility = 'hidden';
+    $('animation').style.visibility = 'hidden';
+    $('firstFrame').innerHTML = '';
+    $('lastFrame').innerHTML = '';
+}
 function setFirstAnimationFrame()
 {
     $('firstFrame').innerHTML = $('tValues').value;
+    $('animation').style.visibility = 'visible';
 }
 function setLastAnimationFrame()
 {
     $('lastFrame').innerHTML = $('tValues').value;
+    $('animation').style.visibility = 'visible';
 }
 function createAnimation()
 {
+    if ($('firstFrame').innerHTML == '' || $('lastFrame').innerHTML == '')
+    {
+        alert("Must select a first and last frame for the animation");
+        return;
+    }
+    // Get a URL for a WMS request that covers the current map extent
     var urlEls = essc_wms.getURL(map.getExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
     // width and height of the viewport, otherwise it takes too long
@@ -444,13 +463,30 @@ function createAnimation()
             newURL += '&WIDTH=' + $('map').clientWidth / 2;
         } else if (urlEls[i].startsWith('HEIGHT')) {
             newURL += '&HEIGHT=' + $('map').clientHeight / 2;
-        } else {
+        } else if (!urlEls[i].startsWith('OPACITY')) {
+            // We remove the OPACITY ARGUMENT as GIFs do not support partial transparency
             newURL += '&' + urlEls[i];
         }
     }
+    $('featureInfo').style.visibility = 'hidden';
+    $('autoZoom').style.visibility = 'hidden';
+    $('hideAnimation').style.visibility = 'visible';
+    // We show the "please wait" image then immediately load the animation
+    $('loadingAnimationDiv').style.visibility = 'visible'; // This will be hidden by animationLoaded()
     $('mapOverlay').src = newURL;
     $('mapOverlay').width = $('map').clientWidth;
     $('mapOverlay').height = $('map').clientHeight;
+}
+function animationLoaded()
+{
+    $('loadingAnimationDiv').style.visibility = 'hidden';
+    $('mapOverlayDiv').style.visibility = 'visible';
+}
+function hideAnimation()
+{
+    $('autoZoom').style.visibility = 'visible';
+    $('hideAnimation').style.visibility = 'hidden';
+    $('mapOverlayDiv').style.visibility = 'hidden';
 }
 
 function updateMap()

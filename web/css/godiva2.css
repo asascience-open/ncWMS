@@ -132,7 +132,7 @@ div.imagePanel
     /*visibility: hidden;*/
 }
 
-div.autoZoom
+div.aboveMap
 {
     position: absolute;
     left: 0px;
@@ -146,6 +146,31 @@ div.map
     top: 25px;
     width: 512px;
     height: 400px;
+}
+
+#mapOverlayDiv
+{
+    visibility: hidden;
+}
+
+#loadingAnimationDiv
+{
+    visibility: hidden;
+}
+
+#setFrames
+{
+    visibility: hidden;
+}
+
+#animation
+{
+    visibility: hidden;
+}
+
+#hideAnimation
+{
+    visibility: hidden;
 }
 
 #imageURL
