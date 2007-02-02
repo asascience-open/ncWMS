@@ -10,6 +10,7 @@ else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
     import graphics
+import iso8601
 from wmsExceptions import *
 import wmsUtils
 import grids
@@ -58,8 +59,9 @@ def getMap(req, params, config):
     # RequestParser replaces pluses with spaces: we must change back
     # to parse the format correctly
     format = params.getParamValue("format").replace(" ", "+")
-    if format not in getSupportedImageFormats():
-        raise InvalidFormat("image", format, "GetMap")
+    # Get a picture making object for this MIME type: this will throw
+    # an InvalidFormat exception if the format is not supported
+    picMaker = graphics.getPicMaker(format)
 
     exception_format = params.getParamValue("exceptions", "XML")
     if exception_format not in getSupportedExceptionFormats():
@@ -109,9 +111,9 @@ def getMap(req, params, config):
     # Get the requested transparency and background colour for the layer
     trans = params.getParamValue("transparent", "false").lower()
     if trans == "false":
-        transparent = 0
+        picMaker.transparent = 0
     elif trans == "true":
-        transparent = 1
+        picMaker.transparent = 1
     else:
         raise WMSException("The value of TRANSPARENT must be \"TRUE\" or \"FALSE\"")
     
@@ -119,20 +121,18 @@ def getMap(req, params, config):
     if len(bgc) != 8 or not bgc.startswith("0x"):
         raise WMSException("Invalid format for BGCOLOR")
     try:
-        bgcolor = eval(bgc) # Parses hex string into an integer
+        picMaker.bgColor = eval(bgc) # Parses hex string into an integer
     except:
         raise WMSException("Invalid format for BGCOLOR")
 
     # Get the extremes of the colour scale
-    scaleMin, scaleMax = _getScale(params)
+    picMaker.scaleMin, picMaker.scaleMax = _getScale(params)
 
     # Get the percentage opacity of the map layer: another WMS extension
     opa = params.getParamValue("opacity", "100")
     try:
-        opacity = int(opa)
+        picMaker.opacity = int(opa)
     except:
-        raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
-    if opacity < 0 or opacity > 100:
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
 
     if format == _getGoogleEarthFormat():
@@ -193,16 +193,23 @@ def getMap(req, params, config):
     else:
         # Generate a grid of lon,lat points, one for each image pixel
         grid = _getGrid(params, config)
+        picMaker.picWidth, picMaker.picHeight = grid.width, grid.height
         # Read the data for the image frames
         # We do this as one large array so that the picture render can
         # automatically generate a colour scale if necessary
-        picData = []
+        picMaker.fillValue = _getFillValue()
         for tIndex in tIndices:
             # TODO: see if we already have this image in cache
-            picData.extend(datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue()))
-        # TODO: cache the data array(s)
-        # Turn the data into an image and output to the client
-        graphics.makePic(req, format, picData, grid.width, grid.height, _getFillValue(), transparent, bgcolor, opacity, scaleMin, scaleMax)
+            picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
+            # TODO: cache the data array
+            # Only add the label if this is an animation
+            if len(tIndices) > 1:
+                label = iso8601.tostring(tAxisValues[tIndex])
+            else:
+                label = ""
+            picMaker.addFrame(picData, label)
+        # Write the image to the client
+        graphics.writePicture(req, picMaker)
 
     return
 

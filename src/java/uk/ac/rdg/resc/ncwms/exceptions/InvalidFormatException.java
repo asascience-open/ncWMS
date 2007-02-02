@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005 The University of Reading
+ * Copyright (c) 2006 The University of Reading
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,56 +26,33 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.graphics;
-
-import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
-
-import java.io.OutputStream;
-import java.io.IOException;
+package uk.ac.rdg.resc.ncwms.exceptions;
 
 /**
- * Makes a picture from an array of raw data, using a rainbow colour model.
- * Fill values are represented as transparent pixels and out-of-range values
- * are represented as black pixels.
+ * Exception that is thrown when a user requests an unsupported image format
  *
- * Supports any output format that is supported by ImageIO class
- * @author jdb
+ * @author Jon Blower
+ * $Revision$
+ * $Date$
+ * $Log$
  */
-public class SimplePicMaker extends PicMaker
+public class InvalidFormatException extends WMSExceptionInJava
 {
-    // Data to turn into an image
-    protected float[] data;
-    protected String label;
+    private String format;
     
-    public SimplePicMaker()
+    /**
+     * Creates a new instance of InvalidDimensionValueException
+     * @param dimName The name of the dimension for which the value is invalid
+     * @param value The invalid value
+     */
+    public InvalidFormatException(String format)
     {
-        this.data = null;
-        this.label = "";
+        this.format = format;
     }
 
-    public void addFrame(float[] data, String label) throws IOException
+    public String getFormat()
     {
-        if (this.data != null)
-        {
-            // TODO Throw an Exception: this does not support animations
-        }
-        this.data = data;
-        this.label = label;
+        return this.format;
     }
-
-    public void writeImage(OutputStream out) throws IOException
-    {
-        // Create the colour scale if we haven't already done so
-        if (this.isAutoScale())
-        {
-            this.adjustColourScaleForFrame(this.data);
-        }
-        BufferedImage im = this.createFrame(this.data, this.label);
-        // Create the image type from the mime type (e.g. "image/png" gives "png")
-        String imageType = this.mimeType.split("/")[1];
-        ImageIO.write(im, imageType, out);
-    }
-    
     
 }
