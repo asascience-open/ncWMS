@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.graphics;
 import javax.imageio.ImageIO;
 import java.awt.image.*;
 import java.awt.Color;
+import java.awt.Graphics;
 
 import java.io.OutputStream;
 import java.io.IOException;
@@ -221,6 +222,13 @@ public class SimplePicMaker
                 DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
             WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
             BufferedImage image = new BufferedImage(getRainbowColorModel(), raster, false, null);
+            // Add the date to the image
+            Graphics gfx = image.getGraphics();
+            gfx.setColor(Color.WHITE);
+            gfx.fillRect(1, image.getHeight() - 19, image.getWidth() - 1, 18);
+            gfx.setColor(Color.BLACK);
+            gfx.drawRect(0, image.getHeight() - 20, image.getWidth(), 20);
+            gfx.drawString("Hello from ncWMS", 10, image.getHeight() - 10);
             // Now write the image
             if (this.mimeType.equals(GIF_FORMAT))
             {
