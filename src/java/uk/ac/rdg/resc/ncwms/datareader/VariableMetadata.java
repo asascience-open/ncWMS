@@ -28,9 +28,9 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import java.util.List;
-import java.util.Vector;
-import ucar.ma2.Range;
+import java.util.Date;
+import ucar.nc2.units.DateFormatter;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 
 /**
  * Stores the metadata for a {@link GeoGrid}: saves reading in the metadata every
@@ -44,6 +44,8 @@ import ucar.ma2.Range;
  */
 public class VariableMetadata
 {
+    private static DateFormatter dateFormatter = new DateFormatter();
+    
     private String id;
     private String title;
     private String abstr; // "abstract" is a reserved word
@@ -199,6 +201,98 @@ public class VariableMetadata
     public void setYaxis(EnhancedCoordAxis yaxis)
     {
         this.yaxis = yaxis;
+    }
+    
+    /**
+     * Finds the index of a certain t value by binary search (the axis may be
+     * very long, so a brute-force search is inappropriate)
+     * @param tValue Date to search for as an ISO8601-formatted String
+     * @return the t index corresponding with the given targetVal
+     * @throws InvalidDimensionValueException if targetVal could not be found
+     * within tValues
+     * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
+     */
+    public int findTIndex(String tValue) throws InvalidDimensionValueException
+    {
+        if (tValue.equals("current"))
+        {
+            // Return the last index in the array
+            return this.tValues.length - 1;
+        }
+        Date targetD = dateFormatter.getISODate(tValue);
+        if (targetD == null)
+        {
+            throw new InvalidDimensionValueException("time", tValue);
+        }
+        double target = targetD.getTime() / 1000.0;
+        
+        // Check that the point is within range
+        if (target < tValues[0] || target > tValues[tValues.length - 1])
+        {
+            throw new InvalidDimensionValueException("time", tValue);
+        }
+        
+        // do a binary search to find the nearest index
+        int low = 0;
+        int high = this.tValues.length - 1;
+        while (low <= high)
+        {
+            int mid = (low + high) >> 1;
+            double midVal = this.tValues[mid];
+            if (midVal == target)
+            {
+                return mid;
+            }
+            else if (midVal < target)
+            {
+                low = mid + 1;
+            }
+            else if (midVal > target)
+            {
+                high = mid - 1;
+            }
+        }
+        
+        // If we've got this far we have to decide between values[low]
+        // and values[high]
+        if (this.tValues[low] == target)
+        {
+            return low;
+        }
+        else if (this.tValues[high] == target)
+        {
+            return high;
+        }
+        throw new InvalidDimensionValueException("time", tValue);
+    }
+    
+    /**
+     * Finds the index of a certain z value by brute-force search.  We can afford
+     * to be inefficient here because z axes are not likely to be large.
+     * @param zValues Array of values of the z coordinate
+     * @param targetVal Value to search for
+     * @return the z index corresponding with the given targetVal
+     * @throws InvalidDimensionValueException if targetVal could not be found
+     * within zValues
+     */
+    public int findZIndex(String targetVal) throws InvalidDimensionValueException
+    {
+        try
+        {
+            float zVal = Float.parseFloat(targetVal);
+            for (int i = 0; i < this.zValues.length; i++)
+            {
+                if (Math.abs((this.zValues[i] - zVal) / zVal) < 1e-5)
+                {
+                    return i;
+                }
+            }
+            throw new InvalidDimensionValueException("elevation", targetVal);
+        }
+        catch(NumberFormatException nfe)
+        {
+            throw new InvalidDimensionValueException("elevation", targetVal);
+        }
     }
     
 }

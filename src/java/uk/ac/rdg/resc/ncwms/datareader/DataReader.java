@@ -46,7 +46,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 public abstract class DataReader
 {
     private static final Logger logger = Logger.getLogger(DataReader.class);
-    private static DateFormatter dateFormatter = new DateFormatter();
     
     /**
      * Maps class names to DataReader objects.  Only one DataReader object of
@@ -155,102 +154,6 @@ public abstract class DataReader
     }
     
     /**
-     * Finds the index of a certain t value by binary search (the axis may be
-     * very long, so a brute-force search is inappropriate)
-     * @param tValues Array of doubles representing the t axis values in <b>seconds</b>
-     * since the epoch
-     * @param tValue Date to search for as an ISO8601-formatted String
-     * @return the t index corresponding with the given targetVal
-     * @throws InvalidDimensionValueException if targetVal could not be found
-     * within tValues
-     * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
-     */
-    public static int findTIndex(double[] tValues, String tValue)
-        throws InvalidDimensionValueException
-    {
-        if (tValue.equals("current"))
-        {
-            // Return the last index in the array
-            return tValues.length - 1;
-        }
-        Date targetD = dateFormatter.getISODate(tValue);
-        if (targetD == null)
-        {
-            throw new InvalidDimensionValueException("time", tValue);
-        }
-        double target = targetD.getTime() / 1000.0;
-        
-        // Check that the point is within range
-        if (target < tValues[0] || target > tValues[tValues.length - 1])
-        {
-            throw new InvalidDimensionValueException("time", tValue);
-        }
-        
-        // do a binary search to find the nearest index
-        int low = 0;
-        int high = tValues.length - 1;
-        while (low <= high)
-        {
-            int mid = (low + high) >> 1;
-            double midVal = tValues[mid];
-            if (midVal == target)
-            {
-                return mid;
-            }
-            else if (midVal < target)
-            {
-                low = mid + 1;
-            }
-            else if (midVal > target)
-            {
-                high = mid - 1;
-            }
-        }
-        
-        // If we've got this far we have to decide between values[low]
-        // and values[high]
-        if (tValues[low] == target)
-        {
-            return low;
-        }
-        else if (tValues[high] == target)
-        {
-            return high;
-        }
-        throw new InvalidDimensionValueException("time", tValue);
-    }
-    
-    /**
-     * Finds the index of a certain z value by brute-force search.  We can afford
-     * to be inefficient here because z axes are not likely to be large.
-     * @param zValues Array of values of the z coordinate
-     * @param targetVal Value to search for
-     * @return the z index corresponding with the given targetVal
-     * @throws InvalidDimensionValueException if targetVal could not be found
-     * within zValues
-     */
-    public static int findZIndex(double[] zValues, String targetVal)
-        throws InvalidDimensionValueException
-    {
-        try
-        {
-            float zVal = Float.parseFloat(targetVal);
-            for (int i = 0; i < zValues.length; i++)
-            {
-                if (Math.abs((zValues[i] - zVal) / zVal) < 1e-5)
-                {
-                    return i;
-                }
-            }
-            throw new InvalidDimensionValueException("elevation", targetVal);
-        }
-        catch(NumberFormatException nfe)
-        {
-            throw new InvalidDimensionValueException("elevation", targetVal);
-        }
-    }
-    
-    /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.  Reads data for a single time index only.
      *
@@ -262,18 +165,29 @@ public abstract class DataReader
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @param fillValue Value to use for missing data
+     * @return array of data values
      * @throws WMSExceptionInJava if an error occurs
      */
     public static float[] read(String location, String dataReaderClassName, String varID,
         int tIndex, String zValue, float[] latValues, float[] lonValues,
-        float fillValue)
-        throws WMSExceptionInJava
+        float fillValue) throws WMSExceptionInJava
     {
         try
         {
             DataReader dr = getDataReader(dataReaderClassName);
             VariableMetadata vm = getAllVariableMetadata(location, dr).get(varID);
-            return dr.read(location, vm, tIndex, zValue, latValues, lonValues, fillValue);
+            if (vm == null)
+            {
+                throw new WMSExceptionInJava("Could not find variable called "
+                    + vm.getId() + " in " + location);
+            }
+            // Find the index along the depth axis
+            int zIndex = 0; // Default value of z is the first in the axis
+            if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
+            {
+                zIndex = vm.findZIndex(zValue);
+            }
+            return dr.read(location, vm, tIndex, zIndex, latValues, lonValues, fillValue);
         }
         catch(Exception e)
         {
@@ -289,14 +203,14 @@ public abstract class DataReader
      * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
      * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
-     * @param zValue The value of elevation as specified by the client
+     * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @param fillValue Value to use for missing data
      * @throws WMSExceptionInJava if an error occurs
      */
     protected abstract float[] read(String location, VariableMetadata vm,
-        int tIndex, String zValue, float[] latValues, float[] lonValues,
+        int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava;
     
     /**

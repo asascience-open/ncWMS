@@ -8,9 +8,11 @@ from java.util import Timer, TimerTask
 from org.apache.log4j import PropertyConfigurator, Logger
 
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
+from uk.ac.rdg.resc.ncwms.exceptions import *
 
 import time
 import ncWMS
+from wmsExceptions import *
 
 class FakeModPythonServerObject:
     """ Class that fakes up the req.server mod_python object """
@@ -95,12 +97,28 @@ class WMS (HttpServlet):
             WMS.timer.cancel()
         WMS.logger.debug("ncWMS Servlet destroyed")
 
-    def doGet(self,request,response):
+    def doGet(self, request, response):
         """ Perform the WMS operation """
         WMS.logger.debug("GET operation called")
         prefix = self.getServletContext().getRealPath("/")
-        ncWMS.doWms(FakeModPythonRequestObject(request, response),
-            prefix + "WEB-INF/conf/ncWMS.ini", WMS.cacheWiper.timeLastRan)
+        req = FakeModPythonRequestObject(request, response)
+        # We make sure we catch all the exceptions from the Java code
+        # and re-raise as Python exceptions so that they are correctly
+        # translated into XML and returned to the client
+        try:
+            try:
+                # Do the WMS operation
+                ncWMS.doWms(req, prefix + "WEB-INF/conf/ncWMS.ini",
+                    WMS.cacheWiper.timeLastRan)
+            except InvalidDimensionValueException, e:
+                raise InvalidDimensionValue(e.getDimName(), e.getValue())
+            except MissingDimensionValueException, e:
+                raise MissingDimensionValue(e.getDimName())
+            except WMSExceptionInJava, e:
+                raise WMSException(e.getMessage())
+        except WMSException, e:
+            req.content_type="text/xml"
+            e.write(req)
 
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")

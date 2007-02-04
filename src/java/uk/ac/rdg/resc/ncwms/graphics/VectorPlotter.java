@@ -76,7 +76,7 @@ public class VectorPlotter
         double aDir = Math.atan2(xCentre - x, yCentre - y);
         g2d.setStroke(new BasicStroke(stroke));
         g2d.drawLine(x, y, xCentre, yCentre);
-        g2d.setStroke(new BasicStroke(1f));
+        g2d.setStroke(new BasicStroke(1.0f));
         Polygon tmpPoly = new Polygon();
         int i1 = 12 + (int)(stroke * 2);
         int i2 = 6 + (int)stroke;

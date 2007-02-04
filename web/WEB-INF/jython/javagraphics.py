@@ -2,6 +2,8 @@
 from uk.ac.rdg.resc.ncwms.graphics import PicMaker
 from uk.ac.rdg.resc.ncwms.exceptions import InvalidFormatException
 
+from wmsExceptions import InvalidFormat
+
 def getSupportedImageFormats():
     """ Returns the list of supported image formats as MIME types """
     fs = []

@@ -77,8 +77,7 @@ def getMap(req, params, config):
     vars = datareader.getAllVariableMetadata(dataset)
 
     # Find the requested index/indices along the time axis
-    tAxisValues = vars[varID].tvalues
-    if tAxisValues is None:
+    if vars[varID].tvalues is None:
         # Ignore any time value that was given by the client (TODO OK?)
         tIndices = [0] # This layer has no time dimension
     else:
@@ -91,13 +90,13 @@ def getMap(req, params, config):
             startStopPeriod = tSpec.split("/")
             if len(startStopPeriod) == 1:
                 # This is a single time value
-                tIndex = datareader.findTIndex(tAxisValues, startStopPeriod[0])
+                tIndex = vars[varID].findTIndex(startStopPeriod[0])
                 tIndices.append(tIndex)
             elif len(startStopPeriod) == 2:
                 # Extract all time values from start to stop inclusive
                 start, stop = startStopPeriod
-                startIndex = datareader.findTIndex(tAxisValues, startStopPeriod[0])
-                stopIndex = datareader.findTIndex(tAxisValues, startStopPeriod[1])
+                startIndex = vars[varID].findTIndex(startStopPeriod[0])
+                stopIndex = vars[varID].findTIndex(startStopPeriod[1])
                 for i in xrange(startIndex, stopIndex + 1):
                     tIndices.append(i)
             elif len(startStopPeriod) == 3:
@@ -204,7 +203,7 @@ def getMap(req, params, config):
             # TODO: cache the data array
             # Only add the label if this is an animation
             if len(tIndices) > 1:
-                label = iso8601.tostring(tAxisValues[tIndex])
+                label = iso8601.tostring(vars[varID].tvalues[tIndex])
             else:
                 label = ""
             picMaker.addFrame(picData, label)

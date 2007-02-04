@@ -63,20 +63,20 @@ public class DefaultDataReader extends DataReader
     private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
     
     /**
-     * Read an array of data from a NetCDF file and projects onto a rectangular
+     * Reads an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.  Reads data for a single time index only.
      *
-     * @param location Location of the NetCDF file (full file path, OPeNDAP URL etc)
+     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
      * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
-     * @param zValue The value of elevation as specified by the client
+     * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @param fillValue Value to use for missing data
      * @throws WMSExceptionInJava if an error occurs
      */
     public float[] read(String location, VariableMetadata vm,
-        int tIndex, String zValue, float[] latValues, float[] lonValues,
+        int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
         NetcdfDataset nc = null;
@@ -84,20 +84,8 @@ public class DefaultDataReader extends DataReader
         {
             // Get the metadata from the cache
             long start = System.currentTimeMillis();
-            if (vm == null)
-            {
-                throw new WMSExceptionInJava("Could not find variable called "
-                    + vm.getId() + " in " + location);
-            }
             
             Range tRange = new Range(tIndex, tIndex);
-            
-            // Find the index along the depth axis
-            int zIndex = 0; // Default value of z is the first in the axis
-            if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
-            {
-                zIndex = findZIndex(vm.getZvalues(), zValue);
-            }
             Range zRange = new Range(zIndex, zIndex);
             
             EnhancedCoordAxis xAxis = vm.getXaxis();
@@ -319,7 +307,7 @@ public class DefaultDataReader extends DataReader
     
     /**
      * @return the value of the standard_name attribute of the variable,
-     * or the unique name if it does not exist
+     * or the unique id if it does not exist
      */
     private static String getStandardName(Variable var)
     {

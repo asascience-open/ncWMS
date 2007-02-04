@@ -1,10 +1,7 @@
 # Data reader that is connected to NetCDF files via the Java NetCDF (nj22) library
 from java.lang import Float
-
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
-from uk.ac.rdg.resc.ncwms.exceptions import *
-
-from wmsExceptions import *
+from wmsExceptions import WMSException
 
 def getAllVariableMetadata(dataset):
     """ returns a dictionary of VariableMetadata objects.  The keys
@@ -12,16 +9,6 @@ def getAllVariableMetadata(dataset):
         the values are VariableMetadata objects
         dataset = dataset object """
     return DataReader.getAllVariableMetadata(dataset.location, dataset.reader)
-
-def findTIndex(tValues, target):
-    """ returns the index of the given target t value in the given
-        array of t values, raising an InvalidDimensionValue exception
-        if the target value does not exist """
-    # TODO: make this a function of the VariableMetadata object?
-    try:
-        return DataReader.findTIndex(tValues, target)
-    except InvalidDimensionValueException, e:
-        raise InvalidDimensionValue(e.getDimName(), e.getValue())
 
 def readImageData(dataset, varID, tIndex, zValue, grid, fillValue):
     """ Reads data from this variable, projected on to the given grid.
@@ -34,18 +21,13 @@ def readImageData(dataset, varID, tIndex, zValue, grid, fillValue):
         returns an array of floating-point numbers representing the data,
             or None if the variable with id varID does not exist. """
     
-    if not grid.isLatLon:
+    # All exceptions from Java are caught in WMS.py
+    if grid.isLatLon:
         # TODO: relax this limitation:
-        raise "Can only read data onto grids in lat-lon projections"
-    try:
-        return DataReader.read(dataset.location, dataset.reader, varID, tIndex, zValue,
-           grid.latValues, grid.lonValues, fillValue)
-    except InvalidDimensionValueException, e:
-        raise InvalidDimensionValue(e.getDimName(), e.getValue())
-    except MissingDimensionValueException, e:
-        raise MissingDimensionValue(e.getDimName())
-    except WMSExceptionInJava, e:
-        raise WMSException(e.getMessage())
+        return DataReader.read(dataset.location, dataset.reader, varID, tIndex,
+            zValue, grid.latValues, grid.lonValues, fillValue)
+    else:
+        raise WMSException("Internal error: can only read data onto grids in lat-lon projections")
 
 def readDataValue(dataset, varID, tIndex, zValue, lat, lon, fillValue):
     """ Reads an individual data point for GetFeatureInfo
@@ -56,18 +38,13 @@ def readDataValue(dataset, varID, tIndex, zValue, lat, lon, fillValue):
         lat, lon = latitude and longitude of the data value
         fillvalue = value to use for missing data
         returns the value at the given point, or None if there is no data at the point """
-    try:
-        # We can re-use the read() method
-        value = DataReader.read(dataset.location, dataset.reader, varID, tIndex, zValue, [lat], [lon], fillValue)[0]
-        # If data is missing, read() will return the fill value, having converted
-        # it from a double to a float
-        if value == Float(fillValue).floatValue():
-            return None
-        else:
-            return value
-    except InvalidDimensionValueException, e:
-        raise InvalidDimensionValue(e.getDimName(), e.getValue())
-    except MissingDimensionValueException, e:
-        raise MissingDimensionValue(e.getDimName())
-    except WMSExceptionInJava, e:
-        raise WMSException(e.getMessage())
+
+    # All exceptions from Java are caught in WMS.py
+    # We can re-use the read() method
+    value = DataReader.read(dataset.location, dataset.reader, varID, tIndex, zValue, [lat], [lon], fillValue)[0]
+    # If data is missing, read() will return the fill value, having converted
+    # it from a double to a float
+    if value == Float(fillValue).floatValue():
+        return None
+    else:
+        return value
