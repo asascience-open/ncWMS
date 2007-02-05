@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.StringTokenizer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import org.apache.log4j.Logger;
 import ucar.unidata.geoloc.LatLonPoint;
 
@@ -48,25 +50,55 @@ public class NemoCoordAxis extends EnhancedCoordAxis
 {
     private static final Logger logger = Logger.getLogger(NemoCoordAxis.class);
     
-    public static final NemoCoordAxis I_AXIS = createAxis("i");
-    public static final NemoCoordAxis J_AXIS = createAxis("j");
+    public static final NemoCoordAxis I_AXIS;
+    public static final NemoCoordAxis J_AXIS;
+    
+    static
+    {
+        try
+        {
+            I_AXIS = createAxis("i");
+            J_AXIS = createAxis("j");
+        }
+        catch(IOException ioe)
+        {
+            // Error has already been logged in createAxis()
+            throw new ExceptionInInitializerError(ioe);
+        }
+    }
     
     private short[] indices;
     
-    private static final NemoCoordAxis createAxis(String axis)
+    private static final NemoCoordAxis createAxis(String axis) throws IOException
     {
         // Read the relevant axis data from the lookup tables
-        String filename = "ORCA025_" + axis + "lt_4x4.dat";
         InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            "/uk/ac/rdg/resc/ncwms/datareader/" + filename);
-        logger.debug("Reading lookup data from {}", filename);
+            "/uk/ac/rdg/resc/ncwms/datareader/ORCA025_4x4.zip");
+        ZipInputStream zin = new ZipInputStream(in);
+        String filename = "ORCA025_" + axis + "lt_4x4.dat";
         BufferedReader reader = null;
         try
         {
-            reader = new BufferedReader(new InputStreamReader(in));
+            // Skip to the required entry
+            boolean done = false;
+            do
+            {
+                ZipEntry entry = zin.getNextEntry();
+                if (entry == null)
+                {
+                    throw new ExceptionInInitializerError(filename + " not found in zip file");
+                }
+                else if (entry.getName().equals(filename))
+                {
+                    done = true;
+                }
+            } while (!done);
+
+            logger.debug("Reading lookup data from {}", filename);
+            reader = new BufferedReader(new InputStreamReader(zin));
             String line = null;
             int i = 0;
-            short[] indices = new short[1441 * 721];
+            short[] indices = new short[1440 * 719];
             do
             {
                 line = reader.readLine();
@@ -76,6 +108,8 @@ public class NemoCoordAxis extends EnhancedCoordAxis
                     while(tok.hasMoreTokens())
                     {
                         indices[i] = Short.parseShort(tok.nextToken());
+                        // Files were produced using FORTRAN, hence indices are 1-based
+                        indices[i] -= 1;
                         i++;
                     }
                 }
@@ -86,6 +120,7 @@ public class NemoCoordAxis extends EnhancedCoordAxis
         catch(IOException ioe)
         {
             logger.error("IO error reading from " + filename, ioe);
+            throw ioe;
         }
         catch(RuntimeException rte)
         {
@@ -100,7 +135,6 @@ public class NemoCoordAxis extends EnhancedCoordAxis
                 try { reader.close(); } catch (IOException ioe) {}
             }
         }
-        return null; // Do something here?
     }
     
     /** Creates a new instance of NemoCoordAxis */
@@ -111,14 +145,16 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     
     public int getIndex(LatLonPoint point)
     {
-        // TODO: use Math.round() instead of int()?
-        if (point.getLatitude() < -90.0 || point.getLatitude() > 90.0)
+        if (point.getLatitude() < -89.75 || point.getLatitude() > 89.75)
         {
             return -1;
         }
-        int latIndex = (int)((point.getLatitude() + 90) * 4);
-        int lonIndex = (int)((point.getLongitude() + 180) * 4);
-        return this.indices[latIndex * 1441 + lonIndex];
+        // TODO: use Math.round() instead of int()?
+        int latIndex = (int)((point.getLatitude() + 89.75) * 4);
+        double lon = point.getLongitude();
+        if (lon < 0.0) lon += 360.0;
+        int lonIndex = (int)(lon * 4);
+        return this.indices[latIndex * 1440 + lonIndex];
     }
     
 }
