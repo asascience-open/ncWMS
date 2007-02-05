@@ -80,7 +80,7 @@ def getFeatureInfo(req, params, config):
     if vars[varID].tvalues is None:
         tIndex = 0
     else:
-        tIndex = datareader.findTIndex(vars[varID].tvalues, tValue)
+        tIndex = vars[varID].findTIndex(tValue)
     # Read the data point
     value = datareader.readDataValue(dataset, varID, tIndex, zValue, lat, lon, _getFillValue())
 

@@ -41,6 +41,7 @@ import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Hashtable;
+import java.util.Set;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
@@ -83,16 +84,16 @@ public abstract class PicMaker
     {
         picMakers = new Hashtable<String, Class>();
         picMakers.put("image/png", SimplePicMaker.class);
-        picMakers.put("image/gif", GifMaker.class);
+        //picMakers.put("image/gif", GifMaker.class);
     }
     
     /**
-     * @return the image formats (MIME types) that can be produced as an 
-     * array of Strings.
+     * @return the image formats (MIME types) that can be produced as a
+     * Set of Strings.
      */
-    public static final Object[] getSupportedImageFormats()
+    public static final Set<String> getSupportedImageFormats()
     {
-        return picMakers.keySet().toArray();
+        return picMakers.keySet();
     }
     
     /**

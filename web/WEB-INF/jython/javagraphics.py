@@ -1,16 +1,12 @@
-# Jython code for generating a picture from source data
+# Jython code for generating images for GetMap
 from uk.ac.rdg.resc.ncwms.graphics import PicMaker
 from uk.ac.rdg.resc.ncwms.exceptions import InvalidFormatException
-
 from wmsExceptions import InvalidFormat
 
 def getSupportedImageFormats():
     """ Returns the list of supported image formats as MIME types """
-    fs = []
-    formats = PicMaker.getSupportedImageFormats()
-    for format in formats:
-        fs.append(format)
-    return fs
+    # Convert from Java Set to a Python list
+    return [f for f in PicMaker.getSupportedImageFormats()]
 
 def getPicMaker(mimeType):
     """ Returns a PicMaker object that generates images for the given MIME type """
