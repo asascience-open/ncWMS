@@ -417,13 +417,11 @@ public abstract class PicMaker
         {
             logger.debug("  ... adding label");
             Graphics2D gfx = image.createGraphics();
-            logger.debug("  ... got Graphics object");
             gfx.setColor(new Color(0, 0, 143));
             gfx.fillRect(1, image.getHeight() - 19, image.getWidth() - 1, 18);
-            logger.debug("  ... added label background");
             gfx.setColor(new Color(255, 151, 0));
             gfx.drawString(label, 10, image.getHeight() - 5);
-            logger.debug("  ... wrote label");
+            logger.debug("  ... added label");
         }
         logger.debug("  ... returning image");
         
