@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Hashtable;
 import java.util.Set;
+import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
@@ -60,6 +61,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
  */
 public abstract class PicMaker
 {
+    private static final Logger logger = Logger.getLogger(PicMaker.class);
     /**
      * Maps MIME types to the required class of PicMaker
      */
@@ -84,7 +86,7 @@ public abstract class PicMaker
     {
         picMakers = new Hashtable<String, Class>();
         picMakers.put("image/png", SimplePicMaker.class);
-        //picMakers.put("image/gif", GifMaker.class);
+        picMakers.put("image/gif", GifMaker.class);
     }
     
     /**
@@ -392,12 +394,14 @@ public abstract class PicMaker
      */
     protected BufferedImage createFrame(float[] data, String label)
     {
+        logger.debug("Creating frame with {} pixels and label {}", data.length, label);
         // Create the pixel array for the frame
         byte[] pixels = new byte[this.picWidth * this.picHeight];
         for (int i = 0; i < pixels.length; i++)
         {
             pixels[i] = getColourIndex(data[i]);
         }
+        logger.debug("  ... created pixel array");
         
         // Create the Image
         DataBuffer buf = new DataBufferByte(pixels, pixels.length);
@@ -405,17 +409,23 @@ public abstract class PicMaker
             DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
         IndexColorModel colorModel = getRainbowColorModel();
-        BufferedImage image = new BufferedImage(colorModel, raster, false, null); 
+        BufferedImage image = new BufferedImage(colorModel, raster, false, null);
+        logger.debug("  ... created Image");
         
         // Add the label to the image
         if (label != null && !label.equals(""))
         {
-            Graphics2D gfx = (Graphics2D)image.getGraphics();
-            gfx.setPaint(new Color(0, 0, 143));
+            logger.debug("  ... adding label");
+            Graphics2D gfx = image.createGraphics();
+            logger.debug("  ... got Graphics object");
+            gfx.setColor(new Color(0, 0, 143));
             gfx.fillRect(1, image.getHeight() - 19, image.getWidth() - 1, 18);
-            gfx.setPaint(new Color(255, 151, 0));
+            logger.debug("  ... added label background");
+            gfx.setColor(new Color(255, 151, 0));
             gfx.drawString(label, 10, image.getHeight() - 5);
+            logger.debug("  ... wrote label");
         }
+        logger.debug("  ... returning image");
         
         return image;
     }

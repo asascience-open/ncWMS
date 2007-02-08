@@ -53,6 +53,8 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     public static final NemoCoordAxis I_AXIS;
     public static final NemoCoordAxis J_AXIS;
     
+    private short[] indices;
+    
     static
     {
         try
@@ -66,8 +68,6 @@ public class NemoCoordAxis extends EnhancedCoordAxis
             throw new ExceptionInInitializerError(ioe);
         }
     }
-    
-    private short[] indices;
     
     private static final NemoCoordAxis createAxis(String axis) throws IOException
     {
