@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Hashtable;
 import java.util.Vector;
 import org.apache.log4j.Logger;
@@ -39,6 +40,7 @@ import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.units.DateUnit;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
@@ -269,7 +271,8 @@ public class NemoDataReader extends DataReader
         
         try
         {
-            nc = NetcdfDataset.openDataset(location, false, null);        
+            nc = NetcdfDataset.openDataset(location, false, null);
+            
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
             float[] fzVals = (float[])depth.read().copyTo1DJavaArray();
@@ -280,6 +283,28 @@ public class NemoDataReader extends DataReader
                 zVals[i] = -fzVals[i];
             }
             String zUnits = depth.getUnitsString();
+            
+            // Get the time values and units
+            Variable time = nc.findVariable("time_counter");
+            float[] ftVals = (float[])time.read().copyTo1DJavaArray();
+            DateUnit dateUnit = null;
+            try
+            {
+                dateUnit = new DateUnit(time.getUnitsString());
+            }
+            catch(Exception e)
+            {
+                // Shouldn't happen if file is well formed
+                logger.error("Malformed time units string " + time.getUnitsString());
+                // IOException not ideal here but didn't want to create new exception
+                // type just for this rare case
+                throw new IOException("Malformed time units string " + time.getUnitsString());
+            }
+            double[] tVals = new double[ftVals.length];
+            for (int i = 0; i < ftVals.length; i++)
+            {
+                tVals[i] = dateUnit.makeDate(ftVals[i]).getTime() / 1000.0;
+            }
 
             for (Object varObj : nc.getVariables())
             {
@@ -308,6 +333,9 @@ public class NemoDataReader extends DataReader
                     // Create the coordinate axes
                     vm.setXaxis(NemoCoordAxis.I_AXIS);
                     vm.setYaxis(NemoCoordAxis.J_AXIS);
+                    
+                    // Set the time axis
+                    vm.setTvalues(tVals);
 
                     vars.put(vm.getId(), vm);
                 }
@@ -325,6 +353,23 @@ public class NemoDataReader extends DataReader
                 catch (IOException ex)
                 {
                     logger.error("IOException closing " + nc.getLocation(), ex);
+                }
+            }
+        }
+    }
+    
+    public static void main(String[] args) throws Exception
+    {
+        DataReader dr = new NemoDataReader();
+        Hashtable<String, VariableMetadata> vms = dr.getVariableMetadata("C:\\data\\NEMO\\NEMO.ncml");
+        for (String varID : vms.keySet())
+        {
+            System.out.println(varID);
+            if (vms.get(varID).getTvalues() != null)
+            {
+                for (double t : vms.get(varID).getTvalues())
+                {
+                    System.out.println("  " + new Date(new Double(t * 1000).longValue()));
                 }
             }
         }

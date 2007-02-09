@@ -50,6 +50,8 @@ public class NemoCoordAxis extends EnhancedCoordAxis
 {
     private static final Logger logger = Logger.getLogger(NemoCoordAxis.class);
     
+    private static final int LUT_RES = 12;  // Resolution of the lookup table in points per degree
+    
     public static final NemoCoordAxis I_AXIS;
     public static final NemoCoordAxis J_AXIS;
     
@@ -73,9 +75,9 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     {
         // Read the relevant axis data from the lookup tables
         InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            "/uk/ac/rdg/resc/ncwms/datareader/ORCA025_4x4.zip");
+            "/uk/ac/rdg/resc/ncwms/datareader/ORCA025_" + LUT_RES + "x" + LUT_RES + ".zip");
         ZipInputStream zin = new ZipInputStream(in);
-        String filename = "ORCA025_" + axis + "lt_4x4.dat";
+        String filename = "ORCA025_" + axis + "lt_" + LUT_RES + "x" + LUT_RES + ".dat";
         BufferedReader reader = null;
         try
         {
@@ -98,7 +100,7 @@ public class NemoCoordAxis extends EnhancedCoordAxis
             reader = new BufferedReader(new InputStreamReader(zin));
             String line = null;
             int i = 0;
-            short[] indices = new short[1440 * 719];
+            short[] indices = new short[(360 * LUT_RES) * (180 * LUT_RES - 1)];
             do
             {
                 line = reader.readLine();
@@ -115,6 +117,8 @@ public class NemoCoordAxis extends EnhancedCoordAxis
                 }
             } while (line != null);
             logger.debug("Read {} items of lookup data", i);
+            // Garbage-collect to try to free some memory
+            System.gc();
             return new NemoCoordAxis(indices);
         }
         catch(IOException ioe)
@@ -145,16 +149,18 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     
     public int getIndex(LatLonPoint point)
     {
-        if (point.getLatitude() < -89.75 || point.getLatitude() > 89.75)
+        double minLat = -90.0 + (1.0 / LUT_RES);
+        double maxLat = 90.0 - (1.0 / LUT_RES);
+        if (point.getLatitude() < minLat || point.getLatitude() > maxLat)
         {
             return -1;
         }
         // TODO: use Math.round() instead of int()?
-        int latIndex = (int)((point.getLatitude() + 89.75) * 4);
+        int latIndex = (int)((point.getLatitude() - minLat) * LUT_RES);
         double lon = point.getLongitude();
         if (lon < 0.0) lon += 360.0;
-        int lonIndex = (int)(lon * 4);
-        return this.indices[latIndex * 1440 + lonIndex];
+        int lonIndex = (int)(lon * LUT_RES);
+        return this.indices[latIndex * (360 * LUT_RES) + lonIndex];
     }
     
 }
