@@ -148,7 +148,7 @@ public abstract class DataReader
         catch(IllegalAccessException iae)
         {
             logger.error("Illegal access error for class: " + clazz, iae);
-            throw new WMSExceptionInJava("Internal error: constructor fo " + clazz +
+            throw new WMSExceptionInJava("Internal error: constructor for " + clazz +
                 " could not be accessed");
         }
     }
