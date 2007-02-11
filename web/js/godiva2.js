@@ -529,12 +529,14 @@ function updateMap()
     // of the data pixels
     // TODO get the map projection from the base layer
     // TODO use a more informative title
+    // Buffer is set to 1 to avoid loading a large halo of tiles outside the
+    // current viewport
     var baseURL = window.location.href.split("/").slice(0,-1).join("/");
     if (essc_wms == null) {
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
             baseURL + '/WMS.py', {layers: layerName, elevation: zValue, time: tValue,
             transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
-            opacity: opacity, buffer: 1});
+            opacity: opacity}, {buffer: 1});
         map.addLayers([essc_wms]);
     } else {
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
