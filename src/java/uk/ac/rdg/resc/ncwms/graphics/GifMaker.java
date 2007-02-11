@@ -28,10 +28,11 @@
 
 package uk.ac.rdg.resc.ncwms.graphics;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import net.jmge.gif.Gif89Encoder;
 import org.apache.log4j.Logger;
 
 /**
@@ -46,16 +47,16 @@ public class GifMaker extends PicMaker
 {
     private static final Logger logger = Logger.getLogger(GifMaker.class);
     
-    private Gif89Encoder encoder;
     private ArrayList<float[]> frameData;
     private ArrayList<String> frameLabels;
+    private ArrayList<BufferedImage> frames;
     
     /** Creates a new instance of GifMaker */
     public GifMaker()
     {
-        this.encoder = new Gif89Encoder();
         this.frameData = null;
         this.frameLabels = null;
+        this.frames = new ArrayList<BufferedImage>();
         logger.debug("Created GifMaker");
     }
 
@@ -80,7 +81,7 @@ public class GifMaker extends PicMaker
         else
         {
             logger.debug("  ... colour scale already set, so creating image of frame");
-            this.encoder.addFrame(this.createFrame(data, label));
+            this.frames.add(this.createFrame(data, label));
         }
     }
 
@@ -101,20 +102,37 @@ public class GifMaker extends PicMaker
             for (int i = 0; i < this.frameData.size(); i++)
             {
                 logger.debug("    ... rendering frame {}", i);
-                this.encoder.addFrame(this.createFrame(this.frameData.get(i),
+                this.frames.add(this.createFrame(this.frameData.get(i),
                     this.frameLabels.get(i)));
             }
         }
-        if (this.encoder.getFrameCount() > 1)
+        logger.debug("Writing GIF to output stream ...");
+        AnimatedGifEncoder e = new AnimatedGifEncoder();
+        e.start(out);
+        if (this.frames.size() > 1)
         {
             logger.debug("Animated GIF ({} frames), setting loop count and delay",
-                this.encoder.getFrameCount());
+                this.frames.size());
             // this is an animated GIF.  Set to loop infinitely.
-            this.encoder.setLoopCount(-1);
-            this.encoder.setUniformDelay(15); // delay between frames in centiseconds
+            e.setRepeat(0);
+            e.setDelay(150); // delay between frames in milliseconds
         }
-        logger.debug("Writing GIF to output stream ...");
-        this.encoder.encode(out);
+        boolean firstTime = true;
+        for (BufferedImage frame : this.frames)
+        {
+            if (firstTime)
+            {
+                e.setSize(frame.getWidth(), frame.getHeight());
+                firstTime = false;
+            }
+            // Get the indices of each pixel in the image.  We do this after the
+            // frames have been created because we might have added a label to
+            // the image.
+            byte[] indices = ((DataBufferByte)frame.getRaster().getDataBuffer()).getData();
+            // The index of the transparent colour is 0 (if transparent=true)
+            e.addFrame(this.getRGBPalette(), indices, this.transparent ? 0 : -1);
+        }
+        e.finish();
         logger.debug("  ... written.");
     }
     

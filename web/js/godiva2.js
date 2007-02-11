@@ -481,9 +481,15 @@ function animationLoaded()
 {
     $('loadingAnimationDiv').style.visibility = 'hidden';
     $('mapOverlayDiv').style.visibility = 'visible';
+    if (essc_wms != null) {
+        essc_wms.setVisibility(false);
+    }
 }
 function hideAnimation()
 {
+    if (essc_wms != null) {
+        essc_wms.setVisibility(true);
+    }
     $('autoZoom').style.visibility = 'visible';
     $('hideAnimation').style.visibility = 'hidden';
     $('mapOverlayDiv').style.visibility = 'hidden';
@@ -528,7 +534,7 @@ function updateMap()
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
             baseURL + '/WMS.py', {layers: layerName, elevation: zValue, time: tValue,
             transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
-            opacity: opacity});
+            opacity: opacity, buffer: 1});
         map.addLayers([essc_wms]);
     } else {
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,

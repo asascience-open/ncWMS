@@ -79,7 +79,7 @@ public abstract class PicMaker
     private int opacity;
     // The fill value of the data.
     private float fillValue;
-    private boolean transparent;
+    protected boolean transparent;
     private int bgColor; // Background colour as an integer
     
     static
@@ -268,6 +268,77 @@ public abstract class PicMaker
     }
     
     /**
+     * @return the colour palette as an array of 256 * 3 bytes, i.e. 256 colours
+     * in RGB order
+     */
+    protected byte[] getRGBPalette()
+    {
+        byte[] palette = new byte[256 * 3];
+        
+        // Use the supplied background color
+        Color bg = new Color(this.bgColor);
+        palette[0] = (byte)bg.getRed();
+        palette[1] = (byte)bg.getGreen();
+        palette[2] = (byte)bg.getBlue();
+        
+        // Colour with index 1 is black (represents out-of-range data)
+        palette[3] = 0;
+        palette[4] = 0;
+        palette[5] = 0;
+        
+        int[] red =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  7, 23, 39, 55, 71, 87,103,
+           119,135,151,167,183,199,215,231,
+           247,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,246,228,211,193,175,158,140};
+        int[] green =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0, 11, 27, 43, 59, 75, 91,107,
+           123,139,155,171,187,203,219,235,
+           251,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0};
+        int[] blue =
+        {  143,159,175,191,207,223,239,
+           255,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0};
+        
+        for (int i = 2; i < 256; i++)
+        {
+            // There are 63 colours and 254 remaining slots
+            float index = (i - 2) * (62.0f / 253.0f);
+            if (i == 255)
+            {
+                palette[3*i]   = (byte)red[62];
+                palette[3*i+1] = (byte)green[62];
+                palette[3*i+2] = (byte)blue[62];
+            }
+            else
+            {
+                // We merge the colours from adjacent indices
+                float fromUpper = index - (int)index;
+                float fromLower = 1.0f - fromUpper;
+                palette[3*i]   = (byte)(fromLower * red[(int)index] + fromUpper * red[(int)index + 1]);
+                palette[3*i+1] = (byte)(fromLower * green[(int)index] + fromUpper * green[(int)index + 1]);
+                palette[3*i+2] = (byte)(fromLower * blue[(int)index] + fromUpper * blue[(int)index + 1]);
+            }
+        }
+        
+        return palette;
+    }
+    
+    /**
      * @return a rainbow colour map for this PicMaker's opacity and transparency
      * @todo To avoid multiplicity of objects, could statically create color models
      * for opacity=100 and transparency=true/false.
@@ -294,20 +365,13 @@ public abstract class PicMaker
             alpha = (byte)(2.55 * this.opacity);
         }
         
-        if (this.transparent)
-        {
-            // Colour with index 0 is fully transparent
-            r[0] = 0;   g[0] = 0;   b[0] = 0;   a[0] = 0;
-        }
-        else
-        {
-            // Use the supplied background color
-            Color bg = new Color(this.bgColor);
-            r[0] = (byte)bg.getRed();
-            g[0] = (byte)bg.getGreen();
-            b[0] = (byte)bg.getBlue();
-            a[0] = alpha;
-        }
+        // Use the supplied background color
+        Color bg = new Color(this.bgColor);
+        r[0] = (byte)bg.getRed();
+        g[0] = (byte)bg.getGreen();
+        b[0] = (byte)bg.getBlue();
+        a[0] = this.transparent ? 0 : alpha;
+        
         // Colour with index 1 is black (represents out-of-range data)
         r[1] = 0;   g[1] = 0;   b[1] = 0;   a[1] = alpha;
         
@@ -424,7 +488,6 @@ public abstract class PicMaker
             logger.debug("  ... added label");
         }
         logger.debug("  ... returning image");
-        
         return image;
     }
     
