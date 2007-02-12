@@ -117,8 +117,8 @@ def doGEarth2(req, params, config):
         raise WMSException("You must request exactly one STYLE per layer, or use"
            + " the default style for each layer with STYLES=")
     # Find the source of the requested data
-    location, varID, queryable = _getLocationAndVariableID(layers, config.datasets)
-    vars = datareader.getVariableMetadata(location)
+    dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
+    vars = datareader.getAllVariableMetadata(dataset)
 
     zValue = params.getParamValue("elevation", "")
     if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:

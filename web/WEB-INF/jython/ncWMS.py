@@ -8,7 +8,7 @@ from capabilities import getCapabilities
 from getmap import getMap
 from getfeatureinfo import getFeatureInfo
 from getmetadata import getMetadata
-from gearth import doGEarth
+from gearth import doGEarth2
 
 def wms(req):
     """ Entry point with mod_python """
@@ -51,7 +51,7 @@ def doWms(req, configFile, lastUpdateTime):
             getMetadata(req, config)
         elif request == "GetKML":
             # Used to get the top-level KML document
-            doGEarth(req, params, config)
+            doGEarth2(req, params, config)
         else:
             raise WMSException("Invalid operation")
     except WMSException, e:

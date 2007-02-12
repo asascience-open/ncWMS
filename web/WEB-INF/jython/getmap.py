@@ -61,7 +61,11 @@ def getMap(req, params, config):
     format = params.getParamValue("format").replace(" ", "+")
     # Get a picture making object for this MIME type: this will throw
     # an InvalidFormat exception if the format is not supported
-    picMaker = graphics.getPicMaker(format)
+    if format != _getGoogleEarthFormat():
+        picMaker = graphics.getPicMaker(format)
+    else:
+        class PicMaker: pass
+        picMaker = PicMaker() # Dirty hack to prevent later errors
 
     exception_format = params.getParamValue("exceptions", "XML")
     if exception_format not in getSupportedExceptionFormats():
@@ -143,8 +147,8 @@ def getMap(req, params, config):
 
         # Set a suggested filename in the header
         # "inline" means "don't force a download dialog box in web browser"
-        req.headers_out["Content-Disposition"] = "inline; filename=%s.kml" % layers[0].replace("/", "_")
         req.content_type = format
+        req.headers_out["Content-Disposition"] = "inline; filename=%s.kml" % layers[0].replace("/", "_")
 
         req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         req.write("<kml xmlns=\"http://earth.google.com/kml/2.0\">")
