@@ -49,20 +49,25 @@ import ucar.unidata.geoloc.LatLonPoint;
 public class NemoCoordAxis extends EnhancedCoordAxis
 {
     private static final Logger logger = Logger.getLogger(NemoCoordAxis.class);
+    private static enum ModelRes { ONE_DEGREE, ONE_QUARTER_DEGREE };
+    private static enum NemoAxis { I, J };
     
-    private static final int LUT_RES = 12;  // Resolution of the lookup table in points per degree
-    
-    public static final NemoCoordAxis I_AXIS;
-    public static final NemoCoordAxis J_AXIS;
+    public static final NemoCoordAxis ONE_DEGREE_I_AXIS;
+    public static final NemoCoordAxis ONE_DEGREE_J_AXIS;
+    public static final NemoCoordAxis ONE_QUARTER_DEGREE_I_AXIS;
+    public static final NemoCoordAxis ONE_QUARTER_DEGREE_J_AXIS;
     
     private short[] indices;
+    private int lutRes;
     
     static
     {
         try
         {
-            I_AXIS = createAxis("i");
-            J_AXIS = createAxis("j");
+            ONE_DEGREE_I_AXIS = createAxis(ModelRes.ONE_DEGREE, NemoAxis.I, 4);
+            ONE_DEGREE_J_AXIS = createAxis(ModelRes.ONE_DEGREE, NemoAxis.J, 4);
+            ONE_QUARTER_DEGREE_I_AXIS = createAxis(ModelRes.ONE_QUARTER_DEGREE, NemoAxis.I, 12);
+            ONE_QUARTER_DEGREE_J_AXIS = createAxis(ModelRes.ONE_QUARTER_DEGREE, NemoAxis.J, 12);
         }
         catch(IOException ioe)
         {
@@ -71,13 +76,24 @@ public class NemoCoordAxis extends EnhancedCoordAxis
         }
     }
     
-    private static final NemoCoordAxis createAxis(String axis) throws IOException
+    /**
+     * Creates a NemoCoordAxis for a NEMO dataset of a certain resolution
+     * @param res resolution of the model
+     * @param axis the axis (I or J)
+     * @param lutRes the (inverse of the) resolution of the look-up table
+     * (12 = 1/12 degree, 4 = 1/4 degree)
+     * @return a newly-created NemoCoordAxis
+     */
+    private static final NemoCoordAxis createAxis(ModelRes res, NemoAxis axis, int lutRes) throws IOException
     {
+        String resCode = (res == ModelRes.ONE_DEGREE) ? "1" : "025";
+        String axisCode = (axis == NemoAxis.I) ? "i" : "j";
+        
         // Read the relevant axis data from the lookup tables
         InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            "/uk/ac/rdg/resc/ncwms/datareader/ORCA025_" + LUT_RES + "x" + LUT_RES + ".zip");
+            "/uk/ac/rdg/resc/ncwms/datareader/ORCA" + resCode + "_" + lutRes + "x" + lutRes + ".zip");
         ZipInputStream zin = new ZipInputStream(in);
-        String filename = "ORCA025_" + axis + "lt_" + LUT_RES + "x" + LUT_RES + ".dat";
+        String filename = "ORCA" + resCode + "_" + axisCode + "lt_" + lutRes + "x" + lutRes + ".dat";
         BufferedReader reader = null;
         try
         {
@@ -100,7 +116,7 @@ public class NemoCoordAxis extends EnhancedCoordAxis
             reader = new BufferedReader(new InputStreamReader(zin));
             String line = null;
             int i = 0;
-            short[] indices = new short[(360 * LUT_RES) * (180 * LUT_RES - 1)];
+            short[] indices = new short[(360 * lutRes) * (180 * lutRes - 1)];
             do
             {
                 line = reader.readLine();
@@ -119,7 +135,7 @@ public class NemoCoordAxis extends EnhancedCoordAxis
             logger.debug("Read {} items of lookup data", i);
             // Garbage-collect to try to free some memory
             System.gc();
-            return new NemoCoordAxis(indices);
+            return new NemoCoordAxis(indices, lutRes);
         }
         catch(IOException ioe)
         {
@@ -142,25 +158,26 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     }
     
     /** Creates a new instance of NemoCoordAxis */
-    private NemoCoordAxis(short[] indices)
+    private NemoCoordAxis(short[] indices, int lutRes)
     {
         this.indices = indices;
+        this.lutRes = lutRes;
     }
     
     public int getIndex(LatLonPoint point)
     {
-        double minLat = -90.0 + (1.0 / LUT_RES);
-        double maxLat = 90.0 - (1.0 / LUT_RES);
+        double minLat = -90.0 + (1.0 / this.lutRes);
+        double maxLat = 90.0 - (1.0 / this.lutRes);
         if (point.getLatitude() < minLat || point.getLatitude() > maxLat)
         {
             return -1;
         }
         // TODO: use Math.round() instead of int()?
-        int latIndex = (int)((point.getLatitude() - minLat) * LUT_RES);
+        int latIndex = (int)((point.getLatitude() - minLat) * this.lutRes);
         double lon = point.getLongitude();
         if (lon < 0.0) lon += 360.0;
-        int lonIndex = (int)(lon * LUT_RES);
-        return this.indices[latIndex * (360 * LUT_RES) + lonIndex];
+        int lonIndex = (int)(lon * this.lutRes);
+        return this.indices[latIndex * (360 * this.lutRes) + lonIndex];
     }
     
 }

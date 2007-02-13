@@ -127,8 +127,17 @@ public class NemoDataReader extends DataReader
             // Now build the picture
             nc = getDataset(location);
             Variable var = nc.findVariable(vm.getId());
-            float scaleFactor = var.findAttribute("scale_factor").getNumericValue().floatValue();
-            float addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();
+            
+            float scaleFactor = 1.0f;
+            float addOffset = 0.0f;
+            if (var.findAttribute("scale_factor") != null)
+            {
+                scaleFactor = var.findAttribute("scale_factor").getNumericValue().floatValue();
+            }
+            if (var.findAttribute("add_offset") != null)
+            {
+                addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();
+            }
             float missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
 
@@ -159,13 +168,22 @@ public class NemoDataReader extends DataReader
 
                 // Read the scanline from the disk, from the first to the last x index
                 Array data = var.read(ranges);
-                short[] arr = (short[])data.copyTo1DJavaArray();
+                Object arrObj = data.copyTo1DJavaArray();
                 
                 for (int xIndex : xIndices)
                 {
                     for (int p : scanline.getPixelIndices(xIndex))
                     {
-                        short val = arr[xIndex - xIndices.firstElement()];
+                        float val;
+                        if (arrObj instanceof float[])
+                        {
+                            val = ((float[])arrObj)[xIndex - xIndices.firstElement()];
+                        }
+                        else
+                        {
+                            // We assume this is an array of shorts
+                            val = ((short[])arrObj)[xIndex - xIndices.firstElement()];
+                        }
                         // The missing value is calculated based on the compressed,
                         // not the uncompressed, data, despite the fact that it's
                         // recorded as a float
@@ -331,8 +349,17 @@ public class NemoDataReader extends DataReader
                     vm.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
                     
                     // Create the coordinate axes
-                    vm.setXaxis(NemoCoordAxis.I_AXIS);
-                    vm.setYaxis(NemoCoordAxis.J_AXIS);
+                    String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
+                    if (res.equals("one_degree"))
+                    {
+                        vm.setXaxis(NemoCoordAxis.ONE_DEGREE_I_AXIS);
+                        vm.setYaxis(NemoCoordAxis.ONE_DEGREE_J_AXIS);
+                    }
+                    else
+                    {
+                        vm.setXaxis(NemoCoordAxis.ONE_QUARTER_DEGREE_I_AXIS);
+                        vm.setYaxis(NemoCoordAxis.ONE_QUARTER_DEGREE_J_AXIS);
+                    }
                     
                     // Set the time axis
                     vm.setTvalues(tVals);
