@@ -69,6 +69,18 @@ public class DataChunk
     }
     
     /**
+     * Gets the value at the given i-j index in the chunk as a float.  (We don't 
+     * need greater precision for making pictures.)
+     * @param i the index of the required value in the chunk
+     * @param j the index of the required value in the chunk
+     */
+    public synchronized float getValue(int i, int j)
+    {
+        this.index.set(i, j);
+        return this.array.getFloat(this.index);
+    }
+    
+    /**
      * @return the number of data points in this chunk
      */
     public int getSize()
