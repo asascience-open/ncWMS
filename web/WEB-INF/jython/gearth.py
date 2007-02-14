@@ -14,7 +14,7 @@ else:
     import cdmsdataset as datareader
 
 from wmsExceptions import WMSException
-from getmap import _getBbox, _getGoogleEarthFormat, _getDatasetAndVariableID
+from getmap import _getBbox, _getDatasetAndVariableID
 
 def doGEarth(req, params, config):
     """ Generates the KML for display in Google Earth """

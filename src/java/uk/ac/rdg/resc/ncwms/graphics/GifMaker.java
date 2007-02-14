@@ -47,15 +47,15 @@ public class GifMaker extends PicMaker
 {
     private static final Logger logger = Logger.getLogger(GifMaker.class);
     
-    private ArrayList<float[]> frameData;
-    private ArrayList<String> frameLabels;
-    private ArrayList<BufferedImage> frames;
+    protected ArrayList<float[]> frameData;
+    protected ArrayList<String> tValues;
+    protected ArrayList<BufferedImage> frames;
     
     /** Creates a new instance of GifMaker */
     public GifMaker()
     {
         this.frameData = null;
-        this.frameLabels = null;
+        this.tValues = null;
         this.frames = new ArrayList<BufferedImage>();
         logger.debug("Created GifMaker");
     }
@@ -64,48 +64,32 @@ public class GifMaker extends PicMaker
      * Adds a frame to this animation.  If the colour scale hasn't yet been set
      * we cache the data and render the frames later
      */
-    public void addFrame(float[] data, String label) throws IOException
+    public void addFrame(float[] data, float[] bbox, String tValue) throws IOException
     {
-        logger.debug("Adding frame with label {}...", label);
+        logger.debug("Adding frame representing time {}...", tValue);
         if (this.isAutoScale())
         {
             logger.debug("  ... auto-scaling, so caching frame");
             if (this.frameData == null)
             {
                 this.frameData = new ArrayList<float[]>();
-                this.frameLabels = new ArrayList<String>();
+                this.tValues = new ArrayList<String>();
             }
             this.frameData.add(data);
-            this.frameLabels.add(label);
+            this.tValues.add(tValue);
         }
         else
         {
             logger.debug("  ... colour scale already set, so creating image of frame");
-            this.frames.add(this.createFrame(data, label));
+            this.frames.add(this.createFrame(data, tValue));
         }
     }
 
     public void writeImage(OutputStream out) throws IOException
     {
         logger.debug("writing GIF...");
-        if (this.frameData != null)
-        {
-            logger.debug("  ... we must set the colour scale");
-            // We have a cache of image data, which we need to turn into images
-            // First we set the colour scale correctly
-            for (float[] data : this.frameData)
-            {
-                this.adjustColourScaleForFrame(data);
-            }
-            logger.debug("  ... colour scale set, rendering stored frames...");
-            // Now we render the frames
-            for (int i = 0; i < this.frameData.size(); i++)
-            {
-                logger.debug("    ... rendering frame {}", i);
-                this.frames.add(this.createFrame(this.frameData.get(i),
-                    this.frameLabels.get(i)));
-            }
-        }
+        // Create the set of Images if we haven't already done so
+        this.createAllFrames();
         logger.debug("Writing GIF to output stream ...");
         AnimatedGifEncoder e = new AnimatedGifEncoder();
         e.start(out);
@@ -134,6 +118,46 @@ public class GifMaker extends PicMaker
         }
         e.finish();
         logger.debug("  ... written.");
+    }
+    
+    /**
+     * @return the number of frames that have been added
+     */
+    protected int getNumFrames()
+    {
+        if (this.frameData == null)
+        {
+            return this.frames == null ? 0 : this.frames.size();
+        }
+        else
+        {
+            return this.frameData.size();
+        }
+    }
+    
+    /**
+     * Creates the array of BufferedImages if we have not already done so.
+     */
+    protected void createAllFrames()
+    {
+        if (this.frameData != null)
+        {
+            logger.debug("  ... we must set the colour scale");
+            // We have a cache of image data, which we need to turn into images
+            // First we set the colour scale correctly
+            for (float[] data : this.frameData)
+            {
+                this.adjustColourScaleForFrame(data);
+            }
+            logger.debug("  ... colour scale set, rendering stored frames...");
+            // Now we render the frames
+            for (int i = 0; i < this.frameData.size(); i++)
+            {
+                logger.debug("    ... rendering frame {}", i);
+                this.frames.add(this.createFrame(this.frameData.get(i),
+                    this.tValues.get(i)));
+            }
+        }
     }
     
 }

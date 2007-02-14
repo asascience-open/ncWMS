@@ -46,22 +46,22 @@ public class SimplePicMaker extends PicMaker
 {
     // Data to turn into an image
     protected float[] data;
-    protected String label;
+    protected String tValue;
     
     public SimplePicMaker()
     {
         this.data = null;
-        this.label = "";
+        this.tValue = "";
     }
 
-    public void addFrame(float[] data, String label) throws IOException
+    public void addFrame(float[] data, float[] bbox, String tValue) throws IOException
     {
         if (this.data != null)
         {
             // TODO Throw an Exception: this does not support animations
         }
         this.data = data;
-        this.label = label;
+        this.tValue = tValue;
     }
 
     public void writeImage(OutputStream out) throws IOException
@@ -71,7 +71,7 @@ public class SimplePicMaker extends PicMaker
         {
             this.adjustColourScaleForFrame(this.data);
         }
-        BufferedImage im = this.createFrame(this.data, this.label);
+        BufferedImage im = this.createFrame(this.data, this.tValue);
         // Create the image type from the mime type (e.g. "image/png" gives "png")
         String imageType = this.mimeType.split("/")[1];
         ImageIO.write(im, imageType, out);

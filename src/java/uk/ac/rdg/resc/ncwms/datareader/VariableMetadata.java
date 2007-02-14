@@ -44,7 +44,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
  */
 public class VariableMetadata
 {
-    private static DateFormatter dateFormatter = new DateFormatter();
+    public static DateFormatter dateFormatter = new DateFormatter();
     
     private String id;
     private String title;

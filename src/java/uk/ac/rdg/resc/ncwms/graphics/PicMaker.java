@@ -87,6 +87,7 @@ public abstract class PicMaker
         picMakers = new Hashtable<String, Class>();
         picMakers.put("image/png", SimplePicMaker.class);
         picMakers.put("image/gif", GifMaker.class);
+        picMakers.put("application/vnd.google-earth.kmz", KmzMaker.class);
     }
     
     /**
@@ -514,12 +515,13 @@ public abstract class PicMaker
      * Adds a new frame to the image.  The scale must be set (with setScaleMin()
      * and setScaleMax()) before calling this method.
      * @param data Array of data points
-     * @param Label for this frame (will be added to the bottom left of the image)
+     * @param bbox Array of four numbers representing the bounding box of the image
+     * @param the time value for this frame in ISO8601 format
      * @throws IOException if there was an error creating the frame
      * @throws Something if a frame already exists and this image type does not
      * support multiple frames
      */
-    public abstract void addFrame(float[] data, String label) throws IOException;
+    public abstract void addFrame(float[] data, float[] bbox, String tValue) throws IOException;
     
     /**
      * Encodes and writes the image to the given OutputStream

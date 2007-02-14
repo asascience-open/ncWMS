@@ -71,7 +71,7 @@ def getFrontPage(config):
         for format in getmap.getSupportedImageFormats():
             doc.write("<td>")
             for varID in vars.keys():
-                doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s" % (prefix, format))
+                doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s&TRANSPARENT=true" % (prefix, format))
                 doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                 bbox = vars[varID].bbox
                 doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))

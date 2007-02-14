@@ -21,11 +21,7 @@ def getLayerLimit():
 
 def getSupportedImageFormats():
     """ returns the image formats supported by this operation """
-    return graphics.getSupportedImageFormats() + [_getGoogleEarthFormat()]
-
-def _getGoogleEarthFormat():
-    """ MIME type for KML """
-    return "application/vnd.google-earth.kml+xml"
+    return graphics.getSupportedImageFormats()
 
 def getSupportedExceptionFormats():
     """ The exception formats supported by this operation """
@@ -61,11 +57,7 @@ def getMap(req, params, config):
     format = params.getParamValue("format").replace(" ", "+")
     # Get a picture making object for this MIME type: this will throw
     # an InvalidFormat exception if the format is not supported
-    if format != _getGoogleEarthFormat():
-        picMaker = graphics.getPicMaker(format)
-    else:
-        class PicMaker: pass
-        picMaker = PicMaker() # Dirty hack to prevent later errors
+    picMaker = graphics.getPicMaker(format)
 
     exception_format = params.getParamValue("exceptions", "XML")
     if exception_format not in getSupportedExceptionFormats():
@@ -138,81 +130,26 @@ def getMap(req, params, config):
     except:
         raise WMSException("The OPACITY parameter must be a valid number in the range 0 to 100 inclusive")
 
-    if format == _getGoogleEarthFormat():
-        # This is a special case: we don't actually render the image,
-        # we just return a KML document containing a link to the image
+    # Generate a grid of lon,lat points, one for each image pixel
+    bbox = _getBbox(params)
+    grid = _getGrid(params, bbox, config)
+    picMaker.picWidth, picMaker.picHeight = grid.width, grid.height
+    # Read the data for the image frames
+    # We do this as one large array so that the picture render can
+    # automatically generate a colour scale if necessary
+    picMaker.fillValue = _getFillValue()
+    for tIndex in tIndices:
+        # TODO: see if we already have this image in cache
+        picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
+        # TODO: cache the data array
+        # Only add the label if this is an animation
         if len(tIndices) > 1:
-            # TODO: fix this - animations in GE are now possible!
-            raise WMSException("Cannot display animations in Google Earth")
-
-        # Set a suggested filename in the header
-        # "inline" means "don't force a download dialog box in web browser"
-        req.content_type = format
-        req.headers_out["Content-Disposition"] = "inline; filename=%s.kml" % layers[0].replace("/", "_")
-
-        req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        req.write("<kml xmlns=\"http://earth.google.com/kml/2.0\">")
-        req.write("<Folder>")
-        req.write("<visibility>1</visibility>")
-        req.write("<GroundOverlay>")
-        #if tValue != "":
-            # TODO: GE doesn't understand something about ISO times
-            #req.write("<TimeStamp><when>%s</when></TimeStamp>" % tValue)
-        req.write("<name>%s</name>" % vars[varID].title)
-        req.write("<description>%s</description>" % vars[varID].abstract)
-        req.write("<visibility>1</visibility>")
-
-        req.write("<Icon><href>")
-        req.write("http://%s%s?SERVICE=WMS&amp;REQUEST=GetMap" %
-            (req.server.server_hostname, req.unparsed_uri.split("?")[0]))
-        req.write("&amp;VERSION=%s" % wmsUtils.getWMSVersion())
-        req.write("&amp;LAYERS=%s" % layers[0])
-        if styles == ['']:
-            req.write("&amp;STYLES=")
+            tValue = iso8601.tostring(vars[varID].tvalues[tIndex])
         else:
-            req.write("&amp;STYLES=%s" % styles[i])
-        # TODO: get the FORMAT string properly
-        req.write("&amp;FORMAT=image/png&amp;CRS=CRS:84&amp;TRANSPARENT=true")
-        bboxEls = tuple([str(f) for f in _getBbox(params)])
-        req.write("&amp;BBOX=%s,%s,%s,%s" % bboxEls)
-        if zValue != "":
-            req.write("&amp;ELEVATION=%s" % zValue)
-        if params.getParamValue("time", "") != "":
-            req.write("&amp;TIME=%s" % params.getParamValue("time", ""))
-        # TODO get width and height more intelligently
-        req.write("&amp;WIDTH=500&amp;HEIGHT=500")
-        if not (scaleMin == 0.0 and scaleMax == 0.0):
-            # TODO add an auto-scaled layer
-            req.write("&amp;SCALE=%s,%s" % (scaleMin, scaleMax))
-        req.write("</href></Icon>")
-
-        req.write("<LatLonBox id=\"1\">")
-        req.write("<west>%s</west><south>%s</south><east>%s</east><north>%s</north>" % bboxEls)
-        req.write("<rotation>0</rotation>")
-        req.write("</LatLonBox>")
-        req.write("</GroundOverlay>")
-        req.write("</Folder>")
-        req.write("</kml>")
-    else:
-        # Generate a grid of lon,lat points, one for each image pixel
-        grid = _getGrid(params, config)
-        picMaker.picWidth, picMaker.picHeight = grid.width, grid.height
-        # Read the data for the image frames
-        # We do this as one large array so that the picture render can
-        # automatically generate a colour scale if necessary
-        picMaker.fillValue = _getFillValue()
-        for tIndex in tIndices:
-            # TODO: see if we already have this image in cache
-            picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
-            # TODO: cache the data array
-            # Only add the label if this is an animation
-            if len(tIndices) > 1:
-                label = iso8601.tostring(vars[varID].tvalues[tIndex])
-            else:
-                label = ""
-            picMaker.addFrame(picData, label)
-        # Write the image to the client
-        graphics.writePicture(req, picMaker)
+            tValue = ""
+        picMaker.addFrame(picData, bbox, tValue)
+    # Write the image to the client
+    graphics.writePicture(req, picMaker)
 
     return
 
@@ -235,10 +172,8 @@ def _getBbox(params):
         raise WMSException("Invalid bounding box format")
     return bbox
 
-def _getGrid(params, config):
+def _getGrid(params, bbox, config):
     """ Gets the grid for the map """
-    # Get the bounding box
-    bbox = _getBbox(params)
 
     # Get the image width and height
     try:
