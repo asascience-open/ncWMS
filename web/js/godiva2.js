@@ -436,11 +436,13 @@ function setFirstAnimationFrame()
 {
     $('firstFrame').innerHTML = $('tValues').value;
     $('animation').style.visibility = 'visible';
+    setGEarthURL();
 }
 function setLastAnimationFrame()
 {
     $('lastFrame').innerHTML = $('tValues').value;
     $('animation').style.visibility = 'visible';
+    setGEarthURL();
 }
 function createAnimation()
 {
@@ -550,10 +552,36 @@ function updateMap()
     var bounds = new OpenLayers.Bounds(parseFloat(bboxEls[0]), 
         parseFloat(bboxEls[1]), parseFloat(bboxEls[2]), parseFloat(bboxEls[3]));
     var imageURL = essc_wms.getURL(bounds);
-    $('imageURL').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>'
-        + '&nbsp;&nbsp;<a href=\'WMS.py?SERVICE=WMS&REQUEST=GetKML&LAYERS=' + layerName + 
-        '&STYLES=&ELEVATION=' + zValue + '&TIME=' + tValue + 
-        '&SCALE=' + scaleMinVal + ',' + scaleMaxVal + '\'>Open in Google Earth</a>';
+    $('testImage').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>';
+    setGEarthURL();
+}
+
+// Sets the URL for "Open in Google Earth"
+function setGEarthURL()
+{
+    // Get a URL for a WMS request that covers the current map extent
+    var urlEls = essc_wms.getURL(map.getExtent()).split('&');
+    var newURL = urlEls[0];
+    for (var i = 1; i < urlEls.length; i++) {
+        if (urlEls[i].startsWith('FORMAT')) {
+            // Make sure the FORMAT is set correctly
+            newURL += '&FORMAT=application/vnd.google-earth.kmz';
+        } else if (urlEls[i].startsWith('TIME') && 
+                   $('firstFrame').innerHTML != '' &&
+                   $('lastFrame').innerHTML != '') {
+            // If we can make an animation, do so
+            newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+        } else if (!urlEls[i].startsWith('OPACITY')) {
+            // We remove the OPACITY ARGUMENT as Google Earth allows opacity
+            // to be controlled in the client
+            newURL += '&' + urlEls[i];
+        }
+    }
+    if ($('firstFrame').innerHTML != '' && $('lastFrame').innerHTML != '') {
+        $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open animation in Google Earth</a>';
+    } else {
+        $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open in Google Earth</a>';
+    }
 }
 
 // Formats the given value to numSigFigs significant figures

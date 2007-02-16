@@ -173,10 +173,9 @@ div.map
     visibility: hidden;
 }
 
-#imageURL
+div.underMap
 {
     position: absolute;
-    left: 0px;
     top: 430px;
 }
 
