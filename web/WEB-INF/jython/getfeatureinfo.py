@@ -14,7 +14,7 @@ else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
 from wmsExceptions import *
-from getmap import _getGrid, _checkVersion, _getDatasetAndVariableID, _getFillValue
+from getmap import _getBbox, _getGrid, _checkVersion, _getDatasetAndVariableID, _getFillValue
 
 def getSupportedFormats():
     """ returns list of output formats supported by GetFeatureInfo """
@@ -27,7 +27,8 @@ def getFeatureInfo(req, params, config):
        config = configuration object """
     
     _checkVersion(params)
-    grid = _getGrid(params, config)
+    bbox = _getBbox(params)
+    grid = _getGrid(params, bbox, config)
 
     query_layers = params.getParamValue("query_layers").split(",")
     if len(query_layers) > 1:
