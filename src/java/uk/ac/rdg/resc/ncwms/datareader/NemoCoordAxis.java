@@ -49,8 +49,6 @@ import ucar.unidata.geoloc.LatLonPoint;
 public class NemoCoordAxis extends EnhancedCoordAxis
 {
     private static final Logger logger = Logger.getLogger(NemoCoordAxis.class);
-    private static enum ModelRes { ONE_DEGREE, ONE_QUARTER_DEGREE };
-    private static enum NemoAxis { I, J };
     
     public static final NemoCoordAxis ONE_DEGREE_I_AXIS;
     public static final NemoCoordAxis ONE_DEGREE_J_AXIS;
@@ -64,10 +62,10 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     {
         try
         {
-            ONE_DEGREE_I_AXIS = createAxis(ModelRes.ONE_DEGREE, NemoAxis.I, 4);
-            ONE_DEGREE_J_AXIS = createAxis(ModelRes.ONE_DEGREE, NemoAxis.J, 4);
-            ONE_QUARTER_DEGREE_I_AXIS = createAxis(ModelRes.ONE_QUARTER_DEGREE, NemoAxis.I, 12);
-            ONE_QUARTER_DEGREE_J_AXIS = createAxis(ModelRes.ONE_QUARTER_DEGREE, NemoAxis.J, 12);
+            ONE_DEGREE_I_AXIS = createAxis("1", "i", 4);
+            ONE_DEGREE_J_AXIS = createAxis("1", "j", 4);
+            ONE_QUARTER_DEGREE_I_AXIS = createAxis("025", "i", 12);
+            ONE_QUARTER_DEGREE_J_AXIS = createAxis("025", "j", 12);
         }
         catch(IOException ioe)
         {
@@ -78,17 +76,14 @@ public class NemoCoordAxis extends EnhancedCoordAxis
     
     /**
      * Creates a NemoCoordAxis for a NEMO dataset of a certain resolution
-     * @param res resolution of the model
-     * @param axis the axis (I or J)
+     * @param resCode resolution of the model "1" or "025"
+     * @param axisCode the axis "i" or "j"
      * @param lutRes the (inverse of the) resolution of the look-up table
      * (12 = 1/12 degree, 4 = 1/4 degree)
      * @return a newly-created NemoCoordAxis
      */
-    private static final NemoCoordAxis createAxis(ModelRes res, NemoAxis axis, int lutRes) throws IOException
-    {
-        String resCode = (res == ModelRes.ONE_DEGREE) ? "1" : "025";
-        String axisCode = (axis == NemoAxis.I) ? "i" : "j";
-        
+    private static final NemoCoordAxis createAxis(String resCode, String axisCode, int lutRes) throws IOException
+    {        
         // Read the relevant axis data from the lookup tables
         InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(
             "/uk/ac/rdg/resc/ncwms/datareader/ORCA" + resCode + "_" + lutRes + "x" + lutRes + ".zip");
