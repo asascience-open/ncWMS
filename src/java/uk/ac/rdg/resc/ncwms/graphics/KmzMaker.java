@@ -59,33 +59,48 @@ public class KmzMaker extends GifMaker
     public KmzMaker()
     {
         this.kml = new StringBuffer();
-        this.kml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        this.kml.append(System.getProperty("line.separator"));
-        this.kml.append("<kml xmlns=\"http://earth.google.com/kml/2.0\">");
-        this.kml.append("<Folder>");
-        this.kml.append("<visibility>1</visibility>");
     }
 
     public void addFrame(float[] data, float[] bbox, String tValue) throws IOException
     {
         // GifMaker.addFrame() creates the Image if it can, otherwise it stores the data
         super.addFrame(data, bbox, tValue);
+        int frameIndex = this.getNumFrames() - 1;
+        
+        if (frameIndex == 0)
+        {
+            // This is the first frame.  Add the KML header and folder metadata
+            this.kml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            this.kml.append(System.getProperty("line.separator"));
+            this.kml.append("<kml xmlns=\"http://earth.google.com/kml/2.0\">");
+            this.kml.append("<Folder>");
+            this.kml.append("<visibility>1</visibility>");
+            this.kml.append("<name>" + this.var.getDatasetId() + ", " +
+                this.var.getId() + "</name>");
+            this.kml.append("<description>" + this.var.getDatasetTitle() + ", "
+                + this.var.getTitle() + ": " + this.var.getAbstract() +
+                "</description>");
+        }
+        
         this.kml.append("<GroundOverlay>");
         // TODO: get name and description properly
-        this.kml.append("<name>Name goes here</name>");
-        this.kml.append("<description>Description goes here</description>");
         if (tValue != null && !tValue.equals(""))
         {
-            // We must make sure the ISO8601 timestamp is full and includes seconds,
-            // otherwise Google Earth gets confused
+            this.kml.append("<name>Time: " + tValue + "</name>");
+            // We must make sure the ISO8601 timestamp is full and includes
+            // seconds, otherwise Google Earth gets confused.  This is why we
+            // convert to a Date and back again.
             Date date = VariableMetadata.dateFormatter.getISODate(tValue);
             this.kml.append("<TimeStamp><when>" +
                 VariableMetadata.dateFormatter.toDateTimeStringISO(date) +
                 "</when></TimeStamp>");
         }
+        else
+        {
+            this.kml.append("<name>Frame " + frameIndex + "</name>");
+        }
         this.kml.append("<visibility>1</visibility>");
         
-        int frameIndex = this.getNumFrames() - 1;
         this.kml.append("<Icon><href>" + getPicFileName(frameIndex) + "</href></Icon>");
         
         this.kml.append("<LatLonBox id=\"" + frameIndex + "\">");

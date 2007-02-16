@@ -17,5 +17,4 @@ def getPicMaker(mimeType):
 
 def writePicture(req, picMaker):
     """ Writes the picture back to the client """
-    req.content_type = picMaker.mimeType
     picMaker.writeImage(req.getOutputStream())

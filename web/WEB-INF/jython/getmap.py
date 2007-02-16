@@ -70,10 +70,12 @@ def getMap(req, params, config):
     # Find the source of the requested data
     dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
     # Get the metadata
-    vars = datareader.getAllVariableMetadata(dataset)
+    var = datareader.getAllVariableMetadata(dataset)[varID]
+    var.datasetId, var.datasetTitle = dataset.id, dataset.title
+    picMaker.var = var # This is used to create descriptions in the KML
 
     # Find the requested index/indices along the time axis
-    if vars[varID].tvalues is None:
+    if var.tvalues is None:
         # Ignore any time value that was given by the client (TODO OK?)
         tIndices = [0] # This layer has no time dimension
     else:
@@ -86,13 +88,13 @@ def getMap(req, params, config):
             startStopPeriod = tSpec.split("/")
             if len(startStopPeriod) == 1:
                 # This is a single time value
-                tIndex = vars[varID].findTIndex(startStopPeriod[0])
+                tIndex = var.findTIndex(startStopPeriod[0])
                 tIndices.append(tIndex)
             elif len(startStopPeriod) == 2:
                 # Extract all time values from start to stop inclusive
                 start, stop = startStopPeriod
-                startIndex = vars[varID].findTIndex(startStopPeriod[0])
-                stopIndex = vars[varID].findTIndex(startStopPeriod[1])
+                startIndex = var.findTIndex(startStopPeriod[0])
+                stopIndex = var.findTIndex(startStopPeriod[1])
                 for i in xrange(startIndex, stopIndex + 1):
                     tIndices.append(i)
             elif len(startStopPeriod) == 3:
@@ -142,11 +144,14 @@ def getMap(req, params, config):
         # TODO: cache the data array
         # Only add the label if this is an animation
         if len(tIndices) > 1:
-            tValue = iso8601.tostring(vars[varID].tvalues[tIndex])
+            tValue = iso8601.tostring(var.tvalues[tIndex])
         else:
             tValue = ""
         picMaker.addFrame(picData, bbox, tValue)
     # Write the image to the client
+    req.content_type = picMaker.mimeType
+    if picMaker.mimeType == "application/vnd.google-earth.kmz":
+        req.headers_out["Content-Disposition"] = "inline; filename=%s_%s.kmz" % (dataset.id, varID)
     graphics.writePicture(req, picMaker)
 
     return

@@ -59,6 +59,8 @@ public class VariableMetadata
     private double validMax;
     private EnhancedCoordAxis xaxis;
     private EnhancedCoordAxis yaxis;
+    private String datasetId;
+    private String datasetTitle;
     
     /** Creates a new instance of VariableMetadata */
     VariableMetadata()
@@ -201,6 +203,26 @@ public class VariableMetadata
     public void setYaxis(EnhancedCoordAxis yaxis)
     {
         this.yaxis = yaxis;
+    }
+
+    public String getDatasetId()
+    {
+        return datasetId;
+    }
+
+    public void setDatasetId(String datasetId)
+    {
+        this.datasetId = datasetId;
+    }
+
+    public String getDatasetTitle()
+    {
+        return datasetTitle;
+    }
+
+    public void setDatasetTitle(String datasetTitle)
+    {
+        this.datasetTitle = datasetTitle;
     }
     
     /**

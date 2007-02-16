@@ -88,6 +88,7 @@ def _getDatasets(config):
         line = config.get('datasets', dsID)
         els = line.split(",")
         dataset = Dataset()
+        dataset.id = dsID
         dataset.title = els[0].strip()
         dataset.location = els[1].strip()
         dataset.queryable = 1

@@ -43,6 +43,7 @@ import java.io.OutputStream;
 import java.util.Hashtable;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
@@ -81,6 +82,7 @@ public abstract class PicMaker
     private float fillValue;
     protected boolean transparent;
     private int bgColor; // Background colour as an integer
+    protected VariableMetadata var;
     
     static
     {
@@ -509,6 +511,16 @@ public abstract class PicMaker
         {
             return (byte)(((253.0f / (this.scaleMax - this.scaleMin)) * (value - this.scaleMin)) + 2);
         }
+    }
+
+    public VariableMetadata getVar()
+    {
+        return var;
+    }
+
+    public void setVar(VariableMetadata var)
+    {
+        this.var = var;
     }
     
     /**
