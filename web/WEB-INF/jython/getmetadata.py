@@ -25,7 +25,8 @@ def getMetadata(req, config):
         req.content_type = "text/html"
         req.write(getFrontPage(config))
     elif metadataItem == "datasets":
-        req.write(getDatasetsDiv(config))
+        filter = params.getParamValue("filter")
+        req.write(getDatasetsDiv(config, filter))
     elif metadataItem == "variables":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
@@ -101,18 +102,20 @@ def getFrontPage(config):
     doc.close()
     return s
 
-def getDatasetsDiv(config):
+def getDatasetsDiv(config, filter=""):
     """ returns a string with a set of divs representing the datasets.
-        Quick and dirty. """
+        Quick and dirty. Only returns divs that start with the filter
+        string """
     str = StringIO()
     datasets = config.datasets
     for ds in datasets.keys():
-        str.write("<div id=\"%sDiv\">" % ds)
-        str.write("<div id=\"%s\">%s</div>" % (ds, datasets[ds].title))
-        str.write("<div id=\"%sContent\">" % ds)
-        str.write("Variables in the %s dataset will appear here" % datasets[ds].title)
-        str.write("</div>")
-        str.write("</div>")
+        if ds.startswith(filter):
+            str.write("<div id=\"%sDiv\">" % ds)
+            str.write("<div id=\"%s\">%s</div>" % (ds, datasets[ds].title))
+            str.write("<div id=\"%sContent\">" % ds)
+            str.write("Variables in the %s dataset will appear here" % datasets[ds].title)
+            str.write("</div>")
+            str.write("</div>")
     s = str.getvalue()
     str.close()
     return s

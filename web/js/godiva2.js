@@ -85,6 +85,8 @@ window.onload = function()
     // Add a listener for GetFeatureInfo
     map.events.register('click', map, getFeatureInfo);
     
+    var filter = '';
+    // see if we are recreating a view from a permalink
     if (window.location.search != '') {
         autoLoad = new Object();
         autoLoad.dataset = null;
@@ -100,13 +102,17 @@ window.onload = function()
                     autoLoad.dataset = keyAndVal[1];
                 } else if (keyAndVal[0] == 'variable') {
                     autoLoad.variable = keyAndVal[1];
+                } else if (keyAndVal[0] == 'filter') {
+                    // we must adapt the site for this brand (e.g. by showing only
+                    // certain datasets)
+                    filter = keyAndVal[1];
                 }
             }
         }
     }       
 
     // Load the list of datasets to populate the left-hand menu
-    loadDatasets('accordionDiv');
+    loadDatasets('accordionDiv', filter);
 }
 
 // Event handler for when a user clicks on a map
@@ -154,9 +160,9 @@ function popUp(URL)
 }
 
 // Populates the left-hand menu with a set of datasets
-function loadDatasets(dsDivId)
+function loadDatasets(dsDivId, filter)
 {
-    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=datasets',
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=datasets&filter=' + filter,
         function(req) {
             $(dsDivId).innerHTML = req.responseText;
             var accordion = new Rico.Accordion (
