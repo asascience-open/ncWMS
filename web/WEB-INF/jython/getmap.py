@@ -138,18 +138,19 @@ def getMap(req, params, config):
     picMaker.picWidth, picMaker.picHeight = grid.width, grid.height
     # Read the data for the image frames
     picMaker.fillValue = _getFillValue()
+    animation = len(tIndices) > 1
     for tIndex in tIndices:
         # TODO: see if we already have this image in cache
         picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
         # TODO: cache the data array
-        # Only add the label if this is an animation
-        if len(tIndices) > 1:
-            tValue = iso8601.tostring(var.tvalues[tIndex])
-        else:
+        if var.tvalues is None:
             tValue = ""
-        picMaker.addFrame(picData, bbox, tValue)
+        else:
+            tValue = iso8601.tostring(var.tvalues[tIndex])
+        picMaker.addFrame(picData, bbox, zValue, tValue, animation)
     # Write the image to the client
     req.content_type = picMaker.mimeType
+    # If this is a KMZ file give it a sensible filename
     if picMaker.mimeType == "application/vnd.google-earth.kmz":
         req.headers_out["Content-Disposition"] = "inline; filename=%s_%s.kmz" % (dataset.id, varID)
     graphics.writePicture(req, picMaker)

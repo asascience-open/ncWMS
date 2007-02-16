@@ -53,7 +53,7 @@ public class KmzMaker extends GifMaker
     private StringBuffer kml; // The KML that accompanies the images
     
     private static final String PICNAME = "frame";
-    private static final String PICEXT = "png";
+    private static final String PICEXT  = "png";
     
     /** Creates a new instance of KmzMaker */
     public KmzMaker()
@@ -61,10 +61,14 @@ public class KmzMaker extends GifMaker
         this.kml = new StringBuffer();
     }
 
-    public void addFrame(float[] data, float[] bbox, String tValue) throws IOException
+    public void addFrame(float[] data, float[] bbox, String zValue,
+        String tValue, boolean isAnimation) throws IOException
     {
         // GifMaker.addFrame() creates the Image if it can, otherwise it stores the data
-        super.addFrame(data, bbox, tValue);
+        // Each individual frame is separate and not part of an animation: setting
+        // isAnimation = false prevents the time from being added to the frames
+        // as labels
+        super.addFrame(data, bbox, zValue, tValue, false);
         int frameIndex = this.getNumFrames() - 1;
         
         if (frameIndex == 0)
@@ -83,22 +87,42 @@ public class KmzMaker extends GifMaker
         }
         
         this.kml.append("<GroundOverlay>");
-        // TODO: get name and description properly
+        String timestamp = null;
+        String z = null;
         if (tValue != null && !tValue.equals(""))
         {
-            this.kml.append("<name>Time: " + tValue + "</name>");
             // We must make sure the ISO8601 timestamp is full and includes
             // seconds, otherwise Google Earth gets confused.  This is why we
             // convert to a Date and back again.
             Date date = VariableMetadata.dateFormatter.getISODate(tValue);
-            this.kml.append("<TimeStamp><when>" +
-                VariableMetadata.dateFormatter.toDateTimeStringISO(date) +
-                "</when></TimeStamp>");
+            timestamp = VariableMetadata.dateFormatter.toDateTimeStringISO(date);
+            this.kml.append("<TimeStamp><when>" + timestamp + "</when></TimeStamp>");
+        }
+        if (zValue != null && !zValue.equals("") && this.var.getZvalues() != null)
+        {
+            z = "";
+            if (timestamp != null) z += "<br />";
+            z += "Elevation: " + zValue + " " + this.var.getZunits();
+        }
+        this.kml.append("<name>");
+        if (timestamp == null && z == null)
+        {
+            this.kml.append("Frame " + frameIndex);
         }
         else
         {
-            this.kml.append("<name>Frame " + frameIndex + "</name>");
+            this.kml.append("<![CDATA[");
+            if (timestamp != null)
+            {
+                this.kml.append("Time: " + timestamp);
+            }
+            if (z != null)
+            {
+                this.kml.append(z);
+            }
+            this.kml.append("]]>");
         }
+        this.kml.append("</name>");
         this.kml.append("<visibility>1</visibility>");
         
         this.kml.append("<Icon><href>" + getPicFileName(frameIndex) + "</href></Icon>");
@@ -122,7 +146,8 @@ public class KmzMaker extends GifMaker
         ZipOutputStream zipOut = new ZipOutputStream(out);
         
         // Write the KML file: todo get filename properly
-        ZipEntry kmlEntry = new ZipEntry("test.kml");
+        ZipEntry kmlEntry = new ZipEntry(this.var.getDatasetId() + "_" +
+            this.var.getId() + ".kml");
         kmlEntry.setTime(System.currentTimeMillis());
         zipOut.putNextEntry(kmlEntry);
         zipOut.write(this.kml.toString().getBytes());

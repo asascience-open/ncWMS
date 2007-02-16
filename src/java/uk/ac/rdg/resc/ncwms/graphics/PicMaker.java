@@ -528,12 +528,15 @@ public abstract class PicMaker
      * and setScaleMax()) before calling this method.
      * @param data Array of data points
      * @param bbox Array of four numbers representing the bounding box of the image
-     * @param the time value for this frame in ISO8601 format
+     * @param zValue The elevation value for this frame
+     * @param tValue the time value for this frame in ISO8601 format
+     * @param isAnimation True if this frame is part of an animation
      * @throws IOException if there was an error creating the frame
      * @throws Something if a frame already exists and this image type does not
      * support multiple frames
      */
-    public abstract void addFrame(float[] data, float[] bbox, String tValue) throws IOException;
+    public abstract void addFrame(float[] data, float[] bbox, String zValue,
+        String tValue, boolean isAnimation) throws IOException;
     
     /**
      * Encodes and writes the image to the given OutputStream

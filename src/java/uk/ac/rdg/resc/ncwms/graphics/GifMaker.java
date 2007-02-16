@@ -48,14 +48,14 @@ public class GifMaker extends PicMaker
     private static final Logger logger = Logger.getLogger(GifMaker.class);
     
     protected ArrayList<float[]> frameData;
-    protected ArrayList<String> tValues;
+    protected ArrayList<String> labels;
     protected ArrayList<BufferedImage> frames;
     
     /** Creates a new instance of GifMaker */
     public GifMaker()
     {
         this.frameData = null;
-        this.tValues = null;
+        this.labels = null;
         this.frames = new ArrayList<BufferedImage>();
         logger.debug("Created GifMaker");
     }
@@ -64,24 +64,26 @@ public class GifMaker extends PicMaker
      * Adds a frame to this animation.  If the colour scale hasn't yet been set
      * we cache the data and render the frames later
      */
-    public void addFrame(float[] data, float[] bbox, String tValue) throws IOException
+    public void addFrame(float[] data, float[] bbox, String zValue,
+        String tValue, boolean isAnimation) throws IOException
     {
         logger.debug("Adding frame representing time {}...", tValue);
+        String label = isAnimation ? tValue : "";
         if (this.isAutoScale())
         {
             logger.debug("  ... auto-scaling, so caching frame");
             if (this.frameData == null)
             {
                 this.frameData = new ArrayList<float[]>();
-                this.tValues = new ArrayList<String>();
+                this.labels = new ArrayList<String>();
             }
             this.frameData.add(data);
-            this.tValues.add(tValue);
+            this.labels.add(label);
         }
         else
         {
             logger.debug("  ... colour scale already set, so creating image of frame");
-            this.frames.add(this.createFrame(data, tValue));
+            this.frames.add(this.createFrame(data, label));
         }
     }
 
@@ -155,7 +157,7 @@ public class GifMaker extends PicMaker
             {
                 logger.debug("    ... rendering frame {}", i);
                 this.frames.add(this.createFrame(this.frameData.get(i),
-                    this.tValues.get(i)));
+                    this.labels.get(i)));
             }
         }
     }
