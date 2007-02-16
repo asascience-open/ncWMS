@@ -135,8 +135,6 @@ def getMap(req, params, config):
     grid = _getGrid(params, bbox, config)
     picMaker.picWidth, picMaker.picHeight = grid.width, grid.height
     # Read the data for the image frames
-    # We do this as one large array so that the picture render can
-    # automatically generate a colour scale if necessary
     picMaker.fillValue = _getFillValue()
     for tIndex in tIndices:
         # TODO: see if we already have this image in cache
