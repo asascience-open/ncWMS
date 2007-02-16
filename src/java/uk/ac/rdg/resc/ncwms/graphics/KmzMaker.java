@@ -39,8 +39,9 @@ import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 
 /**
  * Creates KMZ files for importing into Google Earth.  We inherit from GifMaker
- * because this contains code that can handle animations.  TODO: refactor this
- * more sensibly.
+ * because this contains code that can handle animations.  However, we actually
+ * make PNG files!  Read the code to understand how this works... TODO: refactor
+ * this more sensibly.
  *
  * @author Jon Blower
  * $Revision$
