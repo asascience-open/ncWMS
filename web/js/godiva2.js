@@ -68,6 +68,10 @@ window.onload = function()
     
     map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms]);
     
+    // Make sure the "Open in Google Earth" link is kept up to date when the map
+    // is moved or zoomed
+    map.events.register('moveend', map, setGEarthURL);
+    
     // If we have loaded Google Maps and the browser is compatible, add it as a base layer
     if (typeof GBrowserIsCompatible == 'function' && GBrowserIsCompatible()) {
         var gmapLayer = new OpenLayers.Layer.Google("Google Maps (satellite)", {type: G_SATELLITE_MAP});
@@ -565,28 +569,42 @@ function updateMap()
 // Sets the URL for "Open in Google Earth"
 function setGEarthURL()
 {
-    // Get a URL for a WMS request that covers the current map extent
-    var urlEls = essc_wms.getURL(map.getExtent()).split('&');
-    var newURL = urlEls[0];
-    for (var i = 1; i < urlEls.length; i++) {
-        if (urlEls[i].startsWith('FORMAT')) {
-            // Make sure the FORMAT is set correctly
-            newURL += '&FORMAT=application/vnd.google-earth.kmz';
-        } else if (urlEls[i].startsWith('TIME') && 
-                   $('firstFrame').innerHTML != '' &&
-                   $('lastFrame').innerHTML != '') {
-            // If we can make an animation, do so
-            newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
-        } else if (!urlEls[i].startsWith('OPACITY')) {
-            // We remove the OPACITY ARGUMENT as Google Earth allows opacity
-            // to be controlled in the client
-            newURL += '&' + urlEls[i];
+    if (essc_wms != null) {
+        // Get a URL for a WMS request that covers the current map extent
+        var mapBounds = map.getExtent();
+        var urlEls = essc_wms.getURL(mapBounds).split('&');
+        var newURL = urlEls[0];
+        for (var i = 1; i < urlEls.length; i++) {
+            if (urlEls[i].startsWith('FORMAT')) {
+                // Make sure the FORMAT is set correctly
+                newURL += '&FORMAT=application/vnd.google-earth.kmz';
+            } else if (urlEls[i].startsWith('TIME') && 
+                       $('firstFrame').innerHTML != '' &&
+                       $('lastFrame').innerHTML != '') {
+                // If we can make an animation, do so
+                newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+            } else if (urlEls[i].startsWith('BBOX')) {
+                // Set the bounding box so that there are no transparent pixels around
+                // the edge of the image: i.e. find the intersection of the layer BBOX
+                // and the viewport BBOX
+                newURL += '&BBOX=';
+                var mapBboxEls = mapBounds.toBBOX().split(',');
+                var layerBboxEls = bbox.split(',');
+                newURL += Math.max(parseFloat(mapBboxEls[0]), parseFloat(layerBboxEls[0])) + ',';
+                newURL += Math.max(parseFloat(mapBboxEls[1]), parseFloat(layerBboxEls[1])) + ',';
+                newURL += Math.min(parseFloat(mapBboxEls[2]), parseFloat(layerBboxEls[2])) + ',';
+                newURL += Math.min(parseFloat(mapBboxEls[3]), parseFloat(layerBboxEls[3]));
+            } else if (!urlEls[i].startsWith('OPACITY')) {
+                // We remove the OPACITY ARGUMENT as Google Earth allows opacity
+                // to be controlled in the client
+                newURL += '&' + urlEls[i];
+            }
         }
-    }
-    if ($('firstFrame').innerHTML != '' && $('lastFrame').innerHTML != '') {
-        $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open animation in Google Earth</a>';
-    } else {
-        $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open in Google Earth</a>';
+        if ($('firstFrame').innerHTML != '' && $('lastFrame').innerHTML != '') {
+            $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open animation in Google Earth</a>';
+        } else {
+            $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open in Google Earth</a>';
+        }
     }
 }
 
