@@ -48,6 +48,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
 {
     private double[] values;
     private CoordinateAxis1D axis;
+    private boolean reversed; // True if original axis is in descending order
     
     /**
      * Creates a new instance of Irregular1DCoordAxis
@@ -56,11 +57,21 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     {
         super(axis1D);
         this.axis = axis1D;
-        this.values = axis1D.getCoordValues();
-        // Make sure the values are sorted into *ascending* order
-        // (do we need this?  will the coordinate values not always be in 
-        // ascending order?)
-        //Arrays.sort(this.values);
+        if (axis1D.getCoordValues()[0] > axis1D.getCoordValues()[1])
+        {
+            // This axis is in descending order (we assume axis is sorted)
+            this.reversed = true;
+            this.values = new double[axis1D.getCoordValues().length];
+            for (int i = 0; i < this.values.length; i++)
+            {
+                this.values[i] = 0.0 - axis1D.getCoordValues()[i];
+            }
+        }
+        else
+        {
+            this.reversed = false;
+            this.values = axis1D.getCoordValues();
+        }
     }
     
     /**
@@ -77,7 +88,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         {
             return -1; // TODO: deal with irregular longitude axes (rare)
         }
-        double target = point.getLatitude();
+        double target = this.reversed ? 0.0 - point.getLatitude() : point.getLatitude();
         //return this.axis.findCoordElement(target);
         return findNearest(this.values, target);
     }
