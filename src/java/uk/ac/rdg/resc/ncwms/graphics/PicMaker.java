@@ -68,6 +68,35 @@ public abstract class PicMaker
      */
     private static Hashtable<String, Class> picMakers;
     
+    // Elements of the default palette
+    private static final int[] RED =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  7, 23, 39, 55, 71, 87,103,
+           119,135,151,167,183,199,215,231,
+           247,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,246,228,211,193,175,158,140};
+    private static final int[] GREEN =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0, 11, 27, 43, 59, 75, 91,107,
+           123,139,155,171,187,203,219,235,
+           251,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0};
+    private static final int[] BLUE =
+        {  143,159,175,191,207,223,239,
+           255,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0};
+    
     // Image MIME type
     protected String mimeType;
     // Width and height of the resulting picture
@@ -276,66 +305,14 @@ public abstract class PicMaker
      */
     protected byte[] getRGBPalette()
     {
-        byte[] palette = new byte[256 * 3];
+        Color[] colors = this.getColorPalette();
+        byte[] palette = new byte[colors.length * 3];
         
-        // Use the supplied background color
-        Color bg = new Color(this.bgColor);
-        palette[0] = (byte)bg.getRed();
-        palette[1] = (byte)bg.getGreen();
-        palette[2] = (byte)bg.getBlue();
-        
-        // Colour with index 1 is black (represents out-of-range data)
-        palette[3] = 0;
-        palette[4] = 0;
-        palette[5] = 0;
-        
-        int[] red =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  7, 23, 39, 55, 71, 87,103,
-           119,135,151,167,183,199,215,231,
-           247,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,246,228,211,193,175,158,140};
-        int[] green =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0, 11, 27, 43, 59, 75, 91,107,
-           123,139,155,171,187,203,219,235,
-           251,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0};
-        int[] blue =
-        {  143,159,175,191,207,223,239,
-           255,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0};
-        
-        for (int i = 2; i < 256; i++)
+        for (int i = 0; i < colors.length; i++)
         {
-            // There are 63 colours and 254 remaining slots
-            float index = (i - 2) * (62.0f / 253.0f);
-            if (i == 255)
-            {
-                palette[3*i]   = (byte)red[62];
-                palette[3*i+1] = (byte)green[62];
-                palette[3*i+2] = (byte)blue[62];
-            }
-            else
-            {
-                // We merge the colours from adjacent indices
-                float fromUpper = index - (int)index;
-                float fromLower = 1.0f - fromUpper;
-                palette[3*i]   = (byte)(fromLower * red[(int)index] + fromUpper * red[(int)index + 1]);
-                palette[3*i+1] = (byte)(fromLower * green[(int)index] + fromUpper * green[(int)index + 1]);
-                palette[3*i+2] = (byte)(fromLower * blue[(int)index] + fromUpper * blue[(int)index + 1]);
-            }
+            palette[3*i]   = (byte)colors[i].getRed();
+            palette[3*i+1] = (byte)colors[i].getGreen();
+            palette[3*i+2] = (byte)colors[i].getBlue();
         }
         
         return palette;
@@ -348,16 +325,39 @@ public abstract class PicMaker
      */
     protected IndexColorModel getRainbowColorModel()
     {
-        byte[] r = new byte[256];   byte[] g = new byte[256];
-        byte[] b = new byte[256];   byte[] a = new byte[256];
+        // Get 256 colors representing this palette
+        Color[] colors = this.getColorPalette();
+        
+        // Extract to arrays of r, g, b, a
+        byte[] r = new byte[colors.length];
+        byte[] g = new byte[colors.length];
+        byte[] b = new byte[colors.length];
+        byte[] a = new byte[colors.length];        
+        for (int i = 0; i < colors.length; i++)
+        {
+            r[i] = (byte)colors[i].getRed();
+            g[i] = (byte)colors[i].getGreen();
+            b[i] = (byte)colors[i].getBlue();
+            a[i] = (byte)colors[i].getAlpha();
+        }
+        
+        return new IndexColorModel(8, 256, r, g, b, a);
+    }
+    
+    /**
+     * @return Array of 256 RGBA Color objects representing the palette.
+     */
+    protected Color[] getColorPalette()
+    {
+        Color[] colors = new Color[256];
         
         // Set the alpha value based on the percentage transparency
-        byte alpha;
+        int alpha;
         // Here we are playing safe and avoiding rounding errors that might
         // cause the alpha to be set to zero instead of 255
         if (this.opacity >= 100)
         {
-            alpha = (byte)255;
+            alpha = 255;
         }
         else if (this.opacity <= 0)
         {
@@ -365,70 +365,38 @@ public abstract class PicMaker
         }
         else
         {
-            alpha = (byte)(2.55 * this.opacity);
+            alpha = (int)(2.55 * this.opacity);
         }
         
         // Use the supplied background color
         Color bg = new Color(this.bgColor);
-        r[0] = (byte)bg.getRed();
-        g[0] = (byte)bg.getGreen();
-        b[0] = (byte)bg.getBlue();
-        a[0] = this.transparent ? 0 : alpha;
+        colors[0] = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(),
+            this.transparent ? 0 : alpha);
         
         // Colour with index 1 is black (represents out-of-range data)
-        r[1] = 0;   g[1] = 0;   b[1] = 0;   a[1] = alpha;
+        colors[1] = new Color(0, 0, 0, alpha);
         
-        int[] red =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  7, 23, 39, 55, 71, 87,103,
-           119,135,151,167,183,199,215,231,
-           247,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,246,228,211,193,175,158,140};
-        int[] green =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0, 11, 27, 43, 59, 75, 91,107,
-           123,139,155,171,187,203,219,235,
-           251,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0};
-        int[] blue =
-        {  143,159,175,191,207,223,239,
-           255,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0};
-        
-        for (int i = 2; i < 256; i++)
+        for (int i = 2; i < colors.length; i++)
         {
-            a[i] = alpha;
             // There are 63 colours and 254 remaining slots
             float index = (i - 2) * (62.0f / 253.0f);
-            if (i == 255)
+            if (i == colors.length - 1)
             {
-                r[i] = (byte)red[62];
-                g[i] = (byte)green[62];
-                b[i] = (byte)blue[62];
+                colors[i] = new Color(RED[62], GREEN[62], BLUE[62]);
             }
             else
             {
                 // We merge the colours from adjacent indices
                 float fromUpper = index - (int)index;
                 float fromLower = 1.0f - fromUpper;
-                r[i] = (byte)(fromLower * red[(int)index] + fromUpper * red[(int)index + 1]);
-                g[i] = (byte)(fromLower * green[(int)index] + fromUpper * green[(int)index + 1]);
-                b[i] = (byte)(fromLower * blue[(int)index] + fromUpper * blue[(int)index + 1]);
+                int r = (int)(fromLower * RED[(int)index] + fromUpper * RED[(int)index + 1]);
+                int g = (int)(fromLower * GREEN[(int)index] + fromUpper * GREEN[(int)index + 1]);
+                int b = (int)(fromLower * BLUE[(int)index] + fromUpper * BLUE[(int)index + 1]);
+                colors[i] = new Color(r, g, b, alpha);
             }
         }
         
-        return new IndexColorModel(8, 256, r, g, b, a);
+        return colors;
     }
     
     /**
