@@ -28,13 +28,18 @@
 
 package uk.ac.rdg.resc.ncwms.graphics;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.imageio.ImageIO;
+import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 
 /**
@@ -50,10 +55,16 @@ import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
  */
 public class KmzMaker extends GifMaker
 {
+    private static final Logger logger = Logger.getLogger(KmzMaker.class);
+    
     private StringBuffer kml; // The KML that accompanies the images
     
     private static final String PICNAME = "frame";
     private static final String PICEXT  = "png";
+    private static final String COLOUR_SCALE_FILENAME = "colourscale.png";
+    
+    private static DecimalFormat DECIMAL_FORMATTER = new DecimalFormat("0.#####");
+    private static DecimalFormat SCIENTIFIC_FORMATTER = new DecimalFormat("0.###E0");
     
     /** Creates a new instance of KmzMaker */
     public KmzMaker()
@@ -84,6 +95,16 @@ public class KmzMaker extends GifMaker
             this.kml.append("<description>" + this.var.getDatasetTitle() + ", "
                 + this.var.getTitle() + ": " + this.var.getAbstract() +
                 "</description>");
+            
+            // Add the screen overlay containing the colour scale
+            this.kml.append("<ScreenOverlay>");
+            this.kml.append("<name>Colour scale</name>");
+            this.kml.append("<Icon><href>" + COLOUR_SCALE_FILENAME + "</href></Icon>");
+            this.kml.append("<overlayXY x=\"0\" y=\"1\" xunits=\"fraction\" yunits=\"fraction\"/>");
+            this.kml.append("<screenXY x=\"0\" y=\"1\" xunits=\"fraction\" yunits=\"fraction\"/>");
+            this.kml.append("<rotationXY x=\"0\" y=\"0\" xunits=\"fraction\" yunits=\"fraction\"/>");
+            this.kml.append("<size x=\"0\" y=\"0\" xunits=\"fraction\" yunits=\"fraction\"/>");
+            this.kml.append("</ScreenOverlay>");
         }
         
         this.kml.append("<GroundOverlay>");
@@ -146,6 +167,7 @@ public class KmzMaker extends GifMaker
         ZipOutputStream zipOut = new ZipOutputStream(out);
         
         // Write the KML file: todo get filename properly
+        logger.debug("Writing KML file to KMZ file");
         ZipEntry kmlEntry = new ZipEntry(this.var.getDatasetId() + "_" +
             this.var.getId() + ".kml");
         kmlEntry.setTime(System.currentTimeMillis());
@@ -155,6 +177,7 @@ public class KmzMaker extends GifMaker
         // Now write all the images
         this.createAllFrames();
         int frameIndex = 0;
+        logger.debug("Writing frames to KMZ file");
         for (BufferedImage frame : this.frames)
         {
             ZipEntry picEntry = new ZipEntry(getPicFileName(frameIndex));
@@ -163,7 +186,71 @@ public class KmzMaker extends GifMaker
             ImageIO.write(frame, PICEXT, zipOut);
         }
         
+        // Finally, write the colour scale
+        // TODO: all dimensions are hard-coded here.  Should be more flexible.
+        logger.debug("Constructing colour scale image");
+        ZipEntry scaleEntry = new ZipEntry(COLOUR_SCALE_FILENAME);
+        zipOut.putNextEntry(scaleEntry);
+        BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
+        Graphics2D gfx = colourScale.createGraphics();
+        
+        // Create the colour scale itself
+        Color[] palette = this.getColorPalette();
+        for (int i = 5; i < 259; i++)
+        {
+            gfx.setColor(palette[260 - i]);
+            gfx.drawLine(2, i, 25, i);
+        }
+        logger.debug("Created palette");
+        
+        // Draw the text items
+        gfx.setColor(Color.WHITE);
+        // Add the scale values top, bottom and middle
+        String scaleMax = format(this.getScaleMax());
+        String scaleMin = format(this.getScaleMin());
+        String scaleMid = format(0.5 * (this.getScaleMax() + this.getScaleMin()));
+        logger.debug("Writing scale ({}, {}, {}) to colour scale image",
+            new Object[]{scaleMin, scaleMid, scaleMax});
+        gfx.drawString(scaleMax, 27, 10);
+        gfx.drawString(scaleMid, 27, 137);
+        gfx.drawString(scaleMin, 27, 264);
+        // Add the title as rotated text
+        logger.debug("Writing rotated title to colour scale image");
+        AffineTransform trans = new AffineTransform();
+        trans.setToTranslation(90, 0);
+        AffineTransform rot = new AffineTransform();
+        rot.setToRotation(Math.PI / 2.0);
+        trans.concatenate(rot);
+        gfx.setTransform(trans);
+        String title = this.var.getTitle();
+        if (this.var.getUnits() != null)
+        {
+            title += " (" + this.var.getUnits() + ")";
+        }
+        gfx.drawString(title, 5, 0);
+        
+        // Write the colour scale bar to the KMZ file
+        logger.debug("Writing colour scale image to KMZ file");
+        ImageIO.write(colourScale, "png", zipOut);
+        
         zipOut.close();
+    }
+    
+    /**
+     * Formats a number to a limited number of d.p., using scientific notation
+     * if necessary
+     */
+    private static String format(double d)
+    {
+        // Try decimal format first
+        String dec = DECIMAL_FORMATTER.format(d);
+        // See if we have at least 3 s.f.:
+        if (dec.length() > 4 && dec.charAt(0) == '0' && dec.charAt(2) == '0'
+            && dec.charAt(3) == '0' && dec.charAt(4) == '0')
+        {
+            return SCIENTIFIC_FORMATTER.format(d);
+        }
+        return dec;
     }
     
     /**
@@ -173,5 +260,4 @@ public class KmzMaker extends GifMaker
     {
         return PICNAME + frameIndex + "." + PICEXT;
     }
-    
 }
