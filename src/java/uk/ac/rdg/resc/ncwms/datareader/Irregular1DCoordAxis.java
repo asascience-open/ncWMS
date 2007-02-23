@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.IndexIterator;
 import ucar.nc2.dataset.CoordinateAxis1D;
@@ -46,7 +47,9 @@ import ucar.unidata.geoloc.LatLonPoint;
  */
 public class Irregular1DCoordAxis extends OneDCoordAxis
 {
-    private double[] values;
+    private static final Logger logger = Logger.getLogger(Irregular1DCoordAxis.class);
+    
+    private double[] values; // always in ascending order
     private CoordinateAxis1D axis;
     private boolean reversed; // True if original axis is in descending order
     
@@ -72,6 +75,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
             this.reversed = false;
             this.values = axis1D.getCoordValues();
         }
+        logger.debug("Created irregular {} axis", (this.isLongitude ? "longitude" : "latitude"));
     }
     
     /**
@@ -84,13 +88,19 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      */
     public int getIndex(LatLonPoint point)
     {
-        if (this.isLongitude)
+        double target = this.isLongitude ? point.getLongitude() : point.getLatitude();
+        logger.debug("Finding index for {} {} ...", this.isLongitude ? "lon" : "lat", target);
+        target = this.reversed ? 0.0 - target : target;
+        int index = findNearest(this.values, target);
+        if (index < 0 && this.isLongitude && target < 0)
         {
-            return -1; // TODO: deal with irregular longitude axes (rare)
+            // We haven't found the point but this could be because this is a
+            // longitude axis between 0 and 360 degrees and we're looking for
+            // a point at, say, -90 degrees.  Try again.
+            index = findNearest(this.values, target + 360);
         }
-        double target = this.reversed ? 0.0 - point.getLatitude() : point.getLatitude();
-        //return this.axis.findCoordElement(target);
-        return findNearest(this.values, target);
+        logger.debug("   ...index= {}", index);
+        return index;
     }
     
     /**
