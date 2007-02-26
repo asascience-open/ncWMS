@@ -74,6 +74,8 @@ public class NemoDataReader extends DataReader
         int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
+        // TODO: allow for aggregated dataset - see DefaultDataReader.
+        // This assumes that the whole dataset is one NetCDF or NcML file
         NetcdfDataset nc = null;
         try
         {
@@ -318,11 +320,6 @@ public class NemoDataReader extends DataReader
                 // type just for this rare case
                 throw new IOException("Malformed time units string " + time.getUnitsString());
             }
-            double[] tVals = new double[ftVals.length];
-            for (int i = 0; i < ftVals.length; i++)
-            {
-                tVals[i] = dateUnit.makeDate(ftVals[i]).getTime() / 1000.0;
-            }
 
             for (Object varObj : nc.getVariables())
             {
@@ -362,7 +359,12 @@ public class NemoDataReader extends DataReader
                     }
                     
                     // Set the time axis
-                    vm.setTvalues(tVals);
+                    for (int i = 0; i < ftVals.length; i++)
+                    {
+                        Date timestep = dateUnit.makeDate(ftVals[i]);
+                        vm.addTimestepInfo(new VariableMetadata.TimestepInfo(
+                            timestep, location, i));
+                    }
 
                     vars.put(vm.getId(), vm);
                 }

@@ -37,6 +37,7 @@ import java.nio.ByteOrder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Hashtable;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
@@ -101,21 +102,21 @@ public class NSIDCSnowWaterDataReader extends DataReader
         
         // Search the source directory for files
         String[] filenames = getFilenames(location);
-        double[] tValues = new double[filenames.length];
-        for (int i = 0; i < filenames.length; i++)
+        for (String filename : filenames)
         {
             try
             {
-                tValues[i] = DATE_FORMAT.parse(filenames[i]).getTime() / 1000.0;
+                Date timestep = DATE_FORMAT.parse(filename);
+                File f = new File(location, filename);
+                vm.addTimestepInfo(new VariableMetadata.TimestepInfo(timestep, f.getPath(), 0));
             }
             catch(ParseException pe)
             {
-                logger.error("Error parsing filename " + filenames[i], pe);
+                logger.error("Error parsing filename " + filename, pe);
                 // TODO: not really an IOException
-                throw new IOException("Error parsing filename " + filenames[i]);
+                throw new IOException("Error parsing filename " + filename);
             }
         }
-        vm.setTvalues(tValues);
         
         vars.put(vm.getId(), vm);
         return vars;
@@ -135,9 +136,8 @@ public class NSIDCSnowWaterDataReader extends DataReader
         throws WMSExceptionInJava
     {
         // Find the file containing the data
-        File dir = new File(location);
-        File file = new File(dir, getFilenames(location)[tIndex]);
-        logger.debug("Got file " + file.getPath());
+        VariableMetadata.TimestepInfo tInfo = vm.getTimestepInfo(tIndex);
+        logger.debug("Got file " + tInfo.getFilename());
         
         // Create an array to hold the data
         float[] picData = new float[lonValues.length * latValues.length];
@@ -148,7 +148,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
         // Read the whole of the file into memory
         try
         {
-            fin = new FileInputStream(file);
+            fin = new FileInputStream(tInfo.getFilename());
             data = ByteBuffer.allocate(ROWS * COLS * 2);
             data.order(ByteOrder.LITTLE_ENDIAN);
             // Read the whole of the file into memory
@@ -156,9 +156,9 @@ public class NSIDCSnowWaterDataReader extends DataReader
         }
         catch(IOException ioe)
         {
-            logger.error("IOException reading from " + file.getPath(), ioe);
+            logger.error("IOException reading from " + tInfo.getFilename(), ioe);
             throw new WMSExceptionInJava("Internal error: IOException reading from "
-                + file.getPath() + ": " + ioe.getMessage());
+                + tInfo.getFilename() + ": " + ioe.getMessage());
         }
         finally
         {

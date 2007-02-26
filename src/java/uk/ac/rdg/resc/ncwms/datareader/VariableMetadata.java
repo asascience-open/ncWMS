@@ -28,7 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.util.Collections;
 import java.util.Date;
+import java.util.Hashtable;
+import java.util.Vector;
 import ucar.nc2.units.DateFormatter;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 
@@ -53,7 +56,6 @@ public class VariableMetadata
     private String zUnits;
     private double[] zValues;
     private boolean zPositive;
-    private double[] tValues; // Seconds since the epoch
     private double[] bbox; // Bounding box : minx, miny, maxx, maxy
     private double validMin;
     private double validMax;
@@ -61,6 +63,7 @@ public class VariableMetadata
     private EnhancedCoordAxis yaxis;
     private String datasetId;
     private String datasetTitle;
+    private Hashtable<Date, TimestepInfo> timesteps;
     
     /** Creates a new instance of VariableMetadata */
     VariableMetadata()
@@ -69,10 +72,10 @@ public class VariableMetadata
         this.abstr = null;
         this.zUnits = null;
         this.zValues = null;
-        this.tValues = null;
         this.bbox = new double[]{-180.0, -90.0, 180.0, 90.0};
         this.xaxis = null;
         this.yaxis = null;
+        this.timesteps = new Hashtable<Date, TimestepInfo>();
     }
 
     public String getTitle()
@@ -115,14 +118,28 @@ public class VariableMetadata
         this.zValues = zValues;
     }
 
-    public double[] getTvalues()
+    /**
+     * @return array of timestep values in seconds since the epoch
+     */
+    public synchronized double[] getTvalues()
     {
-        return tValues;
+        Vector<Date> tValsVec = this.getSortedDates();
+        double[] tVals = new double[tValsVec.size()];
+        for (int i = 0; i < tValsVec.size(); i++)
+        {
+            tVals[i] = tValsVec.get(i).getTime() / 1000.0; 
+        }
+        return tVals;
     }
-
-    public void setTvalues(double[] tValues)
+    
+    /**
+     * Returns a Vector of Dates, sorted in ascending order
+     */
+    private Vector<Date> getSortedDates()
     {
-        this.tValues = tValues;
+        Vector<Date> tValsVec = new Vector<Date>(this.timesteps.keySet());
+        Collections.sort(tValsVec); // sort into ascending order
+        return tValsVec;
     }
 
     public double[] getBbox()
@@ -226,6 +243,21 @@ public class VariableMetadata
     }
     
     /**
+     * Adds a new TimestepInfo to this metadata object.  If a TimestepInfo object
+     * already exists for this timestep, the TimestepInfo object with the lower
+     * indexInFile value is chosen (this is most likely to be the result of a
+     * shorter forecast lead time and therefore more accurate).
+     */
+    public synchronized void addTimestepInfo(TimestepInfo tInfo)
+    {
+        TimestepInfo existingTStep = this.timesteps.get(tInfo.timestep);
+        if (existingTStep == null || tInfo.indexInFile < existingTStep.indexInFile)
+        {
+            this.timesteps.put(tInfo.timestep, tInfo);
+        }
+    }
+    
+    /**
      * Finds the index of a certain t value by binary search (the axis may be
      * very long, so a brute-force search is inappropriate)
      * @param tValue Date to search for as an ISO8601-formatted String
@@ -234,42 +266,43 @@ public class VariableMetadata
      * within tValues
      * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
      */
-    public int findTIndex(String tValue) throws InvalidDimensionValueException
+    public int findTIndex(String tValueStr) throws InvalidDimensionValueException
     {
-        if (tValue.equals("current"))
+        if (tValueStr.equals("current"))
         {
             // Return the last index in the array
-            return this.tValues.length - 1;
+            return this.timesteps.size() - 1;
         }
-        Date targetD = dateFormatter.getISODate(tValue);
-        if (targetD == null)
+        Date target = dateFormatter.getISODate(tValueStr);
+        if (target == null)
         {
-            throw new InvalidDimensionValueException("time", tValue);
+            throw new InvalidDimensionValueException("time", tValueStr);
         }
-        double target = targetD.getTime() / 1000.0;
+        
+        Vector<Date> tValues = this.getSortedDates();
         
         // Check that the point is within range
-        if (target < tValues[0] || target > tValues[tValues.length - 1])
+        if (target.before(tValues.firstElement()) || target.after(tValues.lastElement()))
         {
-            throw new InvalidDimensionValueException("time", tValue);
+            throw new InvalidDimensionValueException("time", tValueStr);
         }
         
         // do a binary search to find the nearest index
         int low = 0;
-        int high = this.tValues.length - 1;
+        int high = tValues.size() - 1;
         while (low <= high)
         {
             int mid = (low + high) >> 1;
-            double midVal = this.tValues[mid];
-            if (midVal == target)
+            Date midVal = tValues.get(mid);
+            if (midVal.equals(target))
             {
                 return mid;
             }
-            else if (midVal < target)
+            else if (midVal.before(target))
             {
                 low = mid + 1;
             }
-            else if (midVal > target)
+            else
             {
                 high = mid - 1;
             }
@@ -277,15 +310,30 @@ public class VariableMetadata
         
         // If we've got this far we have to decide between values[low]
         // and values[high]
-        if (this.tValues[low] == target)
+        if (tValues.get(low).equals(target))
         {
             return low;
         }
-        else if (this.tValues[high] == target)
+        else if (tValues.get(high).equals(target))
         {
             return high;
         }
-        throw new InvalidDimensionValueException("time", tValue);
+        throw new InvalidDimensionValueException("time", tValueStr);
+    }
+    
+    /**
+     * @return the TimestepInfo object for the timestep at the given index in the
+     * <b>whole dataset</b>.  Returns null if there is no time axis for this dataset.
+     */
+    public TimestepInfo getTimestepInfo(int datasetTIndex)
+    {
+        // Get a sorted array of the dates in ascending order
+        Vector<Date> dates = this.getSortedDates();
+        if (dates.size() == 0)
+        {
+            return null;
+        }
+        return this.timesteps.get(dates.get(datasetTIndex));
     }
     
     /**
@@ -314,6 +362,40 @@ public class VariableMetadata
         catch(NumberFormatException nfe)
         {
             throw new InvalidDimensionValueException("elevation", targetVal);
+        }
+    }
+
+    /**
+     * Simple class that holds information about which files in an aggregation
+     * hold which timesteps for a variable
+     */
+    public static class TimestepInfo
+    {
+        private Date timestep;
+        private String filename;
+        private int indexInFile;
+
+        /**
+         * Creates a new TimestepInfo object
+         * @param timestep The real date/time of this timestep
+         * @param filename The filename containing this timestep
+         * @param indexInFile The index of this timestep in the file
+         */
+        public TimestepInfo(Date timestep, String filename, int indexInFile)
+        {
+            this.timestep = timestep;
+            this.filename = filename;
+            this.indexInFile = indexInFile;
+        }
+        
+        public String getFilename()
+        {
+            return this.filename;
+        }
+        
+        public int getIndexInFile()
+        {
+            return this.indexInFile;
         }
     }
     

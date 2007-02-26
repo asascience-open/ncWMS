@@ -75,7 +75,8 @@ def getMap(req, params, config):
     picMaker.var = var # This is used to create descriptions in the KML
 
     # Find the requested index/indices along the time axis
-    if var.tvalues is None:
+    tvals = var.tvalues
+    if len(tvals) == 0:
         # Ignore any time value that was given by the client (TODO OK?)
         tIndices = [0] # This layer has no time dimension
     else:
@@ -143,10 +144,10 @@ def getMap(req, params, config):
         # TODO: see if we already have this image in cache
         picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
         # TODO: cache the data array
-        if var.tvalues is None:
+        if len(tvals) == 0:
             tValue = ""
         else:
-            tValue = iso8601.tostring(var.tvalues[tIndex])
+            tValue = iso8601.tostring(tvals[tIndex])
         picMaker.addFrame(picData, bbox, zValue, tValue, animation)
     # Write the image to the client
     req.content_type = picMaker.mimeType

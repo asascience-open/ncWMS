@@ -76,8 +76,9 @@ def getFrontPage(config):
                 doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                 bbox = vars[varID].bbox
                 doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
-                if vars[varID].tvalues is not None:
-                    doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
+                tvals = vars[varID].tvalues
+                if len(tvals) > 0:
+                    doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
                 doc.write("\">%s</a><br />" % vars[varID].title)
             doc.write("</td>")
         if config.allowFeatureInfo:
@@ -89,8 +90,9 @@ def getFrontPage(config):
                     bbox = vars[varID].bbox
                     doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
                     doc.write("&I=128&J=128")
-                    if vars[varID].tvalues is not None:
-                        doc.write("&TIME=%s" % iso8601.tostring(vars[varID].tvalues[-1]))
+                    tvals = vars[varID].tvalues
+                    if len(tvals) > 0:
+                        doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
                     doc.write("\">%s</a><br />" % vars[varID].title)
             else:
                 doc.write("Dataset not queryable")
@@ -164,7 +166,7 @@ def getCalendar(config, dataset, varID, dateTime):
     # Get an array of time axis values in seconds since the epoch
     tValues = datareader.getAllVariableMetadata(datasets[dataset])[varID].tvalues
     # TODO: is this the right thing to do here?
-    if tValues is None:
+    if len(tValues) == 0:
         return ""
     str = StringIO()
     prettyDateFormat = "%d %b %Y"

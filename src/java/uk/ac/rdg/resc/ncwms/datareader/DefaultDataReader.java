@@ -28,12 +28,15 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import org.apache.log4j.Logger;
+import org.apache.oro.io.GlobFilenameFilter;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
@@ -79,13 +82,23 @@ public class DefaultDataReader extends DataReader
         int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
+        // Firstly we need to figure out which file actually contains the data
+        // for this timestep:  TODO: do this in DataReader?
+        VariableMetadata.TimestepInfo tInfo = vm.getTimestepInfo(tIndex);
+        int tIndexInFile = 0;
+        String filename = location;
+        if (tInfo != null)
+        {
+            tIndexInFile = tInfo.getIndexInFile();
+            filename = tInfo.getFilename();
+        }
+        
         NetcdfDataset nc = null;
         try
         {
-            // Get the metadata from the cache
             long start = System.currentTimeMillis();
             
-            Range tRange = new Range(tIndex, tIndex);
+            Range tRange = new Range(tIndexInFile, tIndexInFile);
             Range zRange = new Range(zIndex, zIndex);
             
             EnhancedCoordAxis xAxis = vm.getXaxis();
@@ -121,7 +134,7 @@ public class DefaultDataReader extends DataReader
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
             // Get the dataset from the cache, without enhancing it
-            nc = getDataset(location);
+            nc = getDataset(filename);
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
             GridDataset gd = new GridDataset(nc);
@@ -213,79 +226,105 @@ public class DefaultDataReader extends DataReader
     public Hashtable<String, VariableMetadata> getVariableMetadata(String location)
         throws IOException
     {
-        logger.debug("Reading metadata for {}", location);
+        logger.debug("Reading metadata for dataset {}", location);
         Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
+        
+        // The location might be a glob expression, in which case the last part
+        // of the location path will be the filter expression
+        File locFile = new File(location);
+        GlobFilenameFilter filter = new GlobFilenameFilter(locFile.getName());
+        
         NetcdfDataset nc = null;
         try
         {
-            // We use openDataset() rather than acquiring from cache
-            // because we need to enhance the dataset
-            nc = NetcdfDataset.openDataset(location, true, null);
-            GridDataset gd = new GridDataset(nc);
-            for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
+            // Loop over all the files that match the glob pattern
+            File[] files = locFile.getParentFile().listFiles((FilenameFilter)filter);
+            for (File file : files)
             {
-                GeoGrid gg = (GeoGrid)it.next();
-                VariableMetadata vm = new VariableMetadata();
-                vm.setId(gg.getName());
-                vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                vm.setAbstract(gg.getDescription());
-                vm.setUnits(gg.getUnitsString());
-                GridCoordSys coordSys = gg.getCoordinateSystem();
-                vm.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
-                vm.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
-
-                if (coordSys.hasVerticalAxis())
+                logger.debug("Reading metadata from file {}", file.getPath());
+                // We use openDataset() rather than acquiring from cache
+                // because we need to enhance the dataset
+                nc = NetcdfDataset.openDataset(file.getPath(), true, null);
+                GridDataset gd = new GridDataset(nc);
+                for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
                 {
-                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                    vm.setZunits(zAxis.getUnitsString());
-                    double[] zVals = zAxis.getCoordValues();
-                    vm.setZpositive(coordSys.isZPositive());
-                    if (coordSys.isZPositive())
+                    GeoGrid gg = (GeoGrid)it.next();
+                    GridCoordSys coordSys = gg.getCoordinateSystem();
+                    // Get the VM object from the hashtable
+                    VariableMetadata vm = vars.get(gg.getName());
+                    if (vm == null)
                     {
-                        vm.setZvalues(zVals);
-                    }
-                    else
-                    {
-                        double[] zVals2 = new double[zVals.length];
-                        for (int i = 0; i < zVals.length; i++)
+                        // This is the first time we've seen this variable in 
+                        // this list of files
+                        logger.debug("Creating new VariableMetadata object");
+                        vm = new VariableMetadata();
+                        vm.setId(gg.getName());
+                        vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
+                        vm.setAbstract(gg.getDescription());
+                        vm.setUnits(gg.getUnitsString());
+                        vm.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
+                        vm.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
+
+                        if (coordSys.hasVerticalAxis())
                         {
-                            zVals2[i] = 0.0 - zVals[i];
+                            CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                            vm.setZunits(zAxis.getUnitsString());
+                            double[] zVals = zAxis.getCoordValues();
+                            vm.setZpositive(coordSys.isZPositive());
+                            if (coordSys.isZPositive())
+                            {
+                                vm.setZvalues(zVals);
+                            }
+                            else
+                            {
+                                double[] zVals2 = new double[zVals.length];
+                                for (int i = 0; i < zVals.length; i++)
+                                {
+                                    zVals2[i] = 0.0 - zVals[i];
+                                }
+                                vm.setZvalues(zVals2);
+                            }
                         }
-                        vm.setZvalues(zVals2);
-                    }
-                }
 
-                if (coordSys.isDate())
-                {
-                    Date[] tVals = coordSys.getTimeDates();
-                    double[] sse = new double[tVals.length]; // Seconds since the epoch
-                    for (int i = 0; i < tVals.length; i++)
+                        // Set the bounding box
+                        // TODO: should take into account the cell bounds
+                        LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
+                        LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
+                        LatLonPoint upperRight = latLonRect.getUpperRightPoint();
+                        double minLon = lowerLeft.getLongitude();
+                        double maxLon = upperRight.getLongitude();
+                        double minLat = lowerLeft.getLatitude();
+                        double maxLat = upperRight.getLatitude();
+                        if (latLonRect.crossDateline())
+                        {
+                            minLon = -180.0;
+                            maxLon = 180.0;
+                        }
+                        vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
+
+                        vm.setValidMin(gg.getVariable().getValidMin());
+                        vm.setValidMax(gg.getVariable().getValidMax());
+                        // Add this to the Hashtable
+                        vars.put(vm.getId(), vm);
+                    }
+                    
+                    // Now add the timestep information to the VM object
+                    if (coordSys.isDate())
                     {
-                        sse[i] = tVals[i].getTime() / 1000.0;
+                        Date[] tVals = coordSys.getTimeDates();
+                        logger.debug("adding {} timesteps", tVals.length);
+                        for (int i = 0; i < tVals.length; i++)
+                        {
+                            VariableMetadata.TimestepInfo tInfo = new
+                                VariableMetadata.TimestepInfo(tVals[i], file.getPath(), i);
+                            vm.addTimestepInfo(tInfo);
+                        }
                     }
-                    vm.setTvalues(sse);
+                    
+                    // (TODO: for safety we could check that the other axes
+                    // match, just in case we're accidentally trying to
+                    // aggregate two separate datasets)
                 }
-
-                // Set the bounding box
-                // TODO: should take into account the cell bounds
-                LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
-                LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
-                LatLonPoint upperRight = latLonRect.getUpperRightPoint();
-                double minLon = lowerLeft.getLongitude();
-                double maxLon = upperRight.getLongitude();
-                double minLat = lowerLeft.getLatitude();
-                double maxLat = upperRight.getLatitude();
-                if (latLonRect.crossDateline())
-                {
-                    minLon = -180.0;
-                    maxLon = 180.0;
-                }
-                vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
-
-                vm.setValidMin(gg.getVariable().getValidMin());
-                vm.setValidMax(gg.getVariable().getValidMax());
-
-                vars.put(vm.getId(), vm);
             }
             return vars;
         }
@@ -312,7 +351,8 @@ public class DefaultDataReader extends DataReader
     private static String getStandardName(Variable var)
     {
         Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
-        return stdNameAtt == null ? var.getName() : stdNameAtt.getStringValue();
+        return (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
+            ? var.getName() : stdNameAtt.getStringValue();
     }
     
 }
