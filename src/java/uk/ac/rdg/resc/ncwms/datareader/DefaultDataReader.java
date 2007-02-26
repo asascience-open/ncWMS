@@ -256,7 +256,7 @@ public class DefaultDataReader extends DataReader
                     {
                         // This is the first time we've seen this variable in 
                         // this list of files
-                        logger.debug("Creating new VariableMetadata object");
+                        logger.debug("Creating new VariableMetadata object for ", gg.getName());
                         vm = new VariableMetadata();
                         vm.setId(gg.getName());
                         vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
@@ -312,7 +312,6 @@ public class DefaultDataReader extends DataReader
                     if (coordSys.isDate())
                     {
                         Date[] tVals = coordSys.getTimeDates();
-                        logger.debug("adding {} timesteps", tVals.length);
                         for (int i = 0; i < tVals.length; i++)
                         {
                             VariableMetadata.TimestepInfo tInfo = new
