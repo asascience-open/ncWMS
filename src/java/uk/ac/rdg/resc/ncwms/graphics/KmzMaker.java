@@ -205,14 +205,19 @@ public class KmzMaker extends GifMaker
         
         // Draw the text items
         gfx.setColor(Color.WHITE);
-        // Add the scale values top, bottom and middle
-        String scaleMax = format(this.getScaleMax());
-        String scaleMin = format(this.getScaleMin());
-        String scaleMid = format(0.5 * (this.getScaleMax() + this.getScaleMin()));
+        // Add the scale values
+        double quarter = 0.25 * (this.getScaleMax() - this.getScaleMin());
+        String scaleMin          = format(this.getScaleMin());
+        String scaleQuarter      = format(this.getScaleMin() + quarter);
+        String scaleMid          = format(this.getScaleMin() + 2 * quarter);
+        String scaleThreeQuarter = format(this.getScaleMin() + 3 * quarter);
+        String scaleMax          = format(this.getScaleMax());
         logger.debug("Writing scale ({}, {}, {}) to colour scale image",
             new Object[]{scaleMin, scaleMid, scaleMax});
         gfx.drawString(scaleMax, 27, 10);
+        gfx.drawString(scaleThreeQuarter, 27, 73);
         gfx.drawString(scaleMid, 27, 137);
+        gfx.drawString(scaleQuarter, 27, 201);
         gfx.drawString(scaleMin, 27, 264);
         // Add the title as rotated text
         logger.debug("Writing rotated title to colour scale image");
