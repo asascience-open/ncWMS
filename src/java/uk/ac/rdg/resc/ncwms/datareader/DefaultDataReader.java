@@ -229,22 +229,36 @@ public class DefaultDataReader extends DataReader
         logger.debug("Reading metadata for dataset {}", location);
         Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
         
-        // The location might be a glob expression, in which case the last part
-        // of the location path will be the filter expression
-        File locFile = new File(location);
-        GlobFilenameFilter filter = new GlobFilenameFilter(locFile.getName());
+        String[] filenames = null;
+        File locFile = null; // Only used if not an opendap location
+        if (this.isOpendapLocation(location))
+        {
+            filenames = new String[]{location};
+        }
+        else
+        {
+            // The location might be a glob expression, in which case the last part
+            // of the location path will be the filter expression
+            locFile = new File(location);
+            GlobFilenameFilter filter = new GlobFilenameFilter(locFile.getName());
+            // Loop over all the files that match the glob pattern
+            filenames = locFile.getParentFile().list(filter);
+        }
         
         NetcdfDataset nc = null;
         try
         {
-            // Loop over all the files that match the glob pattern
-            File[] files = locFile.getParentFile().listFiles((FilenameFilter)filter);
-            for (File file : files)
+            for (String filepath : filenames)
             {
-                logger.debug("Reading metadata from file {}", file.getPath());
+                if (!isOpendapLocation(location))
+                {
+                    // Prepend the full path
+                    filepath = new File(locFile.getParentFile(), filepath).getPath();
+                }
+                logger.debug("Reading metadata from file {}", filepath);
                 // We use openDataset() rather than acquiring from cache
                 // because we need to enhance the dataset
-                nc = NetcdfDataset.openDataset(file.getPath(), true, null);
+                nc = NetcdfDataset.openDataset(filepath, true, null);
                 GridDataset gd = new GridDataset(nc);
                 for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
                 {
@@ -313,7 +327,7 @@ public class DefaultDataReader extends DataReader
                     for (int i = 0; i < tVals.length; i++)
                     {
                         VariableMetadata.TimestepInfo tInfo = new
-                            VariableMetadata.TimestepInfo(tVals[i], file.getPath(), i);
+                            VariableMetadata.TimestepInfo(tVals[i], filepath, i);
                         vm.addTimestepInfo(tInfo);
                     }
                     
