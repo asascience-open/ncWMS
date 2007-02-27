@@ -28,13 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.util.Collections;
+import java.util.Vector;
 import org.apache.log4j.Logger;
-import ucar.ma2.Array;
-import ucar.ma2.IndexIterator;
 import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 
 /**
@@ -49,9 +46,38 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(Irregular1DCoordAxis.class);
     
-    private double[] values; // always in ascending order
-    private CoordinateAxis1D axis;
-    private boolean reversed; // True if original axis is in descending order
+    /**
+     * Maps axis values to their indices along the axis, sorted in ascending order
+     * of value.  This level of
+     * elaboration is necessary because some axis values might be NaNs if they
+     * are latitude values outside the range -90:90 (possible for some model data).
+     * These NaNs are not stored here.
+     */
+    private Vector<AxisValue> axisVals;
+    
+    /**
+     * Simple class mapping axis values to indices.  Longitudes are always
+     * stored in range 0->360
+     */
+    private static final class AxisValue implements Comparable<AxisValue>
+    {
+        private double value;
+        private int index;
+        
+        public AxisValue(double value, int index)
+        {
+            this.value = value;
+            this.index = index;
+        }
+        
+        /**
+         * Sorts based on the axis value, not the index
+         */
+        public int compareTo(AxisValue otherVal)
+        {
+            return Double.compare(this.value, otherVal.value);
+        }
+    }
     
     /**
      * Creates a new instance of Irregular1DCoordAxis
@@ -59,23 +85,55 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     public Irregular1DCoordAxis(CoordinateAxis1D axis1D)
     {
         super(axis1D);
-        this.axis = axis1D;
-        if (axis1D.getCoordValues()[0] > axis1D.getCoordValues()[1])
+        
+        // Store the axis values and their indices
+        double[] vals = axis1D.getCoordValues();
+        this.axisVals = new Vector<AxisValue>(vals.length);
+        for (int i = 0; i < vals.length; i++)
         {
-            // This axis is in descending order (we assume axis is sorted)
-            this.reversed = true;
-            this.values = new double[axis1D.getCoordValues().length];
-            for (int i = 0; i < this.values.length; i++)
+            // Might be NaN for a lat axis outside range -90:90
+            // (this is less silly than it sounds for model data, which might
+            // have latitude values outside this range due to construction of the
+            // numerical grid)
+            if (!Double.isNaN(vals[i])) 
             {
-                this.values[i] = 0.0 - axis1D.getCoordValues()[i];
+                this.axisVals.add(new AxisValue(vals[i], i));
             }
         }
-        else
+        // Now sort the axis values in ascending order
+        Collections.sort(this.axisVals);
+        
+        // Check for wrapping in the longitude direction
+        if (this.isLongitude)
         {
-            this.reversed = false;
-            this.values = axis1D.getCoordValues();
+            logger.debug("Checking for longitude axis wrapping...");
+            double lastVal = this.axisVals.lastElement().value;
+            double dx = lastVal - this.axisVals.get(this.axisVals.size() - 2).value;
+            // Calculate the position of the imaginary next value along the axis
+            double nextVal = lastVal + dx;
+            logger.debug("lastVal = {}, nextVal = {}", lastVal, nextVal);
+            AxisValue firstVal = this.axisVals.firstElement();
+            
+            Longitude firstValLon = new Longitude(firstVal.value);
+            Longitude lastValLon = new Longitude(lastVal);
+            Longitude nextValLon = new Longitude(nextVal);
+            
+            // We say that the axis wraps if the imaginary next value on the axis
+            // is equal to or past the first value on the axis; or if the imaginary
+            // next value is closer to the first value than it is to the last value            
+            if (firstValLon.isBetween(lastVal, nextVal) ||
+                lastValLon.getClockwiseDistanceTo(nextVal) >
+                nextValLon.getClockwiseDistanceTo(firstVal.value))
+            {
+                logger.debug("Axis wraps, creating new point with lon = {}", (firstVal.value + 360));
+                // This axis wraps.  Create a new point with the same index as 
+                // the first value, but 360 degrees further around the scale
+                this.axisVals.add(new AxisValue(firstVal.value + 360, firstVal.index));
+            }
         }
-        logger.debug("Created irregular {} axis", (this.isLongitude ? "longitude" : "latitude"));
+        
+        logger.debug("Created irregular {} axis",
+            (this.isLongitude ? "longitude" : "latitude"));
     }
     
     /**
@@ -90,14 +148,13 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     {
         double target = this.isLongitude ? point.getLongitude() : point.getLatitude();
         logger.debug("Finding index for {} {} ...", this.isLongitude ? "lon" : "lat", target);
-        target = this.reversed ? 0.0 - target : target;
-        int index = findNearest(this.values, target);
+        int index = this.findNearest(target);
         if (index < 0 && this.isLongitude && target < 0)
         {
             // We haven't found the point but this could be because this is a
             // longitude axis between 0 and 360 degrees and we're looking for
             // a point at, say, -90 degrees.  Try again.
-            index = findNearest(this.values, target + 360);
+            index = this.findNearest(target + 360);
         }
         logger.debug("   ...index= {}", index);
         return index;
@@ -111,72 +168,33 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      * @return the index of the element in values whose value is closest to target,
      * or -1 if the target is out of range
      */
-    private static int findNearest(double[] values, double target)
+    private int findNearest(double target)
     {
         // Check that the point is within range
-        if (target < values[0] || target > values[values.length - 1])
+        // TODO: careful of longitude axis wrapping
+        if (target < this.axisVals.firstElement().value || 
+            target > this.axisVals.lastElement().value)
         {
             return -1;
         }
         
         // do a binary search to find the nearest index
         int low = 0;
-        int high = values.length - 1;
-        while (low <= high)
+        int high = this.axisVals.size() - 1;
+        while (high > low + 1)
         {
-            int mid = (low + high) >> 1;
-            double midVal = values[mid];
-            if (midVal == target)
-            {
-                return mid;
-            }
-            else if (midVal < target)
-            {
-                low = mid + 1;
-            }
-            else if (midVal > target)
-            {
-                high = mid - 1;
-            }
+            int mid = (low + high) / 2;
+            AxisValue midVal = this.axisVals.get(mid);
+            if (midVal.value == target) return midVal.index;
+            else if (midVal.value < target) low = mid;
+            else high = mid;
         }
         
-        // If we've got this far we have to decide between values[low]
-        // and values[high]
-        if (Math.abs(target - values[low]) < Math.abs(target - values[high]))
-        {
-            return low;
-        }
-        return high;
-    }
-    
-    /**
-     * Simple test harness
-     */
-    public static void main(String[] args) throws Exception
-    {
-        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\data\\OA_20060830.nc", true, null);
-        GridDataset gd = new GridDataset(nc);
-        GeoGrid gg = gd.findGridByName("temperature");
-        
-        /*EnhancedCoordAxis axis =
-            EnhancedCoordAxis.create(gg.getCoordinateSystem().getYHorizAxis());
-        System.out.println(axis.getClass().getName());
-        for (double lat = -90; lat < 90; lat++)
-        {
-            LatLonPoint point = new LatLonPointImpl(lat, 0);
-            System.out.println("Latitude: " + lat + " index " +
-                axis.getIndex(point));
-        }*/
-        Array arr = gg.readYXData(0, 0);
-        //Index index = arr.getIndex();
-        IndexIterator it = arr.getIndexIteratorFast();
-        while (it.hasNext())
-        {
-            float val = it.getFloatNext();
-            System.out.println("" + val);
-        }
-        
-        nc.close();
+        // If we've got this far then high = low + 1 or high = low
+        AxisValue lowVal  = this.axisVals.get(low);
+        AxisValue highVal = this.axisVals.get(high);
+        return (Math.abs(target - lowVal.value) < 
+                Math.abs(target - highVal.value)) ? lowVal.index : highVal.index;
     }
     
 }
