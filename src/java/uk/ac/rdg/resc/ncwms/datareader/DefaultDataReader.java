@@ -256,7 +256,7 @@ public class DefaultDataReader extends DataReader
                     {
                         // This is the first time we've seen this variable in 
                         // this list of files
-                        logger.debug("Creating new VariableMetadata object for ", gg.getName());
+                        logger.debug("Creating new VariableMetadata object for {}", gg.getName());
                         vm = new VariableMetadata();
                         vm.setId(gg.getName());
                         vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
@@ -309,15 +309,12 @@ public class DefaultDataReader extends DataReader
                     }
                     
                     // Now add the timestep information to the VM object
-                    if (coordSys.isDate())
+                    Date[] tVals = this.getTimesteps(nc, gg);
+                    for (int i = 0; i < tVals.length; i++)
                     {
-                        Date[] tVals = coordSys.getTimeDates();
-                        for (int i = 0; i < tVals.length; i++)
-                        {
-                            VariableMetadata.TimestepInfo tInfo = new
-                                VariableMetadata.TimestepInfo(tVals[i], file.getPath(), i);
-                            vm.addTimestepInfo(tInfo);
-                        }
+                        VariableMetadata.TimestepInfo tInfo = new
+                            VariableMetadata.TimestepInfo(tVals[i], file.getPath(), i);
+                        vm.addTimestepInfo(tInfo);
                     }
                     
                     // (TODO: for safety we could check that the other axes
@@ -344,6 +341,29 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
+     * Gets array of Dates representing the timesteps of the given variable.
+     * This method is factored out to allow for simple subclasses that read 
+     * time information in different ways.
+     * @param nc The NetcdfDataset to which the variable belongs
+     * @param gg the variable as a GeoGrid
+     * @return Array of {@link Date}s
+     * @throws IOException if there was an error reading the timesteps data
+     */
+    protected Date[] getTimesteps(NetcdfDataset nc, GeoGrid gg)
+        throws IOException
+    {
+        GridCoordSys coordSys = gg.getCoordinateSystem();
+        if (coordSys.isDate())
+        {
+            return coordSys.getTimeDates();
+        }
+        else
+        {
+            return new Date[]{};
+        }
+    }
+    
+    /**
      * @return the value of the standard_name attribute of the variable,
      * or the unique id if it does not exist
      */
@@ -352,6 +372,11 @@ public class DefaultDataReader extends DataReader
         Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
         return (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
             ? var.getName() : stdNameAtt.getStringValue();
+    }
+    
+    public static void main(String[] args) throws Exception
+    {
+        NetcdfDataset nc = NetcdfDataset.openDataset("thredds:file:/M:/raid/data/marine/processing/ag_server_xml/catalog.xml.sample#MERSEA North Atlantic TEP");
     }
     
 }
