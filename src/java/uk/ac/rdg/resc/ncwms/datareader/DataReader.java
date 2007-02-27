@@ -120,7 +120,7 @@ public abstract class DataReader
         throws WMSExceptionInJava
     {
         String clazz = DefaultDataReader.class.getName();
-        if (location.startsWith("http://") || location.startsWith("dods://"))
+        if (isOpendapLocation(location))
         {
             clazz = OpendapDataReader.class.getName();
         }
@@ -157,6 +157,11 @@ public abstract class DataReader
             throw new WMSExceptionInJava("Internal error: constructor for " + clazz +
                 " could not be accessed");
         }
+    }
+    
+    protected static boolean isOpendapLocation(String location)
+    {
+        return location.startsWith("http://") || location.startsWith("dods://");
     }
     
     /**
