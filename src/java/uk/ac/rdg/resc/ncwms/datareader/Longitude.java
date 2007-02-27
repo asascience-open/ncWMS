@@ -104,6 +104,15 @@ public class Longitude
         return lon1.getClockwiseDistanceTo(this) <= lon1.getClockwiseDistanceTo(lon2);
     }
     
+    public boolean equals(Object obj)
+    {
+        if (obj instanceof Longitude)
+        {
+            return this.equals((Longitude)obj);
+        }
+        return false;
+    }
+    
     /**
      * Test to see if this Longitude is equal to another to within a fractional
      * tolerance of 1e-6 (i.e. 0.0001%)
@@ -112,13 +121,27 @@ public class Longitude
      */
     public boolean equals(Longitude other)
     {
+        double distance = this.getClockwiseDistanceTo(other);
+        // Make sure the apparent distance is around 0 if the values are close
+        distance = Longitude.constrain180(distance);
         // Check for equality, avoiding divide-by-zero error
-        if (this.getValue() == 0.0)
+        if (this.getValue() < 1.0e-6)
         {
-            return (Math.abs(other.getValue()) < 1.0e-6);
+            return (Math.abs(distance) < 1.0e-6);
         }
-        double fracDiff = (this.getValue() - other.getValue()) / this.getValue();
+        double fracDiff = distance / this.getValue();
         return Math.abs(fracDiff) < 1.0e-6;
+    }
+    
+    /**
+     * Test to see if this Longitude is equal to another to within a fractional
+     * tolerance of 1e-6 (i.e. 0.0001%)
+     * @param other The other longitude value
+     * @return true if the two Longitudes are equal
+     */
+    public boolean equals(double other)
+    {
+        return this.equals(new Longitude(other));
     }
     
     /**
@@ -139,7 +162,7 @@ public class Longitude
     }
     
     /**
-     * Constrains the value to be between in the range -180 < val <= 180
+     * Constrains the value to be between in the range -180 &lt; val &lt;= 180
      */
     public static double constrain180(double input)
     {
@@ -162,6 +185,7 @@ public class Longitude
         Longitude long4 = new Longitude(-156.23);
         Longitude long5 = new Longitude(-1050.0);
         Longitude long6 = new Longitude(29.02);
+        Longitude long7 = new Longitude(0);
         System.out.println("Long1 (should be 245.67): " + long1);
         System.out.println("Long2 (should be 29.02): " + long2);
         System.out.println("Long3 (should be 218.32): " + long3);
@@ -173,6 +197,8 @@ public class Longitude
         System.out.println("Distance from 29.02 to 245.67 (should be 216.65): "
             + long2.getClockwiseDistanceTo(long1));
         System.out.println("Test of equality (29.02 = 389.02?): " + long2.equals(long6));
+        System.out.println("Test of equality (0 = 360?): " + long7.equals(360.0));
+        System.out.println("Test of equality (0 = 359?): " + long7.equals(359.98999));
     }
     
 }
