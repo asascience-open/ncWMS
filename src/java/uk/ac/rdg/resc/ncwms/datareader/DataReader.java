@@ -161,7 +161,8 @@ public abstract class DataReader
     
     protected static boolean isOpendapLocation(String location)
     {
-        return location.startsWith("http://") || location.startsWith("dods://");
+        return location.startsWith("http://") || location.startsWith("dods://")
+            || location.startsWith("thredds");
     }
     
     /**
