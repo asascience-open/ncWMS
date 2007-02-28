@@ -335,6 +335,7 @@ public class DefaultDataReader extends DataReader
                     // match, just in case we're accidentally trying to
                     // aggregate two separate datasets)
                 }
+                nc.close();
             }
             return vars;
         }
