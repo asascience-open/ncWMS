@@ -412,9 +412,13 @@
         <copy-ear-war file="${file.reference.commons-codec-1.3.jar}" propname="included.lib.file.reference.commons-codec-1.3.jar.X"/>
         <basename property="included.lib.file.reference.jakarta-oro-2.0.8.jar" file="${file.reference.jakarta-oro-2.0.8.jar}"/>
         <copy-ear-war file="${file.reference.jakarta-oro-2.0.8.jar}" propname="included.lib.file.reference.jakarta-oro-2.0.8.jar.X"/>
+        <basename property="included.lib.file.reference.jfreechart-1.0.4.jar" file="${file.reference.jfreechart-1.0.4.jar}"/>
+        <copy-ear-war file="${file.reference.jfreechart-1.0.4.jar}" propname="included.lib.file.reference.jfreechart-1.0.4.jar.X"/>
+        <basename property="included.lib.file.reference.jcommon-1.0.8.jar" file="${file.reference.jcommon-1.0.8.jar}"/>
+        <copy-ear-war file="${file.reference.jcommon-1.0.8.jar}" propname="included.lib.file.reference.jcommon-1.0.8.jar.X"/>
         <mkdir dir="${build.web.dir.real}/META-INF"/>
         <manifest file="${build.web.dir.real}/META-INF/MANIFEST.MF" mode="update">
-            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} ${included.lib.file.reference.bufr.jar-2} ${included.lib.file.reference.commons-httpclient-3.0.jar} ${included.lib.file.reference.commons-codec-1.3.jar} ${included.lib.file.reference.jakarta-oro-2.0.8.jar} "/>
+            <attribute name="Class-Path" value="${included.lib.file.reference.jython.jar} ${included.lib.file.reference.grib.jar-1} ${included.lib.file.reference.jdom.jar-2} ${included.lib.file.reference.netcdfUI-2.2.16.jar} ${included.lib.file.reference.nlog4j-1.2.21.jar-2} ${included.lib.file.reference.bufr.jar-2} ${included.lib.file.reference.commons-httpclient-3.0.jar} ${included.lib.file.reference.commons-codec-1.3.jar} ${included.lib.file.reference.jakarta-oro-2.0.8.jar} ${included.lib.file.reference.jfreechart-1.0.4.jar} ${included.lib.file.reference.jcommon-1.0.8.jar} "/>
         </manifest>
         <delete dir="${dist.ear.dir}/temp"/>
     </target>
@@ -428,6 +432,8 @@
         <copy file="${file.reference.commons-httpclient-3.0.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.commons-codec-1.3.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
         <copy file="${file.reference.jakarta-oro-2.0.8.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.jfreechart-1.0.4.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
+        <copy file="${file.reference.jcommon-1.0.8.jar}" todir="${build.web.dir.real}/WEB-INF/lib"/>
     </target>
     <target name="do-ear-dist" depends="init,compile,compile-jsps,-pre-dist,library-inclusion-in-manifest">
         <dirname property="dist.jar.dir" file="${dist.ear.war}"/>

@@ -13,12 +13,18 @@ if sys.platform.startswith("java"):
 else:
     # TODO: check for presence of CDAT
     import cdmsdataset as datareader
+import iso8601
 from wmsExceptions import *
-from getmap import _getBbox, _getGrid, _checkVersion, _getDatasetAndVariableID, _getFillValue
+from getmap import _getBbox, _getGrid, _checkVersion, _getDatasetAndVariableID, _getTIndices, _getFillValue
+
+from org.jfree.chart import ChartFactory, ChartUtilities
+from org.jfree.data.time import TimeSeries, TimeSeriesCollection, Millisecond
+from java.util import Date
+from java.lang import Double
 
 def getSupportedFormats():
     """ returns list of output formats supported by GetFeatureInfo """
-    return ["text/xml"]
+    return ["text/xml", "image/png"]
 
 def getFeatureInfo(req, params, config):
     """ The GetFeatureInfo operation.
@@ -45,10 +51,6 @@ def getFeatureInfo(req, params, config):
     zValue = params.getParamValue("elevation", "")
     if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
         raise WMSException("You may only request a single value of ELEVATION")
-
-    tValue = params.getParamValue("time", "")
-    if len(tValue.split(",")) > 1 or len(tValue.split("/")) > 1:
-        raise WMSException("You may only request a single value of TIME")
 
     # Get the i and j coordinate of the feature in pixels
     try:
@@ -78,23 +80,48 @@ def getFeatureInfo(req, params, config):
     # Get the index along the time axis
     # Get the metadata
     vars = datareader.getAllVariableMetadata(dataset)
-    if vars[varID].tvalues is None:
-        tIndex = 0
-    else:
-        tIndex = vars[varID].findTIndex(tValue)
-    # Read the data point
-    value = datareader.readDataValue(dataset, varID, tIndex, zValue, lat, lon, _getFillValue())
+    tIndices = _getTIndices(vars[varID], params)
+
+    # Read the data points
+    datavalues = [datareader.readDataValue(dataset, varID, t, zValue, lat, lon, _getFillValue()) for t in tIndices]
+
+    req.content_type = info_format
 
     # Output in simple XML
-    req.content_type = info_format
-    req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-    req.write("<FeatureInfoResponse>")
-    req.write("<longitude>%f</longitude>" % lon)
-    req.write("<latitude>%f</latitude>" % lat)
-    if value is None:
-        req.write("<value>none</value>") 
+    if info_format == "text/xml":
+        req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        req.write("<FeatureInfoResponse>")
+        req.write("<longitude>%f</longitude>" % lon)
+        req.write("<latitude>%f</latitude>" % lat)
+        for i in xrange(len(tIndices)):
+            req.write("<FeatureInfo>")
+            if len(vars[varID].tvalues) > 0:
+                tval = vars[varID].tvalues[tIndices[i]]
+                req.write("<time>%s</time>" % iso8601.tostring(tval))
+            if datavalues[i] is None:
+                req.write("<value>none</value>") 
+            else:
+                req.write("<value>%s</value>" % str(datavalues[i]))
+            req.write("</FeatureInfo>")
+        req.write("</FeatureInfoResponse>")
     else:
-        req.write("<value>%s</value>" % str(value))
-    req.write("</FeatureInfoResponse>")
+        # Output the data as a PNG JFreeChart (most useful for timeseries)
+        # TODO: this needs to be separated to preserve pure Python
+        ts = TimeSeries("Data", Millisecond)
+        for i in xrange(len(tIndices)):
+            tval = vars[varID].tvalues[tIndices[i]]
+            tvalLong = Double(tval * 1000).longValue()
+            date = Date(tvalLong)
+            ts.add(Millisecond(date), datavalues[i])
+        xydataset = TimeSeriesCollection()
+        xydataset.addSeries(ts)
+        xydataset.setDomainIsPointsInTime(1)
+
+        # Creat a chart with no legend, tooltips or URLs
+        title = "Lon: %f, Lat: %f" % (lon, lat)
+        yLabel = "%s (%s)" % (vars[varID].title, vars[varID].units)
+        chart = ChartFactory.createTimeSeriesChart(title, "Date / time", yLabel, xydataset, 0, 0, 0)
+        # Output the chart. TODO: control the plot size
+        ChartUtilities.writeChartAsPNG(req.getOutputStream(), chart, 400, 300)
 
     return

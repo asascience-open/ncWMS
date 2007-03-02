@@ -74,37 +74,8 @@ def getMap(req, params, config):
     var.datasetId, var.datasetTitle = dataset.id, dataset.title
     picMaker.var = var # This is used to create descriptions in the KML
 
-    # Find the requested index/indices along the time axis
-    tvals = var.tvalues
-    if len(tvals) == 0:
-        # Ignore any time value that was given by the client (TODO OK?)
-        tIndices = [0] # This layer has no time dimension
-    else:
-        # The time axis exists
-        if params.getParamValue("time", "") == "":
-            raise MissingDimensionValue("time")
-        # Interpret the time specification
-        tIndices = []
-        for tSpec in params.getParamValue("time", "").split(","):
-            startStopPeriod = tSpec.split("/")
-            if len(startStopPeriod) == 1:
-                # This is a single time value
-                tIndex = var.findTIndex(startStopPeriod[0])
-                tIndices.append(tIndex)
-            elif len(startStopPeriod) == 2:
-                # Extract all time values from start to stop inclusive
-                start, stop = startStopPeriod
-                startIndex = var.findTIndex(startStopPeriod[0])
-                stopIndex = var.findTIndex(startStopPeriod[1])
-                for i in xrange(startIndex, stopIndex + 1):
-                    tIndices.append(i)
-            elif len(startStopPeriod) == 3:
-                # Extract time values from start to stop inclusive
-                # with a set periodicity
-                start, stop, period = startStopPeriod
-                raise WMSException("Cannot yet handle animations with a set periodicity")
-            else:
-                raise InvalidDimensionValue("time", tSpec)
+    # Get the requested indices along the time axis
+    tIndices = _getTIndices(var, params)
 
     # Get the requested transparency and background colour for the layer
     trans = params.getParamValue("transparent", "false").lower()
@@ -144,10 +115,10 @@ def getMap(req, params, config):
         # TODO: see if we already have this image in cache
         picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
         # TODO: cache the data array
-        if len(tvals) == 0:
+        if len(var.tvalues) == 0:
             tValue = ""
         else:
-            tValue = iso8601.tostring(tvals[tIndex])
+            tValue = iso8601.tostring(var.tvalues[tIndex])
         picMaker.addFrame(picData, bbox, zValue, tValue, animation)
     # Write the image to the client
     req.content_type = picMaker.mimeType
@@ -225,6 +196,41 @@ def _getDatasetAndVariableID(layers, datasets):
         return datasets[dsAndVar[0]], dsAndVar[1]
     else:
         raise LayerNotDefined(layers[0])
+
+def _getTIndices(var, params):
+    """ Find the requested index/indices along the time axis.
+        Returns a list of indices """
+    tvals = var.tvalues
+    if len(tvals) == 0:
+        # Ignore any time value that was given by the client (TODO OK?)
+        tIndices = [0] # This layer has no time dimension
+    else:
+        # The time axis exists
+        if params.getParamValue("time", "") == "":
+            raise MissingDimensionValue("time")
+        # Interpret the time specification
+        tIndices = []
+        for tSpec in params.getParamValue("time", "").split(","):
+            startStopPeriod = tSpec.split("/")
+            if len(startStopPeriod) == 1:
+                # This is a single time value
+                tIndex = var.findTIndex(startStopPeriod[0])
+                tIndices.append(tIndex)
+            elif len(startStopPeriod) == 2:
+                # Extract all time values from start to stop inclusive
+                start, stop = startStopPeriod
+                startIndex = var.findTIndex(startStopPeriod[0])
+                stopIndex = var.findTIndex(startStopPeriod[1])
+                for i in xrange(startIndex, stopIndex + 1):
+                    tIndices.append(i)
+            elif len(startStopPeriod) == 3:
+                # Extract time values from start to stop inclusive
+                # with a set periodicity
+                start, stop, period = startStopPeriod
+                raise WMSException("Cannot yet handle animations with a set periodicity")
+            else:
+                raise InvalidDimensionValue("time", tSpec)
+    return tIndices
 
 def _getFillValue():
     """ returns the fill value to be used internally - can't be NaN because NaN is 

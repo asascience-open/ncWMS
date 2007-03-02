@@ -17,6 +17,7 @@ var newVariable = true;  // This will be true when we have chosen a new variable
 var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
+var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
 // Ajax call using the Prototype library
 // url: The URL of the data source
@@ -60,13 +61,19 @@ window.onload = function()
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' } );
     var human_wms = new OpenLayers.Layer.WMS( "Human Footprint", 
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' } );
+        
+    // ESSI WMS (see Stefano Nativi's email to me, Feb 15th)
+    var essi_wms = new OpenLayers.Layer.WMS( "ESSI WMS", 
+        "http://athena.pin.unifi.it:8080/ls/servlet/LayerService?",
+        {layers: 'sst(time-lat-lon)-T0', transparent: 'true' } );
+    essi_wms.setVisibility(false);
             
     // The SeaZone Web Map server
     var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);
     
-    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms]);
+    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms, essi_wms]);
     
     // Make sure the "Open in Google Earth" link is kept up to date when the map
     // is moved or zoomed
@@ -125,7 +132,7 @@ function getFeatureInfo(e)
     if (essc_wms != null)
     {
         $('featureInfo').innerHTML = "Getting feature info...";
-        var url = essc_wms.getFullRequestString({
+        featureInfoUrl = essc_wms.getFullRequestString({
             REQUEST: "GetFeatureInfo",
             BBOX: essc_wms.map.getExtent().toBBOX(),
             I: e.xy.x,
@@ -135,7 +142,7 @@ function getFeatureInfo(e)
             WIDTH: essc_wms.map.size.w,
             HEIGHT: essc_wms.map.size.h
             });
-        OpenLayers.loadURL(url, '', this, gotFeatureInfo);
+        OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
         Event.stop(e);
     }
 }
@@ -151,16 +158,37 @@ function gotFeatureInfo(response)
         $('featureInfo').innerHTML = "<b>Lon:</b> " + toNSigFigs(lon.firstChild.nodeValue, 4) + 
             "&nbsp;&nbsp;<b>Lat:</b> " + toNSigFigs(lat.firstChild.nodeValue, 4) + "&nbsp;&nbsp;<b>Value:</b> " +
             toNSigFigs(val.firstChild.nodeValue, 4);
+        if (timeSeriesSelected()) {
+            // Construct a GetFeatureInfo request for the timeseries plot
+            // Get a URL for a WMS request that covers the current map extent
+            var urlEls = featureInfoUrl.split('&');
+            // Replace the parameters as needed.  We generate a map that is half the
+            // width and height of the viewport, otherwise it takes too long
+            var newURL = urlEls[0];
+            for (var i = 1; i < urlEls.length; i++) {
+                if (urlEls[i].startsWith('TIME=')) {
+                    newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+                } else if (urlEls[i].startsWith('INFO_FORMAT')) {
+                    newURL += '&INFO_FORMAT=image/png';
+                } else {
+                    newURL += '&' + urlEls[i];
+                }
+            }
+            // Image will be 400x300, need to allow a little elbow room
+            $('featureInfo').innerHTML += "&nbsp;&nbsp;<a href='#' onclick=popUp('"
+                + newURL + "',450,350)>Create timeseries plot</a>";
+        }
     } else {
-        $('featureInfo').innerHTML = "Can't get feature info data for this layer <a href=\"javascript:popUp('whynot.html')\">(why not?)</a>";
+        $('featureInfo').innerHTML = "Can't get feature info data for this layer <a href=\"javascript:popUp('whynot.html', 200, 200)\">(why not?)</a>";
     }
 }
 
-function popUp(URL)
+function popUp(url, width, height)
 {
     day = new Date();
     id = day.getTime();
-    eval("page" + id + " = window.open(URL, '" + id + "', 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width=200,height=200,left = 300,top = 300');");
+    window.open(url, id, 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width='
+        + width + ',height=' + height + ',left = 300,top = 300');
 }
 
 // Populates the left-hand menu with a set of datasets
@@ -456,7 +484,7 @@ function setLastAnimationFrame()
 }
 function createAnimation()
 {
-    if ($('firstFrame').innerHTML == '' || $('lastFrame').innerHTML == '')
+    if (!timeSeriesSelected())
     {
         alert("Must select a first and last frame for the animation");
         return;
@@ -600,7 +628,7 @@ function setGEarthURL()
                 newURL += '&' + urlEls[i];
             }
         }
-        if ($('firstFrame').innerHTML != '' && $('lastFrame').innerHTML != '') {
+        if (timeSeriesSelected()) {
             $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open animation in Google Earth</a>';
         } else {
             $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open in Google Earth</a>';
@@ -643,4 +671,10 @@ function toNSigFigs(value, numSigFigs)
         }
     }
     return newValue;
+}
+
+// Returns true if the user has selected a time series
+function timeSeriesSelected()
+{
+    return $('firstFrame').innerHTML != '' && $('lastFrame').innerHTML != '';
 }
