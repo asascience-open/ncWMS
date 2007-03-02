@@ -87,7 +87,7 @@ def getFeatureInfo(req, params, config):
 
     req.content_type = info_format
 
-    # Output in simple XML
+    # Output in simple XML. TODO make this GeoRSS and/or KML?
     if info_format == "text/xml":
         req.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         req.write("<FeatureInfoResponse>")
