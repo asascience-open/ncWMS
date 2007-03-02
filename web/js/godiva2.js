@@ -25,7 +25,7 @@ var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following 
 // onsuccess: A function that will be called with the original request object
 function downloadUrl(url, params, onsuccess)
 {
-    var myAjax = new Ajax.Request(
+    var myAjax = new OpenLayers.Ajax.Request(
         url, 
         {
             method: 'get', 
@@ -69,11 +69,11 @@ window.onload = function()
     essi_wms.setVisibility(false);
             
     // The SeaZone Web Map server
-    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
-        {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
-    seazone_wms.setVisibility(false);
+    //var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
+    //    {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
+    //seazone_wms.setVisibility(false);
     
-    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms, essi_wms]);
+    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms/*, seazone_wms*/, essi_wms]);
     
     // Make sure the "Open in Google Earth" link is kept up to date when the map
     // is moved or zoomed

@@ -4,8 +4,8 @@
 * A WMS 1.3.0 layer, created by subclassing the WMS (1.1.1) layer type
 * @class
 */
-OpenLayers.Layer.WMS1_3 = Class.create();
-OpenLayers.Layer.WMS1_3.prototype = Object.extend( new OpenLayers.Layer.WMS(), {
+OpenLayers.Layer.WMS1_3 = OpenLayers.Class.create();
+OpenLayers.Layer.WMS1_3.prototype = OpenLayers.Class.inherit( OpenLayers.Layer.WMS, {
 
     /** @final @type hash */
     DEFAULT_PARAMS: { service: "WMS",
