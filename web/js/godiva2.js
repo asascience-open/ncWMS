@@ -63,17 +63,17 @@ window.onload = function()
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' } );
         
     // ESSI WMS (see Stefano Nativi's email to me, Feb 15th)
-    var essi_wms = new OpenLayers.Layer.WMS( "ESSI WMS", 
+    /*var essi_wms = new OpenLayers.Layer.WMS.Untiled( "ESSI WMS", 
         "http://athena.pin.unifi.it:8080/ls/servlet/LayerService?",
         {layers: 'sst(time-lat-lon)-T0', transparent: 'true' } );
-    essi_wms.setVisibility(false);
+    essi_wms.setVisibility(false);*/
             
     // The SeaZone Web Map server
-    //var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
-    //    {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
-    //seazone_wms.setVisibility(false);
+    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
+        {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
+    seazone_wms.setVisibility(false);
     
-    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms/*, seazone_wms*/, essi_wms]);
+    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms/*, essi_wms*/]);
     
     // Make sure the "Open in Google Earth" link is kept up to date when the map
     // is moved or zoomed
@@ -87,8 +87,6 @@ window.onload = function()
     }
         
     map.addControl(new OpenLayers.Control.LayerSwitcher());
-    // For some reason we have to call zoomToMaxExtent() before calling zoomTo()
-    map.zoomToMaxExtent();
     map.zoomTo(1);
     
     // Add a listener for changing the base map
@@ -489,6 +487,12 @@ function createAnimation()
         alert("Must select a first and last frame for the animation");
         return;
     }
+    
+    essc_wms.mergeNewParams({time: $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML,
+        format: 'image/gif'});
+    alert("new parameters merged");
+    return;
+    
     // Get a URL for a WMS request that covers the current map extent
     var urlEls = essc_wms.getURL(map.getExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
@@ -573,10 +577,12 @@ function updateMap()
     // current viewport
     var baseURL = window.location.href.split("/").slice(0,-1).join("/");
     if (essc_wms == null) {
+        // If this were an Untiled layer we could control the ratio of image
+        // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
             baseURL + '/WMS.py', {layers: layerName, elevation: zValue, time: tValue,
             transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
-            opacity: opacity}, {buffer: 1});
+            opacity: opacity}, {buffer: 1, ratio: 1.5});
         map.addLayers([essc_wms]);
     } else {
         essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
