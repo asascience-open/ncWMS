@@ -88,7 +88,8 @@ def getCapabilities(req, params, config, lastUpdateTime):
     output.write("<Request>")
     output.write("<GetCapabilities>")
     output.write("<Format>text/xml</Format>")
-    url = "http://%s%s?" % (req.server.server_hostname, req.unparsed_uri.split("?")[0])
+    # Trailing "?" in the URL confuses World Wind 1.4.0.0
+    url = "http://%s%s" % (req.server.server_hostname, req.unparsed_uri.split("?")[0])
     output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetCapabilities>")
