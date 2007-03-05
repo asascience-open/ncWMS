@@ -56,6 +56,7 @@ def getFrontPage(config):
     doc.write("<body><h1>%s</h1>" % config.title)
     doc.write("<p><a href=\"" + prefix + "?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.html\">Godiva2 interface</a></p>")
+    doc.write("<p><a href=\"./admin/\">Admin interface</a> (requires login)</p>")
     doc.write("<h2>Datasets:</h2>")
     # Print a GetMap link for every dataset we have
     doc.write("<table border=\"1\"><tbody>")
