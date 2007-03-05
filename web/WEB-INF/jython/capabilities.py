@@ -169,10 +169,11 @@ def getCapabilities(req, params, config, lastUpdateTime):
                 output.write("</Dimension>")
 
             # Set the time dimension
-            if vars[vid].tvalues is not None:
-                output.write("<Dimension name=\"time\" units=\"ISO8601\">")
-                # If we change this to support the "current" attribute
-                # we must also change the data reading code
+            if len(vars[vid].tvalues) > 0:
+                output.write("<Dimension name=\"time\" units=\"ISO8601\"")
+                # TODO: default value should be the time closest to now
+                output.write(" multipleValues=\"true\" current=\"true\" default=\"%s\">" %
+                    iso8601.tostring(vars[vid].tvalues[-1]))
                 firstTime = 1
                 for t in vars[vid].tvalues:
                     if firstTime:

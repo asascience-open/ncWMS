@@ -206,30 +206,34 @@ def _getTIndices(var, params):
         tIndices = [0] # This layer has no time dimension
     else:
         # The time axis exists
-        if params.getParamValue("time", "") == "":
-            raise MissingDimensionValue("time")
-        # Interpret the time specification
-        tIndices = []
-        for tSpec in params.getParamValue("time", "").split(","):
-            startStopPeriod = tSpec.split("/")
-            if len(startStopPeriod) == 1:
-                # This is a single time value
-                tIndex = var.findTIndex(startStopPeriod[0])
-                tIndices.append(tIndex)
-            elif len(startStopPeriod) == 2:
-                # Extract all time values from start to stop inclusive
-                start, stop = startStopPeriod
-                startIndex = var.findTIndex(startStopPeriod[0])
-                stopIndex = var.findTIndex(startStopPeriod[1])
-                for i in xrange(startIndex, stopIndex + 1):
-                    tIndices.append(i)
-            elif len(startStopPeriod) == 3:
-                # Extract time values from start to stop inclusive
-                # with a set periodicity
-                start, stop, period = startStopPeriod
-                raise WMSException("Cannot yet handle animations with a set periodicity")
-            else:
-                raise InvalidDimensionValue("time", tSpec)
+        reqtime = params.getParamValue("time", "")
+        if reqtime == "":
+            # The default time is the last value along the axis
+            # TODO: this should be the time closest to now
+            tIndices = [len(tvals) - 1]
+        else:
+            # Interpret the time specification
+            tIndices = []
+            for tSpec in reqtime.split(","):
+                startStopPeriod = tSpec.split("/")
+                if len(startStopPeriod) == 1:
+                    # This is a single time value
+                    tIndex = var.findTIndex(startStopPeriod[0])
+                    tIndices.append(tIndex)
+                elif len(startStopPeriod) == 2:
+                    # Extract all time values from start to stop inclusive
+                    start, stop = startStopPeriod
+                    startIndex = var.findTIndex(startStopPeriod[0])
+                    stopIndex = var.findTIndex(startStopPeriod[1])
+                    for i in xrange(startIndex, stopIndex + 1):
+                        tIndices.append(i)
+                elif len(startStopPeriod) == 3:
+                    # Extract time values from start to stop inclusive
+                    # with a set periodicity
+                    start, stop, period = startStopPeriod
+                    raise WMSException("Cannot yet handle animations with a set periodicity")
+                else:
+                    raise InvalidDimensionValue("time", tSpec)
     return tIndices
 
 def _getFillValue():

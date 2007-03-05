@@ -271,6 +271,7 @@ public class VariableMetadata
         if (tValueStr.equals("current"))
         {
             // Return the last index in the array
+            // TODO: should be the index of the timestep closest to now
             return this.timesteps.size() - 1;
         }
         Date target = dateFormatter.getISODate(tValueStr);
