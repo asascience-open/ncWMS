@@ -14,18 +14,69 @@ def wms(req):
     """ Entry point with mod_python """
     # Config file is in the same directory as this script
     path = os.path.join(os.path.split(__file__)[0], "ncWMS.ini")
-    doWms(req, path, time.time())
+    doWms(req, _readConfig(path), time.time())
 
-def doWms(req, configFile, lastUpdateTime):
+class NcWMSConfig: pass
+def _readConfig(configFile):
+    """ returns an object containing the configuration of this server.
+        Used by mod_python only """
+    config = ConfigParser.ConfigParser()
+    config.read(configFile)
+    configObj = NcWMSConfig()
+    configObj.datasets = _getDatasets(config)
+    configObj.title = config.get('server', 'title')
+    configObj.abstract = config.get('server', 'abstract')
+    configObj.url = config.get('server', 'url')
+    configObj.keywords = config.get('server', 'keywords').split(',')
+    configObj.allowFeatureInfo = config.getboolean('server', 'allowFeatureInfo')
+    configObj.maxImageWidth = config.getint('server', 'maxImageWidth')
+    configObj.maxImageHeight = config.getint('server', 'maxImageHeight')
+    configObj.contactName = config.get('contact', 'name')
+    configObj.contactOrg = config.get('contact', 'organization')
+    configObj.contactTel = config.get('contact', 'tel')
+    configObj.contactEmail = config.get('contact', 'email')
+    return configObj
+
+class Dataset: pass # Simple class that will hold a dataset's title and location
+def _getDatasets(config):
+    """ Return dictionary of Dataset objects, keyed by the unique ID.
+        Used by mod_python only
+        config = ConfigParser object """
+    # TODO error checking
+    datasets = {}
+    for dsID in config.options('datasets'):
+        line = config.get('datasets', dsID)
+        els = line.split(",")
+        dataset = Dataset()
+        dataset.id = dsID
+        dataset.title = els[0].strip()
+        dataset.location = els[1].strip()
+        dataset.queryable = 1
+        if len(els) > 2 and els[2].lower() == "false":
+            dataset.queryable = 0
+        # dataset.reader is set to an empty string: this will cause 
+        # the default data reader to be used
+        dataset.reader = ""
+        # Say this dataset is ready for display (in the Java version
+        # datasets are reloaded every so often)
+        dataset.ready = 1
+        datasets[dsID] = dataset
+
+    # Now override the datareaders for those datasets that are specified
+    for dsID in config.options('datareaders'):
+        datasets[dsID].reader = config.get('datareaders', dsID)
+
+    return datasets
+
+# Entry point from Java
+def doWms(req, config, lastUpdateTime):
     """ Does the WMS operation.
         req = mod_python request object (or FakeModPythonRequestObject
             from Jython servlet)
-        configFile = location of the config file
+        config = Configuration object
         lastUpdateTime = time at which cache of data and metadata was last updated """
        
     try:
-        # Read the config file
-        config = _readConfig(configFile)
         # Parse the URL parameters
         args = req.args
         if req.args is None or req.args.strip() == "":
@@ -58,49 +109,3 @@ def doWms(req, configFile, lastUpdateTime):
         req.content_type="text/xml"
         e.write(req)
 
-class NcWMSConfig: pass
-def _readConfig(configFile):
-    """ returns an object containing the configuration of this server """
-    config = ConfigParser.ConfigParser()
-    config.read(configFile)
-    configObj = NcWMSConfig()
-    configObj.datasets = _getDatasets(config)
-    configObj.title = config.get('server', 'title')
-    configObj.abstract = config.get('server', 'abstract')
-    configObj.url = config.get('server', 'url')
-    configObj.keywords = config.get('server', 'keywords').split(',')
-    configObj.allowFeatureInfo = config.getboolean('server', 'allowFeatureInfo')
-    configObj.maxImageWidth = config.getint('server', 'maxImageWidth')
-    configObj.maxImageHeight = config.getint('server', 'maxImageHeight')
-    configObj.contactName = config.get('contact', 'name')
-    configObj.contactOrg = config.get('contact', 'organization')
-    configObj.contactTel = config.get('contact', 'tel')
-    configObj.contactEmail = config.get('contact', 'email')
-    return configObj
-
-class Dataset: pass # Simple class that will hold a dataset's title and location
-def _getDatasets(config):
-    """ Return dictionary of Dataset objects, keyed by the unique ID
-        config = ConfigParser object """
-    # TODO error checking
-    datasets = {}
-    for dsID in config.options('datasets'):
-        line = config.get('datasets', dsID)
-        els = line.split(",")
-        dataset = Dataset()
-        dataset.id = dsID
-        dataset.title = els[0].strip()
-        dataset.location = els[1].strip()
-        dataset.queryable = 1
-        if len(els) > 2 and els[2].lower() == "false":
-            dataset.queryable = 0
-        # dataset.reader is set to an empty string: this will cause 
-        # the default data reader to be used
-        dataset.reader = ""
-        datasets[dsID] = dataset
-
-    # Now override the datareaders for those datasets that are specified
-    for dsID in config.options('datareaders'):
-        datasets[dsID].reader = config.get('datareaders', dsID)
-
-    return datasets

@@ -68,37 +68,38 @@ def getFrontPage(config):
     doc.write("</tr>")
     datasets = config.datasets
     for ds in datasets.keys():
-        doc.write("<tr><th>%s</th>" % datasets[ds].title)
-        vars = datareader.getAllVariableMetadata(datasets[ds])
-        for format in getmap.getSupportedImageFormats():
-            doc.write("<td>")
-            for varID in vars.keys():
-                doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s&TRANSPARENT=true" % (prefix, format))
-                doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
-                bbox = vars[varID].bbox
-                doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
-                tvals = vars[varID].tvalues
-                if len(tvals) > 0:
-                    doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
-                doc.write("\">%s</a><br />" % vars[varID].title)
-            doc.write("</td>")
-        if config.allowFeatureInfo:
-            doc.write("<td>")
-            if datasets[ds].queryable:
+        if datasets[ds].ready:
+            doc.write("<tr><th>%s</th>" % datasets[ds].title)
+            vars = datareader.getAllVariableMetadata(datasets[ds])
+            for format in getmap.getSupportedImageFormats():
+                doc.write("<td>")
                 for varID in vars.keys():
-                    doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml" % prefix)
-                    doc.write("&QUERY_LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
+                    doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=CRS:84&WIDTH=256&HEIGHT=256&FORMAT=%s&TRANSPARENT=true" % (prefix, format))
+                    doc.write("&LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
                     bbox = vars[varID].bbox
                     doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
-                    doc.write("&I=128&J=128")
                     tvals = vars[varID].tvalues
                     if len(tvals) > 0:
                         doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
                     doc.write("\">%s</a><br />" % vars[varID].title)
-            else:
-                doc.write("Dataset not queryable")
-            doc.write("</td>")
-        doc.write("</tr>")
+                doc.write("</td>")
+            if config.allowFeatureInfo:
+                doc.write("<td>")
+                if datasets[ds].queryable:
+                    for varID in vars.keys():
+                        doc.write("<a href=\"%s?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&CRS=CRS:84&WIDTH=256&HEIGHT=256&INFO_FORMAT=text/xml" % prefix)
+                        doc.write("&QUERY_LAYERS=%s%s%s" % (ds, wmsUtils.getLayerSeparator(), varID))
+                        bbox = vars[varID].bbox
+                        doc.write("&BBOX=%s,%s,%s,%s" % tuple([str(b) for b in bbox]))
+                        doc.write("&I=128&J=128")
+                        tvals = vars[varID].tvalues
+                        if len(tvals) > 0:
+                            doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
+                        doc.write("\">%s</a><br />" % vars[varID].title)
+                else:
+                    doc.write("Dataset not queryable")
+                doc.write("</td>")
+            doc.write("</tr>")
     doc.write("</tbody></table>")
     doc.write("</body></html>")
     s = doc.getvalue()

@@ -26,74 +26,44 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.datareader;
+package uk.ac.rdg.resc.ncwms.config;
 
-import java.util.Hashtable;
-import java.util.Vector;
+import simple.xml.Attribute;
+import simple.xml.Root;
 
 /**
- * A dataset: contains a number of VariableMetadata objects.
+ * Simple Java bean describing a user that can log on to the ncWMS.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class Dataset
+@Root(name="user")
+public class User
 {
-    /**
-     * The state of a Dataset
-     */
-    public static enum State { LOADING, READY, ERROR };
-    /**
-     * The datasets currently in memory: maps ids to Dataset objects
-     */
-    private static Hashtable<String, Dataset> datasets = new Hashtable<String, Dataset>();
+    @Attribute(name="username")
+    private String username;
+    @Attribute(name="password")
+    private String password;
     
-    private String id; // Unique ID for this dataset
-    private String location; // Location of this dataset (NcML file, OPeNDAP location etc)
-    private Vector<VariableMetadata> vars; // Variables contained in this dataset
-    private State state; // State of this dataset
-    private Exception err; // Set if there is an error loading the dataset
-    private DataReader dataReader; // Object used to read data and metadata
-    
-    
-    
-    /** Creates a new instance of Dataset */
-    public Dataset(String id, String location)
+    /** Creates a new instance of User */
+    public User()
     {
-        this.id = id;
-        this.setLocation(location);
-        this.vars = new Vector<VariableMetadata>();
+    }
+    
+    public String toString()
+    {
+        return "User: " + getUsername() + ", password: " + getPassword();
     }
 
-    public String getId()
+    public String getUsername()
     {
-        return this.id;
-    }
-    
-    public String getLocation()
-    {
-        return location;
+        return username;
     }
 
-    public void setLocation(String location)
+    public String getPassword()
     {
-        this.location = location;
-        // TODO: reload this dataset?
+        return password;
     }
-
-    public Vector<VariableMetadata> getVariables()
-    {
-        return vars;
-    }
-    
-    /**
-     * (Re)loads the metadata for this Dataset in a new thread.
-     */
-    private void loadMetadata()
-    {
-        
-    }
-    
 }

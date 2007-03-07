@@ -5,10 +5,11 @@ from javax.servlet import ServletException
 from java.net import URL
 from java.util import Timer, TimerTask
 
-from org.apache.log4j import PropertyConfigurator, Logger
+from org.apache.log4j import Logger
 
 from uk.ac.rdg.resc.ncwms.datareader import DataReader
 from uk.ac.rdg.resc.ncwms.exceptions import *
+from uk.ac.rdg.resc.ncwms.config import Config
 
 import time
 import ncWMS
@@ -70,15 +71,11 @@ class WMS (HttpServlet):
             HttpServlet.init(self)
         else:
             HttpServlet.init(self, cfg)
+        # The config object has been created by the GlobalFilter
+        self.config = self.servletContext.getAttribute("config")
         # These are the things we only do once
         if WMS.timer is None:
             WMS.timer = Timer(1) # timer is a daemon
-            # Load the Log4j configuration file
-            file = self.getInitParameter("log4j-init-file")
-            if file is not None:
-                prefix = self.getServletContext().getRealPath("/")
-                PropertyConfigurator.configure(prefix + file)
-            WMS.logger.debug("Initialized logging system")
             # Initialize the cache of datasets
             DataReader.init()
             WMS.logger.debug("Initialized DatasetCache")
@@ -100,7 +97,6 @@ class WMS (HttpServlet):
     def doGet(self, request, response):
         """ Perform the WMS operation """
         WMS.logger.debug("GET operation called")
-        prefix = self.getServletContext().getRealPath("/")
         req = FakeModPythonRequestObject(request, response)
         # We make sure we catch all the exceptions from the Java code
         # and re-raise as Python exceptions so that they are correctly
@@ -108,8 +104,7 @@ class WMS (HttpServlet):
         try:
             try:
                 # Do the WMS operation
-                ncWMS.doWms(req, prefix + "WEB-INF/conf/ncWMS.ini",
-                    WMS.cacheWiper.timeLastRan)
+                ncWMS.doWms(req, self.config, WMS.cacheWiper.timeLastRan)
             except InvalidDimensionValueException, e:
                 raise InvalidDimensionValue(e.getDimName(), e.getValue())
             except MissingDimensionValueException, e:
