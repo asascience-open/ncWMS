@@ -29,13 +29,8 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.Hashtable;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.NetcdfDatasetCache;
-import ucar.nc2.units.DateFormatter;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
@@ -47,76 +42,29 @@ public abstract class DataReader
 {
     private static final Logger logger = Logger.getLogger(DataReader.class);
     
-    /**
-     * Maps class names to DataReader objects.  Only one DataReader object of
-     * each class will ever be created.
-     */
-    private static Hashtable<String, DataReader> readers;
-    /**
-     * Maps locations to hashtables that map variable IDs to VariableMetadata
-     * objects.
-     */
-    private static Hashtable<String, Hashtable<String, VariableMetadata>> metadataCache;
+    protected String location; // Location of the data that we'll be reading
+                               // (could be a glob expression or OPeNDAP address)
     
     /**
-     * Initialize the cache. Must be called before trying to get datasets or
-     * metadata from the cache.  Does nothing if already called.
+     * This class can only be instantiated through createDataReader()
      */
-    public static synchronized void init()
+    protected DataReader()
     {
-        if (metadataCache == null)
-        {
-            NetcdfDatasetCache.init();
-            metadataCache = new Hashtable<String, Hashtable<String, VariableMetadata>>();
-            readers = new Hashtable<String, DataReader>();
-            logger.debug("DatasetCache initialized");
-        }
     }
     
     /**
-     * Gets the {@link NetcdfDataset} at the given location from the cache.
-     * @throws IOException if there was an error opening the dataset
-     */
-    protected static synchronized NetcdfDataset getDataset(String location)
-        throws IOException
-    {
-        NetcdfDataset nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
-        logger.debug("Returning NetcdfDataset at {} from cache", location);
-        return nc;
-    }
-    
-    /**
-     * Clears the cache of datasets and metadata.  This is called periodically
-     * by a Timer (see WMS.py), to make sure we are synchronized with the disk.
-     * @todo if a dataset is already open, it will not be removed from the cache
-     */
-    public static synchronized void clear()
-    {
-        NetcdfDatasetCache.clearCache(false);
-        metadataCache.clear();
-        logger.debug("DatasetCache cleared");
-    }
-    
-    /**
-     * Cleans up the cache.
-     */
-    public static synchronized void exit()
-    {
-        NetcdfDatasetCache.exit();
-        logger.debug("Cleaned up DatasetCache");
-    }
-    
-    /**
-     * Gets a DataReader object.  <b>Only one</b> object of each class will be
-     * created (hence methods have to be thread-safe).
-     * @param className Name of the class to generate
+     * Gets a DataReader object of a certain type, for data at a certain location.
+     * We need the location information because we might want to detect whether
+     * a dataset is local or remote (e.g. OPeNDAP).  Creates a new DataReader object
+     * with each invocation.
+     * @param className Name of the DataReader class to generate
      * @param the location of the dataset: used to detect OPeNDAP URLs
      * @return a DataReader object of the given class, or {@link DefaultDataReader}
      * or {@link OpendapDataReader} (depending on whether the location starts with
      * "http://" or "dods://") if <code>className</code> is null or the empty string
      * @throws a {@link WMSExceptionInJava} if the DataReader could not be created
      */
-    private static DataReader getDataReader(String className, String location)
+    public static DataReader createDataReader(String className, String location)
         throws WMSExceptionInJava
     {
         String clazz = DefaultDataReader.class.getName();
@@ -130,14 +78,9 @@ public abstract class DataReader
             {
                 clazz = className;
             }
-            if (!readers.containsKey(clazz))
-            {
-                // Create the DataReader object
-                Object drObj = Class.forName(clazz).newInstance();
-                // this will throw a ClassCastException if drObj is not a DataReader
-                readers.put(clazz, (DataReader)drObj);
-            }
-            return readers.get(clazz);
+            DataReader dr = (DataReader)Class.forName(clazz).newInstance();
+            dr.location = location;
+            return dr;
         }
         catch(ClassNotFoundException cnfe)
         {
@@ -169,9 +112,7 @@ public abstract class DataReader
      * Reads an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.  Reads data for a single time index only.
      *
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
-     * @param dataReaderClassName The name of the class that we will use to read data
-     * @param varID Unique identifier for the required variable in the file
+     * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
      * @param zValue The value of elevation as specified by the client
      * @param latValues Array of latitude values
@@ -180,26 +121,19 @@ public abstract class DataReader
      * @return array of data values
      * @throws WMSExceptionInJava if an error occurs
      */
-    public static float[] read(String location, String dataReaderClassName, String varID,
+    public float[] read(VariableMetadata vm,
         int tIndex, String zValue, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
         try
         {
-            DataReader dr = getDataReader(dataReaderClassName, location);
-            VariableMetadata vm = getAllVariableMetadata(location, dr).get(varID);
-            if (vm == null)
-            {
-                throw new WMSExceptionInJava("Could not find variable called "
-                    + vm.getId() + " in " + location);
-            }
             // Find the index along the depth axis
             int zIndex = 0; // Default value of z is the first in the axis
             if (zValue != null && !zValue.equals("") && vm.getZvalues() != null)
             {
                 zIndex = vm.findZIndex(zValue);
             }
-            return dr.read(location, vm, tIndex, zIndex, latValues, lonValues, fillValue);
+            return this.read(vm, tIndex, zIndex, latValues, lonValues, fillValue);
         }
         catch(Exception e)
         {
@@ -212,7 +146,6 @@ public abstract class DataReader
      * Reads an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.  Reads data for a single time index only.
      *
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
      * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
      * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
@@ -221,58 +154,24 @@ public abstract class DataReader
      * @param fillValue Value to use for missing data
      * @throws WMSExceptionInJava if an error occurs
      */
-    protected abstract float[] read(String location, VariableMetadata vm,
+    protected abstract float[] read(VariableMetadata vm,
         int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava;
     
     /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location.
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
-     * @param dataReaderClassName The name of the class that we will use to read data
-     * @return Hashtable of variable IDs mapped to {@link VariableMetadata} objects
-     * @throws WMSExceptionInJava if there was an error reading from the data source
-     */
-    public static Hashtable<String, VariableMetadata> getAllVariableMetadata(String location,
-        String dataReaderClassName) throws WMSExceptionInJava
-    {
-        try
-        {
-            DataReader dr = getDataReader(dataReaderClassName, location);
-            return getAllVariableMetadata(location, dr);
-        }
-        catch(IOException ioe)
-        {
-            logger.error("IOException reading metadata: " + ioe.getMessage(), ioe);
-            throw new WMSExceptionInJava("Internal IO error reading metadata " + ioe.getMessage());
-        }
-    }
-    
-    /**
-     * Reads and returns the metadata for all the variables in the dataset
-     * at the given location.
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
-     * @param dr The DataReader that we will use to read data
      * @return Hashtable of variable IDs mapped to {@link VariableMetadata} objects
      * @throws IOException if there was an error reading from the data source
      */
-    public static Hashtable<String, VariableMetadata> getAllVariableMetadata(String location,
-        DataReader dr) throws IOException
-    {
-        if (!metadataCache.containsKey(location))
-        {
-            metadataCache.put(location, dr.getVariableMetadata(location));
-        }
-        return metadataCache.get(location);
-    }
-    
-    /**
-     * Reads and returns the metadata for all the variables in the dataset
-     * at the given location.
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
-     * @return Hashtable of variable IDs mapped to {@link VariableMetadata} objects
-     * @throws IOException if there was an error reading from the data source
-     */
-    protected abstract Hashtable<String, VariableMetadata> getVariableMetadata(String location)
+    public abstract Hashtable<String, VariableMetadata> getVariableMetadata()
         throws IOException;
+    
+    /**
+     * Closes the DataReader: frees up any resources.  This default implementation
+     * does nothing: subclasses should override if necessary.
+     */
+    public void close()
+    {
+    }
 }

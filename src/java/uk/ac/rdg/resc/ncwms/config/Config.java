@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
@@ -68,6 +69,9 @@ public class Config
     @Element(name="allowFeatureInfo", required=false)
     private boolean allowFeatureInfo; // True if we allow the GetFeatureInfo operation globally
     
+    private Date lastUpdateTime; // Time of the last update to this configuration
+                                 // or any of the contained metadata
+    
     /**
      * This contains the map of dataset IDs to Dataset objects
      */
@@ -78,11 +82,12 @@ public class Config
     private Hashtable<String, User> users;
     
     /** Creates a new instance of Config */
-    private Config()
+    public Config()
     {
         this.datasets = new Hashtable<String, Dataset>();
         this.users = new Hashtable<String, User>();
         this.allowFeatureInfo = true;
+        this.lastUpdateTime = new Date();
     }
     
     /**
@@ -158,6 +163,16 @@ public class Config
         }
     }
     
+    /**
+     * @return true if the server has been adequately configured.  This method
+     * is used by the {@link GlobalFilter} to redirect users to an error page
+     * if they try to use the server before it is configured.
+     */
+    public boolean isReady()
+    {
+        return this.title != null; // TODO: check all the compulsory options
+    }
+    
     public Hashtable<String, Dataset> getDatasets()
     {
         return datasets;
@@ -186,6 +201,25 @@ public class Config
     public void setAllowFeatureInfo(boolean allowFeatureInfo)
     {
         this.allowFeatureInfo = allowFeatureInfo;
+    }
+    
+    public void setLastUpdateTime(Date date)
+    {
+        this.lastUpdateTime = date;
+    }
+    
+    public Date getLastUpdateTime()
+    {
+        return this.lastUpdateTime;
+    }
+    
+    /**
+     * @return the time of the last change to the configuration or metadata,
+     * in seconds since the epoch
+     */
+    public double getLastUpdateTimeSeconds()
+    {
+        return this.lastUpdateTime.getTime() / 1000.0;
     }
     
 }

@@ -3,11 +3,10 @@
 from javax.servlet.http import HttpServlet
 from javax.servlet import ServletException
 from java.net import URL
-from java.util import Timer, TimerTask
+from java.lang import RuntimeException
 
 from org.apache.log4j import Logger
 
-from uk.ac.rdg.resc.ncwms.datareader import DataReader
 from uk.ac.rdg.resc.ncwms.exceptions import *
 from uk.ac.rdg.resc.ncwms.config import Config
 
@@ -61,8 +60,6 @@ class FakeModPythonRequestObject:
 class WMS (HttpServlet):
 
     logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.WMS")
-    timer = None
-    cacheWiper = None
 
     def init(self, cfg=None):
         """ This method will be called twice, once with a cfg parameter
@@ -73,25 +70,9 @@ class WMS (HttpServlet):
             HttpServlet.init(self, cfg)
         # The config object has been created by the GlobalFilter
         self.config = self.servletContext.getAttribute("config")
-        # These are the things we only do once
-        if WMS.timer is None:
-            WMS.timer = Timer(1) # timer is a daemon
-            # Initialize the cache of datasets
-            DataReader.init()
-            WMS.logger.debug("Initialized DatasetCache")
-            # Start a timer that will clear the cache at regular intervals
-            # so that NcML aggregations are reloaded
-            # TODO: get the interval value from a config file
-            intervalInMs = int(60 * 1000) # Runs once a minute
-            WMS.cacheWiper = CacheWiper()
-            WMS.timer.scheduleAtFixedRate(WMS.cacheWiper, intervalInMs, intervalInMs)
-            WMS.logger.debug("Initialized NetcdfDatasetCache refresher")
-            WMS.logger.debug("ncWMS Servlet initialized")
+        WMS.logger.debug("ncWMS Servlet initialized")
 
     def destroy(self):
-        DataReader.exit()
-        if WMS.timer is not None:
-            WMS.timer.cancel()
         WMS.logger.debug("ncWMS Servlet destroyed")
 
     def doGet(self, request, response):
@@ -104,13 +85,17 @@ class WMS (HttpServlet):
         try:
             try:
                 # Do the WMS operation
-                ncWMS.doWms(req, self.config, WMS.cacheWiper.timeLastRan)
+                # TODO: get time of last metadata update somehow
+                ncWMS.doWms(req, self.config)
             except InvalidDimensionValueException, e:
                 raise InvalidDimensionValue(e.getDimName(), e.getValue())
             except MissingDimensionValueException, e:
                 raise MissingDimensionValue(e.getDimName())
             except WMSExceptionInJava, e:
                 raise WMSException(e.getMessage())
+            except RuntimeException, e:
+                self.logger.error(e.getMessage(), e)
+                raise WMSException("%s: %s" % (e.getClass().getName(), e.getMessage()))
         except WMSException, e:
             req.content_type="text/xml"
             e.write(req)
@@ -118,13 +103,4 @@ class WMS (HttpServlet):
     def doPost(self,request,response):
         raise ServletException("POST method is not supported on this server")
 
-class CacheWiper(TimerTask):
-    """ Clears the NetcdfDatasetCache at regular intervals """
-    def __init__(self):
-        self.logger = Logger.getLogger("uk.ac.rdg.resc.ncwms.CacheWiper")
-        self.timeLastRan = time.time() # Will be used as UpdateSequence in capabilities doc
-    def run(self):
-        DataReader.clear()
-        self.timeLastRan = time.time()
-        self.logger.debug("Cleared cache")
         

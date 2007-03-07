@@ -87,7 +87,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
     {
     }
     
-    protected Hashtable<String, VariableMetadata> getVariableMetadata(String location)
+    public Hashtable<String, VariableMetadata> getVariableMetadata()
         throws IOException
     {
         Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
@@ -131,7 +131,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
         return dir.list(FILENAME_FILTER);
     }
     
-    protected float[] read(String location, VariableMetadata vm, int tIndex,
+    protected float[] read(VariableMetadata vm, int tIndex,
         int zIndex, float[] latValues, float[] lonValues, float fillValue)
         throws WMSExceptionInJava
     {

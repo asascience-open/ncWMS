@@ -18,16 +18,17 @@ import getfeatureinfo
 import getmap
 from wmsExceptions import *
 
-def getCapabilities(req, params, config, lastUpdateTime):
+def getCapabilities(req, params, config):
     """ Returns the Capabilities document.
         req = mod_python request object or WMS.FakeModPythonRequest object
         params = wmsUtils.RequestParser object containing the request parameters
-        config = ConfigParser object containing configuration info for this WMS
-        lastUpdateTime = time at which cache of data and metadata was last updated """
+        config = ConfigParser object containing configuration info for this WMS """
 
     version = params.getParamValue("version", "")
     format = params.getParamValue("format", "")
     # TODO: deal with version and format
+
+    lastUpdateTime = config.lastUpdateTimeSeconds
 
     # Check the UPDATESEQUENCE (used for cache consistency)
     updatesequence = params.getParamValue("updatesequence", "")

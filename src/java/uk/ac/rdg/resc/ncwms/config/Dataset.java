@@ -65,7 +65,8 @@ public class Dataset
     @Attribute(name="title")
     private String title;
     
-    private Vector<VariableMetadata> vars; // Variables contained in this dataset
+    // Variables contained in this dataset, keyed by their unique IDs
+    private Hashtable<String, VariableMetadata> vars; 
     private State state; // State of this dataset
     private Exception err; // Set if there is an error loading the dataset
     private DataReader dataReader; // Object used to read data and metadata
@@ -73,9 +74,11 @@ public class Dataset
     
     public Dataset()
     {
-        this.vars = new Vector<VariableMetadata>();
+        this.vars = new Hashtable<String, VariableMetadata>();
         this.state = State.TO_BE_LOADED;
         this.queryable = true;
+        // We'll use a default data reader unless this is overridden in the config file
+        this.dataReaderClass = "";
     }
 
     public String getId()
@@ -91,10 +94,11 @@ public class Dataset
     public void setLocation(String location)
     {
         this.location = location;
-        // TODO: reload this dataset?
+        // Mark for reload: TODO: reload immediately?
+        this.state = State.TO_BE_LOADED;
     }
 
-    public Vector<VariableMetadata> getVariables()
+    public Hashtable<String, VariableMetadata> getVariables()
     {
         return vars;
     }
@@ -124,20 +128,65 @@ public class Dataset
     }
     
     /**
-     * (Re)loads the metadata for this Dataset.  Does nothing if we are already
-     * loading metadata.
+     * @return true if this dataset needs to be reloaded
+     */
+    public boolean needsRefresh()
+    {
+        if (this.state == State.LOADING)
+        {
+            return false;
+        }
+        else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED)
+        {
+            return true;
+        }
+        else
+        {
+            // State = READY.  TODO: check the age of the metadata
+            return true;
+        }
+    }
+    
+    /**
+     * (Re)loads the metadata for this Dataset.  Clients must call needsRefresh()
+     * before calling this method to check that the metadata needs reloading.
+     * This is called from the {@link GlobalFilter.DatasetReloader} timer task.
      */
     public void loadMetadata()
     {
-        // Do nothing if we are already loading metadata
-        if (this.state != State.LOADING)
+        this.state = State.LOADING;
+        try
         {
-            this.state = State.LOADING;
-            
-            // TODO: use the DataReader to read the metadata
-            // Might result in State.ERROR
+            // Clear the store of variables
+            this.vars = null;
+            // Destroy any previous DataReader object (close files etc)
+            if (this.dataReader != null) this.dataReader.close();
+            // Create a new DataReader object of the correct type
+            this.dataReader = DataReader.createDataReader(this.dataReaderClass,
+                this.location);
+            // Read the metadata
+            this.vars = this.dataReader.getVariableMetadata();
             this.state = State.READY;
         }
+        catch(Exception e)
+        {
+            this.err = e;
+            this.state = State.ERROR;
+        }
+    }
+    
+    /**
+     * If this Dataset has not been loaded correctly, this returns the Exception
+     * that was thrown.  If the dataset has no errors, this returns null.
+     */
+    public Exception getException()
+    {
+        return this.state == State.ERROR ? this.err : null;
+    }
+    
+    public State getState()
+    {
+        return this.state;
     }
     
     public String toString()

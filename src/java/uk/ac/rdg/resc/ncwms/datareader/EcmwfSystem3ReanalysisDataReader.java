@@ -56,10 +56,10 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * Corrects problem with reading bounding box in source data (use of latitude
      * values > +/- 90 degrees causes latitude portion of BBOX to be NaN)
      */
-    public Hashtable<String, VariableMetadata> getVariableMetadata(String location)
+    public Hashtable<String, VariableMetadata> getVariableMetadata()
         throws IOException
     {
-        Hashtable<String, VariableMetadata> vars = super.getVariableMetadata(location);
+        Hashtable<String, VariableMetadata> vars = super.getVariableMetadata();
         for (VariableMetadata vm : vars.values())
         {
             vm.setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});

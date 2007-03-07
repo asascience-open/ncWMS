@@ -69,12 +69,11 @@ def _getDatasets(config):
     return datasets
 
 # Entry point from Java
-def doWms(req, config, lastUpdateTime):
+def doWms(req, config):
     """ Does the WMS operation.
         req = mod_python request object (or FakeModPythonRequestObject
             from Jython servlet)
-        config = Configuration object
-        lastUpdateTime = time at which cache of data and metadata was last updated """
+        config = Configuration object """
        
     try:
         # Parse the URL parameters
@@ -88,7 +87,7 @@ def doWms(req, config, lastUpdateTime):
         if service != "WMS":
             raise WMSException("SERVICE parameter must be \"WMS\"")
         if request == "GetCapabilities":
-            getCapabilities(req, params, config, lastUpdateTime)
+            getCapabilities(req, params, config)
         elif request == "GetMap":
             getMap(req, params, config)
         elif request == "GetFeatureInfo":

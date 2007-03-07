@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
     <filter>
-        <description>Filters all requests to ncWMS</description>
-        <filter-name>GlobalFilter</filter-name>
-        <filter-class>uk.ac.rdg.resc.ncwms.filters.GlobalFilter</filter-class>
+        <description>Filters all requests to the WMS</description>
+        <filter-name>WMSFilter</filter-name>
+        <filter-class>uk.ac.rdg.resc.ncwms.filters.WMSFilter</filter-class>
         <init-param>
             <description>Log4J configuration file location</description>
             <param-name>log4j-init-file</param-name>
@@ -16,8 +16,8 @@
         <filter-class>uk.ac.rdg.resc.ncwms.filters.LoginFilter</filter-class>
     </filter>
     <filter-mapping>
-        <filter-name>GlobalFilter</filter-name>
-        <url-pattern>/*</url-pattern>
+        <filter-name>WMSFilter</filter-name>
+        <servlet-name>PyServlet</servlet-name>
     </filter-mapping>
     <filter-mapping>
         <filter-name>LoginFilter</filter-name>

@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.filters;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.servlet.Filter;
@@ -37,23 +38,25 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 
 /**
- * Filters all requests to ncWMS.  This gives an opportunity for logging, and 
- * also gives a place to initialize global objects such as the Config object.
+ * Filters all requests to the WMS.  This also gives a place to initialize
+ * global objects such as the Config object and the logging system.  This does
+ * not filter requests to the administrative pages (JSPs).
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class GlobalFilter implements Filter
+public class WMSFilter implements Filter
 {
-    private static final Logger logger = Logger.getLogger(GlobalFilter.class);
+    private static final Logger logger = Logger.getLogger(WMSFilter.class);
     
     private FilterConfig filterConfig = null;
     private Config config = null; // the ncWMS configuration information
@@ -81,10 +84,18 @@ public class GlobalFilter implements Filter
         {
             // TODO: get the config file from the user's home directory or from
             // an init-param
-            // TODO: if the configuration does not exist, return an empty object
-            // and make sure the configuration is "filled in" before allowing
-            // access through this filter to the WMS.
-            this.config = Config.readConfig("C:\\config.xml");
+            String configLocation = "C:\\config.xml";
+            try
+            {
+                this.config = Config.readConfig(configLocation);
+            }
+            catch(Exception e)
+            {
+                logger.warn("Could not load configuration from " + configLocation, e);
+                // Create a blank Config object.  This filter will check that the
+                // config object is valid before allowing access to the WMS.
+                this.config = new Config();
+            }
             // Store in the servlet context
             this.filterConfig.getServletContext().setAttribute("config", this.config);
             logger.debug("Read ncWMS configuration information");
@@ -99,7 +110,7 @@ public class GlobalFilter implements Filter
         this.timer = new Timer("Dataset reloader", true);
         // TODO: read this interval from an init-param
         int intervalMs = 60 * 1000; // Check every minute
-        this.timer.scheduleAtFixedRate(new DatasetReloader(), 0, intervalMs);
+        this.timer.schedule(new DatasetReloader(), 0, intervalMs);
         
         logger.debug("GlobalFilter initialized");
     }
@@ -114,7 +125,11 @@ public class GlobalFilter implements Filter
             logger.debug("Checking to see if datasets need reloading...");
             for (Dataset ds : config.getDatasets().values())
             {
-                // TODO
+                if (ds.needsRefresh())
+                {
+                    ds.loadMetadata();
+                    config.setLastUpdateTime(new Date());
+                }
             }
         }
     }
@@ -131,10 +146,21 @@ public class GlobalFilter implements Filter
         FilterChain chain) throws IOException, ServletException
     {
         logger.debug("Called GlobalFilter.doFilter()");
-        // TODO: check that we have a configuration loaded and redirect to an
-        // error page if not.  BUT this means we might block access to the
-        // admin pages!!
-        chain.doFilter(request, response);
+        
+        // TODO: check to see if the config file has been updated manually since
+        // the last reload?  Don't forget to free up any resources if so.
+        
+        // Check that we have a configuration loaded and redirect to an
+        // error page if not.
+        if (this.config.isReady())
+        {
+            chain.doFilter(request, response);
+        }
+        else
+        {
+            // TODO: display the reasons why the config is not complete
+            ((HttpServletResponse)response).sendRedirect("admin/servernotready.html");
+        }
     }
     
 }

@@ -30,11 +30,11 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Hashtable;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
+import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
@@ -61,7 +61,8 @@ public class OpendapDataReader extends DefaultDataReader
      * Reads an array of data from a NetCDF file and projects onto a rectangular
      * lat-lon grid.  Reads data for a single time index only.
      *
-     * @param location Location of the NetCDF dataset (full file path, OPeNDAP URL etc)
+     * TODO: refactor this: repeats a lot of code in DefaultDataReader
+     *
      * @param vm {@link VariableMetadata} object representing the variable
      * @param tIndex The index along the time axis as found in getmap.py
      * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
@@ -70,11 +71,10 @@ public class OpendapDataReader extends DefaultDataReader
      * @param fillValue Value to use for missing data
      * @throws WMSExceptionInJava if an error occurs
      */
-    public float[] read(String location, VariableMetadata vm,
+    public float[] read(VariableMetadata vm,
         int tIndex, int zIndex, float[] latValues, float[] lonValues,
         float fillValue) throws WMSExceptionInJava
     {
-        NetcdfDataset nc = null;
         try
         {
             // Get the metadata from the cache
@@ -144,11 +144,16 @@ public class OpendapDataReader extends DefaultDataReader
             long readMetadata = System.currentTimeMillis();
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
-            // Get the dataset from the cache, without enhancing it
-            nc = getDataset(location);
+            // Get the dataset from the cache, without enhancing it. We hold
+            // the dataset in memory until this DataReader is closed.
+            if (this.nc == null)
+            {
+                this.nc = NetcdfDataset.openDataset(this.location, false, null);
+                CoordSysBuilder.addCoordinateSystems(nc, null);
+            }
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
-            GridDataset gd = new GridDataset(nc);
+            GridDataset gd = new GridDataset(this.nc);
             GeoGrid gg = gd.findGridByName(vm.getId());
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
@@ -210,31 +215,7 @@ public class OpendapDataReader extends DefaultDataReader
             logger.error("InvalidRangeException reading from " + nc.getLocation(), ire);
             throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
         }
-        finally
-        {
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
-        }
-    }
-    
-    public static void main(String[] args) throws Exception
-    {
-        DataReader dr = new OpendapDataReader();
-        Hashtable<String, VariableMetadata> vars =
-            dr.getVariableMetadata("http://www.nerc-essc.ac.uk:9090/thredds/dodsC/FOAM_MED_MEANSSH");
-        for (VariableMetadata var : vars.values())
-        {
-            System.out.println(var.getId() + "; " + var.getTitle());
-        }
+        // We don't close the dataset just yet: we wait till this.close() is called
     }
     
 }
