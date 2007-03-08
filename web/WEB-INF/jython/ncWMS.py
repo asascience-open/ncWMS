@@ -43,6 +43,7 @@ def _getDatasets(config):
         Used by mod_python only
         config = ConfigParser object """
     # TODO error checking
+    # TODO: the dataset object must implement a read() function to get data
     datasets = {}
     for dsID in config.options('datasets'):
         line = config.get('datasets', dsID)
@@ -91,7 +92,7 @@ def doWms(req, config):
         elif request == "GetMap":
             getMap(req, params, config)
         elif request == "GetFeatureInfo":
-            if config.allowFeatureInfo:
+            if config.server.allowFeatureInfo:
                 getFeatureInfo(req, params, config)
             else:
                 raise OperationNotSupported("GetFeatureInfo")

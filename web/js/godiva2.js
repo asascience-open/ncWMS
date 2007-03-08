@@ -87,6 +87,7 @@ window.onload = function()
     }
         
     map.addControl(new OpenLayers.Control.LayerSwitcher());
+    //map.addControl(new OpenLayers.Control.MousePosition({prefix: 'Lon: ', separator: ' Lat:'}));
     map.zoomTo(1);
     
     // Add a listener for changing the base map

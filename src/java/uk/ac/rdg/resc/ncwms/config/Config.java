@@ -58,16 +58,14 @@ public class Config
 {
     private static final Logger logger = Logger.getLogger(Config.class);
     
-    @ElementList(name="datasets", type=Dataset.class)
-    private Vector<Dataset> datasetList;
-    
+    @Element(name="contact", required=false)
+    private Contact contact;
+    @Element(name="server")
+    private Server server;
     @ElementList(name="users", type=User.class)
     private Vector<User> userList;
-    
-    @Element(name="title")
-    private String title; // Title for this ncWMS
-    @Element(name="allowFeatureInfo", required=false)
-    private boolean allowFeatureInfo; // True if we allow the GetFeatureInfo operation globally
+    @ElementList(name="datasets", type=Dataset.class)
+    private Vector<Dataset> datasetList;
     
     private Date lastUpdateTime; // Time of the last update to this configuration
                                  // or any of the contained metadata
@@ -86,8 +84,9 @@ public class Config
     {
         this.datasets = new Hashtable<String, Dataset>();
         this.users = new Hashtable<String, User>();
-        this.allowFeatureInfo = true;
         this.lastUpdateTime = new Date();
+        this.server = null;
+        this.contact = new Contact();
     }
     
     /**
@@ -170,7 +169,7 @@ public class Config
      */
     public boolean isReady()
     {
-        return this.title != null; // TODO: check all the compulsory options
+        return this.getServer() != null; // TODO: check all the compulsory options
     }
     
     public Hashtable<String, Dataset> getDatasets()
@@ -181,26 +180,6 @@ public class Config
     public Hashtable<String, User> getUsers()
     {
         return users;
-    }
-    
-    public String getTitle()
-    {
-        return title;
-    }
-    
-    public void setTitle(String title)
-    {
-        this.title = title;
-    }
-    
-    public boolean isAllowFeatureInfo()
-    {
-        return allowFeatureInfo;
-    }
-    
-    public void setAllowFeatureInfo(boolean allowFeatureInfo)
-    {
-        this.allowFeatureInfo = allowFeatureInfo;
     }
     
     public void setLastUpdateTime(Date date)
@@ -220,6 +199,26 @@ public class Config
     public double getLastUpdateTimeSeconds()
     {
         return this.lastUpdateTime.getTime() / 1000.0;
+    }
+
+    public Server getServer()
+    {
+        return server;
+    }
+
+    public void setServer(Server server)
+    {
+        this.server = server;
+    }
+
+    public Contact getContact()
+    {
+        return contact;
+    }
+
+    public void setContact(Contact contact)
+    {
+        this.contact = contact;
     }
     
 }

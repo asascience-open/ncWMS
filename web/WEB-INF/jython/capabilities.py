@@ -3,14 +3,8 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-import sys, time
+import time
 
-if sys.platform.startswith("java"):
-    # We're running on Jython
-    import nj22dataset as datareader
-else:
-    # TODO: check for presence of CDAT
-    import cdmsdataset as datareader
 import iso8601
 import wmsUtils
 import grids
@@ -61,28 +55,28 @@ def getCapabilities(req, params, config):
     
     output.write("<Service>")
     output.write("<Name>WMS</Name>")
-    output.write("<Title>%s</Title>" % config.title)
-    output.write("<Abstract>%s</Abstract>" % config.abstract)
+    output.write("<Title>%s</Title>" % config.server.title)
+    output.write("<Abstract>%s</Abstract>" % config.server.abstract)
     output.write("<KeywordList>")
-    for keyword in config.keywords:
+    for keyword in config.server.keywords.split(","):
         output.write("<Keyword>%s</Keyword>" % keyword)
     output.write("</KeywordList>")
-    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.url)
+    output.write("<OnlineResource xlink:type=\"simple\" xlink:href=\"%s\"/>" % config.server.url)
 
     output.write("<ContactInformation>")
     output.write("<ContactPersonPrimary>")
-    output.write("<ContactPerson>%s</ContactPerson>" % config.contactName)
-    output.write("<ContactOrganization>%s</ContactOrganization>" % config.contactOrg)
+    output.write("<ContactPerson>%s</ContactPerson>" % config.contact.name)
+    output.write("<ContactOrganization>%s</ContactOrganization>" % config.contact.org)
     output.write("</ContactPersonPrimary>")
-    output.write("<ContactVoiceTelephone>%s</ContactVoiceTelephone>" % config.contactTel)
-    output.write("<ContactElectronicMailAddress>%s</ContactElectronicMailAddress>" % config.contactEmail)
+    output.write("<ContactVoiceTelephone>%s</ContactVoiceTelephone>" % config.contact.tel)
+    output.write("<ContactElectronicMailAddress>%s</ContactElectronicMailAddress>" % config.contact.email)
     output.write("</ContactInformation>")
 
     output.write("<Fees>none</Fees>")
     output.write("<AccessConstraints>none</AccessConstraints>")
     output.write("<LayerLimit>%d</LayerLimit>" % getmap.getLayerLimit())
-    output.write("<MaxWidth>%d</MaxWidth>" % config.maxImageWidth)
-    output.write("<MaxHeight>%d</MaxHeight>" % config.maxImageHeight)
+    output.write("<MaxWidth>%d</MaxWidth>" % config.server.maxImageWidth)
+    output.write("<MaxHeight>%d</MaxHeight>" % config.server.maxImageHeight)
     output.write("</Service>")
     
     output.write("<Capability>")
@@ -100,7 +94,7 @@ def getCapabilities(req, params, config):
     output.write("<DCPType><HTTP><Get><OnlineResource xlink:type=\"simple\" xlink:href=\"" +
         url + "\"/></Get></HTTP></DCPType>")
     output.write("</GetMap>")
-    if config.allowFeatureInfo:
+    if config.server.allowFeatureInfo:
         output.write("<GetFeatureInfo>")
         for format in getfeatureinfo.getSupportedFormats():
             output.write("<Format>%s</Format>" % format)
@@ -116,7 +110,7 @@ def getCapabilities(req, params, config):
 
     # Write the top-level container layer
     output.write("<Layer>")
-    output.write("<Title>%s</Title>" % config.title)
+    output.write("<Title>%s</Title>" % config.server.title)
     # TODO: add styles
     for crs in grids.getSupportedCRSs().keys():
         output.write("<CRS>" + crs + "</CRS>")
@@ -129,10 +123,10 @@ def getCapabilities(req, params, config):
         output.write("<Layer>")
         output.write("<Title>%s</Title>" % datasets[dsid].title)
         # Now write the displayable data layers
-        vars = datareader.getAllVariableMetadata(datasets[dsid])
+        vars = datasets[dsid].variables
         for vid in vars.keys():
             output.write("<Layer")
-            if config.allowFeatureInfo and datasets[dsid].queryable:
+            if config.server.allowFeatureInfo and datasets[dsid].queryable:
                 output.write(" queryable=\"1\"")
             output.write(">")
             output.write("<Name>%s%s%s</Name>" % (dsid, wmsUtils.getLayerSeparator(), vid))

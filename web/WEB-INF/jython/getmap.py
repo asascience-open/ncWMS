@@ -4,11 +4,9 @@ import sys
 
 if sys.platform.startswith("java"):
     # We're running on Jython
-    import nj22dataset as datareader
     import javagraphics as graphics
 else:
     # TODO: check for presence of CDAT
-    import cdmsdataset as datareader
     import graphics
 import iso8601
 from wmsExceptions import *
@@ -70,8 +68,7 @@ def getMap(req, params, config):
     # Find the source of the requested data
     dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
     # Get the metadata
-    var = datareader.getAllVariableMetadata(dataset)[varID]
-    var.datasetId, var.datasetTitle = dataset.id, dataset.title
+    var = dataset.variables[varID]
     picMaker.var = var # This is used to create descriptions in the KML
 
     # Get the requested indices along the time axis
@@ -113,7 +110,8 @@ def getMap(req, params, config):
     animation = len(tIndices) > 1
     for tIndex in tIndices:
         # TODO: see if we already have this image in cache
-        picData = datareader.readImageData(dataset, varID, tIndex, zValue, grid, _getFillValue())
+        # TODO: deal with non lat-lon grids
+        picData = dataset.read(var, tIndex, zValue, grid.latValues, grid.lonValues, _getFillValue())
         # TODO: cache the data array
         if len(var.tvalues) == 0:
             tValue = ""
@@ -155,12 +153,12 @@ def _getGrid(params, bbox, config):
     try:
         width = int(params.getParamValue("width"))
         height = int(params.getParamValue("height"))
-        if width < 1 or width > config.maxImageWidth:
+        if width < 1 or width > config.server.maxImageWidth:
             raise WMSException("Image width must be between 1 and " +
-                str(config.maxImageWidth) + " pixels inclusive")
-        if height < 1 or height > config.maxImageHeight:
+                str(config.server.maxImageWidth) + " pixels inclusive")
+        if height < 1 or height > config.server.maxImageHeight:
             raise WMSException("Image height must be between 1 and " +
-                str(config.maxImageHeight) + " pixels inclusive")
+                str(config.server.maxImageHeight) + " pixels inclusive")
     except ValueError:
         raise WMSException("Invalid integer provided for WIDTH or HEIGHT")
 
@@ -192,9 +190,9 @@ def _getDatasetAndVariableID(layers, datasets):
         the ID of the variable 
         Only deals with one layer at the moment """
     dsAndVar = layers[0].split(wmsUtils.getLayerSeparator())
-    if len(dsAndVar) == 2 and datasets.has_key(dsAndVar[0]):
+    try:
         return datasets[dsAndVar[0]], dsAndVar[1]
-    else:
+    except KeyError:
         raise LayerNotDefined(layers[0])
 
 def _getTIndices(var, params):

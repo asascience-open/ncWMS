@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Vector;
 import ucar.nc2.units.DateFormatter;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 
 /**
@@ -61,8 +62,7 @@ public class VariableMetadata
     private double validMax;
     private EnhancedCoordAxis xaxis;
     private EnhancedCoordAxis yaxis;
-    private String datasetId;
-    private String datasetTitle;
+    private Dataset dataset;
     private Hashtable<Date, TimestepInfo> timesteps;
     
     /** Creates a new instance of VariableMetadata */
@@ -75,6 +75,7 @@ public class VariableMetadata
         this.bbox = new double[]{-180.0, -90.0, 180.0, 90.0};
         this.xaxis = null;
         this.yaxis = null;
+        this.dataset = null;
         this.timesteps = new Hashtable<Date, TimestepInfo>();
     }
 
@@ -222,24 +223,14 @@ public class VariableMetadata
         this.yaxis = yaxis;
     }
 
-    public String getDatasetId()
+    public Dataset getDataset()
     {
-        return datasetId;
+        return this.dataset;
     }
 
-    public void setDatasetId(String datasetId)
+    public void setDataset(Dataset dataset)
     {
-        this.datasetId = datasetId;
-    }
-
-    public String getDatasetTitle()
-    {
-        return datasetTitle;
-    }
-
-    public void setDatasetTitle(String datasetTitle)
-    {
-        this.datasetTitle = datasetTitle;
+        this.dataset = dataset;
     }
     
     /**

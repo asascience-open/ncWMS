@@ -7,11 +7,9 @@ import sys, time, math, calendar
 
 if sys.platform.startswith("java"):
     # We're running on Jython
-    import nj22dataset as datareader
     prefix = "WMS.py"
 else:
     # TODO: check for presence of CDAT
-    import cdmsdataset as datareader
     prefix = "wms"
 import iso8601
 import wmsUtils
@@ -29,8 +27,8 @@ def getMetadata(req, config):
         req.write(getDatasetsDiv(config, filter))
     elif metadataItem == "variables":
         req.content_type = "text/xml"
-        dataset = params.getParamValue("dataset")
-        req.write(getVariables(config, dataset))
+        dsId = params.getParamValue("dataset")
+        req.write(getVariables(config, dsId))
     elif metadataItem == "variableDetails":
         req.content_type = "text/xml"
         dataset = params.getParamValue("dataset")
@@ -52,8 +50,8 @@ def getMetadata(req, config):
 def getFrontPage(config):
     """ Returns a front page for the WMS, containing example links """
     doc = StringIO()
-    doc.write("<html><head><title>%s</title></head>" % config.title)
-    doc.write("<body><h1>%s</h1>" % config.title)
+    doc.write("<html><head><title>%s</title></head>" % config.server.title)
+    doc.write("<body><h1>%s</h1>" % config.server.title)
     doc.write("<p><a href=\"" + prefix + "?SERVICE=WMS&REQUEST=GetCapabilities\">Capabilities document</a></p>")
     doc.write("<p><a href=\"./godiva2.html\">Godiva2 interface</a></p>")
     doc.write("<p><a href=\"./admin/\">Admin interface</a> (requires login)</p>")
@@ -63,14 +61,14 @@ def getFrontPage(config):
     doc.write("<tr><th>Dataset</th>")
     for format in getmap.getSupportedImageFormats():
         doc.write("<th>%s</th>" % format)
-    if config.allowFeatureInfo:
+    if config.server.allowFeatureInfo:
         doc.write("<th>FeatureInfo</th>")
     doc.write("</tr>")
     datasets = config.datasets
     for ds in datasets.keys():
         if datasets[ds].ready:
             doc.write("<tr><th>%s</th>" % datasets[ds].title)
-            vars = datareader.getAllVariableMetadata(datasets[ds])
+            vars = datasets[ds].variables
             for format in getmap.getSupportedImageFormats():
                 doc.write("<td>")
                 for varID in vars.keys():
@@ -83,7 +81,7 @@ def getFrontPage(config):
                         doc.write("&TIME=%s" % iso8601.tostring(tvals[-1]))
                     doc.write("\">%s</a><br />" % vars[varID].title)
                 doc.write("</td>")
-            if config.allowFeatureInfo:
+            if config.server.allowFeatureInfo:
                 doc.write("<td>")
                 if datasets[ds].queryable:
                     for varID in vars.keys():
@@ -124,28 +122,26 @@ def getDatasetsDiv(config, filter=""):
     str.close()
     return s
 
-def getVariables(config, dataset):
+def getVariables(config, dsId):
     """ returns an HTML table containing a set of variables for the given dataset. """
     str = StringIO()
     str.write("<table cellspacing=\"0\"><tbody>")
-    datasets = config.datasets
-    vars = datareader.getAllVariableMetadata(datasets[dataset])
+    vars = config.datasets[dsId].variables
     for varID in vars.keys():
         str.write("<tr><td>")
-        str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dataset, varID, vars[varID].title))
+        str.write("<a href=\"#\" onclick=\"javascript:variableSelected('%s', '%s')\">%s</a>" % (dsId, varID, vars[varID].title))
         str.write("</td></tr>")
     str.write("</tbody></table>")
     s = str.getvalue()
     str.close()
     return s
 
-def getVariableDetails(config, dataset, varID):
+def getVariableDetails(config, dsId, varID):
     """ returns an XML document containing the details of the given variable
         in the given dataset. """
     s = StringIO()
-    datasets = config.datasets
-    var = datareader.getAllVariableMetadata(datasets[dataset])[varID]
-    s.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dataset, var.title, var.units))
+    var = config.datasets[dsId].variables[varID]
+    s.write("<variableDetails dataset=\"%s\" variable=\"%s\" units=\"%s\">" % (dsId, var.title, var.units))
     s.write("<axes>")
     if var.zvalues is not None:
         s.write("<axis type=\"z\" units=\"%s\" positive=\"%d\">" % (var.zunits, var.zpositive))
@@ -160,13 +156,12 @@ def getVariableDetails(config, dataset, varID):
     s.close()
     return doc
 
-def getCalendar(config, dataset, varID, dateTime):
+def getCalendar(config, dsId, varID, dateTime):
     """ returns an HTML calendar for the given dataset and variable.
         dateTime is a string in ISO 8601 format with the required
         'focus time' """
-    datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
-    tValues = datareader.getAllVariableMetadata(datasets[dataset])[varID].tvalues
+    tValues = config.datasets[dsId].variables[varID].tvalues
     # TODO: is this the right thing to do here?
     if len(tValues) == 0:
         return ""
@@ -201,11 +196,11 @@ def getCalendar(config, dataset, varID, dateTime):
     str.write("<table><tbody>")
     # Add the navigation buttons at the top of the month view
     str.write("<tr>")
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dataset, varID, _getYearBefore(nearesttime)))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dataset, varID, _getMonthBefore(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;&lt;</a></td>" % (dsId, varID, _getYearBefore(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&lt;</a></td>" % (dsId, varID, _getMonthBefore(nearesttime)))
     str.write("<td colspan=\"3\">%s</td>" % _getHeading(nearesttime))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dataset, varID, _getMonthAfter(nearesttime)))
-    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dataset, varID, _getYearAfter(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;</a></td>" % (dsId, varID, _getMonthAfter(nearesttime)))
+    str.write("<td><a href=\"#\" onclick=\"javascript:setCalendar('%s','%s','%s'); return false\">&gt;&gt;</a></td>" % (dsId, varID, _getYearAfter(nearesttime)))
     str.write("</tr>")
     # Add the day-of-week headings
     str.write("<tr><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th><th>S</th></tr>")
@@ -231,7 +226,7 @@ def getCalendar(config, dataset, varID, dateTime):
                 if found:
                     tValue = iso8601.tostring(tValues[tValIndex])
                     prettyTValue = time.strftime(prettyDateFormat, axisDay)
-                    str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%s','%s','%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, dataset, varID, tValIndex, tValue, prettyTValue, day))
+                    str.write("<td id=\"t%d\"><a href=\"#\" onclick=\"javascript:getTimesteps('%s','%s','%d','%s','%s'); return false\">%d</a></td>" % (tValIndex, dsId, varID, tValIndex, tValue, prettyTValue, day))
                 else:
                     str.write("<td>%d</td>" % day)
             else:
@@ -289,12 +284,12 @@ def _getMonthAfter(date):
     newDate = tuple([year] + [month] + list(date[2:]))
     return iso8601.tostring(time.mktime(newDate))
 
-def getTimesteps(config, dataset, varID, tIndex):
+def getTimesteps(config, dsId, varID, tIndex):
     """ Returns an HTML select box allowing the user to select a 
         set of times for a given day """
     datasets = config.datasets
     # Get an array of time axis values in seconds since the epoch
-    tValues = datareader.getAllVariableMetadata(datasets[dataset])[varID].tvalues
+    tValues = config.datasets[dsId].variables[varID].tvalues
     # TODO: is this the right thing to do here?
     if tValues is None:
         return ""

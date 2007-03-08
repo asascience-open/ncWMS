@@ -90,9 +90,9 @@ public class KmzMaker extends GifMaker
             this.kml.append("<kml xmlns=\"http://earth.google.com/kml/2.0\">");
             this.kml.append("<Folder>");
             this.kml.append("<visibility>1</visibility>");
-            this.kml.append("<name>" + this.var.getDatasetId() + ", " +
+            this.kml.append("<name>" + this.var.getDataset().getId() + ", " +
                 this.var.getId() + "</name>");
-            this.kml.append("<description>" + this.var.getDatasetTitle() + ", "
+            this.kml.append("<description>" + this.var.getDataset().getTitle() + ", "
                 + this.var.getTitle() + ": " + this.var.getAbstract() +
                 "</description>");
             
@@ -168,7 +168,7 @@ public class KmzMaker extends GifMaker
         
         // Write the KML file: todo get filename properly
         logger.debug("Writing KML file to KMZ file");
-        ZipEntry kmlEntry = new ZipEntry(this.var.getDatasetId() + "_" +
+        ZipEntry kmlEntry = new ZipEntry(this.var.getDataset().getId() + "_" +
             this.var.getId() + ".kml");
         kmlEntry.setTime(System.currentTimeMillis());
         zipOut.putNextEntry(kmlEntry);

@@ -8,11 +8,23 @@
 import sys
 
 if sys.platform.startswith("java"):
-    # We're running on Jython
-    import nj22dataset as datareader
+    # We're running on Jython and we need a function to convert fill
+    # values to "none"
+    from java.lang import Float
+    def _checkFillValue(datavalue, fillvalue):
+        """ if datavalue == fillvalue, returns None, else returns datavalue """
+        if datavalue == Float(fillvalue).floatValue():
+            return None
+        else:
+            return datavalue
 else:
-    # TODO: check for presence of CDAT
-    import cdmsdataset as datareader
+    def _checkFillValue(datavalue, fillvalue):
+        """ if datavalue == fillvalue, returns None, else returns datavalue """
+        if datavalue == fillvalue:
+            return None
+        else:
+            return datavalue
+        
 import iso8601
 from wmsExceptions import *
 from getmap import _getBbox, _getGrid, _checkVersion, _getDatasetAndVariableID, _getTIndices, _getFillValue
@@ -79,11 +91,13 @@ def getFeatureInfo(req, params, config):
         raise LayerNotQueryable(query_layers[0])
     # Get the index along the time axis
     # Get the metadata
-    vars = datareader.getAllVariableMetadata(dataset)
-    tIndices = _getTIndices(vars[varID], params)
+    var = dataset.variables[varID]
+    tIndices = _getTIndices(var, params)
 
     # Read the data points
-    datavalues = [datareader.readDataValue(dataset, varID, t, zValue, lat, lon, _getFillValue()) for t in tIndices]
+    datavalues = [dataset.read(var, t, zValue, [lat], [lon], _getFillValue())[0] for t in tIndices]
+    # Check for fill values, replacing with "None"
+    datavalues = [_checkFillValue(val, _getFillValue()) for val in datavalues]
 
     req.content_type = info_format
 
@@ -95,8 +109,8 @@ def getFeatureInfo(req, params, config):
         req.write("<latitude>%f</latitude>" % lat)
         for i in xrange(len(tIndices)):
             req.write("<FeatureInfo>")
-            if len(vars[varID].tvalues) > 0:
-                tval = vars[varID].tvalues[tIndices[i]]
+            if len(var.tvalues) > 0:
+                tval = var.tvalues[tIndices[i]]
                 req.write("<time>%s</time>" % iso8601.tostring(tval))
             if datavalues[i] is None:
                 req.write("<value>none</value>") 
@@ -109,7 +123,7 @@ def getFeatureInfo(req, params, config):
         # TODO: this needs to be separated to preserve pure Python
         ts = TimeSeries("Data", Millisecond)
         for i in xrange(len(tIndices)):
-            tval = vars[varID].tvalues[tIndices[i]]
+            tval = var.tvalues[tIndices[i]]
             tvalLong = Double(tval * 1000).longValue()
             date = Date(tvalLong)
             ts.add(Millisecond(date), datavalues[i])
@@ -119,7 +133,7 @@ def getFeatureInfo(req, params, config):
 
         # Creat a chart with no legend, tooltips or URLs
         title = "Lon: %f, Lat: %f" % (lon, lat)
-        yLabel = "%s (%s)" % (vars[varID].title, vars[varID].units)
+        yLabel = "%s (%s)" % (var.title, vars[varID].units)
         chart = ChartFactory.createTimeSeriesChart(title, "Date / time", yLabel, xydataset, 0, 0, 0)
         # Output the chart. TODO: control the plot size
         ChartUtilities.writeChartAsPNG(req.getOutputStream(), chart, 400, 300)

@@ -19,15 +19,15 @@
     
     <h2>Datasets</h2>
     <table border="1">
-        <tr><th>ID</th><th>Title</th><th>Location</th><th>Data reading class</th><th>State</th></tr>
+        <tr><th>ID</th><th>Title</th><th>Location</th><th>State</th><th>Data reading class</th></tr>
     
     <%
         Config conf = (Config)application.getAttribute("config");
         for (Dataset ds : conf.getDatasets().values())
         {
     %>
-        <tr><td><%=ds.getId()%></td><td><%=ds.getTitle()%></td><td><%=ds.getLocation()%></td><td>TODO</td>
-            <td><%=ds.getState().toString()%></td></tr>
+        <tr><td><%=ds.getId()%></td><td><%=ds.getTitle()%></td><td><%=ds.getLocation()%></td>
+            <td><%=ds.getState().toString()%></td><td>TODO</td></tr>
     <%
         }
     %>
