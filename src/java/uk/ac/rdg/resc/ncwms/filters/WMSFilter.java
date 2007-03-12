@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.filters;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Timer;
@@ -82,19 +83,31 @@ public class WMSFilter implements Filter
         // Load the ncWMS configuration object
         try
         {
-            // TODO: get the config file from the user's home directory or from
-            // an init-param
-            String configLocation = "C:\\config.xml";
+            File userHome = new File(System.getProperty("user.home"));
+            File ncWMSDir = new File(userHome, ".ncWMS");
+            if (ncWMSDir.exists())
+            {
+                if (ncWMSDir.isFile())
+                {
+                    throw new Exception(ncWMSDir.getPath() +
+                        " exists but is not a directory");
+                }
+            }
+            else
+            {
+                ncWMSDir.mkdir();
+            }
+            File configFile = new File(ncWMSDir, "config.xml");
             try
             {
-                this.config = Config.readConfig(configLocation);
+                this.config = Config.readConfig(configFile);
             }
             catch(Exception e)
             {
-                logger.warn("Could not load configuration from " + configLocation, e);
-                // Create a blank Config object.  This filter will check that the
-                // config object is valid before allowing access to the WMS.
+                logger.warn("Could not load configuration from " + configFile.getPath(), e);
+                // Create a blank Config object using default values
                 this.config = new Config();
+                this.config.saveConfig(configFile);
             }
             // Store in the servlet context
             this.filterConfig.getServletContext().setAttribute("config", this.config);

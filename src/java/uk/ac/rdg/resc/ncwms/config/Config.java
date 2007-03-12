@@ -38,7 +38,6 @@ import org.apache.log4j.Logger;
 import simple.xml.Element;
 import simple.xml.ElementList;
 import simple.xml.Root;
-import simple.xml.Serializer;
 import simple.xml.load.Commit;
 import simple.xml.load.PersistenceException;
 import simple.xml.load.Persister;
@@ -62,58 +61,67 @@ public class Config
     private Contact contact;
     @Element(name="server")
     private Server server;
-    @ElementList(name="users", type=User.class)
-    private Vector<User> userList;
     @ElementList(name="datasets", type=Dataset.class)
     private Vector<Dataset> datasetList;
     
     private Date lastUpdateTime; // Time of the last update to this configuration
                                  // or any of the contained metadata
+    private File configFile;     // Location to which the config information was
+                                 // last saved
     
     /**
      * This contains the map of dataset IDs to Dataset objects
      */
     private Hashtable<String, Dataset> datasets;
-    /**
-     * This contains the map of usernames to User objects
-     */
-    private Hashtable<String, User> users;
     
     /** Creates a new instance of Config */
     public Config()
     {
         this.datasets = new Hashtable<String, Dataset>();
-        this.users = new Hashtable<String, User>();
+        this.datasetList = new Vector<Dataset>();
         this.lastUpdateTime = new Date();
-        this.server = null;
+        this.server = new Server();
         this.contact = new Contact();
     }
     
     /**
      * Reads configuration information from disk
-     * @param configFilePath Full path to the configuration file
+     * @param configFile The configuration file
      * @throws Exception if there was an error reading the configuration
      * @todo create a new object if the config file doesn't already exist
      */
-    public static Config readConfig(String configFilePath) throws Exception
+    public static Config readConfig(File configFile) throws Exception
     {
-        Serializer serializer = new Persister();
-        File configFile = new File(configFilePath);
-        Config config = serializer.read(Config.class, configFile);
-        logger.debug("Loaded configuration from {}", configFilePath);
+        Config config = new Persister().read(Config.class, configFile);
+        logger.debug("Loaded configuration from {}", configFile.getPath());
         return config;
     }
     
     /**
      * Saves configuration information to the disk
-     * @param configFilePath Full path to the configuration file
+     * @param configFile The configuration file
      * @throws Exception if there was an error reading the configuration
      */
-    public void saveConfig(String configFilePath) throws Exception
+    public void saveConfig(File configFile) throws Exception
     {
-        Serializer serializer = new Persister();
-        File configFile = new File(configFilePath);
-        serializer.write(this, configFile);
+        this.configFile = configFile;
+        new Persister().write(this, configFile);
+    }
+    
+    /**
+     * Saves configuration information to the disk to the place it was last
+     * saved
+     * @throws Exception if there was an error reading the configuration
+     * @throws IllegalStateException if the config file has not previously been
+     * saved.
+     */
+    public void saveConfig() throws Exception
+    {
+        if (this.configFile == null)
+        {
+            throw new IllegalStateException("No location set for config file");
+        }
+        this.saveConfig(this.configFile);
     }
     
     /**
@@ -133,16 +141,6 @@ public class Config
             }
             dsIds.add(dsId);
         }
-        List<String> usernames = new ArrayList<String>();
-        for (User user : userList)
-        {
-            String username = user.getUsername();
-            if (usernames.contains(username))
-            {
-                throw new PersistenceException("Duplicate username %s", username);
-            }
-            usernames.add(username);
-        }
     }
     
     /**
@@ -152,13 +150,9 @@ public class Config
     @Commit
     public void build()
     {
-        for (Dataset ds : datasetList)
+        for (Dataset ds : this.datasetList)
         {
             this.datasets.put(ds.getId(), ds);
-        }
-        for (User user : userList)
-        {
-            this.users.put(user.getUsername(), user);
         }
     }
     
@@ -175,11 +169,6 @@ public class Config
     public Hashtable<String, Dataset> getDatasets()
     {
         return datasets;
-    }
-    
-    public Hashtable<String, User> getUsers()
-    {
-        return users;
     }
     
     public void setLastUpdateTime(Date date)

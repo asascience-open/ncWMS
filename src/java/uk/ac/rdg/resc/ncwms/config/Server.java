@@ -56,18 +56,22 @@ public class Server
     private String keywords; // Comma-separated list
     @Element(name="url", required=false)
     private String url;
+    @Element(name="adminpassword")
+    private String adminPassword;
     
     /**
      * Creates a new instance of Server
      */
     public Server()
     {
+        this.title = "My ncWMS server";
         this.allowFeatureInfo = true;
         this.maxImageWidth = 1024;
         this.maxImageHeight = 1024;
         this.abstr = "";
         this.keywords = "";
         this.url = "";
+        this.adminPassword = "ncWMS";
     }
 
     public String getTitle()
@@ -138,6 +142,16 @@ public class Server
     public void setUrl(String url)
     {
         this.url = url;
+    }
+
+    public String getAdminPassword()
+    {
+        return adminPassword;
+    }
+
+    public void setAdminPassword(String adminPassword)
+    {
+        this.adminPassword = adminPassword;
     }
     
 }

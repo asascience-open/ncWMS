@@ -47,9 +47,9 @@ public class Contact
     private String name; // Title for this ncWMS
     @Element(name="organization", required=false)
     private String org; // True if we allow the GetFeatureInfo operation globally
-    @Element(name="maxImageWidth", required=false)
+    @Element(name="telephone", required=false)
     private String tel;
-    @Element(name="maxImageHeight", required=false)
+    @Element(name="email", required=false)
     private String email;
     
     /** Creates a new instance of Contact */

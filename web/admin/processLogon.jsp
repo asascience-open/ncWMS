@@ -1,7 +1,6 @@
 <%@page import="java.security.MessageDigest"%>
 <%@page import="org.apache.commons.codec.binary.Hex"%>
 <%@page import="uk.ac.rdg.resc.ncwms.config.Config"%>
-<%@page import="uk.ac.rdg.resc.ncwms.config.User"%>
 <%
     // Process a logon request and forward to an appropriate page
     String key = (String)session.getAttribute("key");
@@ -11,16 +10,16 @@
         response.sendRedirect("login.jsp");
     }
     
-    // Calculate what the password hash should be
+    // Check that the user is logging on as "admin" with the correct password
     MessageDigest sha1 = MessageDigest.getInstance("SHA");
     sha1.update(key.getBytes());
     Config conf = (Config)application.getAttribute("config");
-    User adminUser = conf.getUsers().get("admin");
+    String adminPassword = conf.getServer().getAdminPassword();
     boolean logonSucceeded = false;
-    // If there is no admin user specified no-one can log on to the admin pages
-    if (adminUser != null)
+    String username = request.getParameter("username");
+    if (username != null && username.trim().equals("admin"))
     {
-        sha1.update(adminUser.getPassword().getBytes());
+        sha1.update(adminPassword.getBytes());
         String realHash = new String(Hex.encodeHex(sha1.digest()));
         logonSucceeded = passwordHash.equals(realHash);
     }
@@ -28,7 +27,7 @@
     
     if (logonSucceeded)
     {
-        session.setAttribute("user", request.getParameter("username"));
+        session.setAttribute("user", username.trim());
         if (destination != null && !destination.trim().equals(""))
         {
             response.sendRedirect(destination);
