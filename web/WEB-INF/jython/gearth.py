@@ -6,13 +6,6 @@ except ImportError:
 import urllib
 import sys
 
-if sys.platform.startswith("java"):
-    # We're running on Jython
-    import nj22dataset as datareader
-else:
-    # TODO: check for presence of CDAT
-    import cdmsdataset as datareader
-
 from wmsExceptions import WMSException
 from getmap import _getBbox, _getDatasetAndVariableID
 
