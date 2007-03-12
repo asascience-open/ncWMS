@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.filters;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Timer;
@@ -69,42 +70,36 @@ public class WMSFilter implements Filter
      */
     public void init(FilterConfig filterConfig) throws ServletException
     {
+        System.out.println("FilterConfig = " + filterConfig);
         this.filterConfig = filterConfig;
         
-        // Load the Log4j configuration file
-        String log4jfile = this.filterConfig.getInitParameter("log4j-init-file");
-        if (log4jfile != null)
-        {
-            String prefix = this.filterConfig.getServletContext().getRealPath("/");
-            PropertyConfigurator.configure(prefix + log4jfile);
-            logger.debug("Logging system initialized");
-        }
-        
-        // Load the ncWMS configuration object
         try
         {
+            // Create the directory structure in the user's home space
             File userHome = new File(System.getProperty("user.home"));
             File ncWMSDir = new File(userHome, ".ncWMS");
-            if (ncWMSDir.exists())
+            mkdir(ncWMSDir);
+            File logDir = new File(ncWMSDir, "log");
+            mkdir(logDir);
+        
+            // Load the Log4j configuration file
+            String log4jfile = this.filterConfig.getInitParameter("log4j-init-file");
+            if (log4jfile != null)
             {
-                if (ncWMSDir.isFile())
-                {
-                    throw new Exception(ncWMSDir.getPath() +
-                        " exists but is not a directory");
-                }
+                String prefix = this.filterConfig.getServletContext().getRealPath("/");
+                PropertyConfigurator.configure(prefix + log4jfile);
+                logger.debug("Logging system initialized");
             }
-            else
-            {
-                ncWMSDir.mkdir();
-            }
+            
+            // Load the ncWMS configuration object
             File configFile = new File(ncWMSDir, "config.xml");
             try
             {
                 this.config = Config.readConfig(configFile);
             }
-            catch(Exception e)
+            catch(FileNotFoundException e)
             {
-                logger.warn("Could not load configuration from " + configFile.getPath(), e);
+                logger.warn("Configuration file does not exist " + configFile.getPath(), e);
                 // Create a blank Config object using default values
                 this.config = new Config();
                 this.config.saveConfig(configFile);
@@ -125,9 +120,32 @@ public class WMSFilter implements Filter
         int intervalMs = 60 * 1000; // Check every minute
         this.timer.schedule(new DatasetReloader(), 0, intervalMs);
         
-        logger.debug("GlobalFilter initialized");
+        logger.debug("WMSFilter initialized");
     }
-
+    
+    /**
+     * Creates a directory or throws an Exception if there was an error
+     */
+    private static void mkdir(File dir) throws Exception
+    {
+        if (dir.exists())
+        {
+            if (!dir.isDirectory())
+            {
+                throw new Exception(dir.getPath() + 
+                    " exists but is not a directory");
+            }
+        }
+        else
+        {
+            boolean created = dir.mkdir();
+            if (!created)
+            {
+                throw new Exception("Could not create " + dir.getPath());
+            }
+        }
+    }
+    
     /**
      * Task that runs periodically, refreshing the metadata catalogue
      */
@@ -152,13 +170,13 @@ public class WMSFilter implements Filter
         this.timer.cancel();
         this.config = null;
         this.filterConfig = null;
-        logger.debug("GlobalFilter destroyed");
+        logger.debug("WMSFilter destroyed");
     }
     
     public void doFilter(ServletRequest request, ServletResponse response,
         FilterChain chain) throws IOException, ServletException
     {
-        logger.debug("Called GlobalFilter.doFilter()");
+        logger.debug("Called WMSFilter.doFilter()");
         
         // TODO: check to see if the config file has been updated manually since
         // the last reload?  Don't forget to free up any resources if so.

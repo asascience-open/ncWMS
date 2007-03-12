@@ -8,6 +8,31 @@
     Config conf = (Config)application.getAttribute("config");
     Contact contact = conf.getContact();
     Server server = conf.getServer();
+    boolean configSaved = false;
+    int numBlankDatasets = 3;
+    
+    if (request.getParameter("contact.name") != null)
+    {
+        contact.setName(request.getParameter("contact.name").trim());
+        contact.setOrg(request.getParameter("contact.org").trim());
+        contact.setTel(request.getParameter("contact.tel").trim());
+        contact.setEmail(request.getParameter("contact.email").trim());
+
+        // Process the server details
+        server.setTitle(request.getParameter("server.title").trim());
+        server.setAbstract(request.getParameter("server.abstract").trim());
+        server.setKeywords(request.getParameter("server.keywords").trim());
+        server.setUrl(request.getParameter("server.url").trim());
+        server.setMaxImageWidth(Integer.parseInt(request.getParameter("server.maximagewidth")));
+        server.setMaxImageHeight(Integer.parseInt(request.getParameter("server.maximageheight")));
+
+        // TODO: save the dataset information, checking for removals
+        
+        // Save the config information
+        // TODO: trap exceptions and forward to appropriate confirmation page
+        conf.saveConfig();
+        configSaved = true;
+    }
 %>
 <html>
     <head>
@@ -18,7 +43,14 @@
 
     <h1>ncWMS Admin page</h1>
     
-    <form id="config" action="saveConfig.jsp" method="POST">
+    <%
+        if (configSaved)
+        {%>
+        <p>Configuration saved.</p>
+      <%}
+    %>
+    
+    <form id="config" action="index.jsp" method="POST">
         <h2>Server metadata</h2>
         <table border="1">
             <tr><th>Title</th><td><input type="text" name="server.title" value="<%=server.getTitle()%>"/></td><td>Title for this WMS</td></tr>
@@ -30,7 +62,9 @@
             <tr><th>Max image width</th><td><input type="text" name="server.maximagewidth" value="<%=server.getMaxImageWidth()%>"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Max image height</th><td><input type="text" name="server.maximageheight" value="<%=server.getMaxImageHeight()%>"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Allow GetFeatureInfo</th><td><input type="checkbox" name="server.allowfeatureinfo" <%=server.isAllowFeatureInfo() ? "checked=\"checked\"" : ""%>/></td><td>Check this box to enable the GetFeatureInfo operation</td></tr>
-            <!-- TODO: allow password to be changed? -->
+            <!-- TODO: allow password to be changed?  Would need good encryption.  Perhaps
+                 have server generate a temporary key pair in the session, then encrypt password
+                 on client with public key. -->
         </table>
         
         <h2>Contact information</h2>
@@ -43,20 +77,42 @@
         
         <h2>Datasets</h2>
         <table border="1">
-            <tr><th>ID</th><th>Title</th><th>Location</th><th>State</th><th>Data reading class</th></tr>
+            <tr><th>ID</th><th>Title</th><th>Location</th><th>State</th><th>Queryable?</th><th>Data reading class</th><th>Remove?</th></tr>
             
             <%
             for (Dataset ds : conf.getDatasets().values())
             {
             %>
-            <tr><td><%=ds.getId()%></td><td><%=ds.getTitle()%></td><td><%=ds.getLocation()%></td>
-            <td><%=ds.getState().toString()%></td><td>TODO</td></tr>
+            <tr>
+                <td><input type="text" name="dataset.<%=ds.getId()%>.id" value="<%=ds.getId()%>"/></td>
+                <td><input type="text" name="dataset.<%=ds.getId()%>.title" value="<%=ds.getTitle()%>"/></td>
+                <td><input type="text" name="dataset.<%=ds.getId()%>.location" value="<%=ds.getLocation()%>"/></td>
+                <!-- TODO: turn into hyperlink to problem page -->
+                <td><%=ds.getState().toString()%></td>
+                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.queryable" <%=ds.isQueryable() ? "checked=\"checked\"" : ""%>/></td>
+                <td><input type="text" name="dataset.<%=ds.getId()%>.reader" value="<%=ds.getDataReaderClass()%>"/></td>
+                <td><input type="checkbox" name="remove.<%=ds.getId()%>"/></td>
+            </tr>
+            <%
+            }
+            for (int i = 0; i < numBlankDatasets; i++)
+            {
+            %>
+            <%--<tr>
+                <td><%=ds.getId()%></td>
+                <td><%=ds.getTitle()%></td>
+                <td><%=ds.getLocation()%></td>
+                <td><%=ds.getState().toString()%></td>
+                <td>TODO</td>
+                <td><input type="checkbox" name="remove.<%=ds.getId()%>"/></td>
+            </tr>--%>
             <%
             }
             %>
+            
         </table>
         
-        <input type="submit" value="submit"/>
+        <input type="submit" value="Save configuration" name="submit"/>
         
     </form>
     

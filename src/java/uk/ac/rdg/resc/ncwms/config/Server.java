@@ -68,9 +68,6 @@ public class Server
         this.allowFeatureInfo = true;
         this.maxImageWidth = 1024;
         this.maxImageHeight = 1024;
-        this.abstr = "";
-        this.keywords = "";
-        this.url = "";
         this.adminPassword = "ncWMS";
     }
 

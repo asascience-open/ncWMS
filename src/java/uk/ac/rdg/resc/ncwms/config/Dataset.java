@@ -163,8 +163,7 @@ public class Dataset
             // Destroy any previous DataReader object (close files etc)
             if (this.dataReader != null) this.dataReader.close();
             // Create a new DataReader object of the correct type
-            this.dataReader = DataReader.createDataReader(this.dataReaderClass,
-                this.location);
+            this.dataReader = DataReader.createDataReader(this.getDataReaderClass(),                 this.location);
             // Read the metadata
             this.vars = this.dataReader.getVariableMetadata();
             for (VariableMetadata vm : this.vars.values())
@@ -218,5 +217,15 @@ public class Dataset
     public String toString()
     {
         return "id: " + this.id + ", location: " + this.location;
+    }
+
+    public String getDataReaderClass()
+    {
+        return dataReaderClass;
+    }
+
+    public void setDataReaderClass(String dataReaderClass)
+    {
+        this.dataReaderClass = dataReaderClass;
     }
 }

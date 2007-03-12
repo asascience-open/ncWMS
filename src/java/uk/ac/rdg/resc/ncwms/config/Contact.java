@@ -44,9 +44,9 @@ public class Contact
 {
     
     @Element(name="name", required=false)
-    private String name; // Title for this ncWMS
+    private String name;
     @Element(name="organization", required=false)
-    private String org; // True if we allow the GetFeatureInfo operation globally
+    private String org; 
     @Element(name="telephone", required=false)
     private String tel;
     @Element(name="email", required=false)
@@ -55,10 +55,6 @@ public class Contact
     /** Creates a new instance of Contact */
     public Contact()
     {
-        this.setName("");
-        this.setOrg("");
-        this.setTel("");
-        this.setEmail("");
     }
 
     public String getName()
