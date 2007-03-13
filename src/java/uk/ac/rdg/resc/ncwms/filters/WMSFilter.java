@@ -182,17 +182,7 @@ public class WMSFilter implements Filter
         // TODO: check to see if the config file has been updated manually since
         // the last reload?  Don't forget to free up any resources if so.
         
-        // Check that we have a configuration loaded and redirect to an
-        // error page if not.
-        if (this.config.isReady())
-        {
-            chain.doFilter(request, response);
-        }
-        else
-        {
-            // TODO: display the reasons why the config is not complete
-            ((HttpServletResponse)response).sendRedirect("admin/servernotready.html");
-        }
+        chain.doFilter(request, response);
     }
     
 }

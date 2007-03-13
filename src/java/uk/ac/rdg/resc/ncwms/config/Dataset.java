@@ -89,7 +89,7 @@ public class Dataset
     
     public void setId(String id)
     {
-        this.id = id;
+        this.id = id.trim();
     }
     
     public String getLocation()
@@ -97,11 +97,14 @@ public class Dataset
         return location;
     }
 
-    public void setLocation(String location)
+    public synchronized void setLocation(String location)
     {
-        this.location = location;
-        // Mark for reload: TODO: reload immediately?
-        this.state = State.TO_BE_LOADED;
+        // Mark for reload only if the location has changed
+        if (!this.location.trim().equals(location.trim()))
+        {
+            this.state = State.TO_BE_LOADED;
+        }
+        this.location = location.trim();
     }
 
     public Hashtable<String, VariableMetadata> getVariables()
@@ -166,7 +169,7 @@ public class Dataset
     /**
      * (Re)loads the metadata for this Dataset.  Clients must call needsRefresh()
      * before calling this method to check that the metadata needs reloading.
-     * This is called from the {@link GlobalFilter.DatasetReloader} timer task.
+     * This is called from the {@link WMSFilter.DatasetReloader} timer task.
      */
     public void loadMetadata()
     {
@@ -178,7 +181,8 @@ public class Dataset
             // Destroy any previous DataReader object (close files etc)
             if (this.dataReader != null) this.dataReader.close();
             // Create a new DataReader object of the correct type
-            this.dataReader = DataReader.createDataReader(this.getDataReaderClass(),                 this.location);
+            this.dataReader = DataReader.createDataReader(this.getDataReaderClass(),
+                this.location);
             // Read the metadata
             this.vars = this.dataReader.getVariableMetadata();
             for (VariableMetadata vm : this.vars.values())

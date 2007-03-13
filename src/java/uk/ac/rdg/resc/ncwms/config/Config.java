@@ -146,16 +146,6 @@ public class Config
         }
     }
     
-    /**
-     * @return true if the server has been adequately configured.  This method
-     * is used by the {@link GlobalFilter} to redirect users to an error page
-     * if they try to use the server before it is configured.
-     */
-    public boolean isReady()
-    {
-        return this.getServer() != null; // TODO: check all the compulsory options
-    }
-    
     public void setLastUpdateTime(Date date)
     {
         this.lastUpdateTime = date;
@@ -210,10 +200,16 @@ public class Config
         return this.datasets;
     }
     
-    public void addDataset(Dataset ds)
+    public synchronized void addDataset(Dataset ds)
     {
         this.datasets.put(ds.getId(), ds);
         this.datasetList.add(ds);
+    }
+    
+    public synchronized void removeDataset(Dataset ds)
+    {
+        this.datasets.remove(ds.getId());
+        this.datasetList.remove(ds);
     }
     
 }
