@@ -102,7 +102,8 @@ public class WMSFilter implements Filter
                 logger.warn("Configuration file does not exist " + configFile.getPath(), e);
                 // Create a blank Config object using default values
                 this.config = new Config();
-                this.config.saveConfig(configFile);
+                this.config.setConfigFile(configFile);
+                this.config.saveConfig();
             }
             // Store in the servlet context
             this.filterConfig.getServletContext().setAttribute("config", this.config);

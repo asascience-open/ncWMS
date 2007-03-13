@@ -13,20 +13,38 @@
     
     if (request.getParameter("contact.name") != null)
     {
-        contact.setName(request.getParameter("contact.name").trim());
-        contact.setOrg(request.getParameter("contact.org").trim());
-        contact.setTel(request.getParameter("contact.tel").trim());
-        contact.setEmail(request.getParameter("contact.email").trim());
+        contact.setName(request.getParameter("contact.name"));
+        contact.setOrg(request.getParameter("contact.org"));
+        contact.setTel(request.getParameter("contact.tel"));
+        contact.setEmail(request.getParameter("contact.email"));
 
         // Process the server details
-        server.setTitle(request.getParameter("server.title").trim());
-        server.setAbstract(request.getParameter("server.abstract").trim());
-        server.setKeywords(request.getParameter("server.keywords").trim());
-        server.setUrl(request.getParameter("server.url").trim());
+        server.setTitle(request.getParameter("server.title"));
+        server.setAbstract(request.getParameter("server.abstract"));
+        server.setKeywords(request.getParameter("server.keywords"));
+        server.setUrl(request.getParameter("server.url"));
         server.setMaxImageWidth(Integer.parseInt(request.getParameter("server.maximagewidth")));
         server.setMaxImageHeight(Integer.parseInt(request.getParameter("server.maximageheight")));
 
-        // TODO: save the dataset information, checking for removals
+        // Save the dataset information, checking for removals
+        // First look through the existing datasets
+        for (Dataset ds : conf.getDatasets().values())
+        {
+            // TODO
+        }
+        // Now look for the new datasets
+        for (int i = 0; i < numBlankDatasets; i++)
+        {
+            // Look for non-blank ID fields
+            if (!request.getParameter("dataset.blank" + i + ".id").trim().equals(""))
+            {
+                Dataset ds = new Dataset();
+                ds.setId(request.getParameter("dataset.blank" + i + ".id"));
+                ds.setTitle(request.getParameter("dataset.blank" + i + ".title"));
+                ds.setLocation(request.getParameter("dataset.blank" + i + ".location"));
+                conf.addDataset(ds);
+            }
+        }
         
         // Save the config information
         // TODO: trap exceptions and forward to appropriate confirmation page
@@ -87,31 +105,33 @@
                 <td><input type="text" name="dataset.<%=ds.getId()%>.id" value="<%=ds.getId()%>"/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.title" value="<%=ds.getTitle()%>"/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.location" value="<%=ds.getLocation()%>"/></td>
-                <!-- TODO: turn into hyperlink to problem page -->
+                <!-- TODO: turn into hyperlink to problem page if ERROR -->
                 <td><%=ds.getState().toString()%></td>
                 <td><input type="checkbox" name="dataset.<%=ds.getId()%>.queryable" <%=ds.isQueryable() ? "checked=\"checked\"" : ""%>/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.reader" value="<%=ds.getDataReaderClass()%>"/></td>
-                <td><input type="checkbox" name="remove.<%=ds.getId()%>"/></td>
+                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.remove"/></td>
             </tr>
             <%
             }
             for (int i = 0; i < numBlankDatasets; i++)
             {
             %>
-            <%--<tr>
-                <td><%=ds.getId()%></td>
-                <td><%=ds.getTitle()%></td>
-                <td><%=ds.getLocation()%></td>
-                <td><%=ds.getState().toString()%></td>
-                <td>TODO</td>
-                <td><input type="checkbox" name="remove.<%=ds.getId()%>"/></td>
-            </tr>--%>
+            <tr>
+                <td><input type="text" name="dataset.blank<%=i%>.id" value=""/></td>
+                <td><input type="text" name="dataset.blank<%=i%>.title" value=""/></td>
+                <td><input type="text" name="dataset.blank<%=i%>.location" value=""/></td>
+                <td>N/A</td>
+                <td><input type="checkbox" name="dataset.blank<%=i%>.queryable" checked="checked"/></td>
+                <td><input type="text" name="dataset.blank<%=i%>.reader" value=""/></td>
+                <td>N/A</td>
+            </tr>
             <%
             }
             %>
             
         </table>
         
+        <br />
         <input type="submit" value="Save configuration" name="submit"/>
         
     </form>

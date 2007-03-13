@@ -64,11 +64,15 @@ public class Server
      */
     public Server()
     {
+        // Simple XML complains if tags are empty, hence we add a space
         this.title = "My ncWMS server";
         this.allowFeatureInfo = true;
         this.maxImageWidth = 1024;
         this.maxImageHeight = 1024;
         this.adminPassword = "ncWMS";
+        this.abstr = " ";
+        this.url = " ";
+        this.keywords = " ";
     }
 
     public String getTitle()
@@ -78,7 +82,7 @@ public class Server
 
     public void setTitle(String title)
     {
-        this.title = title;
+        this.title = Contact.checkEmpty(title);
     }
 
     public boolean isAllowFeatureInfo()
@@ -118,7 +122,7 @@ public class Server
 
     public void setAbstract(String abstr)
     {
-        this.abstr = abstr;
+        this.abstr = Contact.checkEmpty(abstr);
     }
 
     public String getKeywords()
@@ -128,7 +132,7 @@ public class Server
 
     public void setKeywords(String keywords)
     {
-        this.keywords = keywords;
+        this.keywords = Contact.checkEmpty(keywords);
     }
 
     public String getUrl()
@@ -138,7 +142,7 @@ public class Server
 
     public void setUrl(String url)
     {
-        this.url = url;
+        this.url = Contact.checkEmpty(url);
     }
 
     public String getAdminPassword()

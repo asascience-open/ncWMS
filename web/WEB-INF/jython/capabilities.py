@@ -118,68 +118,69 @@ def getCapabilities(req, params, config):
     # Now for the dataset layers
     datasets = config.datasets
     for dsid in datasets.keys():
-        # Write a container layer for this dataset. Container layers
-        # do not have a Name
-        output.write("<Layer>")
-        output.write("<Title>%s</Title>" % datasets[dsid].title)
-        # Now write the displayable data layers
-        vars = datasets[dsid].variables
-        for vid in vars.keys():
-            output.write("<Layer")
-            if config.server.allowFeatureInfo and datasets[dsid].queryable:
-                output.write(" queryable=\"1\"")
-            output.write(">")
-            output.write("<Name>%s%s%s</Name>" % (dsid, wmsUtils.getLayerSeparator(), vid))
-            output.write("<Title>%s</Title>" % vars[vid].title)
-            output.write("<Abstract>%s</Abstract>" % vars[vid].abstract)
+        if datasets[dsid].ready:
+            # Write a container layer for this dataset. Container layers
+            # do not have a Name
+            output.write("<Layer>")
+            output.write("<Title>%s</Title>" % datasets[dsid].title)
+            # Now write the displayable data layers
+            vars = datasets[dsid].variables
+            for vid in vars.keys():
+                output.write("<Layer")
+                if config.server.allowFeatureInfo and datasets[dsid].queryable:
+                    output.write(" queryable=\"1\"")
+                output.write(">")
+                output.write("<Name>%s%s%s</Name>" % (dsid, wmsUtils.getLayerSeparator(), vid))
+                output.write("<Title>%s</Title>" % vars[vid].title)
+                output.write("<Abstract>%s</Abstract>" % vars[vid].abstract)
 
-            # Set the bounding box
-            minLon, minLat, maxLon, maxLat = vars[vid].bbox
-            output.write("<EX_GeographicBoundingBox>")
-            output.write("<westBoundLongitude>%s</westBoundLongitude>" % str(minLon))
-            output.write("<eastBoundLongitude>%s</eastBoundLongitude>" % str(maxLon))
-            output.write("<southBoundLatitude>%s</southBoundLatitude>" % str(minLat))
-            output.write("<northBoundLatitude>%s</northBoundLatitude>" % str(maxLat))
-            output.write("</EX_GeographicBoundingBox>")
-            output.write("<BoundingBox CRS=\"CRS:84\" ")
-            output.write("minx=\"%f\" maxx=\"%f\" miny=\"%f\" maxy=\"%f\"/>"
-                % (minLon, maxLon, minLat, maxLat))
+                # Set the bounding box
+                minLon, minLat, maxLon, maxLat = vars[vid].bbox
+                output.write("<EX_GeographicBoundingBox>")
+                output.write("<westBoundLongitude>%s</westBoundLongitude>" % str(minLon))
+                output.write("<eastBoundLongitude>%s</eastBoundLongitude>" % str(maxLon))
+                output.write("<southBoundLatitude>%s</southBoundLatitude>" % str(minLat))
+                output.write("<northBoundLatitude>%s</northBoundLatitude>" % str(maxLat))
+                output.write("</EX_GeographicBoundingBox>")
+                output.write("<BoundingBox CRS=\"CRS:84\" ")
+                output.write("minx=\"%f\" maxx=\"%f\" miny=\"%f\" maxy=\"%f\"/>"
+                    % (minLon, maxLon, minLat, maxLat))
 
-            # Set the level dimension
-            if vars[vid].zvalues is not None:
-                output.write("<Dimension name=\"elevation\" units=\"%s\"" 
-                    % vars[vid].zunits)
-                # Use the first value in the array as the default
-                # If the default value is removed, you also need to edit
-                # the data reading code (e.g. DataReader.java) to
-                # disallow default z values
-                output.write(" default=\"%s\">" % vars[vid].zvalues[0])
-                firstTime = 1
-                for z in vars[vid].zvalues:
-                    if firstTime:
-                        firstTime = 0
-                    else:
-                        output.write(",")
-                    output.write(str(z))
-                output.write("</Dimension>")
+                # Set the level dimension
+                if vars[vid].zvalues is not None:
+                    output.write("<Dimension name=\"elevation\" units=\"%s\"" 
+                        % vars[vid].zunits)
+                    # Use the first value in the array as the default
+                    # If the default value is removed, you also need to edit
+                    # the data reading code (e.g. DataReader.java) to
+                    # disallow default z values
+                    output.write(" default=\"%s\">" % vars[vid].zvalues[0])
+                    firstTime = 1
+                    for z in vars[vid].zvalues:
+                        if firstTime:
+                            firstTime = 0
+                        else:
+                            output.write(",")
+                        output.write(str(z))
+                    output.write("</Dimension>")
 
-            # Set the time dimension
-            if len(vars[vid].tvalues) > 0:
-                output.write("<Dimension name=\"time\" units=\"ISO8601\"")
-                # TODO: default value should be the time closest to now
-                output.write(" multipleValues=\"true\" current=\"true\" default=\"%s\">" %
-                    iso8601.tostring(vars[vid].tvalues[-1]))
-                firstTime = 1
-                for t in vars[vid].tvalues:
-                    if firstTime:
-                        firstTime = 0
-                    else:
-                        output.write(",")
-                    output.write(iso8601.tostring(t))
-                output.write("</Dimension>")
+                # Set the time dimension
+                if len(vars[vid].tvalues) > 0:
+                    output.write("<Dimension name=\"time\" units=\"ISO8601\"")
+                    # TODO: default value should be the time closest to now
+                    output.write(" multipleValues=\"true\" current=\"true\" default=\"%s\">" %
+                        iso8601.tostring(vars[vid].tvalues[-1]))
+                    firstTime = 1
+                    for t in vars[vid].tvalues:
+                        if firstTime:
+                            firstTime = 0
+                        else:
+                            output.write(",")
+                        output.write(iso8601.tostring(t))
+                    output.write("</Dimension>")
 
-            output.write("</Layer>") # end of variable Layer
-        output.write("</Layer>") # end of dataset layer
+                output.write("</Layer>") # end of variable Layer
+            output.write("</Layer>") # end of dataset layer
     
     output.write("</Layer>") # end of top-level container layer
     

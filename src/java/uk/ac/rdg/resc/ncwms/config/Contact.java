@@ -55,6 +55,11 @@ public class Contact
     /** Creates a new instance of Contact */
     public Contact()
     {
+        // Simple XML complains if tags are empty, hence we add a space
+        this.name = " ";
+        this.org = " ";
+        this.tel = " ";
+        this.email = " ";
     }
 
     public String getName()
@@ -64,7 +69,7 @@ public class Contact
 
     public void setName(String name)
     {
-        this.name = name;
+        this.name = checkEmpty(name);
     }
 
     public String getOrg()
@@ -74,7 +79,7 @@ public class Contact
 
     public void setOrg(String org)
     {
-        this.org = org;
+        this.org = checkEmpty(org);
     }
 
     public String getTel()
@@ -84,7 +89,7 @@ public class Contact
 
     public void setTel(String tel)
     {
-        this.tel = tel;
+        this.tel = checkEmpty(tel);
     }
 
     public String getEmail()
@@ -94,7 +99,18 @@ public class Contact
 
     public void setEmail(String email)
     {
-        this.email = email;
+        this.email = checkEmpty(email);
+    }
+    
+    /**
+     * If s is whitespace only or empty, returns a space, otherwise returns s.
+     * This is to work around problems with the Simple XML software, which throws
+     * an Exception if it tries to read an empty field from an XML file.
+     */
+    public static String checkEmpty(String s)
+    {
+        s = s.trim();
+        return s.equals("") ? " " : s;
     }
     
 }

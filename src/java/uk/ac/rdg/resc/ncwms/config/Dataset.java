@@ -87,6 +87,11 @@ public class Dataset
         return this.id;
     }
     
+    public void setId(String id)
+    {
+        this.id = id;
+    }
+    
     public String getLocation()
     {
         return location;
@@ -120,12 +125,22 @@ public class Dataset
         return this.queryable;
     }
     
+    public void setQueryable(boolean queryable)
+    {
+        this.queryable = queryable;
+    }
+    
     /**
      * @return the human-readable Title of this dataset
      */
     public String getTitle()
     {
         return this.title;
+    }
+    
+    public void setTitle(String title)
+    {
+        this.title = title;
     }
     
     /**

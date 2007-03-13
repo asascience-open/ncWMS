@@ -94,18 +94,8 @@ public class Config
     {
         Config config = new Persister().read(Config.class, configFile);
         logger.debug("Loaded configuration from {}", configFile.getPath());
+        config.setConfigFile(configFile);
         return config;
-    }
-    
-    /**
-     * Saves configuration information to the disk
-     * @param configFile The configuration file
-     * @throws Exception if there was an error reading the configuration
-     */
-    public void saveConfig(File configFile) throws Exception
-    {
-        this.configFile = configFile;
-        new Persister().write(this, configFile);
     }
     
     /**
@@ -121,7 +111,7 @@ public class Config
         {
             throw new IllegalStateException("No location set for config file");
         }
-        this.saveConfig(this.configFile);
+        new Persister().write(this, this.configFile);
     }
     
     /**
@@ -166,11 +156,6 @@ public class Config
         return this.getServer() != null; // TODO: check all the compulsory options
     }
     
-    public Hashtable<String, Dataset> getDatasets()
-    {
-        return datasets;
-    }
-    
     public void setLastUpdateTime(Date date)
     {
         this.lastUpdateTime = date;
@@ -208,6 +193,27 @@ public class Config
     public void setContact(Contact contact)
     {
         this.contact = contact;
+    }
+
+    public File getConfigFile()
+    {
+        return configFile;
+    }
+
+    public void setConfigFile(File configFile)
+    {
+        this.configFile = configFile;
+    }
+    
+    public Hashtable<String, Dataset> getDatasets()
+    {
+        return this.datasets;
+    }
+    
+    public void addDataset(Dataset ds)
+    {
+        this.datasets.put(ds.getId(), ds);
+        this.datasetList.add(ds);
     }
     
 }
