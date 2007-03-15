@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
@@ -272,6 +273,10 @@ public class DefaultDataReader extends DataReader
             locFile = new File(location);
             GlobFilenameFilter filter = new GlobFilenameFilter(locFile.getName());
             // Loop over all the files that match the glob pattern
+            if (locFile.getParentFile() == null)
+            {
+                throw new FileNotFoundException(location);
+            }
             filenames = locFile.getParentFile().list(filter);
         }
         this.isGlobAggregation = filenames.length > 1;
