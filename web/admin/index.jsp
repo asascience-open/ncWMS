@@ -86,7 +86,7 @@
     
     <form id="config" action="index.jsp" method="POST">
         
-        <input type="submit" value="Save configuration" name="submit2"/>
+        <input type="submit" value="Save configuration" name="submit1"/>
         
         <h2>Datasets</h2>
         <table border="1">
@@ -100,8 +100,16 @@
                 <td><input type="text" name="dataset.<%=ds.getId()%>.id" value="<%=ds.getId()%>"/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.title" value="<%=ds.getTitle()%>"/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.location" value="<%=ds.getLocation()%>"/></td>
-                <!-- TODO: turn into hyperlink to problem page if ERROR -->
-                <td><%=ds.getState().toString()%></td>
+                <td><%
+                if (ds.isError())
+                {%>
+                    <a target="_blank" href="error.jsp?dataset=<%=ds.getId()%>"><%=ds.getState().toString()%></a>
+              <%}
+                else
+                {
+                    out.print(ds.getState().toString());
+                }
+                %></td>
                 <td><input type="checkbox" name="dataset.<%=ds.getId()%>.queryable" <%=ds.isQueryable() ? "checked=\"checked\"" : ""%>/></td>
                 <td><input type="text" name="dataset.<%=ds.getId()%>.reader" value="<%=ds.getDataReaderClass()%>"/></td>
                 <td><input type="checkbox" name="dataset.<%=ds.getId()%>.remove"/></td>
