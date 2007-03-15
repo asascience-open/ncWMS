@@ -278,6 +278,10 @@ public class DefaultDataReader extends DataReader
                 throw new FileNotFoundException(location);
             }
             filenames = locFile.getParentFile().list(filter);
+            if (filenames == null)
+            {
+                throw new FileNotFoundException(location);
+            }
         }
         this.isGlobAggregation = filenames.length > 1;
         
