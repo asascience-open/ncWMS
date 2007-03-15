@@ -70,7 +70,6 @@ public class WMSFilter implements Filter
      */
     public void init(FilterConfig filterConfig) throws ServletException
     {
-        System.out.println("FilterConfig = " + filterConfig);
         this.filterConfig = filterConfig;
         
         try
