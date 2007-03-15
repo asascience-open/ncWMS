@@ -47,9 +47,14 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 public class Dataset
 {
     /**
-     * The state of a Dataset
+     * The state of a Dataset.
+     * TO_BE_LOADED: Dataset is new or has changed and needs to be loaded
+     * LOADING: In the process of loading
+     * READY: Ready for use
+     * SYNCING: A previously-ready dataset is synchronizing with the disk
+     * ERROR: An error occurred when loading the dataset.
      */
-    public static enum State { TO_BE_LOADED, LOADING, READY, ERROR };
+    public static enum State { TO_BE_LOADED, LOADING, READY, REFRESHING, ERROR };
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
@@ -61,13 +66,14 @@ public class Dataset
     private String dataReaderClass;
     @Attribute(name="title")
     private String title;
+    @Attribute(name="updateInterval", required=false)
+    private int updateInterval; // The update interval in minutes
     
     // Variables contained in this dataset, keyed by their unique IDs
-    private Hashtable<String, VariableMetadata> vars; 
+    private Hashtable<String, VariableMetadata> vars;
     private State state; // State of this dataset
     private Exception err; // Set if there is an error loading the dataset
     private DataReader dataReader; // Object used to read data and metadata
-    
     
     public Dataset()
     {
@@ -76,6 +82,7 @@ public class Dataset
         this.queryable = true;
         // We'll use a default data reader unless this is overridden in the config file
         this.dataReaderClass = "";
+        this.setUpdateInterval(-1); // Means "never update"
     }
 
     public String getId()
@@ -99,6 +106,7 @@ public class Dataset
         if (this.location != null && !this.location.trim().equals(location.trim()))
         {
             this.state = State.TO_BE_LOADED;
+            // TODO: actually reload the dataset.
         }
         this.location = location.trim();
     }
@@ -170,6 +178,7 @@ public class Dataset
     public void loadMetadata()
     {
         this.state = State.LOADING;
+        this.err = null;
         try
         {
             // Clear the store of variables
@@ -180,11 +189,12 @@ public class Dataset
             this.dataReader = DataReader.createDataReader(this.getDataReaderClass(),
                 this.location);
             // Read the metadata
-            this.vars = this.dataReader.getVariableMetadata();
-            for (VariableMetadata vm : this.vars.values())
+            Hashtable<String, VariableMetadata> vars = this.dataReader.getVariableMetadata();
+            for (VariableMetadata vm : vars.values())
             {
                 vm.setDataset(this);
             }
+            this.vars = vars;
             this.state = State.READY;
         }
         catch(Exception e)
@@ -250,5 +260,21 @@ public class Dataset
     public void setDataReaderClass(String dataReaderClass)
     {
         this.dataReaderClass = dataReaderClass;
+    }
+
+    /**
+     * @return the update interval for this dataset in minutes
+     */
+    public int getUpdateInterval()
+    {
+        return updateInterval;
+    }
+
+    /**
+     * Sets the update interval for this dataset in minutes
+     */
+    public void setUpdateInterval(int updateInterval)
+    {
+        this.updateInterval = updateInterval;
     }
 }
