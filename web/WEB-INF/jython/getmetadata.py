@@ -46,6 +46,11 @@ def getMetadata(req, config):
         varID = params.getParamValue("variable")
         tIndex = int(params.getParamValue("tIndex"))
         req.write(getTimesteps(config, dataset, varID, tIndex))
+    elif metadataItem == "minmax":
+        req.content_type = "text/xml"
+        dataset = params.getParamValue("dataset")
+        varID = params.getParamValue("variable")
+        req.write(getMinMax(config, dataset, varID, params))        
 
 def getFrontPage(config):
     """ Returns a front page for the WMS, containing example links """
@@ -340,4 +345,13 @@ def _compareDays(d1, d2):
             return -1
         else:
             return 1
+
+def getMinMax(config, dsID, varID, params):
+    
+    var = config.datasets[dsID].vars[varID]
+    tIndex = getmap._getTIndices(var, params)
+    #zValue = 
+    # Now read the data
+    picData = dataset.read(var, tIndex, zValue, grid.latValues, grid.lonValues, _getFillValue())
+    # Now find the minimum and maximum values
     
