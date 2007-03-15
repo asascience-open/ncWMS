@@ -19,7 +19,12 @@
 
     <h1>Error stack trace for dataset <%=dsName%> (for debugging)</h1>
     
-        <pre><% ds.getException().printStackTrace(new PrintWriter(out)); %></pre>
+    <%  if (ds.getException() == null) { %>
+        <p>This dataset does not contain any errors</p>
+    <%  } else {%>
+            <pre><% ds.getException().printStackTrace(new PrintWriter(out)); %></pre>
+    <%  }%>
+        
         
     </body>
 </html>
