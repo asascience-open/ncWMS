@@ -50,10 +50,6 @@ public class Dataset
      * The state of a Dataset
      */
     public static enum State { TO_BE_LOADED, LOADING, READY, ERROR };
-    /**
-     * The datasets currently in memory: maps ids to Dataset objects
-     */
-    private static Hashtable<String, Dataset> datasets = new Hashtable<String, Dataset>();
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
@@ -100,7 +96,7 @@ public class Dataset
     public synchronized void setLocation(String location)
     {
         // Mark for reload only if the location has changed
-        if (!this.location.trim().equals(location.trim()))
+        if (this.location != null && !this.location.trim().equals(location.trim()))
         {
             this.state = State.TO_BE_LOADED;
         }
@@ -217,6 +213,14 @@ public class Dataset
         float fillValue) throws WMSExceptionInJava
     {
         return this.dataReader.read(vm, tIndex, zValue, latValues, lonValues, fillValue);
+    }
+    
+    /**
+     * @return true if there is an error with this dataset
+     */
+    public boolean isError()
+    {
+        return this.state == State.ERROR;
     }
     
     /**
