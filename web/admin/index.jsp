@@ -43,6 +43,12 @@
                 ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
                 ds.setId(request.getParameter("dataset." + ds.getId() + ".id"));
             }
+            if (request.getParameter("dataset." + ds.getId() + ".refresh") != null)
+            {
+                // TODO: refresh the dataset.  What if the change of location name
+                // has already forced a refresh?  Also force a refresh if data reader
+                // class name changes?
+            }
         }
         // Now look for the new datasets
         for (int i = 0; i < numBlankDatasets; i++)
@@ -93,7 +99,7 @@
         
         <h2>Datasets</h2>
         <table border="1">
-            <tr><th>ID</th><th>Title</th><th>Location</th><th>State</th><th>Queryable?</th><th>Data reading class</th><th>Refresh frequency</th><th>Reload?</th><th>Remove?</th></tr>
+            <tr><th>ID</th><th>Title</th><th>Location</th><th>State</th><th>Refresh frequency</th><th>Force refresh?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th></tr>
             
             <% for (Dataset ds : conf.getDatasets().values()) { %>
             <tr>
@@ -105,8 +111,6 @@
               <%} else {
                     out.print(ds.getState().toString());
                 }%></td>
-                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.queryable" <%=ds.isQueryable() ? "checked=\"checked\"" : ""%>/></td>
-                <td><input type="text" name="dataset.<%=ds.getId()%>.reader" value="<%=ds.getDataReaderClass()%>"/></td>
                 <td>
                     <select name="dataset.<%=ds.getId()%>.updateinterval">
                         <option value="-1" <%=ds.getUpdateInterval() < 0 ? "selected=\"selected\"" : ""%>>Never</option>
@@ -119,8 +123,10 @@
                         <option value="1440" <%=ds.getUpdateInterval() == 1440 ? "selected=\"selected\"" : ""%>>Daily</option>
                     </select>
                 </td>
-                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.reload"/></td>
+                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.refresh"/></td>
+                <td><input type="checkbox" name="dataset.<%=ds.getId()%>.queryable" <%=ds.isQueryable() ? "checked=\"checked\"" : ""%>/></td>
                 <td><input type="checkbox" name="dataset.<%=ds.getId()%>.remove"/></td>
+                <td><input type="text" name="dataset.<%=ds.getId()%>.reader" value="<%=ds.getDataReaderClass()%>"/></td>
             </tr>
             <%
             }
@@ -130,8 +136,6 @@
                 <td><input type="text" name="dataset.new<%=i%>.title" value=""/></td>
                 <td><input type="text" name="dataset.new<%=i%>.location" value=""/></td>
                 <td>N/A</td>
-                <td><input type="checkbox" name="dataset.new<%=i%>.queryable" checked="checked"/></td>
-                <td><input type="text" name="dataset.new<%=i%>.reader" value=""/></td>
                 <td>
                     <select name="dataset.new<%=i%>.updateinterval">
                         <option value="-1">Never</option>
@@ -145,7 +149,9 @@
                     </select>
                 </td>
                 <td>N/A</td>
+                <td><input type="checkbox" name="dataset.new<%=i%>.queryable" checked="checked"/></td>
                 <td>N/A</td>
+                <td><input type="text" name="dataset.new<%=i%>.reader" value=""/></td>
             </tr>
          <% } %>
         </table>        

@@ -28,7 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Hashtable;
+import org.apache.log4j.Logger;
 import simple.xml.Attribute;
 import simple.xml.Root;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
@@ -46,15 +49,17 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 @Root(name="dataset")
 public class Dataset
 {
+    private static final Logger logger = Logger.getLogger(Dataset.class);
+    
     /**
      * The state of a Dataset.
      * TO_BE_LOADED: Dataset is new or has changed and needs to be loaded
      * LOADING: In the process of loading
      * READY: Ready for use
-     * SYNCING: A previously-ready dataset is synchronizing with the disk
+     * UPDATING: A previously-ready dataset is synchronizing with the disk
      * ERROR: An error occurred when loading the dataset.
      */
-    public static enum State { TO_BE_LOADED, LOADING, READY, REFRESHING, ERROR };
+    public static enum State { TO_BE_LOADED, LOADING, READY, UPDATING, ERROR };
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
@@ -71,9 +76,11 @@ public class Dataset
     
     // Variables contained in this dataset, keyed by their unique IDs
     private Hashtable<String, VariableMetadata> vars;
+    
     private State state; // State of this dataset
     private Exception err; // Set if there is an error loading the dataset
     private DataReader dataReader; // Object used to read data and metadata
+    private Date lastUpdate; // Time at which the dataset was last updated
     
     public Dataset()
     {
@@ -82,7 +89,8 @@ public class Dataset
         this.queryable = true;
         // We'll use a default data reader unless this is overridden in the config file
         this.dataReaderClass = "";
-        this.setUpdateInterval(-1); // Means "never update"
+        this.updateInterval = -1; // Means "never update"
+        this.lastUpdate = null;
     }
 
     public String getId()
@@ -105,8 +113,8 @@ public class Dataset
         // Mark for reload only if the location has changed
         if (this.location != null && !this.location.trim().equals(location.trim()))
         {
-            this.state = State.TO_BE_LOADED;
             // TODO: actually reload the dataset.
+            this.state = State.TO_BE_LOADED;
         }
         this.location = location.trim();
     }
@@ -119,9 +127,9 @@ public class Dataset
     /**
      * @return true if this dataset is ready for use
      */
-    public boolean isReady()
+    public synchronized boolean isReady()
     {
-        return this.state == State.READY;
+        return this.state == State.READY || this.state == State.UPDATING;
     }
     
     /**
@@ -153,20 +161,29 @@ public class Dataset
     /**
      * @return true if this dataset needs to be reloaded
      */
-    public boolean needsRefresh()
+    public synchronized boolean needsRefresh()
     {
-        if (this.state == State.LOADING)
+        if (this.state == State.LOADING || this.state == State.UPDATING)
         {
             return false;
         }
-        else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED)
+        else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED
+            || this.lastUpdate == null)
         {
             return true;
         }
+        else if (this.updateInterval < 0)
+        {
+            return false; // We never update this dataset
+        }
         else
         {
-            // State = READY.  TODO: check the age of the metadata
-            return true;
+            // State = READY.  Check the age of the metadata
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(this.lastUpdate);
+            cal.add(Calendar.MINUTE, this.updateInterval);
+            // Return true if we are after the next scheduled update
+            return new Date().after(cal.getTime());
         }
     }
     
@@ -177,25 +194,31 @@ public class Dataset
      */
     public void loadMetadata()
     {
-        this.state = State.LOADING;
+        this.state = this.state == State.READY ? State.UPDATING : State.LOADING;
         this.err = null;
         try
         {
-            // Clear the store of variables
-            this.vars = null;
             // Destroy any previous DataReader object (close files etc)
             if (this.dataReader != null) this.dataReader.close();
+            logger.debug("Closed datareader (if it existed)");
             // Create a new DataReader object of the correct type
-            this.dataReader = DataReader.createDataReader(this.getDataReaderClass(),
-                this.location);
+            if (this.dataReader == null ||
+                !this.dataReader.getClass().getName().equals(this.dataReaderClass))
+            {
+                logger.debug("Creating new data reader of type {}", this.dataReaderClass);
+                this.dataReader = DataReader.createDataReader(this.dataReaderClass,
+                    this.location);
+            }
             // Read the metadata
             Hashtable<String, VariableMetadata> vars = this.dataReader.getVariableMetadata();
+            logger.debug("loaded VariableMetadata");
             for (VariableMetadata vm : vars.values())
             {
                 vm.setDataset(this);
             }
             this.vars = vars;
             this.state = State.READY;
+            this.lastUpdate = new Date();
         }
         catch(Exception e)
         {
