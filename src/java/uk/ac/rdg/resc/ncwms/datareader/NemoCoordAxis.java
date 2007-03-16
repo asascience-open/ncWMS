@@ -139,7 +139,7 @@ public class NemoCoordAxis extends EnhancedCoordAxis
         }
         catch(RuntimeException rte)
         {
-            logger.error("Runtime error: " + rte);
+            logger.error("Runtime error: ", rte);
             throw rte;
         }
         finally
