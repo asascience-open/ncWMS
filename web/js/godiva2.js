@@ -5,7 +5,6 @@
 var map = null;
 var layerName = '';
 var prettyDsName = ''; // The dataset name, formatted for human reading
-var zValue = 0; // The currently-selected depth *value* (not the index)
 var zPositive = 0; // Will be 1 if the selected z axis is positive
 var tValue = null;
 var prettyTValue = null; // The t value, formatted for human reading
@@ -268,6 +267,7 @@ function variableSelected(datasetName, variableName)
 
             // Set the range selector objects
             var theAxes = xmldoc.getElementsByTagName('axis');
+            var zValue = getZValue();
             for (var i = 0; i < theAxes.length; i++)
             {
                 var axisType = theAxes[i].getAttribute('type');
@@ -286,8 +286,7 @@ function variableSelected(datasetName, variableName)
                     $('zValues').style.visibility = (values.length == 0) ? 'hidden' : 'visible';
                     var zDiff = 1e10; // Set to some ridiculously-high value
                     var nearestIndex = 0;
-                    for (var j = 0; j < values.length; j++)
-                    {
+                    for (var j = 0; j < values.length; j++) {
                         var optionZValue = values[j].firstChild.nodeValue;
                         // Create an item in the drop-down list for this z level
                         $('zValues').options[j] = new Option(optionZValue, j);
@@ -300,8 +299,7 @@ function variableSelected(datasetName, variableName)
                         } else {
                             diff = Math.abs(parseFloat(optionZValue) + zValue);
                         }
-                        if (diff < zDiff)
-                        {
+                        if (diff < zDiff) {
                             zDiff = diff;
                             nearestIndex = j;
                         }
@@ -371,7 +369,6 @@ function setCalendar(dataset, variable, dateTime)
             // If this call has resulted from the selection of a new variable,
             // choose the timestep based on the result from the server
             if (newVariable) {
-                newVariable = false; // This will be set true when we click on a different variable name
                 var tIndex = parseInt(xmldoc.getElementsByTagName('nearestIndex')[0].firstChild.nodeValue);
                 var tVal = xmldoc.getElementsByTagName('nearestValue')[0].firstChild.nodeValue;
                 var prettyTVal = xmldoc.getElementsByTagName('prettyNearestValue')[0].firstChild.nodeValue;
@@ -409,20 +406,35 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
             if ($('t' + timestep)) {
                 $('t' + timestep).style.backgroundColor = '#dadee9';
             }
-            autoScale(); // Scales the map automatically and updates it
+            if (newVariable) {
+                autoScale(); // Scales the map automatically and updates it
+            } else {
+                updateMap(); // Update the map without changing the scale
+            }
         }
     );
 }
 
-// Calls the WMS to find the min and max data values for the viewport, then
-// rescales
+// Calls the WMS to find the min and max data values, then rescales.
+// If this is a newly-selected variable the method gets the min and max values
+// for the whole layer.  If not, this gets the min and max values for the viewport.
 function autoScale()
 {
+    var dataBounds = bbox;
+    if ($('tValues')) {
+        tValue = $('tValues').value;
+    }
+    if (newVariable) {
+        newVariable = false; // This will be set true when we click on a different variable name
+    } else {
+        // Use the intersection of the viewport and the layer's bounding box
+        dataBounds = getIntersectionBBOX();
+    }
     // Get the minmax metadata item.  This gets a grid of 50x50 data points
-    // covering the intersection BBOX and finds the min and max values
+    // covering the BBOX and finds the min and max values
     downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=minmax&layers=' +
-        layerName + '&BBOX=' + getIntersectionBBOX() + '&WIDTH=50&HEIGHT=50'
-        + '&CRS=CRS:84',
+        layerName + '&BBOX=' + dataBounds + '&WIDTH=50&HEIGHT=50'
+        + '&CRS=CRS:84&ELEVATION=' + getZValue() + '&TIME=' + tValue,
         function(req) {
             var xmldoc = req.responseXML;
             // set the size of the panel to match the number of variables
@@ -496,10 +508,9 @@ function createAnimation()
         return;
     }
     
-    essc_wms.mergeNewParams({time: $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML,
-        format: 'image/gif'});
-    alert("new parameters merged");
-    return;
+    //essc_wms.mergeNewParams({time: $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML,
+    //    format: 'image/gif'});
+    //return;
     
     // Get a URL for a WMS request that covers the current map extent
     var urlEls = essc_wms.getURL(map.getExtent()).split('&');
@@ -554,19 +565,6 @@ function updateMap()
     var scaleTwoThirds = parseFloat(scaleMinVal) + (2 * (scaleMaxVal - scaleMinVal) / 3);
     $('scaleOneThird').innerHTML = toNSigFigs(scaleOneThird, 4);
     $('scaleTwoThirds').innerHTML = toNSigFigs(scaleTwoThirds, 4);
-
-    // Get the z value
-    var zIndex = $('zValues').selectedIndex;
-    if ($('zValues').options.length == 0) {
-        // If we have no depth information, assume we're at the surface.  This
-        // will be ignored by the map server
-        zValue = 0;
-    } else {
-        zValue = $('zValues').options[zIndex].firstChild.nodeValue;
-    }
-    if (!zPositive) {
-        zValue = -zValue;
-    }
     
     if ($('tValues')) {
         tValue = $('tValues').value;
@@ -588,12 +586,12 @@ function updateMap()
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
-            baseURL + '/WMS.py', {layers: layerName, elevation: zValue, time: tValue,
+            baseURL + '/WMS.py', {layers: layerName, elevation: getZValue(), time: tValue,
             transparent: 'true', scale: scaleMinVal + "," + scaleMaxVal,
             opacity: opacity}, {buffer: 1, ratio: 1.5});
         map.addLayers([essc_wms]);
     } else {
-        essc_wms.mergeNewParams({layers: layerName, elevation: zValue, time: tValue,
+        essc_wms.mergeNewParams({layers: layerName, elevation: getZValue(), time: tValue,
             scale: scaleMinVal + "," + scaleMaxVal, opacity: opacity});
     }
     
@@ -608,6 +606,16 @@ function updateMap()
     setGEarthURL();
 }
 
+// Gets the Z value set by the user
+function getZValue()
+{
+    // If we have no depth information, assume we're at the surface.  This
+    // will be ignored by the map server
+    var zIndex = $('zValues').selectedIndex;
+    var zValue = $('zValues').options.length == 0 ? 0 : $('zValues').options[zIndex].firstChild.nodeValue;
+    return zPositive ? zValue : -zValue;
+}
+
 // Sets the URL for "Open in Google Earth"
 function setGEarthURL()
 {
@@ -620,9 +628,7 @@ function setGEarthURL()
             if (urlEls[i].startsWith('FORMAT')) {
                 // Make sure the FORMAT is set correctly
                 newURL += '&FORMAT=application/vnd.google-earth.kmz';
-            } else if (urlEls[i].startsWith('TIME') && 
-                       $('firstFrame').innerHTML != '' &&
-                       $('lastFrame').innerHTML != '') {
+            } else if (urlEls[i].startsWith('TIME') && timeSeriesSelected()) {
                 // If we can make an animation, do so
                 newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
             } else if (urlEls[i].startsWith('BBOX')) {

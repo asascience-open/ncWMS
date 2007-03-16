@@ -361,12 +361,14 @@ def getMinMax(config, params):
     # Now find the minimum and maximum values
     min = 1e20
     max = -1e20
+    allNone = 1
     for val in picData:
         v = getfeatureinfo._checkFillValue(val, fillvalue)
         if v is not None:
+            allNone = 0
             if v < min: min = v
             if v > max: max = v
-    if min == 1e20 and max == -1e20:
+    if allNone:
         min, max = 0, 50 # All data values were "None". Make up some numbers
     str = StringIO()
     str.write("<minmax><min>%f</min><max>%f</max></minmax>" % (min, max))
