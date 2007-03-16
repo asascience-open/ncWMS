@@ -5,7 +5,7 @@
 * @class
 */
 OpenLayers.Layer.WMS1_3 = OpenLayers.Class.create();
-OpenLayers.Layer.WMS1_3.prototype = OpenLayers.Class.inherit( OpenLayers.Layer.WMS.Untiled, {
+OpenLayers.Layer.WMS1_3.prototype = OpenLayers.Class.inherit( OpenLayers.Layer.WMS, {
 
     /** @final @type hash */
     DEFAULT_PARAMS: { service: "WMS",
