@@ -321,17 +321,11 @@ function variableSelected(datasetName, variableName)
             $('scaleBar').style.visibility = 'visible';
             $('scaleMin').style.visibility = 'visible';
             $('scaleMax').style.visibility = 'visible';
-            if (!isIE)
-            {
+            $('autoScale').style.visibility = 'visible';
+            if (!isIE) {
                 // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
                 $('opacityControl').style.visibility = 'visible';
             }
-
-            // update the scale markers
-            $('scaleMax').value = xmldoc.getElementsByTagName('max')[0].firstChild.nodeValue;
-            $('scaleMin').value = xmldoc.getElementsByTagName('min')[0].firstChild.nodeValue;
-            scaleMinVal = $('scaleMin').value;
-            scaleMaxVal = $('scaleMax').value;
             
             // Set the auto-zoom box
             bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
@@ -339,8 +333,7 @@ function variableSelected(datasetName, variableName)
             
             // Get the currently-selected time and date or the current time if
             // none has been selected
-            if (tValue == null)
-            {
+            if (tValue == null) {
                 var now = new Date();
                 // Format the date in ISO8601 format
                 tValue = now.getFullYear();
@@ -369,7 +362,7 @@ function setCalendar(dataset, variable, dateTime)
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
                 $('utc').style.visibility = 'hidden';
-                updateMap();
+                autoScale(); // this also updates the map
                 return;
             }
             var xmldoc = req.responseXML;
@@ -377,17 +370,14 @@ function setCalendar(dataset, variable, dateTime)
                 RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
             // If this call has resulted from the selection of a new variable,
             // choose the timestep based on the result from the server
-            if (newVariable)
-            {
+            if (newVariable) {
                 newVariable = false; // This will be set true when we click on a different variable name
                 var tIndex = parseInt(xmldoc.getElementsByTagName('nearestIndex')[0].firstChild.nodeValue);
                 var tVal = xmldoc.getElementsByTagName('nearestValue')[0].firstChild.nodeValue;
                 var prettyTVal = xmldoc.getElementsByTagName('prettyNearestValue')[0].firstChild.nodeValue;
                 // Get the timesteps for this day and update the map
                 getTimesteps(dataset, variable, tIndex, tVal, prettyTVal);
-            }
-            else if ($('t' + timestep))
-            {
+            } else if ($('t' + timestep)) {
                 // Highlight the currently-selected timestep if it happens to
                 // exist in this calendar
                 $('t' + timestep).style.backgroundColor = '#dadee9';
@@ -412,16 +402,33 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
             $('setFrames').style.visibility = 'visible';
             // Make sure the correct day is highlighted in the calendar
             // TODO: doesn't work if there are many timesteps on the same day!
-            if ($('t' + timestep))
-            {
+            if ($('t' + timestep)) {
                 $('t' + timestep).style.backgroundColor = 'white';
             }
             timestep = tIndex;
-            if ($('t' + timestep))
-            {
+            if ($('t' + timestep)) {
                 $('t' + timestep).style.backgroundColor = '#dadee9';
             }
-            updateMap();
+            autoScale(); // Scales the map automatically and updates it
+        }
+    );
+}
+
+// Calls the WMS to find the min and max data values for the viewport, then
+// rescales
+function autoScale()
+{
+    // Get the minmax metadata item.  This gets a grid of 50x50 data points
+    // covering the intersection BBOX and finds the min and max values
+    downloadUrl('WMS.py', 'SERVICE=WMS&REQUEST=GetMetadata&item=minmax&layers=' +
+        layerName + '&BBOX=' + getIntersectionBBOX() + '&WIDTH=50&HEIGHT=50'
+        + '&CRS=CRS:84',
+        function(req) {
+            var xmldoc = req.responseXML;
+            // set the size of the panel to match the number of variables
+            $('scaleMin').value = xmldoc.getElementsByTagName('min')[0].firstChild.nodeValue;
+            $('scaleMax').value = xmldoc.getElementsByTagName('max')[0].firstChild.nodeValue;
+            validateScale(); // This calls updateMap()
         }
     );
 }
@@ -622,13 +629,7 @@ function setGEarthURL()
                 // Set the bounding box so that there are no transparent pixels around
                 // the edge of the image: i.e. find the intersection of the layer BBOX
                 // and the viewport BBOX
-                newURL += '&BBOX=';
-                var mapBboxEls = mapBounds.toBBOX().split(',');
-                var layerBboxEls = bbox.split(',');
-                newURL += Math.max(parseFloat(mapBboxEls[0]), parseFloat(layerBboxEls[0])) + ',';
-                newURL += Math.max(parseFloat(mapBboxEls[1]), parseFloat(layerBboxEls[1])) + ',';
-                newURL += Math.min(parseFloat(mapBboxEls[2]), parseFloat(layerBboxEls[2])) + ',';
-                newURL += Math.min(parseFloat(mapBboxEls[3]), parseFloat(layerBboxEls[3]));
+                newURL += '&BBOX=' + getIntersectionBBOX();
             } else if (!urlEls[i].startsWith('OPACITY')) {
                 // We remove the OPACITY ARGUMENT as Google Earth allows opacity
                 // to be controlled in the client
@@ -641,6 +642,22 @@ function setGEarthURL()
             $('googleEarth').innerHTML = '<a href=\'' + newURL + '\'>Open in Google Earth</a>';
         }
     }
+}
+
+// Returns a bounding box as a string in format "minlon,minlat,maxlon,maxlat"
+// that represents the intersection of the currently-visible map layer's 
+// bounding box and the viewport's bounding box.
+function getIntersectionBBOX()
+{
+    var mapBounds = map.getExtent();
+    var mapBboxEls = mapBounds.toBBOX().split(',');
+    // bbox is the bounding box of the currently-visible layer
+    var layerBboxEls = bbox.split(',');
+    var newBBOX = Math.max(parseFloat(mapBboxEls[0]), parseFloat(layerBboxEls[0])) + ',';
+    newBBOX += Math.max(parseFloat(mapBboxEls[1]), parseFloat(layerBboxEls[1])) + ',';
+    newBBOX += Math.min(parseFloat(mapBboxEls[2]), parseFloat(layerBboxEls[2])) + ',';
+    newBBOX += Math.min(parseFloat(mapBboxEls[3]), parseFloat(layerBboxEls[3]));
+    return newBBOX;
 }
 
 // Formats the given value to numSigFigs significant figures

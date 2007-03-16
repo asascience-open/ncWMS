@@ -61,9 +61,7 @@ def getMap(req, params, config):
     if exception_format not in getSupportedExceptionFormats():
         raise InvalidFormat("exception", exception_format, "GetMap")
 
-    zValue = params.getParamValue("elevation", "")
-    if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
-        raise InvalidDimensionValue("elevation", "You may only request a single value")
+    zValue = _getZValue(params)
 
     # Find the source of the requested data
     dataset, varID = _getDatasetAndVariableID(layers, config.datasets)
@@ -194,6 +192,13 @@ def _getDatasetAndVariableID(layers, datasets):
         return datasets[dsAndVar[0]], dsAndVar[1]
     except KeyError:
         raise LayerNotDefined(layers[0])
+
+def _getZValue(params):
+    """ Gets the value of ELEVATION """
+    zValue = params.getParamValue("elevation", "")
+    if len(zValue.split(",")) > 1 or len(zValue.split("/")) > 1:
+        raise InvalidDimensionValue("elevation", "You may only request a single value")
+    return zValue
 
 def _getTIndices(var, params):
     """ Find the requested index/indices along the time axis.

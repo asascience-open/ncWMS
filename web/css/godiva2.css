@@ -239,3 +239,9 @@ input.scaleMin
     position: absolute;
     top: 121px;
 }
+
+#autoScale
+{
+    position: absolute;
+    top: 188px;
+    visibility: hidden;

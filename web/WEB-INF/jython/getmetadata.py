@@ -13,7 +13,7 @@ else:
     prefix = "wms"
 import iso8601
 import wmsUtils
-import getmap
+import getmap, getfeatureinfo
 
 def getMetadata(req, config):
     """ Processes a request for metadata from the Godiva2 web interface """
@@ -48,9 +48,7 @@ def getMetadata(req, config):
         req.write(getTimesteps(config, dataset, varID, tIndex))
     elif metadataItem == "minmax":
         req.content_type = "text/xml"
-        dataset = params.getParamValue("dataset")
-        varID = params.getParamValue("variable")
-        req.write(getMinMax(config, dataset, varID, params))        
+        req.write(getMinMax(config, params))        
 
 def getFrontPage(config):
     """ Returns a front page for the WMS, containing example links """
@@ -116,7 +114,7 @@ def getDatasetsDiv(config, filter=""):
     str = StringIO()
     datasets = config.datasets
     for ds in datasets.keys():
-        if ds.startswith(filter):
+        if ds.startswith(filter) and datasets[ds].ready:
             str.write("<div id=\"%sDiv\">" % ds)
             str.write("<div id=\"%s\">%s</div>" % (ds, datasets[ds].title))
             str.write("<div id=\"%sContent\">" % ds)
@@ -346,12 +344,33 @@ def _compareDays(d1, d2):
         else:
             return 1
 
-def getMinMax(config, dsID, varID, params):
-    
-    var = config.datasets[dsID].vars[varID]
-    tIndex = getmap._getTIndices(var, params)
-    #zValue = 
+def getMinMax(config, params):
+    """ Gets the minimum and maximum data values for a certain tile.
+        The client makes a call very similar to GetMap """
+    # TODO: should this be an output format of GetMap?
+    layers = params.getParamValue("layers").split(",")
+    dataset, varID = getmap._getDatasetAndVariableID(layers, config.datasets)
+    var = dataset.variables[varID]
+    tIndex = getmap._getTIndices(var, params)[0]
+    zValue = getmap._getZValue(params)
+    bbox = getmap._getBbox(params)
+    grid = getmap._getGrid(params, bbox, config)
+    fillvalue = getmap._getFillValue()
     # Now read the data
-    picData = dataset.read(var, tIndex, zValue, grid.latValues, grid.lonValues, _getFillValue())
+    picData = dataset.read(var, tIndex, zValue, grid.latValues, grid.lonValues, fillvalue)
     # Now find the minimum and maximum values
+    min = 1e20
+    max = -1e20
+    for val in picData:
+        v = getfeatureinfo._checkFillValue(val, fillvalue)
+        if v is not None:
+            if v < min: min = v
+            if v > max: max = v
+    if min == 1e20 and max == -1e20:
+        min, max = 0, 50 # All data values were "None". Make up some numbers
+    str = StringIO()
+    str.write("<minmax><min>%f</min><max>%f</max></minmax>" % (min, max))
+    s = str.getvalue()
+    str.close()
+    return s
     
