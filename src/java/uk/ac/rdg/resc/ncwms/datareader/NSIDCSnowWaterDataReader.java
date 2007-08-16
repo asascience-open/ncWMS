@@ -36,11 +36,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.List;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
  * DataReader for NSIDC snow/water data
@@ -81,44 +81,40 @@ public class NSIDCSnowWaterDataReader extends DataReader
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("'NL'yyyyMM'.v01.NSIDC8'");
     
     /**
-     * Creates a new instance of NSIDCSnowWaterDataReader
+     * Reads and returns the metadata for all the variables in the dataset
+     * at the given location, which is the location of a NetCDF file, NcML
+     * aggregation, or OPeNDAP location (i.e. one element resulting from the
+     * expansion of a glob aggregation).
+     * @param filename Full path to the individual file
+     * @return List of {@link VariableMetadata} objects
+     * @throws IOException if there was an error reading from the data source
      */
-    public NSIDCSnowWaterDataReader()
-    {
-    }
-    
-    public Hashtable<String, VariableMetadata> getVariableMetadata()
+    protected List<VariableMetadata> getVariableMetadata(String filename)
         throws IOException
     {
-        Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
+        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
         VariableMetadata vm = new VariableMetadata();
         
         vm.setId("swe");
         vm.setTitle("snow_water_equivalent");
         vm.setUnits("mm");
         vm.setValidMin(0.0);
-        vm.setValidMax(500.0); // TODO: is this OK?
+        vm.setValidMax(10000.0); // TODO: is this OK?
         vm.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
         
-        // Search the source directory for files
-        String[] filenames = getFilenames(location);
-        for (String filename : filenames)
+        try
         {
-            try
-            {
-                Date timestep = DATE_FORMAT.parse(filename);
-                File f = new File(location, filename);
-                vm.addTimestepInfo(new VariableMetadata.TimestepInfo(timestep, f.getPath(), 0));
-            }
-            catch(ParseException pe)
-            {
-                logger.error("Error parsing filename " + filename, pe);
-                // TODO: not really an IOException
-                throw new IOException("Error parsing filename " + filename);
-            }
+            Date timestep = DATE_FORMAT.parse(filename);
+            vm.addTimestepInfo(new VariableMetadata.TimestepInfo(timestep, filename, 0));
+        }
+        catch(ParseException pe)
+        {
+            logger.error("Error parsing filename " + filename, pe);
+            // TODO: not really an IOException
+            throw new IOException("Error parsing filename " + filename);
         }
         
-        vars.put(vm.getId(), vm);
+        vars.add(vm);
         return vars;
     }
     
@@ -131,34 +127,43 @@ public class NSIDCSnowWaterDataReader extends DataReader
         return dir.list(FILENAME_FILTER);
     }
     
-    protected float[] read(VariableMetadata vm, int tIndex,
-        int zIndex, float[] latValues, float[] lonValues, float fillValue)
-        throws WMSExceptionInJava
+    /**
+     * Reads an array of data from a NetCDF file and projects onto a rectangular
+     * lat-lon grid.  Reads data for a single timestep only.  This method knows
+     * nothing about aggregation: it simply reads data from the given file. 
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by Float.NaN.
+     * 
+     * @param filename Full path to the individual file containing the data
+     * @param vm {@link VariableMetadata} object representing the variable
+     * @param tIndex The index along the time axis (or -1 if there is no time axis).
+     * This is ignored in this class as there is only one timestep per file.
+     * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
+     * @param latValues Array of latitude values
+     * @param lonValues Array of longitude values
+     * @throws Exception if an error occurs
+     */
+    public float[] read(String filename, VariableMetadata vm,
+        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        throws Exception
     {
         // Find the file containing the data
-        VariableMetadata.TimestepInfo tInfo = vm.getTimestepInfo(tIndex);
-        logger.debug("Got file " + tInfo.getFilename());
+        logger.debug("Reading data from " + filename);
         
         // Create an array to hold the data
         float[] picData = new float[lonValues.length * latValues.length];
-        Arrays.fill(picData, fillValue);
+        Arrays.fill(picData, Float.NaN);
         
         FileInputStream fin = null;
         ByteBuffer data = null;
         // Read the whole of the file into memory
         try
         {
-            fin = new FileInputStream(tInfo.getFilename());
+            fin = new FileInputStream(filename);
             data = ByteBuffer.allocate(ROWS * COLS * 2);
             data.order(ByteOrder.LITTLE_ENDIAN);
             // Read the whole of the file into memory
             int numBytesRead = fin.getChannel().read(data);
-        }
-        catch(IOException ioe)
-        {
-            logger.error("IOException reading from " + tInfo.getFilename(), ioe);
-            throw new WMSExceptionInJava("Internal error: IOException reading from "
-                + tInfo.getFilename() + ": " + ioe.getMessage());
         }
         finally
         {

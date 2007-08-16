@@ -29,14 +29,12 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
-import java.util.Hashtable;
 import org.apache.log4j.Logger;
 import simple.xml.Attribute;
 import simple.xml.Root;
-import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
  * A dataset Java bean: contains a number of VariableMetadata objects.
@@ -74,22 +72,18 @@ public class Dataset
     @Attribute(name="updateInterval", required=false)
     private int updateInterval; // The update interval in minutes
     
-    // Variables contained in this dataset, keyed by their unique IDs
-    private Hashtable<String, VariableMetadata> vars;
-    
-    private State state; // State of this dataset
-    private Exception err; // Set if there is an error loading the dataset
-    private DataReader dataReader; // Object used to read data and metadata
+    private State state;     // State of this dataset
+    private Exception err;   // Set if there is an error loading the dataset
     private Date lastUpdate; // Time at which the dataset was last updated
+    private Config config;   // The Config object to which this belongs
     
     public Dataset()
     {
-        this.vars = new Hashtable<String, VariableMetadata>();
         this.state = State.TO_BE_LOADED;
         this.queryable = true;
         // We'll use a default data reader unless this is overridden in the config file
         this.dataReaderClass = "";
-        this.updateInterval = -1; // Means "never update"
+        this.updateInterval = -1; // Means "never update automatically"
         this.lastUpdate = null;
     }
 
@@ -108,20 +102,9 @@ public class Dataset
         return location;
     }
 
-    public synchronized void setLocation(String location)
+    public void setLocation(String location)
     {
-        // Mark for reload only if the location has changed
-        if (this.location != null && !this.location.trim().equals(location.trim()))
-        {
-            // TODO: actually reload the dataset.
-            this.state = State.TO_BE_LOADED;
-        }
         this.location = location.trim();
-    }
-
-    public Hashtable<String, VariableMetadata> getVariables()
-    {
-        return vars;
     }
     
     /**
@@ -159,9 +142,9 @@ public class Dataset
     }
     
     /**
-     * @return true if this dataset needs to be reloaded
+     * @return true if the metadata from this dataset needs to be reloaded
      */
-    public synchronized boolean needsRefresh()
+    public boolean needsRefresh()
     {
         if (this.state == State.LOADING || this.state == State.UPDATING)
         {
@@ -188,67 +171,6 @@ public class Dataset
     }
     
     /**
-     * (Re)loads the metadata for this Dataset.  Clients must call needsRefresh()
-     * before calling this method to check that the metadata needs reloading.
-     * This is called from the {@link WMSFilter.DatasetReloader} timer task.
-     */
-    public void loadMetadata()
-    {
-        this.state = this.state == State.READY ? State.UPDATING : State.LOADING;
-        this.err = null;
-        try
-        {
-            // Destroy any previous DataReader object (close files etc)
-            if (this.dataReader != null) this.dataReader.close();
-            logger.debug("Closed datareader (if it existed)");
-            // Create a new DataReader object of the correct type
-            if (this.dataReader == null ||
-                !this.dataReader.getClass().getName().equals(this.dataReaderClass))
-            {
-                logger.debug("Creating new data reader of type {}", this.dataReaderClass);
-                this.dataReader = DataReader.createDataReader(this.dataReaderClass,
-                    this.location);
-            }
-            // Read the metadata
-            Hashtable<String, VariableMetadata> vars = this.dataReader.getVariableMetadata();
-            logger.debug("loaded VariableMetadata");
-            for (VariableMetadata vm : vars.values())
-            {
-                vm.setDataset(this);
-            }
-            this.vars = vars;
-            this.state = State.READY;
-            this.lastUpdate = new Date();
-        }
-        catch(Exception e)
-        {
-            this.err = e;
-            this.state = State.ERROR;
-        }
-    }
-    
-    /**
-     * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single time index only.  Delegates to 
-     * the DataReader.
-     *
-     * @param vm {@link VariableMetadata} object representing the variable
-     * @param tIndex The index along the time axis as found in getmap.py
-     * @param zValue The value of elevation as specified by the client
-     * @param latValues Array of latitude values
-     * @param lonValues Array of longitude values
-     * @param fillValue Value to use for missing data
-     * @return array of data values
-     * @throws WMSExceptionInJava if an error occurs
-     */
-    public float[] read(VariableMetadata vm,
-        int tIndex, String zValue, float[] latValues, float[] lonValues,
-        float fillValue) throws WMSExceptionInJava
-    {
-        return this.dataReader.read(vm, tIndex, zValue, latValues, lonValues, fillValue);
-    }
-    
-    /**
      * @return true if there is an error with this dataset
      */
     public boolean isError()
@@ -265,9 +187,23 @@ public class Dataset
         return this.state == State.ERROR ? this.err : null;
     }
     
+    /**
+     * Called by the MetadataReloader to set the error associated with this
+     * dataset
+     */
+    public void setException(Exception e)
+    {
+        this.err = e;
+    }
+    
     public State getState()
     {
         return this.state;
+    }
+    
+    public void setState(State state)
+    {
+        this.state = state;
     }
     
     public String toString()
@@ -299,5 +235,30 @@ public class Dataset
     public void setUpdateInterval(int updateInterval)
     {
         this.updateInterval = updateInterval;
+    }
+
+    public void setConfig(Config config)
+    {
+        this.config = config;
+    }
+    
+    public Date getLastUpdate()
+    {
+        return this.lastUpdate;
+    }
+    
+    public void setLastUpdate(Date lastUpdate)
+    {
+        this.lastUpdate = lastUpdate;
+    }
+    
+    /**
+     * @return a Collection of all the variables in this dataset.  A convenience
+     * method that reads from the metadata store.
+     * @throws Exception if there was an error reading from the store.
+     */
+    public Collection<VariableMetadata> getVariables() throws Exception
+    {
+        return this.config.getMetadataStore().getVariablesInDataset(this.id);
     }
 }

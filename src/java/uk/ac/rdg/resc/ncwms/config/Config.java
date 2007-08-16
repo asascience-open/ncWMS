@@ -31,9 +31,9 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import simple.xml.Element;
 import simple.xml.ElementList;
@@ -42,6 +42,7 @@ import simple.xml.load.Commit;
 import simple.xml.load.PersistenceException;
 import simple.xml.load.Persister;
 import simple.xml.load.Validate;
+import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 
 /**
  * Configuration of the server.  We use Simple XML Serialization
@@ -62,38 +63,65 @@ public class Config
     @Element(name="server")
     private Server server;
     @ElementList(name="datasets", type=Dataset.class)
-    private Vector<Dataset> datasetList;
+    private List<Dataset> datasetList;
     
     private Date lastUpdateTime; // Time of the last update to this configuration
                                  // or any of the contained metadata
     private File configFile;     // Location to which the config information was
                                  // last saved
+    private MetadataStore metadataStore; // Injected by Spring.  Gives access to
+                                         // metadata
     
     /**
      * This contains the map of dataset IDs to Dataset objects
      */
-    private Hashtable<String, Dataset> datasets;
+    private Map<String, Dataset> datasets;
     
     /** Creates a new instance of Config */
     public Config()
     {
-        this.datasets = new Hashtable<String, Dataset>();
-        this.datasetList = new Vector<Dataset>();
+        this.datasets = new HashMap<String, Dataset>();
+        this.datasetList = new ArrayList<Dataset>();
         this.lastUpdateTime = new Date();
         this.server = new Server();
         this.contact = new Contact();
     }
     
     /**
-     * Reads configuration information from disk
+     * Reads the config information from the default location
+     * ($HOME/.ncWMS-Spring/config.xml).  If the configuration file
+     * does not exist in the given location it will be created.
+     */
+    public static Config readConfig() throws Exception
+    {
+        String homeDir = System.getProperty("user.home");
+        File ncWmsDir = new File(homeDir, ".ncWMS-Spring");
+        File configFile = new File(ncWmsDir, "config.xml");
+        return readConfig(configFile);
+    }
+    
+    /**
+     * Reads configuration information from disk.  If the configuration file
+     * does not exist in the given location it will be created.
      * @param configFile The configuration file
      * @throws Exception if there was an error reading the configuration
-     * @todo create a new object if the config file doesn't already exist
      */
     public static Config readConfig(File configFile) throws Exception
     {
-        Config config = new Persister().read(Config.class, configFile);
-        logger.debug("Loaded configuration from {}", configFile.getPath());
+        Config config;
+        if (configFile.exists())
+        {
+            config = new Persister().read(Config.class, configFile);
+            logger.debug("Loaded configuration from {}", configFile.getPath());
+        }
+        else
+        {
+            // We must make a new config file and save it
+            config = new Config();
+            config.saveConfig();
+            logger.debug("Created new configuration object and saved to {}",
+                configFile.getPath());
+        }
         config.setConfigFile(configFile);
         return config;
     }
@@ -116,7 +144,7 @@ public class Config
     
     /**
      * Checks that the data we have read are valid.  Checks that there are no
-     * duplicate dataset IDs or usernames.
+     * duplicate dataset IDs.
      */
     @Validate
     public void validate() throws PersistenceException
@@ -135,20 +163,24 @@ public class Config
     
     /**
      * Called when we have checked that the configuration is valid.  Populates
-     * the datasets and users hashtables
+     * the datasets hashmap
      */
     @Commit
     public void build()
     {
         for (Dataset ds : this.datasetList)
         {
+            ds.setConfig(this);
             this.datasets.put(ds.getId(), ds);
         }
     }
     
-    public void setLastUpdateTime(Date date)
+    public synchronized void setLastUpdateTime(Date date)
     {
-        this.lastUpdateTime = date;
+        if (date.after(this.lastUpdateTime))
+        {
+            this.lastUpdateTime = date;
+        }
     }
     
     public Date getLastUpdateTime()
@@ -158,11 +190,11 @@ public class Config
     
     /**
      * @return the time of the last change to the configuration or metadata,
-     * in seconds since the epoch
+     * in milliseconds since the epoch
      */
-    public double getLastUpdateTimeSeconds()
+    public long getLastUpdateTimeMilliseconds()
     {
-        return this.lastUpdateTime.getTime() / 1000.0;
+        return this.lastUpdateTime.getTime();
     }
 
     public Server getServer()
@@ -195,13 +227,14 @@ public class Config
         this.configFile = configFile;
     }
     
-    public Hashtable<String, Dataset> getDatasets()
+    public Map<String, Dataset> getDatasets()
     {
         return this.datasets;
     }
     
     public synchronized void addDataset(Dataset ds)
     {
+        ds.setConfig(this);
         this.datasets.put(ds.getId(), ds);
         this.datasetList.add(ds);
     }
@@ -210,6 +243,22 @@ public class Config
     {
         this.datasets.remove(ds.getId());
         this.datasetList.remove(ds);
+    }
+    
+    /**
+     * Used by Dataset to provide a method to get variables
+     */
+    MetadataStore getMetadataStore()
+    {
+        return this.metadataStore;
+    }
+    
+    /**
+     * Called by Spring to inject the metadata store
+     */
+    public void setMetadataStore(MetadataStore metadataStore)
+    {
+        this.metadataStore = metadataStore;
     }
     
 }

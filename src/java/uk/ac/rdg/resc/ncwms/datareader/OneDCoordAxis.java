@@ -42,7 +42,7 @@ import ucar.nc2.dataset.CoordinateAxis1D;
 public abstract class OneDCoordAxis extends EnhancedCoordAxis
 {
     
-    protected int count; // The number of points along the axis
+    private int count; // The number of points along the axis
     
     protected boolean isLongitude; // True if this is a longitude axis
     protected CoordinateAxis1D axis1D;
@@ -66,6 +66,11 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
         this.count = count;
         this.isLongitude = isLongitude;
         this.axis1D = null;
+    }
+
+    public int getCount()
+    {
+        return count;
     }
     
 }

@@ -29,21 +29,27 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Vector;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
+import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.units.DateUnit;
+import ucar.nc2.dataset.grid.GeoGrid;
+import ucar.nc2.dataset.grid.GridCoordSys;
+import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
+import ucar.unidata.geoloc.LatLonRect;
 
 /**
  * DataReader for Rich Signell's example data
@@ -53,25 +59,28 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
  * $Date$
  * $Log$
  */
-public class USGSDataReader extends DataReader
+public class USGSDataReader extends DefaultDataReader
 {
     private static final Logger logger = Logger.getLogger(USGSDataReader.class);
     
     /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single time index only.
+     * lat-lon grid.  Reads data for a single timestep only.  This method knows
+     * nothing about aggregation: it simply reads data from the given file. 
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by Float.NaN.
      *
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
      * @param vm {@link VariableMetadata} object representing the variable
-     * @param tIndex The index along the time axis as found in getmap.py
-     * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
+     * @param tIndex The index along the time axis (or -1 if there is no time axis)
+     * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
-     * @param fillValue Value to use for missing data
-     * @throws WMSExceptionInJava if an error occurs
+     * @throws Exception if an error occurs
      */
-    public float[] read(VariableMetadata vm,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues,
-        float fillValue) throws WMSExceptionInJava
+    public float[] read(String filename, VariableMetadata vm,
+        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        throws Exception
     {
         NetcdfDataset nc = null;
         try
@@ -79,16 +88,19 @@ public class USGSDataReader extends DataReader
             // Get the metadata from the cache
             long start = System.currentTimeMillis();
             
+            // Prevent InvalidRangeExceptions for ranges we're not going to use anyway
+            if (tIndex < 0) tIndex = 0;
+            if (zIndex < 0) zIndex = 0;
             Range tRange = new Range(tIndex, tIndex);
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
-            Arrays.fill(picData, fillValue);
-
+            Arrays.fill(picData, Float.NaN);
+            
             EnhancedCoordAxis xAxis = vm.getXaxis();
             EnhancedCoordAxis yAxis = vm.getYaxis();
-      
+            
             // Maps y indices to scanlines
             Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
             // Cycle through each pixel in the picture and work out which
@@ -122,9 +134,9 @@ public class USGSDataReader extends DataReader
             }
             logger.debug("Built scanlines in {} ms", System.currentTimeMillis() - start);
             start = System.currentTimeMillis();
-
-            // Now build the picture: TODO open the dataset
-            //nc = getDataset(location);
+            
+            // Now build the picture
+            nc = getDataset(filename);
             Variable var = nc.findVariable(vm.getId());
             
             float scaleFactor = 1.0f;
@@ -137,9 +149,13 @@ public class USGSDataReader extends DataReader
             {
                 addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();
             }
-            float missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
+            float missingValue = Float.NaN;
+            if (var.findAttribute("missing_value") != null)
+            {
+                missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
+            }
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
-
+            
             int yAxisIndex = 1;
             int xAxisIndex = 2;
             Vector<Range> ranges = new Vector<Range>();
@@ -151,11 +167,11 @@ public class USGSDataReader extends DataReader
                 yAxisIndex = 2;
                 xAxisIndex = 3;
             }
-        
+            
             // Add dummy ranges for x and y
             ranges.add(new Range(0,0));
             ranges.add(new Range(0,0));
-
+            
             // Iterate through the scanlines, the order doesn't matter
             for (int yIndex : scanlines.keySet())
             {
@@ -164,7 +180,7 @@ public class USGSDataReader extends DataReader
                 Vector<Integer> xIndices = scanline.getSortedXIndices();
                 Range xRange = new Range(xIndices.firstElement(), xIndices.lastElement());
                 ranges.setElementAt(xRange, xAxisIndex);
-
+                
                 // Read the scanline from the disk, from the first to the last x index
                 Array data = var.read(ranges);
                 Object arrObj = data.copyTo1DJavaArray();
@@ -199,16 +215,6 @@ public class USGSDataReader extends DataReader
             }
             logger.debug("Read data in {} ms", System.currentTimeMillis() - start);
             return picData;
-        }
-        catch(IOException e)
-        {
-            logger.error("IOException reading from " + nc.getLocation(), e);
-            throw new WMSExceptionInJava("IOException: " + e.getMessage());
-        }
-        catch(InvalidRangeException ire)
-        {
-            logger.error("InvalidRangeException reading from " + nc.getLocation(), ire);
-            throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
         }
         finally
         {
@@ -275,98 +281,85 @@ public class USGSDataReader extends DataReader
     
     /**
      * Reads and returns the metadata for all the variables in the dataset
-     * at the given location.
-     * @param location The location of the NetCDF dataset
-     * @return Hashtable of variable IDs mapped to {@link VariableMetadata} objects
+     * at the given location, which is the location of a NetCDF file, NcML
+     * aggregation, or OPeNDAP location (i.e. one element resulting from the
+     * expansion of a glob aggregation).
+     * @param filename Full path to the dataset (N.B. not an aggregation)
+     * @return List of {@link VariableMetadata} objects
      * @throws IOException if there was an error reading from the data source
      */
-    public Hashtable<String, VariableMetadata> getVariableMetadata()
+    protected List<VariableMetadata> getVariableMetadata(String filename)
         throws IOException
     {
-        Hashtable<String, VariableMetadata> vars = new Hashtable<String, VariableMetadata>();
+        logger.debug("Reading metadata for dataset {}", filename);
+        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
         NetcdfDataset nc = null;
-        
         try
         {
-            nc = NetcdfDataset.openDataset(location, false, null);
-            
-            // Get the depth values and units
-            Variable depth = nc.findVariable("deptht");
-            float[] fzVals = (float[])depth.read().copyTo1DJavaArray();
-            // Copy to an array of doubles
-            double[] zVals = new double[fzVals.length];
-            for (int i = 0; i < fzVals.length; i++)
+            // We use openDataset() rather than acquiring from cache
+            // because we need to enhance the dataset
+            nc = NetcdfDataset.openDataset(filename, true, null);
+            GridDataset gd = new GridDataset(nc);
+            for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
             {
-                zVals[i] = -fzVals[i];
-            }
-            String zUnits = depth.getUnitsString();
-            
-            // Get the time values and units
-            Variable time = nc.findVariable("time_counter");
-            float[] ftVals = (float[])time.read().copyTo1DJavaArray();
-            DateUnit dateUnit = null;
-            try
-            {
-                dateUnit = new DateUnit(time.getUnitsString());
-            }
-            catch(Exception e)
-            {
-                // Shouldn't happen if file is well formed
-                logger.error("Malformed time units string " + time.getUnitsString());
-                // IOException not ideal here but didn't want to create new exception
-                // type just for this rare case
-                throw new IOException("Malformed time units string " + time.getUnitsString());
-            }
-            double[] tVals = new double[ftVals.length];
-            for (int i = 0; i < ftVals.length; i++)
-            {
-                tVals[i] = dateUnit.makeDate(ftVals[i]).getTime() / 1000.0;
-            }
-
-            for (Object varObj : nc.getVariables())
-            {
-                Variable var = (Variable)varObj;
-                // We ignore the coordinate axes
-                if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
-                    && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))
+                GeoGrid gg = (GeoGrid)it.next();
+                if (!gg.getName().equals("temp") && !gg.getName().equals("shflux")
+                && !gg.getName().equals("ssflux") && !gg.getName().equals("latent")
+                && !gg.getName().equals("sensible") && !gg.getName().equals("lwrad")
+                && !gg.getName().equals("swrad") && !gg.getName().equals("zeta"))
                 {
-                    VariableMetadata vm = new VariableMetadata();
-                    vm.setId(var.getName());
-                    //vm.setTitle(getStandardName(var));
-                    //vm.setAbstract(var.getDescription());
-                    vm.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
-                    vm.setUnits(var.getUnitsString());
-                    vm.setZpositive(false);
-                    // TODO: check for the presence of a z axis in a neater way
-                    if (var.getRank() == 4)
-                    {
-                        vm.setZvalues(zVals);
-                        vm.setZunits(zUnits);
-                    }
-                    // TODO: should check these values exist
-                    vm.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
-                    vm.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
-                    
-                    // Create the coordinate axes
-                    String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
-                    if (res.equals("one_degree"))
-                    {
-                        vm.setXaxis(NemoCoordAxis.ONE_DEGREE_I_AXIS);
-                        vm.setYaxis(NemoCoordAxis.ONE_DEGREE_J_AXIS);
-                    }
-                    else
-                    {
-                        vm.setXaxis(NemoCoordAxis.ONE_QUARTER_DEGREE_I_AXIS);
-                        vm.setYaxis(NemoCoordAxis.ONE_QUARTER_DEGREE_J_AXIS);
-                    }
-                    
-                    // Set the time axis TODO do properly
-                    //vm.setTvalues(tVals);
-
-                    vars.put(vm.getId(), vm);
+                    // Only display temperature data for the moment
+                    continue;
                 }
+                GridCoordSys coordSys = gg.getCoordinateSystem();
+                logger.debug("Creating new VariableMetadata object for {}", gg.getName());
+                VariableMetadata vm = new VariableMetadata();
+                vm.setId(gg.getName());
+                vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
+                vm.setAbstract(gg.getDescription());
+                vm.setUnits(gg.getUnitsString());
+                vm.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
+                vm.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
+                
+                if (coordSys.hasVerticalAxis())
+                {
+                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                    vm.setZunits(zAxis.getUnitsString());
+                    double[] zVals = zAxis.getCoordValues();
+                    vm.setZpositive(false);
+                    vm.setZvalues(zVals);
+                }
+                
+                // Set the bounding box
+                // TODO: should take into account the cell bounds
+                LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
+                LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
+                LatLonPoint upperRight = latLonRect.getUpperRightPoint();
+                double minLon = lowerLeft.getLongitude();
+                double maxLon = upperRight.getLongitude();
+                double minLat = lowerLeft.getLatitude();
+                double maxLat = upperRight.getLatitude();
+                if (latLonRect.crossDateline())
+                {
+                    minLon = -180.0;
+                    maxLon = 180.0;
+                }
+                vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
+                
+                vm.setValidMin(gg.getVariable().getValidMin());
+                vm.setValidMax(gg.getVariable().getValidMax());
+                
+                // Now add the timestep information to the VM object
+                Date[] tVals = this.getTimesteps(nc, gg);
+                for (int i = 0; i < tVals.length; i++)
+                {
+                    VariableMetadata.TimestepInfo tInfo = new
+                        VariableMetadata.TimestepInfo(tVals[i], filename, i);
+                    vm.addTimestepInfo(tInfo);
+                }
+                // Add this to the Hashtable
+                vars.add(vm);
             }
-            return vars;
         }
         finally
         {
@@ -382,5 +375,6 @@ public class USGSDataReader extends DataReader
                 }
             }
         }
+        return vars;
     }
 }

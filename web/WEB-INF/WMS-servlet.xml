@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : WMS-servlet.xml
+    Created on : 06 June 2007, 17:59
+    Author     : Jon
+    Description:
+        Configures the properties of the WMS servlet (see web.xml)
+-->
+
+<beans xmlns='http://www.springframework.org/schema/beans'
+       xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+       xsi:schemaLocation='http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd'>
+    
+    <!-- Need beans for the tile cache, ?logging framework? -->
+          
+    <!-- An object that is used to store and read metadata about the variables
+         that are being exposed through this server. -->
+    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>
+    
+    <!-- Defines a configuration object that is used to configure this server.
+         This object is created via Config.readConfig(), a static factory method.
+         If a configuration file does not already exist in the default location
+         ($HOME/.ncwms/config.xml) it will be created. -->
+     <bean id="ncwmsConfig" class="uk.ac.rdg.resc.ncwms.config.Config"
+           factory-method="readConfig">
+         <property name="metadataStore"><ref local="metadataStore"/></property>
+     </bean>
+    
+    <!-- An object that is used to create PicMakers. -->
+    <bean id="picMakerFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
+        <!-- This constructor argument is the name of the superclass of all PicMakers -->
+        <constructor-arg value="uk.ac.rdg.resc.ncwms.graphics.PicMaker"/>
+        <!-- This list defines the PicMaker classes that will be used to handle
+             different mime types of images -->
+        <property name="classes">
+            <list>
+                <value>uk.ac.rdg.resc.ncwms.graphics.SimplePicMaker</value>
+                <value>uk.ac.rdg.resc.ncwms.graphics.GifMaker</value>
+                <value>uk.ac.rdg.resc.ncwms.graphics.KmzMaker</value>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- An object that is used to create Styles -->
+    <bean id="styleFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
+        <!-- This constructor argument is the name of the superclass of all styles -->
+        <constructor-arg value="uk.ac.rdg.resc.ncwms.styles.AbstractStyle"/>
+        <!-- This list defines the classes that will be used to handle
+             different styles of images -->
+        <property name="classes">
+            <list>
+                <value>uk.ac.rdg.resc.ncwms.styles.BoxFillStyle</value>
+                <value>uk.ac.rdg.resc.ncwms.styles.VectorStyle</value>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- An object that is used to create Grids -->
+    <bean id="gridFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
+        <!-- This constructor argument is the name of the superclass of all grids -->
+        <constructor-arg value="uk.ac.rdg.resc.ncwms.grids.AbstractGrid"/>
+        <!-- This list defines the classes that will be used to handle
+             different styles of images -->
+        <property name="classes">
+            <list>
+                <value>uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid</value>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- Object that handles the periodic refreshing of metadata. -->
+    <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.metadata.MetadataLoader"
+            init-method="init" destroy-method="close">
+        <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
+    </bean>
+    
+    <!-- This Controller will handle all the requests to the WMS -->
+    <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController">
+        <property name="supportedMethods" value="GET"/>
+        <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
+        <property name="styleFactory"><ref local="styleFactory"/></property>
+        <property name="gridFactory"><ref local="gridFactory"/></property>
+        <property name="metadataController"><ref local="metadataController"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
+    </bean>
+    
+    <!-- This Controller will handle all requests for the non-standard
+         metadata that are required by the Godiva2 site.  It is called from the
+         WmsController and therefore does not need a mapping to be set up here. -->
+    <bean id="metadataController" class="uk.ac.rdg.resc.ncwms.controller.MetadataController">
+        <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="gridFactory"><ref local="gridFactory"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
+    </bean>
+    
+    <!-- This Controller is used to display the front page of the server, which
+         contains links to the Capabilities documents and sample images for each
+         layer.  Mapped to index.jsp. -->
+    <bean id="frontPageController" class="uk.ac.rdg.resc.ncwms.controller.FrontPageController">
+        <property name="supportedMethods" value="GET"/>
+        <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
+    </bean>
+    
+    <!-- This Controller is used to display the administrative pages of the server.
+         The AdminController is a MultiActionController that uses a different method
+         for each page under the /admin/ directory -->
+    <bean id="adminController" class="uk.ac.rdg.resc.ncwms.controller.AdminController">
+        <property name="supportedMethods" value="GET,POST"/>
+        <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="metadataLoader"><ref local="metadataLoader"/></property>
+        <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
+    </bean>
+    <!-- This maps URL patterns to the methods of the admin controller -->
+    <bean id="methodNameResolver" class="org.springframework.web.servlet.mvc.multiaction.PropertiesMethodNameResolver">
+        <property name="mappings">
+            <value>
+                / = displayAdminPage
+                /index.jsp = displayAdminPage
+                /error.jsp = displayErrorPage
+                /updateConfig = updateConfig
+            </value>
+        </property>
+    </bean>
+    
+    <!-- This mapping ensures that all requests to "/wms" are mapped to the WmsController
+         and "index.jsp" results in the display of the front page -->
+    <!-- no 'id' required, HandlerMapping beans are automatically detected by the DispatcherServlet -->
+    <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="alwaysUseFullPath" value="true"/>
+        <property name="mappings">
+            <value>
+                /admin/* = adminController
+                /wms = wmsController
+                /index.jsp = frontPageController
+                / = frontPageController
+            </value>
+        </property>
+    </bean>
+    
+    <!-- Each Controller will return the name of a View that maps to a certain JSP.
+         For example, if a Controller returns a View name "hello_xml", the 
+         ViewResolver will display /WEB-INF/jsp/hello_xml.jsp. -->
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <!-- We put the JSPs in /WEB-INF so that they are not directly visible 
+             over the network -->
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+    
+    <!-- Exception Handling: this ensures that all WmsExceptions are returned to 
+         the user as an XML document, created by displayWmsException.jsp.
+         Note that we don't have to register this anywhere as an exception handler
+         because Spring automagically detects it. -->
+    <bean id="exceptionResolver" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="uk.ac.rdg.resc.ncwms.exceptions.WmsException">displayWmsException</prop>
+            </props>
+        </property>
+        <!-- If an unexpected error occurs (i.e. one that doesn't get expressed as
+             a WmsException) we will handle it using displayDefaultException.jsp -->
+        <property name="defaultErrorView" value="displayDefaultException"/>
+    </bean>
+    
+</beans>

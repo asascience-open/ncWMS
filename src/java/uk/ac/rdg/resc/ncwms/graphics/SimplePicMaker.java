@@ -33,47 +33,28 @@ import javax.imageio.ImageIO;
 
 import java.io.OutputStream;
 import java.io.IOException;
+import java.util.List;
 
 /**
- * Makes a picture from an array of raw data, using a rainbow colour model.
- * Fill values are represented as transparent pixels and out-of-range values
- * are represented as black pixels.
- *
- * Supports any output format that is supported by ImageIO class
+ * Writes images using the ImageIO class.  Will only write the first frame of
+ * an animation: Use GifMaker or KmzMaker to make animations.
+ * Supports any output format that is supported by ImageIO class.
  * @author jdb
  */
 public class SimplePicMaker extends PicMaker
 {
-    // Data to turn into an image
-    protected float[] data;
+    /**
+     * Defines the MIME types that this PicMaker supports: see Factory.setClasses()
+     */
+    public static final String[] KEYS = new String[]{"image/png"};
     
-    public SimplePicMaker()
+    /**
+     * This just writes the first frame as the image.
+     */
+    public void writeImage(List<BufferedImage> frames, String mimeType,
+        OutputStream out) throws IOException
     {
-        this.data = null;
+        String imageType = mimeType.split("/")[1];
+        ImageIO.write(frames.get(0), imageType, out);
     }
-
-    public void addFrame(float[] data, float[] bbox, String zValue,
-        String tValue, boolean isAnimation) throws IOException
-    {
-        if (this.data != null)
-        {
-            // TODO Throw an Exception: this does not support animations
-        }
-        this.data = data;
-    }
-
-    public void writeImage(OutputStream out) throws IOException
-    {
-        // Create the colour scale if we haven't already done so
-        if (this.isAutoScale())
-        {
-            this.adjustColourScaleForFrame(this.data);
-        }
-        BufferedImage im = this.createFrame(this.data, "");
-        // Create the image type from the mime type (e.g. "image/png" gives "png")
-        String imageType = this.mimeType.split("/")[1];
-        ImageIO.write(im, imageType, out);
-    }
-    
-    
 }

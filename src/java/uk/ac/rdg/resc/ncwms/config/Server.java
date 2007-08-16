@@ -28,8 +28,11 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import simple.xml.Element;
 import simple.xml.Root;
+import simple.xml.load.Commit;
 
 /**
  * The part of the configuration file that pertains to the server itself.
@@ -53,7 +56,7 @@ public class Server
     @Element(name="abstract", required=false)
     private String abstr; // "Abstract" is a reserved word
     @Element(name="keywords", required=false)
-    private String keywords; // Comma-separated list
+    private String keywords; // Comma-separated list of keywords
     @Element(name="url", required=false)
     private String url;
     @Element(name="adminpassword")
@@ -124,10 +127,13 @@ public class Server
     {
         this.abstr = Contact.checkEmpty(abstr);
     }
-
+    
+    /**
+     * @return the keywords as a comma-separated string
+     */
     public String getKeywords()
     {
-        return keywords;
+        return this.keywords;
     }
 
     public void setKeywords(String keywords)

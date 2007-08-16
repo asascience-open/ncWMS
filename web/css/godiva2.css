@@ -2,7 +2,7 @@
 div
 {
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 12px;
 }
 
 /* Style for the left-hand menu */
@@ -38,7 +38,7 @@ div.help
     position: absolute;
     top: 420px;
     left: 20px;
-    font-size: 10pt;
+    font-size: 11px;
 }
 
 #resclogo
@@ -79,7 +79,7 @@ div.panelHeader
     position: absolute;
     top: 0px;
     left: 400px;
-    font-size: 10pt;
+    font-size: 12px;
     text-align: center;
 }
 
@@ -192,7 +192,16 @@ div.underMap
     position: absolute;
     top: 460px;
     left: 0px;
-    font-size: 9pt;
+    font-size: 10px;
+}
+
+#permalink
+{
+    position: absolute;
+    top: 460px;
+    right: 50px;
+    font-size: 10px;
+    visibility: hidden;
 }
 
 img.scaleBar
@@ -211,7 +220,7 @@ div.scaleMarkers
     left: 555px;
     top: 25px;
     height: 400px;
-    font-size: 10pt;
+    font-size: 12px;
 }
 
 input.scaleMax

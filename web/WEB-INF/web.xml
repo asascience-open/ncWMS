@@ -1,36 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+    <servlet>
+        <description>Entry point for the WMS, configured by WMS-servlet.xml.  Handles all requests to the WMS.</description>
+        <servlet-name>WMS</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    </servlet>
+    <listener>
+        <description>Required by Spring to integrate with Acegi</description>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
     <filter>
-        <description>Filters all requests to the WMS</description>
-        <filter-name>WMSFilter</filter-name>
-        <filter-class>uk.ac.rdg.resc.ncwms.filters.WMSFilter</filter-class>
+        <description>Acegi Security filter, secures the admin pages</description>
+        <filter-name>Acegi Filter Chain Proxy</filter-name>
+        <filter-class>org.acegisecurity.util.FilterToBeanProxy</filter-class>
         <init-param>
-            <description>Log4J configuration file location</description>
-            <param-name>log4j-init-file</param-name>
-            <param-value>WEB-INF/conf/log4j.properties</param-value>
+            <param-name>targetClass</param-name>
+            <param-value>org.acegisecurity.util.FilterChainProxy</param-value>
         </init-param>
     </filter>
-    <filter>
-        <description>Filters access to admin web application</description>
-        <filter-name>LoginFilter</filter-name>
-        <filter-class>uk.ac.rdg.resc.ncwms.filters.LoginFilter</filter-class>
-    </filter>
     <filter-mapping>
-        <filter-name>WMSFilter</filter-name>
-        <servlet-name>PyServlet</servlet-name>
+        <filter-name>Acegi Filter Chain Proxy</filter-name>
+        <url-pattern>/admin/*</url-pattern>
     </filter-mapping>
-    <filter-mapping>
-        <filter-name>LoginFilter</filter-name>
-        <url-pattern>/admin/index.jsp</url-pattern>
-    </filter-mapping>
-    <servlet>
-        <servlet-name>PyServlet</servlet-name>
-        <servlet-class>org.python.util.PyServlet</servlet-class>
-        <load-on-startup>1</load-on-startup>
-    </servlet>
     <servlet-mapping>
-        <servlet-name>PyServlet</servlet-name>
-        <url-pattern>*.py</url-pattern>
+        <servlet-name>WMS</servlet-name>
+        <url-pattern>/wms</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WMS</servlet-name>
+        <url-pattern>/index.jsp</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WMS</servlet-name>
+        <url-pattern>/admin/*</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>
@@ -38,11 +40,6 @@
         </session-timeout>
     </session-config>
     <welcome-file-list>
-	<welcome-file>
-            WMS.py
-        </welcome-file>
-	<welcome-file>
-            index.jsp
-        </welcome-file>
+	<welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
 </web-app>

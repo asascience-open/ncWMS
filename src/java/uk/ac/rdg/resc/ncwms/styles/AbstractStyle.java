@@ -30,6 +30,10 @@ package uk.ac.rdg.resc.ncwms.styles;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
+import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 
 /**
  * An abstract definition of a Style
@@ -41,16 +45,21 @@ import java.util.ArrayList;
  */
 public abstract class AbstractStyle
 {
+    private static final Logger logger = Logger.getLogger(AbstractStyle.class);
+    
     protected String name;
     // Width and height of the resulting picture
     protected int picWidth;
     protected int picHeight;
-    // The fill value of the data.
-    protected float fillValue;
     protected boolean transparent;
     protected int bgColor; // Background colour as an integer
+    
     // set of rendered images, ready to be turned into a picture
-    protected ArrayList<BufferedImage> renderedFrames;
+    protected List<BufferedImage> renderedFrames;
+    // If we need to cache the frame data and associated labels (we do this if
+    // we have to auto-scale the image) this is where we put them.
+    protected List<List<float[]>> frameData;
+    protected List<String> labels;
     
     /**
      * Creates a new instance of AbstractStyle
@@ -96,19 +105,6 @@ public abstract class AbstractStyle
         this.picHeight = picHeight;
     }
 
-    public float getFillValue()
-    {
-        return fillValue;
-    }
-
-    /**
-     * @param fillValue The value to use for missing data
-     */
-    public void setFillValue(float fillValue)
-    {
-        this.fillValue = fillValue;
-    }
-
     public boolean isTransparent()
     {
         return transparent;
@@ -138,17 +134,90 @@ public abstract class AbstractStyle
     /**
      * Sets an attribute of this Style
      * @param attName The name of the attribute (e.g. "fgcolor")
-     * @param value The value for the attribute
+     * @param values The value(s) for the attribute
+     * @throws StyleNotDefinedException if there is an error with the attribute
      */
-    public abstract void setAttribute(String attName, String value);
+    public abstract void setAttribute(String attName, String[] values) 
+        throws StyleNotDefinedException;
+    
+    /**
+     * Adds a frame of data to this Style.  If the data cannot yet be rendered 
+     * into a BufferedImage, the data and label are stored.
+     */
+    public void addFrame(List<float[]> data, String label)
+    {
+        logger.debug("Adding frame with label {}", label);
+        this.processData(data);
+        if (this.isAutoScale())
+        {
+            logger.debug("Auto-scaling, so caching frame");
+            if (this.frameData == null)
+            {
+                this.frameData = new ArrayList<List<float[]>>();
+                this.labels = new ArrayList<String>();
+            }
+            this.frameData.add(data);
+            this.labels.add(label);
+        }
+        else
+        {
+            logger.debug("Scale is set, so rendering image");
+            this.createImage(data, label);
+        }
+    }
+    
+    /**
+     * Processes the data (e.g. calculates magnitude of vector components).
+     * Does so in-place.  This implementation does nothing: subclasses
+     * can override.
+     */
+    protected void processData(List<float[]> data)
+    {
+    }
     
     /**
      * Creates a single image in this style and adds to the internal store
-     * of BufferedImages.
-     * @param data The data to be rendered into an image
+     * of BufferedImages.  This is only called when the scale information has been
+     * set, so all info should be present for creating the image.
+     * @param data The data to be rendered into an image.
      * @param label Label to add to the image (ignored if null or the empty string)
      */
-    public abstract void createImage(float[] data, String label);
+    protected abstract void createImage(List<float[]> data, String label);
+    
+    /**
+     * @return true if this image is to be auto-scaled (meaning we have to collect
+     * all of the frame data before we calculate the scale)
+     */
+    protected abstract boolean isAutoScale();
+    
+    /**
+     * Adjusts the colour scale of the image based on the given data.  Used if
+     * <code>isAutoScale() == true</code>.
+     */
+    protected abstract void adjustScaleForFrame(List<float[]> data);
+    
+    /**
+     * Creates and returns a BufferedImage representing the legend for this 
+     * Style instance.  Sets the colour scale if we need to.
+     * @param var The VariableMetadata object for which this legend is being 
+     * created (needed for title and units strings)
+     * @todo Allow setting of width and height of legend
+     */
+    public BufferedImage getLegend(VariableMetadata var)
+    {
+        this.setScale();
+        return this.createLegend(var);
+    }
+    
+    /**
+     * Creates and returns a BufferedImage representing the legend for this 
+     * Style instance.  The colour scale will already have been set before this
+     * is called.
+     * @param var The VariableMetadata object for which this legend is being 
+     * created (needed for title and units strings)
+     * @todo Allow setting of width and height of legend
+     */
+    protected abstract BufferedImage createLegend(VariableMetadata var);
 
     /**
      * Gets the frames as BufferedImages, ready to be turned into a picture or
@@ -156,8 +225,40 @@ public abstract class AbstractStyle
      * so subclasses can delay creating the BufferedImages until all the data
      * has been extracted (for example, if we are auto-scaling an animation,
      * we can't create each individual frame until we have data for all the frames)
-     * @return ArrayList of BufferedImages
+     * @return List of BufferedImages
      */
-    public abstract ArrayList<BufferedImage> getRenderedFrames();
+    public List<BufferedImage> getRenderedFrames()
+    {
+        this.setScale(); // Make sure the colour scale is set before proceeding
+        // We render the frames if we have not done so already
+        if (this.frameData != null)
+        {
+            logger.debug("Rendering image frames...");
+            for (int i = 0; i < this.frameData.size(); i++)
+            {
+                logger.debug("    ... rendering frame {}", i);
+                this.createImage(this.frameData.get(i), this.labels.get(i));
+            }
+        }
+        return this.renderedFrames;
+    }
+    
+    /**
+     * Makes sure that the scale is set: if we are auto-scaling, this reads all
+     * of the data we have stored to find the extremes.  If the scale has
+     * already been set, this does nothing
+     */
+    protected void setScale()
+    {
+        if (this.isAutoScale())
+        {
+            logger.debug("Setting the scale automatically");
+            // We have a cache of image data, which we use to generate the colour scale
+            for (List<float[]> data : this.frameData)
+            {
+                this.adjustScaleForFrame(data);
+            }
+        }
+    }
     
 }

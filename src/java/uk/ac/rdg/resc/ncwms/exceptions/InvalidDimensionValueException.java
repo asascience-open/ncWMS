@@ -36,11 +36,8 @@ package uk.ac.rdg.resc.ncwms.exceptions;
  * $Date$
  * $Log$
  */
-public class InvalidDimensionValueException extends WMSExceptionInJava
-{
-    private String dimName;
-    private String value;
-    
+public class InvalidDimensionValueException extends WmsException
+{    
     /**
      * Creates a new instance of InvalidDimensionValueException
      * @param dimName The name of the dimension for which the value is invalid
@@ -48,18 +45,8 @@ public class InvalidDimensionValueException extends WMSExceptionInJava
      */
     public InvalidDimensionValueException(String dimName, String value)
     {
-        this.dimName = dimName;
-        this.value = value;
-    }
-
-    public String getDimName()
-    {
-        return dimName;
-    }
-
-    public String getValue()
-    {
-        return value;
+        super("The value \"" + value + "\" is not valid for the " +
+            dimName.toUpperCase() + " dimension", "InvalidDimensionValue");
     }
     
 }

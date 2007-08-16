@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.styles;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
@@ -38,7 +39,11 @@ import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.SinglePixelPackedSampleModel;
 import java.awt.image.WritableRaster;
-import java.util.ArrayList;
+import java.text.DecimalFormat;
+import java.util.List;
+import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
+import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 
 /**
  * Renders an image using a boxfill style (i.e. solid regions of colour)
@@ -50,16 +55,55 @@ import java.util.ArrayList;
  */
 public class BoxFillStyle extends AbstractStyle
 {
+    private static final Logger logger = Logger.getLogger(BoxFillStyle.class);
+    
+    /**
+     * Defines the names of styles that this class supports: see Factory.setClasses()
+     */
+    public static final String[] KEYS = new String[]{"boxfill"};
+    
+    private static DecimalFormat DECIMAL_FORMATTER = new DecimalFormat("0.#####");
+    private static DecimalFormat SCIENTIFIC_FORMATTER = new DecimalFormat("0.###E0");
+    
     // Scale range of the picture
     private float scaleMin;
     private float scaleMax;
     // The percentage opacity of the picture
     private int opacity;
     
+    // Elements of the default palette
+    private static final int[] RED =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  7, 23, 39, 55, 71, 87,103,
+           119,135,151,167,183,199,215,231,
+           247,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,246,228,211,193,175,158,140};
+    private static final int[] GREEN =
+        {  0,  0,  0,  0,  0,  0,  0,
+           0, 11, 27, 43, 59, 75, 91,107,
+           123,139,155,171,187,203,219,235,
+           251,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0};
+    private static final int[] BLUE =
+        {  143,159,175,191,207,223,239,
+           255,255,255,255,255,255,255,255,
+           255,255,255,255,255,255,255,255,
+           255,247,231,215,199,183,167,151,
+           135,119,103, 87, 71, 55, 39, 23,
+           7,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0,
+           0,  0,  0,  0,  0,  0,  0,  0};
+    
     /** Creates a new instance of BoxFillStyle */
     public BoxFillStyle()
     {
-        super("boxfill");
+        super(KEYS[0]);
         this.opacity = 100;
         this.scaleMin = 0.0f;
         this.scaleMax = 0.0f;
@@ -70,26 +114,64 @@ public class BoxFillStyle extends AbstractStyle
      * this style are "opacity" and "scale".
      * @todo error handling and reporting
      */
-    public void setAttribute(String attName, String value)
+    public void setAttribute(String attName, String[] values)
+        throws StyleNotDefinedException
     {
         if (attName.trim().equalsIgnoreCase("opacity"))
         {
-            int opVal = Integer.parseInt(value);
-            if (opacity < 0 || opacity > 100)
+            if (values.length != 1)
+            {
+                throw new StyleNotDefinedException("Format error for OPACITY attribute of BOXFILL style");
+            }
+            int opVal = Integer.parseInt(values[0]); // TODO: trap number format errors
+            if (opVal < 0 || opVal > 100)
             {
                 throw new IllegalArgumentException("Opacity must be in the range 0 to 100");
             }
             this.opacity = opVal;
+            logger.debug("Set OPACITY to {}", this.opacity);
         }
         else if (attName.trim().equalsIgnoreCase("scale"))
         {
-            String[] scVals = value.trim().split(":");
-            this.scaleMin = Float.parseFloat(scVals[0]);
-            this.scaleMax = Float.parseFloat(scVals[1]);
+            if (values.length != 2)
+            {
+                throw new StyleNotDefinedException("Format error for SCALE attribute of BOXFILL style");
+            }
+            this.scaleMin = Float.parseFloat(values[0]); // TODO: trap number format errors
+            this.scaleMax = Float.parseFloat(values[1]);
+            logger.debug("Set SCALE to {},{}", this.scaleMin, this.scaleMax);
         }
+        // TODO: set the palette ("rainbow", etc)
         else
         {
-            // TODO: do something here
+            throw new StyleNotDefinedException("Attribute " + attName + 
+                " is not supported by the " + this.name + " style");
+        }
+    }
+    
+    /**
+     * Calculates the magnitude of the data in-place, replacing data.get(0) with the
+     * magnitude of the data.
+     */
+    public void processData(List<float[]> data)
+    {
+        logger.debug("Calculating the magnitude of {} components", data.size());
+        if (data.size() == 1)
+        {
+            return;
+        }
+        float[] firstComponent = data.get(0);
+        for (int i = 0; i < firstComponent.length; i++)
+        {
+            if (!Float.isNaN(firstComponent[i]))
+            {
+                double sumsq = firstComponent[i] * firstComponent[i];
+                for (int j = 1; j < data.size(); j++)
+                {
+                    sumsq += data.get(j)[i] * data.get(j)[i];
+                }
+                firstComponent[i] = (float)Math.sqrt(sumsq);
+            }
         }
     }
     
@@ -98,13 +180,15 @@ public class BoxFillStyle extends AbstractStyle
      * Adds the label if one has been set.  The scale must be set before
      * calling this method.
      */
-    public void createImage(float[] data, String label)
+    public void createImage(List<float[]> data, String label)
     {
         // Create the pixel array for the frame
         byte[] pixels = new byte[this.picWidth * this.picHeight];
+        // We only use the first of the data arrays: this is a Style for scalars
+        float[] firstArray = data.get(0);
         for (int i = 0; i < pixels.length; i++)
         {
-            pixels[i] = getColourIndex(data[i]);
+            pixels[i] = getColourIndex(firstArray[i]);
         }
         
         // Create the Image
@@ -127,17 +211,12 @@ public class BoxFillStyle extends AbstractStyle
         
         this.renderedFrames.add(image);
     }
-
-    public ArrayList<BufferedImage> getRenderedFrames()
-    {
-        return this.renderedFrames;
-    }
     
     /**
      * @return true if this image will have its colour range scaled automatically.
      * This is true if scaleMin and scaleMax are both zero
      */
-    private boolean isAutoScale()
+    protected boolean isAutoScale()
     {
         return (this.scaleMin == 0.0f && this.scaleMax == 0.0f);
     }
@@ -145,22 +224,17 @@ public class BoxFillStyle extends AbstractStyle
     /**
      * Adjusts the colour scale to accommodate the given frame.
      */
-    private void adjustColourScaleForFrame(float[] data)
+    protected void adjustScaleForFrame(List<float[]> data)
     {
+        // We only use the first data array: this is a Style for scalars
         this.scaleMin = Float.MAX_VALUE;
         this.scaleMax = -Float.MAX_VALUE;
-        for (int i = 0; i < data.length; i++)
+        for (float val : data.get(0))
         {
-            if (data[i] != this.fillValue)
+            if (!Float.isNaN(val))
             {
-                if (data[i] < this.scaleMin)
-                {
-                    this.scaleMin = data[i];
-                }
-                if (data[i] > this.scaleMax)
-                {
-                    this.scaleMax = data[i];
-                }
+                if (val < this.scaleMin) this.scaleMin = val;
+                if (val > this.scaleMax) this.scaleMax = val;
             }
         }
     }
@@ -170,7 +244,7 @@ public class BoxFillStyle extends AbstractStyle
      */
     private byte getColourIndex(float value)
     {
-        if (value == this.fillValue)
+        if (Float.isNaN(value))
         {
             return 0; // represents a transparent pixel
         }
@@ -189,18 +263,41 @@ public class BoxFillStyle extends AbstractStyle
      * @todo To avoid multiplicity of objects, could statically create color models
      * for opacity=100 and transparency=true/false.
      */
-    private IndexColorModel getRainbowColorModel()
+    protected IndexColorModel getRainbowColorModel()
     {
-        byte[] r = new byte[256];   byte[] g = new byte[256];
-        byte[] b = new byte[256];   byte[] a = new byte[256];
+        // Get 256 colors representing this palette
+        Color[] colors = this.getColorPalette();
+        
+        // Extract to arrays of r, g, b, a
+        byte[] r = new byte[colors.length];
+        byte[] g = new byte[colors.length];
+        byte[] b = new byte[colors.length];
+        byte[] a = new byte[colors.length];        
+        for (int i = 0; i < colors.length; i++)
+        {
+            r[i] = (byte)colors[i].getRed();
+            g[i] = (byte)colors[i].getGreen();
+            b[i] = (byte)colors[i].getBlue();
+            a[i] = (byte)colors[i].getAlpha();
+        }
+        
+        return new IndexColorModel(8, 256, r, g, b, a);
+    }
+    
+    /**
+     * @return Array of 256 RGBA Color objects representing the palette.
+     */
+    protected Color[] getColorPalette()
+    {
+        Color[] colors = new Color[256];
         
         // Set the alpha value based on the percentage transparency
-        byte alpha;
+        int alpha;
         // Here we are playing safe and avoiding rounding errors that might
         // cause the alpha to be set to zero instead of 255
         if (this.opacity >= 100)
         {
-            alpha = (byte)255;
+            alpha = 255;
         }
         else if (this.opacity <= 0)
         {
@@ -208,77 +305,106 @@ public class BoxFillStyle extends AbstractStyle
         }
         else
         {
-            alpha = (byte)(2.55 * this.opacity);
+            alpha = (int)(2.55 * this.opacity);
         }
         
-        if (this.transparent)
-        {
-            // Colour with index 0 is fully transparent
-            r[0] = 0;   g[0] = 0;   b[0] = 0;   a[0] = 0;
-        }
-        else
-        {
-            // Use the supplied background color
-            Color bg = new Color(this.bgColor);
-            r[0] = (byte)bg.getRed();
-            g[0] = (byte)bg.getGreen();
-            b[0] = (byte)bg.getBlue();
-            a[0] = alpha;
-        }
+        // Use the supplied background color or set transparent
+        Color bg = new Color(this.bgColor);
+        colors[0] = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(),
+            this.transparent ? 0 : alpha);
+        
         // Colour with index 1 is black (represents out-of-range data)
-        r[1] = 0;   g[1] = 0;   b[1] = 0;   a[1] = alpha;
+        colors[1] = new Color(0, 0, 0, alpha);
         
-        int[] red =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  7, 23, 39, 55, 71, 87,103,
-           119,135,151,167,183,199,215,231,
-           247,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,246,228,211,193,175,158,140};
-        int[] green =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0, 11, 27, 43, 59, 75, 91,107,
-           123,139,155,171,187,203,219,235,
-           251,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0};
-        int[] blue =
-        {  143,159,175,191,207,223,239,
-           255,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0};
-        
-        for (int i = 2; i < 256; i++)
+        for (int i = 2; i < colors.length; i++)
         {
-            a[i] = alpha;
             // There are 63 colours and 254 remaining slots
             float index = (i - 2) * (62.0f / 253.0f);
-            if (i == 255)
+            if (i == colors.length - 1)
             {
-                r[i] = (byte)red[62];
-                g[i] = (byte)green[62];
-                b[i] = (byte)blue[62];
+                colors[i] = new Color(RED[62], GREEN[62], BLUE[62]);
             }
             else
             {
                 // We merge the colours from adjacent indices
                 float fromUpper = index - (int)index;
                 float fromLower = 1.0f - fromUpper;
-                r[i] = (byte)(fromLower * red[(int)index] + fromUpper * red[(int)index + 1]);
-                g[i] = (byte)(fromLower * green[(int)index] + fromUpper * green[(int)index + 1]);
-                b[i] = (byte)(fromLower * blue[(int)index] + fromUpper * blue[(int)index + 1]);
+                int r = (int)(fromLower * RED[(int)index] + fromUpper * RED[(int)index + 1]);
+                int g = (int)(fromLower * GREEN[(int)index] + fromUpper * GREEN[(int)index + 1]);
+                int b = (int)(fromLower * BLUE[(int)index] + fromUpper * BLUE[(int)index + 1]);
+                colors[i] = new Color(r, g, b, alpha);
             }
         }
         
-        return new IndexColorModel(8, 256, r, g, b, a);
+        return colors;
     }
     
+    /**
+     * Creates and returns a BufferedImage representing the legend for this 
+     * Style instance
+     * @param var The VariableMetadata object for which this legend is being 
+     * created (needed for title and units strings)
+     */
+    public BufferedImage createLegend(VariableMetadata var)
+    {
+        BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
+        Graphics2D gfx = colourScale.createGraphics();
+        
+        // Create the colour scale itself
+        Color[] palette = this.getColorPalette();
+        for (int i = 5; i < 259; i++)
+        {
+            gfx.setColor(palette[260 - i]);
+            gfx.drawLine(2, i, 25, i);
+        }
+        
+        // Draw the text items
+        gfx.setColor(Color.WHITE);
+        // Add the scale values
+        double quarter = 0.25 * (this.scaleMax - this.scaleMin);
+        String scaleMin          = format(this.scaleMin);
+        String scaleQuarter      = format(this.scaleMin + quarter);
+        String scaleMid          = format(this.scaleMin + 2 * quarter);
+        String scaleThreeQuarter = format(this.scaleMin + 3 * quarter);
+        String scaleMax          = format(this.scaleMax);        
+        gfx.drawString(scaleMax, 27, 10);
+        gfx.drawString(scaleThreeQuarter, 27, 73);
+        gfx.drawString(scaleMid, 27, 137);
+        gfx.drawString(scaleQuarter, 27, 201);
+        gfx.drawString(scaleMin, 27, 264);
+        
+        // Add the title as rotated text        
+        AffineTransform trans = new AffineTransform();
+        trans.setToTranslation(90, 0);
+        AffineTransform rot = new AffineTransform();
+        rot.setToRotation(Math.PI / 2.0);
+        trans.concatenate(rot);
+        gfx.setTransform(trans);
+        String title = var.getTitle();
+        if (var.getUnits() != null)
+        {
+            title += " (" + var.getUnits() + ")";
+        }
+        gfx.drawString(title, 5, 0);
+        
+        return colourScale;
+    }
+    
+    
+    /**
+     * Formats a number to a limited number of d.p., using scientific notation
+     * if necessary
+     */
+    private static String format(double d)
+    {
+        // Try decimal format first
+        String dec = DECIMAL_FORMATTER.format(d);
+        // See if we have at least 3 s.f.:
+        if (dec.length() > 4 && dec.charAt(0) == '0' && dec.charAt(2) == '0'
+            && dec.charAt(3) == '0' && dec.charAt(4) == '0')
+        {
+            return SCIENTIFIC_FORMATTER.format(d);
+        }
+        return dec;
+    }
 }

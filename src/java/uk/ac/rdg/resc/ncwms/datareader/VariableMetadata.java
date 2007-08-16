@@ -28,13 +28,18 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Hashtable;
-import java.util.Vector;
-import ucar.nc2.units.DateFormatter;
+import java.util.List;
+import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
+import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.grids.RectangularLatLonGrid;
+import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
+import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Stores the metadata for a {@link GeoGrid}: saves reading in the metadata every
@@ -48,7 +53,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
  */
 public class VariableMetadata
 {
-    public static DateFormatter dateFormatter = new DateFormatter();
+    private static final Logger logger = Logger.getLogger(VariableMetadata.class);
     
     private String id;
     private String title;
@@ -63,10 +68,18 @@ public class VariableMetadata
     private EnhancedCoordAxis xaxis;
     private EnhancedCoordAxis yaxis;
     private Dataset dataset;
-    private Hashtable<Date, TimestepInfo> timesteps;
+    // Sorted in ascending order of time
+    private List<TimestepInfo> timesteps;
+    // Stores the keys of the styles that this variable supports
+    private List<String> supportedStyles = new ArrayList<String>();
+    
+    // If this is a vector quantity, these values will be the northward and
+    // eastward components
+    private VariableMetadata eastward;
+    private VariableMetadata northward;
     
     /** Creates a new instance of VariableMetadata */
-    VariableMetadata()
+    public VariableMetadata()
     {
         this.title = null;
         this.abstr = null;
@@ -76,7 +89,59 @@ public class VariableMetadata
         this.xaxis = null;
         this.yaxis = null;
         this.dataset = null;
-        this.timesteps = new Hashtable<Date, TimestepInfo>();
+        this.timesteps = new ArrayList<TimestepInfo>();
+        this.eastward = null;
+        this.northward = null;
+        this.addStyles(BoxFillStyle.KEYS);
+    }
+    
+    /**
+     * Creates a VariableMetadata object that comprises an eastward and 
+     * northward component (e.g. for velocities)
+     */
+    public VariableMetadata(String title, VariableMetadata eastward, VariableMetadata northward)
+    {
+        // Copy the metadata from the eastward component
+        // TODO: check that the two components match
+        this.title = title;
+        this.abstr = "Automatically-generated vector field, composed of the fields "
+            + eastward.title + " and " + northward.title;
+        this.zUnits = eastward.zUnits;
+        this.zValues = eastward.zValues;
+        this.bbox = eastward.bbox;
+        this.xaxis = eastward.xaxis;
+        this.yaxis = eastward.yaxis;
+        this.dataset = eastward.dataset;
+        this.units = eastward.units;
+        this.timesteps = eastward.getTimesteps(); // Only used for metadata:
+                                                  // have to be careful reading
+                                                  // data as some datasets might
+                                                  // store different variables in
+                                                  // different files.
+        
+        // Vector is the default style, but we can also render as a boxfill
+        // (magnitude only)
+        this.addStyles(VectorStyle.KEYS);
+        this.addStyles(BoxFillStyle.KEYS);
+        
+        this.eastward = eastward;
+        this.northward = northward;
+    }
+    
+    private void addStyles(String[] styles)
+    {
+        for (String style : styles)
+        {
+            this.supportedStyles.add(style.trim());
+        }
+    }
+    
+    /**
+     * @return true if this is a vector quantity (e.g. velocity)
+     */
+    public boolean isVector()
+    {
+        return this.getEastwardComponent() != null && this.getNorthwardComponent() != null;
     }
 
     public String getTitle()
@@ -120,27 +185,18 @@ public class VariableMetadata
     }
 
     /**
-     * @return array of timestep values in seconds since the epoch
+     * @return array of timestep values in milliseconds since the epoch
      */
-    public synchronized double[] getTvalues()
+    public synchronized long[] getTvalues()
     {
-        Vector<Date> tValsVec = this.getSortedDates();
-        double[] tVals = new double[tValsVec.size()];
-        for (int i = 0; i < tValsVec.size(); i++)
+        long[] tVals = new long[this.timesteps.size()];
+        int i = 0;
+        for (TimestepInfo tInfo : timesteps)
         {
-            tVals[i] = tValsVec.get(i).getTime() / 1000.0; 
+            tVals[i] = tInfo.timestep.getTime();
+            i++;
         }
         return tVals;
-    }
-    
-    /**
-     * Returns a Vector of Dates, sorted in ascending order
-     */
-    private Vector<Date> getSortedDates()
-    {
-        Vector<Date> tValsVec = new Vector<Date>(this.timesteps.keySet());
-        Collections.sort(tValsVec); // sort into ascending order
-        return tValsVec;
     }
 
     public double[] getBbox()
@@ -153,7 +209,7 @@ public class VariableMetadata
         this.bbox = bbox;
     }
 
-    public boolean getZpositive()
+    public boolean isZpositive()
     {
         return zPositive;
     }
@@ -241,97 +297,122 @@ public class VariableMetadata
      */
     public synchronized void addTimestepInfo(TimestepInfo tInfo)
     {
-        TimestepInfo existingTStep = this.timesteps.get(tInfo.timestep);
-        if (existingTStep == null || tInfo.indexInFile < existingTStep.indexInFile)
+        // See if we already have a TimestepInfo object for this date
+        int tIndex = this.findTIndex(tInfo.timestep);
+        if (tIndex < 0)
         {
-            this.timesteps.put(tInfo.timestep, tInfo);
+            // We don't have an info for this date, so we add the new info
+            // and make sure the List is sorted correctly (TODO: could do a
+            // simple insertion into the correct locaion?)
+            this.getTimesteps().add(tInfo);
+            Collections.sort(this.getTimesteps());
+        }
+        else
+        {
+            // We already have a timestep for this time
+            TimestepInfo existingTStep = this.getTimesteps().get(tIndex);
+            if (tInfo.indexInFile < existingTStep.indexInFile)
+            {
+                // The new info probably has a shorter forecast time and so we
+                // replace the existing version with this one
+                existingTStep = tInfo;
+            }
         }
     }
     
     /**
-     * Finds the index of a certain t value by binary search (the axis may be
-     * very long, so a brute-force search is inappropriate)
-     * @param tValue Date to search for as an ISO8601-formatted String
-     * @return the t index corresponding with the given targetVal
-     * @throws InvalidDimensionValueException if targetVal could not be found
-     * within tValues
-     * @todo almost repeats code in {@link Irregular1DCoordAxis} - refactor?
+     * @return the index of the TimestepInfo object corresponding with the given
+     * date, or -1 if there is no TimestepInfo object corresponding with the
+     * given date.  Uses binary search for efficiency.
+     * @todo replace with Arrays.binarySearch()?
      */
-    public int findTIndex(String tValueStr) throws InvalidDimensionValueException
+    private int findTIndex(Date target)
     {
-        if (tValueStr.equals("current"))
-        {
-            // Return the last index in the array
-            // TODO: should be the index of the timestep closest to now
-            return this.timesteps.size() - 1;
-        }
-        Date target = dateFormatter.getISODate(tValueStr);
-        if (target == null)
-        {
-            throw new InvalidDimensionValueException("time", tValueStr);
-        }
-        
-        Vector<Date> tValues = this.getSortedDates();
-        
+        if (this.timesteps.size() == 0) return -1;
         // Check that the point is within range
-        if (target.before(tValues.firstElement()) || target.after(tValues.lastElement()))
+        if (target.before(this.timesteps.get(0).timestep) ||
+            target.after(this.timesteps.get(this.timesteps.size()  - 1).timestep))
         {
-            throw new InvalidDimensionValueException("time", tValueStr);
+            return -1;
         }
         
         // do a binary search to find the nearest index
         int low = 0;
-        int high = tValues.size() - 1;
+        int high = this.getTimesteps().size() - 1;
         while (low <= high)
         {
             int mid = (low + high) >> 1;
-            Date midVal = tValues.get(mid);
-            if (midVal.equals(target))
-            {
-                return mid;
-            }
-            else if (midVal.before(target))
-            {
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
+            Date midVal = this.timesteps.get(mid).timestep;
+            if (midVal.equals(target)) return mid;
+            else if (midVal.before(target)) low = mid + 1;
+            else high = mid - 1;
         }
         
         // If we've got this far we have to decide between values[low]
         // and values[high]
-        if (tValues.get(low).equals(target))
-        {
-            return low;
-        }
-        else if (tValues.get(high).equals(target))
-        {
-            return high;
-        }
-        throw new InvalidDimensionValueException("time", tValueStr);
+        if (this.timesteps.get(low).timestep.equals(target)) return low;
+        else if (this.timesteps.get(high).timestep.equals(target)) return high;
+        // The given time doesn't match any axis value
+        return -1;
     }
     
     /**
-     * @return the TimestepInfo object for the timestep at the given index in the
-     * <b>whole dataset</b>.  Returns null if there is no time axis for this dataset.
+     * @return the index of the TimestepInfo object corresponding with the given
+     * ISO8601 time string. Uses binary search for efficiency.
+     * @throws InvalidDimensionValueException if there is no corresponding
+     * TimestepInfo object, or if the given ISO8601 string is not valid.  
      */
-    public TimestepInfo getTimestepInfo(int datasetTIndex)
+    public int findTIndex(String isoDateTime) throws InvalidDimensionValueException
     {
-        // Get a sorted array of the dates in ascending order
-        Vector<Date> dates = this.getSortedDates();
-        if (dates.size() == 0)
+        if (isoDateTime.equals("current"))
         {
-            return null;
+            // Return the last timestep
+            // TODO: should be the index of the timestep closest to now
+            return this.getLastTIndex();
         }
-        return this.timesteps.get(dates.get(datasetTIndex));
+        Date target = WmsUtils.iso8601ToDate(isoDateTime);
+        if (target == null)
+        {
+            throw new InvalidDimensionValueException("time", isoDateTime);
+        }
+        int index = findTIndex(target);
+        if (index < 0)
+        {
+            throw new InvalidDimensionValueException("time", isoDateTime);
+        }
+        return index;
+    }
+    
+    /**
+     * Gets a List of integers representing indices along the time axis
+     * starting from isoDateTimeStart and ending at isoDateTimeEnd, inclusive.
+     * @param isoDateTimeStart ISO8601-formatted String representing the start time
+     * @param isoDateTimeEnd ISO8601-formatted String representing the start time
+     * @return List of Integer indices
+     * @throws InvalidDimensionValueException if either of the start or end
+     * values were not found in the axis, or if they are not valid ISO8601 times.
+     */
+    public List<Integer> findTIndices(String isoDateTimeStart,
+        String isoDateTimeEnd) throws InvalidDimensionValueException
+    {
+        int startIndex = this.findTIndex(isoDateTimeStart);
+        int endIndex = this.findTIndex(isoDateTimeEnd);
+        if (startIndex > endIndex)
+        {
+            throw new InvalidDimensionValueException("time",
+                isoDateTimeStart + "/" + isoDateTimeEnd);
+        }
+        List<Integer> tIndices = new ArrayList<Integer>();
+        for (int i = startIndex; i <= endIndex; i++)
+        {
+            tIndices.add(i);
+        }
+        return tIndices;
     }
     
     /**
      * Finds the index of a certain z value by brute-force search.  We can afford
      * to be inefficient here because z axes are not likely to be large.
-     * @param zValues Array of values of the z coordinate
      * @param targetVal Value to search for
      * @return the z index corresponding with the given targetVal
      * @throws InvalidDimensionValueException if targetVal could not be found
@@ -344,7 +425,9 @@ public class VariableMetadata
             float zVal = Float.parseFloat(targetVal);
             for (int i = 0; i < this.zValues.length; i++)
             {
-                if (Math.abs((this.zValues[i] - zVal) / zVal) < 1e-5)
+                // The fuzzy comparison fails for zVal == 0.0 so we do a direct
+                // comparison too
+                if (this.zValues[i] == zVal || Math.abs((this.zValues[i] - zVal) / zVal) < 1e-5)
                 {
                     return i;
                 }
@@ -359,9 +442,10 @@ public class VariableMetadata
 
     /**
      * Simple class that holds information about which files in an aggregation
-     * hold which timesteps for a variable
+     * hold which timesteps for this variable.  Implements Comparable to allow
+     * collections of this class to be sorted in order of their timestep.
      */
-    public static class TimestepInfo
+    public static class TimestepInfo implements Comparable<TimestepInfo>
     {
         private Date timestep;
         private String filename;
@@ -389,6 +473,207 @@ public class VariableMetadata
         {
             return this.indexInFile;
         }
+        
+        /**
+         * @return the date-time that this timestep represents
+         */
+        public Date getDate()
+        {
+            return this.timestep;
+        }
+        
+        /**
+         * Sorts based on the timestep only
+         */
+        public int compareTo(TimestepInfo otherInfo)
+        {
+            return this.timestep.compareTo(otherInfo.timestep);
+        }
+    }
+
+    public VariableMetadata getEastwardComponent()
+    {
+        return this.eastward;
+    }
+
+    public VariableMetadata getNorthwardComponent()
+    {
+        return this.northward;
+    }
+
+    /**
+     * @return List of Strings representing the keys of styles that this
+     * variable can be rendered in.
+     */
+    public List<String> getSupportedStyleKeys()
+    {
+        return this.supportedStyles;
+    }
+    
+    /**
+     * @return the key of the default style for this Variable.  Exactly 
+     * equivalent to getSupportedStyleKeys().get(0)
+     */
+    public String getDefaultStyleKey()
+    {
+        // Could be an IndexOutOfBoundsException here, but would be a programming
+        // error if so
+        return this.supportedStyles.get(0);
+    }
+    
+    /**
+     * @return true if this Variable can be rendered in the style with the 
+     * given name, false otherwise.
+     */
+    public boolean supportsStyle(String styleName)
+    {
+        return this.supportedStyles.contains(styleName.trim());
+    }
+    
+    /**
+     * @return true if this variable has a depth/elevation axis
+     */
+    public boolean isZaxisPresent()
+    {
+        return this.zValues != null && this.zValues.length > 0;
+    }
+    
+    /**
+     * @return true if this variable has a time axis
+     */
+    public boolean isTaxisPresent()
+    {
+        return this.getTimesteps() != null && this.getTimesteps().size() > 0;
+    }
+    
+    /**
+     * @return the index of the default value on the z axis (i.e. the index of
+     * the z value that will be used if the user does not specify an explicit
+     * z value in a GetMap request).
+     */
+    public int getDefaultZIndex()
+    {
+        return 0;
+    }
+    
+    /**
+     * @return the default value of the z axis (i.e. the z value that will be
+     * used if the user does not specify an explicit z value in a GetMap request).
+     */
+    public final double getDefaultZValue()
+    {
+        return this.zValues[this.getDefaultZIndex()];
+    }
+    
+    /**
+     * @return the last index on the t axis
+     */
+    public int getLastTIndex()
+    {
+        return this.timesteps.size() - 1;
+    }
+    
+    /**
+     * @return the index of the default value of the t axis (i.e. the t value that will be
+     * used if the user does not specify an explicit t value in a GetMap request),
+     * as a TimestepInfo object.  This currently returns the last value along
+     * the time axis, but should probably return the value closest to now.
+     */
+    public final int getDefaultTIndex()
+    {
+        return this.getLastTIndex();
+    }
+    
+    /**
+     * @return the default value of the t axis (i.e. the t value that will be
+     * used if the user does not specify an explicit t value in a GetMap request),
+     * in milliseconds since the epoch.  This currently returns the last value along
+     * the time axis, but should probably return the value closest to now.
+     */
+    public final long getDefaultTValue()
+    {
+        return this.getTvalues()[this.getLastTIndex()];
+    }
+    
+    /**
+     * @return a unique identifier string for this VariableMetadata object (used
+     * in the display of Layers in a Capabilities document).
+     */
+    public String getLayerName()
+    {
+        // NOTE!! The logic of this method must match up with
+        // Config.getVariable(layerName)!
+        return this.dataset.getId() + "/" + this.id;
+    }
+    
+    /**
+     * @return true if this variable can be queried through the GetFeatureInfo
+     * function.  Delegates to Dataset.isQueryable().
+     */
+    public boolean isQueryable()
+    {
+        return this.dataset.isQueryable();
+    }
+    
+    /**
+     * Reads a layer of data from this variable (which must be a scalar or a
+     * single component of a vector).  Missing values will be represented by
+     * Float.NaN.
+     * Currently only works for RectangularLatLonGrids.
+     */
+    public float[] read(int tIndex, int zIndex, AbstractGrid grid)
+        throws Exception
+    {
+        // Check that we can handle this type of grid
+        if (!(grid instanceof RectangularLatLonGrid))
+        {
+            // TODO: support non-rectangular grids for images
+            throw new Exception("Grid is not rectangular");
+        }
+        RectangularLatLonGrid rectGrid = (RectangularLatLonGrid)grid;
+        return this.read(tIndex, zIndex, rectGrid.getLatArray(),
+            rectGrid.getLonArray());
+    }
+    
+    /**
+     * Reads a layer of data from this variable (which must be a scalar or a
+     * single component of a vector).  Missing values will be represented by
+     * Float.NaN.
+     */
+    public float[] read(int tIndex, int zIndex, float[] latValues,
+        float[] lonValues) throws Exception
+    {
+        // Get a DataReader object for reading the data
+        String dataReaderClass = this.dataset.getDataReaderClass();
+        String location = this.dataset.getLocation();
+        DataReader dr = DataReader.getDataReader(dataReaderClass, location);
+        logger.debug("Got data reader of type {}", dr.getClass().getName());
+        
+        // See exactly which file we're reading from, and which time index in 
+        // the file (handles datasets with glob aggregation)
+        String filename;
+        int tIndexInFile;
+        if (tIndex >= 0)
+        {
+            TimestepInfo tInfo = this.timesteps.get(tIndex);
+            filename = tInfo.getFilename();
+            tIndexInFile = tInfo.getIndexInFile();
+        }
+        else
+        {
+            // There is no time axis
+            filename = this.dataset.getLocation();
+            tIndexInFile = tIndex;
+        }
+        return dr.read(filename, this, tIndexInFile, zIndex, latValues, lonValues);
+    }
+    
+    /**
+     * @return all the timesteps in this variable
+     */
+    public List<TimestepInfo> getTimesteps()
+    {
+        return timesteps;
     }
     
 }

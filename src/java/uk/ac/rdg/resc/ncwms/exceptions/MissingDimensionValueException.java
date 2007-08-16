@@ -36,9 +36,8 @@ package uk.ac.rdg.resc.ncwms.exceptions;
  * $Date$
  * $Log$
  */
-public class MissingDimensionValueException extends WMSExceptionInJava
+public class MissingDimensionValueException extends WmsException
 {
-    private String dimName;
     
     /**
      * Creates a new instance of MissingDimensionValueException
@@ -46,12 +45,8 @@ public class MissingDimensionValueException extends WMSExceptionInJava
      */
     public MissingDimensionValueException(String dimName)
     {
-        this.dimName = dimName;
-    }
-
-    public String getDimName()
-    {
-        return dimName;
+        super("You must provide a value for the " +
+            dimName.toUpperCase() + " dimension", "MissingDimensionValue");
     }
     
 }

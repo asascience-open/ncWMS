@@ -36,23 +36,16 @@ package uk.ac.rdg.resc.ncwms.exceptions;
  * $Date$
  * $Log$
  */
-public class InvalidFormatException extends WMSExceptionInJava
+public class InvalidFormatException extends WmsException
 {
-    private String format;
     
     /**
-     * Creates a new instance of InvalidDimensionValueException
-     * @param dimName The name of the dimension for which the value is invalid
-     * @param value The invalid value
+     * Creates a new instance of InvalidFormatException
+     * @param message The message to display to the client
      */
-    public InvalidFormatException(String format)
+    public InvalidFormatException(String message)
     {
-        this.format = format;
-    }
-
-    public String getFormat()
-    {
-        return this.format;
+        super(message, "InvalidFormat");
     }
     
 }

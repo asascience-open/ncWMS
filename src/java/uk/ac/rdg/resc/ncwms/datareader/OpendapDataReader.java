@@ -30,17 +30,16 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Hashtable;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPointImpl;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
  * DataReader for OPeNDAP datasets.  This is very similar to the DefaultDataReader
@@ -59,27 +58,32 @@ public class OpendapDataReader extends DefaultDataReader
     
     /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single time index only.
-     *
-     * TODO: refactor this: repeats a lot of code in DefaultDataReader
-     *
+     * lat-lon grid.  Reads data for a single timestep only.  This method knows
+     * nothing about aggregation: it simply reads data from the given file. 
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by Float.NaN.
+     * 
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
      * @param vm {@link VariableMetadata} object representing the variable
-     * @param tIndex The index along the time axis as found in getmap.py
-     * @param zIndex The index along the vertical axis (or 0 if there is no vertical axis)
+     * @param tIndex The index along the time axis (or -1 if there is no time axis)
+     * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
-     * @param fillValue Value to use for missing data
-     * @throws WMSExceptionInJava if an error occurs
+     * @throws Exception if an error occurs
      */
-    public float[] read(VariableMetadata vm,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues,
-        float fillValue) throws WMSExceptionInJava
+    public float[] read(String filename, VariableMetadata vm,
+        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        throws Exception
     {
+        NetcdfDataset nc = null;
         try
         {
             // Get the metadata from the cache
             long start = System.currentTimeMillis();
             
+            // Prevent InvalidRangeExceptions for ranges we're not going to use anyway
+            if (tIndex < 0) tIndex = 0;
+            if (zIndex < 0) zIndex = 0;
             Range tRange = new Range(tIndex, tIndex);
             Range zRange = new Range(zIndex, zIndex);
             
@@ -88,7 +92,7 @@ public class OpendapDataReader extends DefaultDataReader
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
-            Arrays.fill(picData, fillValue);
+            Arrays.fill(picData, Float.NaN);
             
             // Find the range of x indices
             int minX = -1;
@@ -103,6 +107,7 @@ public class OpendapDataReader extends DefaultDataReader
                     if (maxX < 0 || xIndices[i] > maxX) maxX = xIndices[i];
                 }
             }
+            logger.debug("xRange = ({},{})", minX, maxX);
             // TODO: subsample if we are going to read very many more points
             // than we actually need
             if (minX < 0 || maxX < 0)
@@ -110,7 +115,6 @@ public class OpendapDataReader extends DefaultDataReader
                 // We haven't found any valid data
                 return picData;
             }
-            logger.debug("xRange = ({},{})", minX, maxX);
             Range xRange = new Range(minX, maxX);
             
             // Find the range of y indices
@@ -144,16 +148,11 @@ public class OpendapDataReader extends DefaultDataReader
             long readMetadata = System.currentTimeMillis();
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
-            // Get the dataset from the cache, without enhancing it. We hold
-            // the dataset in memory until this DataReader is closed.
-            if (this.nc == null)
-            {
-                this.nc = NetcdfDataset.openDataset(this.location, false, null);
-                CoordSysBuilder.addCoordinateSystems(nc, null);
-            }
+            // Get the dataset from the cache, without enhancing it
+            nc = getDataset(filename);
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
-            GridDataset gd = new GridDataset(this.nc);
+            GridDataset gd = new GridDataset(nc);
             GeoGrid gg = gd.findGridByName(vm.getId());
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
@@ -186,7 +185,7 @@ public class OpendapDataReader extends DefaultDataReader
                                 // We unpack and check for missing values just for
                                 // the points we need to display.
                                 float pixel = (float)enhanced.convertScaleOffsetMissing(val);
-                                picData[picIndex] = Float.isNaN(pixel) ? fillValue : pixel;
+                                picData[picIndex] = Float.isNaN(pixel) ? Float.NaN : pixel;
                             }
                             catch(ArrayIndexOutOfBoundsException aioobe)
                             {
@@ -205,17 +204,20 @@ public class OpendapDataReader extends DefaultDataReader
             
             return picData;
         }
-        catch(IOException e)
+        finally
         {
-            logger.error("IOException reading from " + nc.getLocation(), e);
-            throw new WMSExceptionInJava("IOException: " + e.getMessage());
+            if (nc != null)
+            {
+                try
+                {
+                    nc.close();
+                }
+                catch (IOException ex)
+                {
+                    logger.error("IOException closing " + nc.getLocation(), ex);
+                }
+            }
         }
-        catch(InvalidRangeException ire)
-        {
-            logger.error("InvalidRangeException reading from " + nc.getLocation(), ire);
-            throw new WMSExceptionInJava("InvalidRangeException: " + ire.getMessage());
-        }
-        // We don't close the dataset just yet: we wait till this.close() is called
     }
     
 }

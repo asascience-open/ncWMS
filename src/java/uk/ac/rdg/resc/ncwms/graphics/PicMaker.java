@@ -28,32 +28,18 @@
 
 package uk.ac.rdg.resc.ncwms.graphics;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
-import java.awt.image.IndexColorModel;
-import java.awt.image.Raster;
-import java.awt.image.SampleModel;
-import java.awt.image.SinglePixelPackedSampleModel;
-import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Hashtable;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
-import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 
 /**
  * Abstract superclass of picture makers.  Subclasses must have a no-argument
- * constructor
- * 
- * Makes a picture from an array of raw data, using a rainbow colour model.
- * Fill values are represented as transparent pixels and out-of-range values
- * are represented as black pixels.
+ * constructor and provide a public static field "KEYS", which is an array of
+ * Strings that specify which MIME types are supported by the PicMaker.
  *
  * @author Jon Blower
  * $Revision$
@@ -63,454 +49,84 @@ import uk.ac.rdg.resc.ncwms.exceptions.WMSExceptionInJava;
 public abstract class PicMaker
 {
     private static final Logger logger = Logger.getLogger(PicMaker.class);
-    /**
-     * Maps MIME types to the required class of PicMaker
-     */
-    private static Hashtable<String, Class> picMakers;
     
-    // Elements of the default palette
-    private static final int[] RED =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  7, 23, 39, 55, 71, 87,103,
-           119,135,151,167,183,199,215,231,
-           247,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,246,228,211,193,175,158,140};
-    private static final int[] GREEN =
-        {  0,  0,  0,  0,  0,  0,  0,
-           0, 11, 27, 43, 59, 75, 91,107,
-           123,139,155,171,187,203,219,235,
-           251,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0};
-    private static final int[] BLUE =
-        {  143,159,175,191,207,223,239,
-           255,255,255,255,255,255,255,255,
-           255,255,255,255,255,255,255,255,
-           255,247,231,215,199,183,167,151,
-           135,119,103, 87, 71, 55, 39, 23,
-           7,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0,
-           0,  0,  0,  0,  0,  0,  0,  0};
-    
-    // Image MIME type
-    protected String mimeType;
-    // Width and height of the resulting picture
-    private int picWidth;
-    private int picHeight;
-    // Scale range of the picture
-    private float scaleMin;
-    private float scaleMax;
-    // The percentage opacity of the picture
-    private int opacity;
-    // The fill value of the data.
-    private float fillValue;
-    protected boolean transparent;
-    private int bgColor; // Background colour as an integer
+    // The variable metadata from which this picture was created
     protected VariableMetadata var;
     
-    static
-    {
-        picMakers = new Hashtable<String, Class>();
-        picMakers.put("image/png", SimplePicMaker.class);
-        picMakers.put("image/gif", GifMaker.class);
-        picMakers.put("application/vnd.google-earth.kmz", KmzMaker.class);
-    }
+    protected List<String> tValues; // List of time values, one for each frame
+    protected String zValue;
+    protected float[] bbox;
+    protected BufferedImage legend; // If we need a legend, it will be stored here 
     
-    /**
-     * @return the image formats (MIME types) that can be produced as a
-     * Set of Strings.
-     */
-    public static final Set<String> getSupportedImageFormats()
-    {
-        return picMakers.keySet();
-    }
-    
-    /**
-     * Initializes fields to default values
-     */
-    protected PicMaker()
-    {
-        this.opacity = 100;
-        this.scaleMin = 0.0f;
-        this.scaleMax = 0.0f;
-    }
-    
-    /**
-     * Creates a PicMaker object for the given mime type.  Creates a new PicMaker
-     * object with each call.
-     * @param mimeType The MIME type of the image that is required
-     * @return A PicMaker object
-     * @throws a {@link InvalidFormatException} if there isn't a PicMaker for
-     * the given MIME type
-     * @throws an {@link WMSExceptionInJava} if the PicMaker could not be created
-     */
-    public static PicMaker createPicMaker(String mimeType)
-        throws InvalidFormatException, WMSExceptionInJava
-    {
-        Class clazz = picMakers.get(mimeType.trim());
-        if (clazz == null)
-        {
-            throw new InvalidFormatException(mimeType);
-        }
-        try
-        {
-            PicMaker pm = (PicMaker)clazz.newInstance();
-            // Some PicMakers support multiple MIME types
-            pm.mimeType = mimeType;
-            return pm;
-        }
-        catch (InstantiationException ie)
-        {
-            throw new WMSExceptionInJava("Internal error: could not create PicMaker "
-                + "of type " + clazz.getName());
-        }
-        catch (IllegalAccessException iae)
-        {
-            throw new WMSExceptionInJava("Internal error: IllegalAccessException" +
-                " when creating PicMaker of type " + clazz.getName());
-        }
-    }
-
-    public String getMimeType()
-    {
-        return mimeType;
-    }
-
-    public int getPicWidth()
-    {
-        return picWidth;
-    }
-
-    /**
-     * @param width The width of the picture in pixels
-     */
-    public void setPicWidth(int picWidth)
-    {
-        this.picWidth = picWidth;
-    }
-
-    public int getPicHeight()
-    {
-        return picHeight;
-    }
-
-    /**
-     * @param height The height of the picture in pixels
-     */
-    public void setPicHeight(int picHeight)
-    {
-        this.picHeight = picHeight;
-    }
-
-    public float getScaleMin()
-    {
-        return scaleMin;
-    }
-
-    /**
-     * @param scaleMin The minimum value for the scale
-     */
-    public void setScaleMin(float scaleMin)
-    {
-        this.scaleMin = scaleMin;
-    }
-
-    public float getScaleMax()
-    {
-        return scaleMax;
-    }
-
-    /**
-     * @param scaleMax The maximum value for the scale
-     */
-    public void setScaleMax(float scaleMax)
-    {
-        this.scaleMax = scaleMax;
-    }
-
-    public int getOpacity()
-    {
-        return opacity;
-    }
-    
-    /**
-     * @return true if this image will have its colour range scaled automatically.
-     * This is true if scaleMin and scaleMax are both zero
-     */
-    public boolean isAutoScale()
-    {
-        return (this.scaleMin == 0.0f && this.scaleMax == 0.0f);
-    }
-
-    /**
-     * @param opacity Percentage opacity of the data pixels
-     * @throws IllegalArgumentException if opacity is out of the range [0,100]
-     */
-    public void setOpacity(int opacity)
-    {
-        if (opacity < 0 || opacity > 100)
-        {
-            throw new IllegalArgumentException("Opacity must be in the range 0 to 100");
-        }
-        this.opacity = opacity;
-    }
-
-    public float getFillValue()
-    {
-        return fillValue;
-    }
-
-    /**
-     * @param fillValue The value to use for missing data
-     */
-    public void setFillValue(float fillValue)
-    {
-        this.fillValue = fillValue;
-    }
-
-    public boolean isTransparent()
-    {
-        return transparent;
-    }
-
-    /**
-     * @param transparent True if the background (missing data) pixels will be transparent
-     */
-    public void setTransparent(boolean transparent)
-    {
-        this.transparent = transparent;
-    }
-
-    public int getBgColor()
-    {
-        return bgColor;
-    }
-
-    /**
-     * @param bgcolor Colour of background pixels if not transparent
-     */
-    public void setBgColor(int bgColor)
-    {
-        this.bgColor = bgColor;
-    }
-    
-    /**
-     * @return the colour palette as an array of 256 * 3 bytes, i.e. 256 colours
-     * in RGB order
-     */
-    protected byte[] getRGBPalette()
-    {
-        Color[] colors = this.getColorPalette();
-        byte[] palette = new byte[colors.length * 3];
-        
-        for (int i = 0; i < colors.length; i++)
-        {
-            palette[3*i]   = (byte)colors[i].getRed();
-            palette[3*i+1] = (byte)colors[i].getGreen();
-            palette[3*i+2] = (byte)colors[i].getBlue();
-        }
-        
-        return palette;
-    }
-    
-    /**
-     * @return a rainbow colour map for this PicMaker's opacity and transparency
-     * @todo To avoid multiplicity of objects, could statically create color models
-     * for opacity=100 and transparency=true/false.
-     */
-    protected IndexColorModel getRainbowColorModel()
-    {
-        // Get 256 colors representing this palette
-        Color[] colors = this.getColorPalette();
-        
-        // Extract to arrays of r, g, b, a
-        byte[] r = new byte[colors.length];
-        byte[] g = new byte[colors.length];
-        byte[] b = new byte[colors.length];
-        byte[] a = new byte[colors.length];        
-        for (int i = 0; i < colors.length; i++)
-        {
-            r[i] = (byte)colors[i].getRed();
-            g[i] = (byte)colors[i].getGreen();
-            b[i] = (byte)colors[i].getBlue();
-            a[i] = (byte)colors[i].getAlpha();
-        }
-        
-        return new IndexColorModel(8, 256, r, g, b, a);
-    }
-    
-    /**
-     * @return Array of 256 RGBA Color objects representing the palette.
-     */
-    protected Color[] getColorPalette()
-    {
-        Color[] colors = new Color[256];
-        
-        // Set the alpha value based on the percentage transparency
-        int alpha;
-        // Here we are playing safe and avoiding rounding errors that might
-        // cause the alpha to be set to zero instead of 255
-        if (this.opacity >= 100)
-        {
-            alpha = 255;
-        }
-        else if (this.opacity <= 0)
-        {
-            alpha = 0;
-        }
-        else
-        {
-            alpha = (int)(2.55 * this.opacity);
-        }
-        
-        // Use the supplied background color
-        Color bg = new Color(this.bgColor);
-        colors[0] = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(),
-            this.transparent ? 0 : alpha);
-        
-        // Colour with index 1 is black (represents out-of-range data)
-        colors[1] = new Color(0, 0, 0, alpha);
-        
-        for (int i = 2; i < colors.length; i++)
-        {
-            // There are 63 colours and 254 remaining slots
-            float index = (i - 2) * (62.0f / 253.0f);
-            if (i == colors.length - 1)
-            {
-                colors[i] = new Color(RED[62], GREEN[62], BLUE[62]);
-            }
-            else
-            {
-                // We merge the colours from adjacent indices
-                float fromUpper = index - (int)index;
-                float fromLower = 1.0f - fromUpper;
-                int r = (int)(fromLower * RED[(int)index] + fromUpper * RED[(int)index + 1]);
-                int g = (int)(fromLower * GREEN[(int)index] + fromUpper * GREEN[(int)index + 1]);
-                int b = (int)(fromLower * BLUE[(int)index] + fromUpper * BLUE[(int)index + 1]);
-                colors[i] = new Color(r, g, b, alpha);
-            }
-        }
-        
-        return colors;
-    }
-    
-    /**
-     * Adjusts the colour scale to accommodate the given frame.
-     */
-    protected void adjustColourScaleForFrame(float[] data)
-    {
-        this.scaleMin = Float.MAX_VALUE;
-        this.scaleMax = -Float.MAX_VALUE;
-        for (int i = 0; i < data.length; i++)
-        {
-            if (data[i] != this.fillValue)
-            {
-                if (data[i] < this.scaleMin)
-                {
-                    this.scaleMin = data[i];
-                }
-                if (data[i] > this.scaleMax)
-                {
-                    this.scaleMax = data[i];
-                }
-            }
-        }
-    }
-    
-    /**
-     * Creates and returns a single frame as an Image, based on the given data.
-     * Adds the label if one has been set.  The scale must be set before
-     * calling this method
-     */
-    protected BufferedImage createFrame(float[] data, String label)
-    {
-        logger.debug("Creating frame with {} pixels and label {}", data.length, label);
-        // Create the pixel array for the frame
-        byte[] pixels = new byte[this.picWidth * this.picHeight];
-        for (int i = 0; i < pixels.length; i++)
-        {
-            pixels[i] = getColourIndex(data[i]);
-        }
-        logger.debug("  ... created pixel array");
-        
-        // Create the Image
-        DataBuffer buf = new DataBufferByte(pixels, pixels.length);
-        SampleModel sampleModel = new SinglePixelPackedSampleModel(
-            DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
-        WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
-        IndexColorModel colorModel = getRainbowColorModel();
-        BufferedImage image = new BufferedImage(colorModel, raster, false, null);
-        logger.debug("  ... created Image");
-        
-        // Add the label to the image
-        if (label != null && !label.equals(""))
-        {
-            logger.debug("  ... adding label");
-            Graphics2D gfx = image.createGraphics();
-            gfx.setColor(new Color(0, 0, 143));
-            gfx.fillRect(1, image.getHeight() - 19, image.getWidth() - 1, 18);
-            gfx.setColor(new Color(255, 151, 0));
-            gfx.drawString(label, 10, image.getHeight() - 5);
-            logger.debug("  ... added label");
-        }
-        logger.debug("  ... returning image");
-        return image;
-    }
-    
-    /**
-     * @return the colour index that corresponds to the given value
-     */
-    private byte getColourIndex(float value)
-    {
-        if (value == this.fillValue)
-        {
-            return 0; // represents a transparent pixel
-        }
-        else if (value < this.scaleMin || value > this.scaleMax)
-        {
-            return 1; // represents an out-of-range pixel
-        }
-        else
-        {
-            return (byte)(((253.0f / (this.scaleMax - this.scaleMin)) * (value - this.scaleMin)) + 2);
-        }
-    }
-
     public VariableMetadata getVar()
     {
         return var;
     }
-
+    
     public void setVar(VariableMetadata var)
     {
         this.var = var;
     }
     
     /**
-     * Adds a new frame to the image.  The scale must be set (with setScaleMin()
-     * and setScaleMax()) before calling this method.
-     * @param data Array of data points
-     * @param bbox Array of four numbers representing the bounding box of the image
-     * @param zValue The elevation value for this frame
-     * @param tValue the time value for this frame in ISO8601 format
-     * @param isAnimation True if this frame is part of an animation
-     * @throws IOException if there was an error creating the frame
-     * @throws Something if a frame already exists and this image type does not
-     * support multiple frames
+     * @return true if this PicMaker needs a legend: if this is true then
+     * AbstractStyle.createLegend() will be called.  This default implementation
+     * returns false: subclasses must override if they want to provide a legend
+     * (e.g. KmzMaker)
      */
-    public abstract void addFrame(float[] data, float[] bbox, String zValue,
-        String tValue, boolean isAnimation) throws IOException;
+    public boolean needsLegend()
+    {
+        return false;
+    }
     
     /**
-     * Encodes and writes the image to the given OutputStream
+     * Encodes and writes the frames to the given OutputStream
+     * @param frames The image frames that will be rendered
+     * @param mimeType The mime type of the image to write
      * @param out The {@link OutputStream} to which the image will be written
      * @throws IOException if there was an error writing the data
      */
-    public abstract void writeImage(OutputStream out) throws IOException;
+    public abstract void writeImage(List<BufferedImage> frames, 
+        String mimeType, OutputStream out) throws IOException;
+
+    public List<String> getTvalues()
+    {
+        return tValues;
+    }
+
+    public void setTvalues(List<String> tValues)
+    {
+        this.tValues = tValues;
+    }
+
+    public String getZvalue()
+    {
+        return zValue;
+    }
+
+    public void setZvalue(String zValue)
+    {
+        this.zValue = zValue;
+    }
+
+    public float[] getBbox()
+    {
+        return bbox;
+    }
+
+    public void setBbox(float[] bbox)
+    {
+        this.bbox = bbox;
+    }
+
+    public BufferedImage getLegend()
+    {
+        return legend;
+    }
+
+    public void setLegend(BufferedImage legend)
+    {
+        this.legend = legend;
+    }
     
 }

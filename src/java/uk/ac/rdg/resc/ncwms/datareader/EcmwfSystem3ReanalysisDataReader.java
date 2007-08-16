@@ -30,7 +30,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.List;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
@@ -56,11 +56,11 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * Corrects problem with reading bounding box in source data (use of latitude
      * values > +/- 90 degrees causes latitude portion of BBOX to be NaN)
      */
-    public Hashtable<String, VariableMetadata> getVariableMetadata()
+    public List<VariableMetadata> getVariableMetadata(String location)
         throws IOException
     {
-        Hashtable<String, VariableMetadata> vars = super.getVariableMetadata();
-        for (VariableMetadata vm : vars.values())
+        List<VariableMetadata> vars = super.getVariableMetadata(location);
+        for (VariableMetadata vm : vars)
         {
             vm.setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
         }
