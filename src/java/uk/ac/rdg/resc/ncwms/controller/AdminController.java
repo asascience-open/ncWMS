@@ -175,6 +175,21 @@ public class AdminController extends MultiActionController
                 }
                 i++;
             }
+            
+            // Set the location of the THREDDS catalog if it has changed
+            String newThreddsCatalogLocation = request.getParameter("thredds.catalog.location");
+            if (!this.config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
+            {
+                this.config.setThreddsCatalogLocation(newThreddsCatalogLocation);
+                // Reload Thredds datasets in a new thread
+                new Thread()
+                {
+                    public void run()
+                    {
+                        config.loadThreddsCatalog();
+                    }
+                }.start();
+            }
 
             // Save the config information to disk
             this.ncwmsContext.saveConfig(this.config);

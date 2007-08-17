@@ -19,7 +19,7 @@
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
          constructor argument. -->
      <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext">
-         <!--<constructor-arg value="/path/to/directory/"/>-->
+         <!--<constructor-arg value="/home/jdb/.ncWMS/"/>-->
      </bean>
           
     <!-- An object that is used to store and read metadata about the variables

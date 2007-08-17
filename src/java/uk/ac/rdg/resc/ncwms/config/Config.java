@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -59,43 +58,53 @@ public class Config
     private static final Logger logger = Logger.getLogger(Config.class);
     
     @Element(name="contact", required=false)
-    private Contact contact;
-    @Element(name="server")
-    private Server server;
-    @ElementList(name="datasets", type=Dataset.class)
-    private List<Dataset> datasetList;
-    @Element(name="threddsCatalog", required=false)
-    private String threddsCatalog;    //location of the Thredds Catalog.xml (if there is one...)
+    private Contact contact = new Contact();
     
-    private Date lastUpdateTime; // Time of the last update to this configuration
-                                 // or any of the contained metadata
+    @Element(name="server")
+    private Server server = new Server();
+    
+    // We don't do "private List<Dataset> datasetList..." here because if we do,
+    // the config file will contain "<datasets class="java.util.ArrayList>",
+    // presumably because the definition doesn't clarify what sort of List should
+    // be used.
+    // This is a temporary store of datasets that are read from the config file.
+    // The real set of all datasets is in the datasets Map.
+    @ElementList(name="datasets", type=Dataset.class)
+    private ArrayList<Dataset> datasetList = new ArrayList<Dataset>();
+    
+    @Element(name="threddsCatalog", required=false)
+    private String threddsCatalogLocation = null;    //location of the Thredds Catalog.xml (if there is one...)
+    // This will store the datasets we have read from the thredds catalog
+    private List<Dataset> threddsDatasets = new ArrayList<Dataset>();
+    
+    private Date lastUpdateTime = new Date(); // Time of the last update to this configuration
+                                              // or any of the contained metadata
     private MetadataStore metadataStore; // Injected by Spring. Gives access to
                                          // metadata
     
     /**
      * This contains the map of dataset IDs to Dataset objects
      */
-    private Map<String, Dataset> datasets;
-    
-    /** Creates a new instance of Config */
-    public Config()
-    {
-        this.datasets = new HashMap<String, Dataset>();
-        this.datasetList = new ArrayList<Dataset>();
-        this.lastUpdateTime = new Date();
-        this.server = new Server();
-        this.contact = new Contact();
-    }
+    private Map<String, Dataset> datasets = new HashMap<String, Dataset>();
     
     /**
      * Checks that the data we have read are valid.  Checks that there are no
      * duplicate dataset IDs.
      */
     @Validate
-    public void validate() throws PersistenceException
+    public void checkDuplicateDatasetIds() throws PersistenceException
     {
         List<String> dsIds = new ArrayList<String>();
         for (Dataset ds : datasetList)
+        {
+            String dsId = ds.getId();
+            if (dsIds.contains(dsId))
+            {
+                throw new PersistenceException("Duplicate dataset id %s", dsId);
+            }
+            dsIds.add(dsId);
+        }
+        for (Dataset ds : threddsDatasets)
         {
             String dsId = ds.getId();
             if (dsIds.contains(dsId))
@@ -108,7 +117,7 @@ public class Config
     
     /**
      * Called when we have checked that the configuration is valid.  Populates
-     * the datasets hashmap
+     * the datasets hashmap and loads the datasets from the THREDDS catalog.
      */
     @Commit
     public void build()
@@ -118,7 +127,7 @@ public class Config
             ds.setConfig(this);
             this.datasets.put(ds.getId(), ds);
         }
-        this.setThreddsCatalog(threddsCatalog); // TODO: is this line necessary?
+        this.loadThreddsCatalog();
     }
     
     public synchronized void setLastUpdateTime(Date date)
@@ -168,17 +177,15 @@ public class Config
         return this.datasets;
     }
     
-    public synchronized void addDataset(Dataset ds)
+    public void addDataset(Dataset ds)
     {
         ds.setConfig(this);
         this.datasets.put(ds.getId(), ds);
-        this.datasetList.add(ds);
     }
     
-    public synchronized void removeDataset(Dataset ds)
+    public void removeDataset(Dataset ds)
     {
         this.datasets.remove(ds.getId());
-        this.datasetList.remove(ds);
     }
     
     /**
@@ -189,33 +196,43 @@ public class Config
         return this.metadataStore;
     }
     
-    public void setThreddsCatalog(String _threddsConfigLocation)
+    public void loadThreddsCatalog()
     {
-        this.threddsCatalog = _threddsConfigLocation;
-        try
+        // First remove the datasets that belonged to the THREDDS catalog.
+        for (Dataset ds : this.threddsDatasets)
         {
-            ThreddsConfig catalog = new ThreddsConfig(_threddsConfigLocation);
-
-            ArrayList<Dataset> tdsDatasets = catalog.getFoundDatasets();
-            
-            System.out.println("tdsDatasets: " + tdsDatasets.size());
-            
-            for(Dataset d: tdsDatasets)
-            {
-                System.out.println("adding dataset: " + d.getTitle() + " id: " + d.getId());
-                addDataset(d);
-            }
+            this.removeDataset(ds);
         }
-        catch(Exception e)
+        if (this.threddsCatalogLocation != null && !this.threddsCatalogLocation.trim().equals(""))
         {
-            logger.debug("Problems loading thredds catalog.  Error: " + e.toString() + " file location: " + _threddsConfigLocation);
-            System.out.println("Problems loading thredds catalog.  Error: " + e.toString() + " file location: " + _threddsConfigLocation);
+            logger.debug("Loading datasets from THREDDS catalog at " + this.threddsCatalogLocation);
+            try
+            {
+                this.threddsDatasets = ThreddsConfig.readThreddsDatasets(this.threddsCatalogLocation);
+
+                logger.debug("Number of thredds Datasets: " + this.threddsDatasets.size());
+
+                for(Dataset d : this.threddsDatasets)
+                {
+                    logger.debug("adding thredds dataset: " + d.getTitle() + " id: " + d.getId());
+                    this.addDataset(d);
+                }
+            }
+            catch(Exception e)
+            {
+                logger.error("Problems loading thredds catalog at " + this.threddsCatalogLocation, e);
+            }
         }
     }
     
-    public String geTthreddsCatalog()
+    public String getThreddsCatalogLocation()
     {
-        return this.threddsCatalog;
+        return this.threddsCatalogLocation;
+    }
+    
+    public void setThreddsCatalogLocation(String threddsCatalogLocation)
+    {
+        this.threddsCatalogLocation = threddsCatalogLocation;
     }
     
     /**

@@ -52,6 +52,10 @@ public class NcwmsContext
      * The name of the config file in the ncWMS working directory
      */
     private static final String CONFIG_FILE_NAME = "config.xml";
+    /**
+     * The name of the log files directory in the working directory
+     */
+    private static final String LOG_FILE_DIR_NAME = "logs";
     
     private File workingDirectory;
     private File configFile; // location of the configuration file
@@ -60,10 +64,18 @@ public class NcwmsContext
      * Creates a context based on the given directory.
      * @param workingDirectory java.io.File representing the working directory
      * @throws Exception if the directory does not exist and cannot be created
+     * @throws IllegalArgumentException if the File does not represent an
+     * absolute path
      */
     public NcwmsContext(File workingDirectory) throws Exception
     {
+        if (!workingDirectory.isAbsolute())
+        {
+            throw new IllegalArgumentException("The working directory must be" +
+                " an absolute path");
+        }
         createDirectory(workingDirectory);
+        createDirectory(new File(workingDirectory, LOG_FILE_DIR_NAME));
         this.workingDirectory = workingDirectory;
         this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
     }
@@ -146,10 +158,10 @@ public class NcwmsContext
         }
         else
         {
-            boolean created = dir.mkdir();
+            boolean created = dir.mkdirs();
             if (!created)
             {
-                throw new Exception("Could not create working directory "
+                throw new Exception("Could not create directory "
                     + dir.getPath());
             }
         }

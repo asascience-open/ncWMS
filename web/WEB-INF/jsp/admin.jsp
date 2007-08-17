@@ -94,7 +94,10 @@
                     <td><input type="text" name="dataset.new${i}.reader" value=""/></td>
                 </tr>
             </c:forEach>
-        </table>        
+        </table>
+        
+        <h2>THREDDS (experimental!)</h2>
+        THREDDS catalog location: <input type="text" name="thredds.catalog.location" value="${config.threddsCatalog}" size="60"/>
         
         <h2>Server metadata</h2>
         <table border="1">
