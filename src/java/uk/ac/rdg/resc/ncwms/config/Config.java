@@ -69,8 +69,9 @@ public class Config
                                  // or any of the contained metadata
     private File configFile;     // Location to which the config information was
                                  // last saved
-    private MetadataStore metadataStore; // Injected by Spring.  Gives access to
+    private MetadataStore metadataStore; // Injected by Spring. Gives access to
                                          // metadata
+    private NcwmsContext ncwmsContext;   // Injected by Spring. Gives path to working directory. 
     
     /**
      * This contains the map of dataset IDs to Dataset objects
@@ -86,27 +87,14 @@ public class Config
         this.server = new Server();
         this.contact = new Contact();
     }
-    
     /**
-     * Reads the config information from the default location
-     * ($HOME/.ncWMS-Spring/config.xml).  If the configuration file
-     * does not exist in the given location it will be created.
-     */
-    public static Config readConfig() throws Exception
-    {
-        String homeDir = System.getProperty("user.home");
-        File ncWmsDir = new File(homeDir, ".ncWMS-Spring");
-        File configFile = new File(ncWmsDir, "config.xml");
-        return readConfig(configFile);
-    }
-    
-    /**
-     * Reads configuration information from disk.  If the configuration file
+     * Reads configuration information from the file config.xml in the working
+     * directory of the context.  If the configuration file
      * does not exist in the given location it will be created.
      * @param configFile The configuration file
      * @throws Exception if there was an error reading the configuration
      */
-    public static Config readConfig(File configFile) throws Exception
+    public static Config readConfig() throws Exception
     {
         Config config;
         if (configFile.exists())
@@ -259,6 +247,14 @@ public class Config
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
+    }
+    
+    /**
+     * Called by Spring to inject the context containing the working directory
+     */
+    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    {
+        this.ncwmsContext = ncwmsContext;
     }
     
 }

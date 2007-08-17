@@ -13,6 +13,14 @@
        xsi:schemaLocation='http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd'>
     
     <!-- Need beans for the tile cache, ?logging framework? -->
+    
+    <!-- An object that stores the context of the ncWMS application.  This contains
+         the location of the application's working directory, which defaults to
+         $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
+         constructor argument. -->
+     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext">
+         <!--<constructor-arg value="/path/to/directory/"/>-->
+     </bean>
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. -->
@@ -22,8 +30,8 @@
          This object is created via Config.readConfig(), a static factory method.
          If a configuration file does not already exist in the default location
          ($HOME/.ncwms/config.xml) it will be created. -->
-     <bean id="ncwmsConfig" class="uk.ac.rdg.resc.ncwms.config.Config"
-           factory-method="readConfig">
+     <bean id="ncwmsConfig" class="uk.ac.rdg.resc.ncwms.config.Config" factory-method="readConfig">
+         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
          <property name="metadataStore"><ref local="metadataStore"/></property>
      </bean>
     
