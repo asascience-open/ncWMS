@@ -42,7 +42,7 @@ import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
- * Stores the metadata for a {@link GeoGrid}: saves reading in the metadata every
+ * Stores the metadata for a layer: saves reading in the metadata every
  * time the dataset is opened (a significant performance hit especially for
  * large NcML aggregations.
  *

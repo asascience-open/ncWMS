@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.File;
 import org.apache.log4j.Logger;
 import simple.xml.load.Persister;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Contains information about the context of the ncWMS application, in particular
@@ -74,8 +75,8 @@ public class NcwmsContext
             throw new IllegalArgumentException("The working directory must be" +
                 " an absolute path");
         }
-        createDirectory(workingDirectory);
-        createDirectory(new File(workingDirectory, LOG_FILE_DIR_NAME));
+        WmsUtils.createDirectory(workingDirectory);
+        WmsUtils.createDirectory(new File(workingDirectory, LOG_FILE_DIR_NAME));
         this.workingDirectory = workingDirectory;
         this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
     }
@@ -97,6 +98,7 @@ public class NcwmsContext
     {
         return this.workingDirectory;
     }
+    
     /**
      * Reads configuration information from the file config.xml in the working
      * directory.  If the configuration file does not exist in the given location
@@ -123,9 +125,8 @@ public class NcwmsContext
     }
     
     /**
-     * Saves configuration information to the disk to the place it was last
-     * saved
-     * @throws Exception if there was an error reading the configuration
+     * Saves configuration information to the disk
+     * @throws Exception if there was an error saving the configuration
      * @throws IllegalStateException if the config file has not previously been
      * saved.
      */
@@ -136,35 +137,6 @@ public class NcwmsContext
             throw new IllegalStateException("No location set for config file");
         }
         new Persister().write(config, this.configFile);
-    }
-    
-    /**
-     * Creates the working directory, throwing an Exception if the working directory
-     * could not be created
-     */
-    private static void createDirectory(File dir) throws Exception
-    {
-        if (dir.exists())
-        {
-            if (dir.isDirectory())
-            {
-                return;
-            }
-            else
-            {
-                throw new Exception(dir.getPath() + 
-                    " already exists but it is a regular file");
-            }
-        }
-        else
-        {
-            boolean created = dir.mkdirs();
-            if (!created)
-            {
-                throw new Exception("Could not create directory "
-                    + dir.getPath());
-            }
-        }
     }
     
 }

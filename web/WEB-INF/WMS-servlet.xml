@@ -24,15 +24,20 @@
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. -->
+    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.BerkeleyDBMetadataStore"
+            init-method="init" destroy-method="close">
+        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+    </bean>-->
+    <!-- Replace with the line below if you want to store the metadata in memory -->
     <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>
     
     <!-- Defines a configuration object that is used to configure this server.
          This object is created by the ncwmsContext object.
          If a configuration file does not already exist in the default location
          ($HOME/.ncwms/config.xml) it will be created. -->
-     <bean id="ncwmsConfig" factory-bean="ncwmsContext" factory-method="loadConfig">
-         <property name="metadataStore"><ref local="metadataStore"/></property>
-     </bean>
+    <bean id="ncwmsConfig" factory-bean="ncwmsContext" factory-method="loadConfig">
+        <property name="metadataStore"><ref local="metadataStore"/></property>
+    </bean>
     
     <!-- An object that is used to create PicMakers. -->
     <bean id="picMakerFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">

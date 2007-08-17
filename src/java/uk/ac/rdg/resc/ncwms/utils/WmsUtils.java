@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.utils;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
 import ucar.nc2.units.DateFormatter;
@@ -340,6 +341,35 @@ public class WmsUtils
             cal.set(Calendar.MINUTE, 0);
             cal.set(Calendar.SECOND, 0);
             cal.set(Calendar.MILLISECOND, 0);
+        }
+    }
+    
+    /**
+     * Creates a directory, throwing an Exception if it could not be created and
+     * it does not already exist.
+     */
+    public static void createDirectory(File dir) throws Exception
+    {
+        if (dir.exists())
+        {
+            if (dir.isDirectory())
+            {
+                return;
+            }
+            else
+            {
+                throw new Exception(dir.getPath() + 
+                    " already exists but it is a regular file");
+            }
+        }
+        else
+        {
+            boolean created = dir.mkdirs();
+            if (!created)
+            {
+                throw new Exception("Could not create directory "
+                    + dir.getPath());
+            }
         }
     }
     
