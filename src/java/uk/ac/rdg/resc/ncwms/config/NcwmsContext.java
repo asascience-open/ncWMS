@@ -29,12 +29,15 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
+import org.apache.log4j.Logger;
+import simple.xml.load.Persister;
 
 /**
  * Contains information about the context of the ncWMS application, in particular
  * the location of the working directory, which will contain the configuration
  * file, metadata store and caches.  The location of this working directory
- * defaults to $HOME/.ncWMS and can be changed using WMS-servlet.xml.
+ * defaults to $HOME/.ncWMS and can be changed using WMS-servlet.xml.  Also
+ * contains methods to save and load the server configuration.
  *
  * @author Jon Blower
  * $Revision$
@@ -43,8 +46,15 @@ import java.io.File;
  */
 public class NcwmsContext
 {
+    private static final Logger logger = Logger.getLogger(NcwmsContext.class);
+    
+    /**
+     * The name of the config file in the ncWMS working directory
+     */
+    private static final String CONFIG_FILE_NAME = "config.xml";
     
     private File workingDirectory;
+    private File configFile; // location of the configuration file
     
     /**
      * Creates a context based on the given directory.
@@ -55,6 +65,7 @@ public class NcwmsContext
     {
         createDirectory(workingDirectory);
         this.workingDirectory = workingDirectory;
+        this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
     }
     
     /**
@@ -73,6 +84,46 @@ public class NcwmsContext
     public File getWorkingDirectory()
     {
         return this.workingDirectory;
+    }
+    /**
+     * Reads configuration information from the file config.xml in the working
+     * directory.  If the configuration file does not exist in the given location
+     * it will be created.
+     * @throws Exception if there was an error reading the configuration
+     */
+    public Config loadConfig() throws Exception
+    {
+        Config config;
+        if (this.configFile.exists())
+        {
+            config = new Persister().read(Config.class, this.configFile);
+            logger.debug("Loaded configuration from {}", configFile.getPath());
+        }
+        else
+        {
+            // We must make a new config file and save it
+            config = new Config();
+            saveConfig(config);
+            logger.debug("Created new configuration object and saved to {}",
+                this.configFile.getPath());
+        }
+        return config;
+    }
+    
+    /**
+     * Saves configuration information to the disk to the place it was last
+     * saved
+     * @throws Exception if there was an error reading the configuration
+     * @throws IllegalStateException if the config file has not previously been
+     * saved.
+     */
+    public void saveConfig(Config config) throws Exception
+    {
+        if (this.configFile == null)
+        {
+            throw new IllegalStateException("No location set for config file");
+        }
+        new Persister().write(config, this.configFile);
     }
     
     /**

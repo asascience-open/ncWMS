@@ -40,8 +40,8 @@ import simple.xml.ElementList;
 import simple.xml.Root;
 import simple.xml.load.Commit;
 import simple.xml.load.PersistenceException;
-import simple.xml.load.Persister;
 import simple.xml.load.Validate;
+import uk.ac.rdg.resc.ncwms.config.thredds.ThreddsConfig;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 
 /**
@@ -64,14 +64,13 @@ public class Config
     private Server server;
     @ElementList(name="datasets", type=Dataset.class)
     private List<Dataset> datasetList;
+    @Element(name="threddsCatalog", required=false)
+    private String threddsCatalog;    //location of the Thredds Catalog.xml (if there is one...)
     
     private Date lastUpdateTime; // Time of the last update to this configuration
                                  // or any of the contained metadata
-    private File configFile;     // Location to which the config information was
-                                 // last saved
     private MetadataStore metadataStore; // Injected by Spring. Gives access to
                                          // metadata
-    private NcwmsContext ncwmsContext;   // Injected by Spring. Gives path to working directory. 
     
     /**
      * This contains the map of dataset IDs to Dataset objects
@@ -86,48 +85,6 @@ public class Config
         this.lastUpdateTime = new Date();
         this.server = new Server();
         this.contact = new Contact();
-    }
-    /**
-     * Reads configuration information from the file config.xml in the working
-     * directory of the context.  If the configuration file
-     * does not exist in the given location it will be created.
-     * @param configFile The configuration file
-     * @throws Exception if there was an error reading the configuration
-     */
-    public static Config readConfig() throws Exception
-    {
-        Config config;
-        if (configFile.exists())
-        {
-            config = new Persister().read(Config.class, configFile);
-            logger.debug("Loaded configuration from {}", configFile.getPath());
-        }
-        else
-        {
-            // We must make a new config file and save it
-            config = new Config();
-            config.saveConfig();
-            logger.debug("Created new configuration object and saved to {}",
-                configFile.getPath());
-        }
-        config.setConfigFile(configFile);
-        return config;
-    }
-    
-    /**
-     * Saves configuration information to the disk to the place it was last
-     * saved
-     * @throws Exception if there was an error reading the configuration
-     * @throws IllegalStateException if the config file has not previously been
-     * saved.
-     */
-    public void saveConfig() throws Exception
-    {
-        if (this.configFile == null)
-        {
-            throw new IllegalStateException("No location set for config file");
-        }
-        new Persister().write(this, this.configFile);
     }
     
     /**
@@ -161,6 +118,7 @@ public class Config
             ds.setConfig(this);
             this.datasets.put(ds.getId(), ds);
         }
+        this.setThreddsCatalog(threddsCatalog); // TODO: is this line necessary?
     }
     
     public synchronized void setLastUpdateTime(Date date)
@@ -204,16 +162,6 @@ public class Config
     {
         this.contact = contact;
     }
-
-    public File getConfigFile()
-    {
-        return configFile;
-    }
-
-    public void setConfigFile(File configFile)
-    {
-        this.configFile = configFile;
-    }
     
     public Map<String, Dataset> getDatasets()
     {
@@ -241,20 +189,41 @@ public class Config
         return this.metadataStore;
     }
     
+    public void setThreddsCatalog(String _threddsConfigLocation)
+    {
+        this.threddsCatalog = _threddsConfigLocation;
+        try
+        {
+            ThreddsConfig catalog = new ThreddsConfig(_threddsConfigLocation);
+
+            ArrayList<Dataset> tdsDatasets = catalog.getFoundDatasets();
+            
+            System.out.println("tdsDatasets: " + tdsDatasets.size());
+            
+            for(Dataset d: tdsDatasets)
+            {
+                System.out.println("adding dataset: " + d.getTitle() + " id: " + d.getId());
+                addDataset(d);
+            }
+        }
+        catch(Exception e)
+        {
+            logger.debug("Problems loading thredds catalog.  Error: " + e.toString() + " file location: " + _threddsConfigLocation);
+            System.out.println("Problems loading thredds catalog.  Error: " + e.toString() + " file location: " + _threddsConfigLocation);
+        }
+    }
+    
+    public String geTthreddsCatalog()
+    {
+        return this.threddsCatalog;
+    }
+    
     /**
      * Called by Spring to inject the metadata store
      */
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
-    }
-    
-    /**
-     * Called by Spring to inject the context containing the working directory
-     */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
-    {
-        this.ncwmsContext = ncwmsContext;
     }
     
 }

@@ -27,11 +27,10 @@
     <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>
     
     <!-- Defines a configuration object that is used to configure this server.
-         This object is created via Config.readConfig(), a static factory method.
+         This object is created by the ncwmsContext object.
          If a configuration file does not already exist in the default location
          ($HOME/.ncwms/config.xml) it will be created. -->
-     <bean id="ncwmsConfig" class="uk.ac.rdg.resc.ncwms.config.Config" factory-method="readConfig">
-         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+     <bean id="ncwmsConfig" factory-bean="ncwmsContext" factory-method="loadConfig">
          <property name="metadataStore"><ref local="metadataStore"/></property>
      </bean>
     
@@ -119,6 +118,7 @@
     <bean id="adminController" class="uk.ac.rdg.resc.ncwms.controller.AdminController">
         <property name="supportedMethods" value="GET,POST"/>
         <property name="config"><ref local="ncwmsConfig"/></property>
+        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
     </bean>

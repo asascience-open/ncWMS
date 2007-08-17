@@ -37,6 +37,7 @@ import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Contact;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.config.Server;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
 
@@ -53,6 +54,7 @@ public class AdminController extends MultiActionController
     // These will be injected by Spring
     private Config config;
     private MetadataLoader metadataLoader;
+    private NcwmsContext ncwmsContext; // Gives method to save config information 
     
     /**
      * Displays the administrative web page
@@ -174,8 +176,8 @@ public class AdminController extends MultiActionController
                 i++;
             }
 
-            // Save the config information
-            this.config.saveConfig();
+            // Save the config information to disk
+            this.ncwmsContext.saveConfig(this.config);
         }
         
         // This causes a client-side redirect, meaning that the user can safely
@@ -197,6 +199,15 @@ public class AdminController extends MultiActionController
     public void setMetadataLoader(MetadataLoader metadataLoader)
     {
         this.metadataLoader = metadataLoader;
+    }
+    
+    /**
+     * Called by Spring to inject the context containing method to save the
+     * configuration information
+     */
+    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    {
+        this.ncwmsContext = ncwmsContext;
     }
     
 }
