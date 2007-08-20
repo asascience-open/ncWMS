@@ -31,7 +31,6 @@ package uk.ac.rdg.resc.ncwms.metadata;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 
 /**
@@ -46,73 +45,73 @@ import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 public class InMemoryMetadataStore implements MetadataStore
 {
     /**
-     * Maps dataset IDs to maps of variable IDs to VariableMetadata objects
+     * Maps dataset IDs to maps of variable IDs to Layer objects
      */
-    private Map<String, Map<String, VariableMetadata>> vars =
-        new HashMap<String, Map<String, VariableMetadata>>();
+    private Map<String, Map<String, Layer>> layers =
+        new HashMap<String, Map<String, Layer>>();
     
     /**
-     * Gets a VariableMetadata object based on its unique layer name
+     * Gets a Layer object based on its unique id
      * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The VariableMetadata object corresponding with this ID, or null
+     * @return The Layer object corresponding with this ID, or null
      * if there is no object with this ID
      * @throws LayerNotDefinedException if the layer does not exist.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public synchronized VariableMetadata getVariableByLayerName(String layerName)
+    public synchronized Layer getLayerById(String layerId)
         throws LayerNotDefinedException, Exception
     {
         // NOTE!! The logic of this method must match up with
-        // VariableMetadata.getLayerName()!
-        String[] dsAndVarIds = layerName.split("/");
+        // Layer.getLayerName()!
+        String[] dsAndVarIds = layerId.split("/");
         if (dsAndVarIds.length != 2)
         {
-            throw new LayerNotDefinedException(layerName);
+            throw new LayerNotDefinedException(layerId);
         }
-        Map<String, VariableMetadata> varsInDataset = this.vars.get(dsAndVarIds[0]);
-        if (varsInDataset == null)
+        Map<String, Layer> layersInDataset = this.layers.get(dsAndVarIds[0]);
+        if (layersInDataset == null)
         {
-            throw new LayerNotDefinedException(layerName);
+            throw new LayerNotDefinedException(layerId);
         }
-        VariableMetadata var = varsInDataset.get(dsAndVarIds[1]);
-        if (var == null)
+        Layer layer = layersInDataset.get(dsAndVarIds[1]);
+        if (layer == null)
         {
-            throw new LayerNotDefinedException(layerName);
+            throw new LayerNotDefinedException(layerId);
         }
-        return var;
+        return layer;
     }
     
     /**
-     * Gets all the variables that belong to a dataset
+     * Gets all the Layers that belong to a dataset
      * @param datasetId The unique ID of the dataset, as defined in the config
      * file
-     * @return a Collection of VariableMetadata objects that belong to this dataset
+     * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public synchronized Collection<VariableMetadata> getVariablesInDataset(String datasetId)
+    public synchronized Collection<Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
         // TODO: handle case where datasetId is not a valid key
-        return this.vars.get(datasetId).values();
+        return this.layers.get(datasetId).values();
     }
     
     /**
-     * Adds or updates a VariableMetadata object
-     * @param vm The VariableMetadata object to add or update.  This object must
+     * Adds or updates a Layer object
+     * @param Layer The Layer object to add or update.  This object must
      * have all of its fields (including its ID and the Dataset ID) set before
      * calling this method.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public synchronized void addOrUpdateVariable(VariableMetadata vm) throws Exception
+    public synchronized void addOrUpdateLayer(Layer layer) throws Exception
     {
-        String datasetId = vm.getDataset().getId();
-        Map<String, VariableMetadata> varsInDataset = vars.get(datasetId);
-        if (varsInDataset == null)
+        String datasetId = layer.getDataset().getId();
+        Map<String, Layer> layersInDataset = this.layers.get(datasetId);
+        if (layersInDataset == null)
         {
-            varsInDataset = new HashMap<String, VariableMetadata>();
-            vars.put(datasetId, varsInDataset);
+            layersInDataset = new HashMap<String, Layer>();
+            this.layers.put(datasetId, layersInDataset);
         }
-        varsInDataset.put(vm.getId(), vm);
+        layersInDataset.put(layer.getId(), layer);
     }
     
 }

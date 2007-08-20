@@ -31,10 +31,9 @@ package uk.ac.rdg.resc.ncwms.graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Abstract superclass of picture makers.  Subclasses must have a no-argument
@@ -50,22 +49,22 @@ public abstract class PicMaker
 {
     private static final Logger logger = Logger.getLogger(PicMaker.class);
     
-    // The variable metadata from which this picture was created
-    protected VariableMetadata var;
+    // The layer from which this picture was created
+    protected Layer layer;
     
     protected List<String> tValues; // List of time values, one for each frame
     protected String zValue;
     protected float[] bbox;
     protected BufferedImage legend; // If we need a legend, it will be stored here 
     
-    public VariableMetadata getVar()
+    public Layer getLayer()
     {
-        return var;
+        return this.layer;
     }
     
-    public void setVar(VariableMetadata var)
+    public void setLayer(Layer layer)
     {
-        this.var = var;
+        this.layer = layer;
     }
     
     /**

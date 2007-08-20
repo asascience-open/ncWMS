@@ -78,10 +78,10 @@ public class KmzMaker extends PicMaker
                 kml.append("<kml xmlns=\"http://earth.google.com/kml/2.0\">");
                 kml.append("<Folder>");
                 kml.append("<visibility>1</visibility>");
-                kml.append("<name>" + this.var.getDataset().getId() + ", " +
-                    this.var.getId() + "</name>");
-                kml.append("<description>" + this.var.getDataset().getTitle() + ", "
-                    + this.var.getTitle() + ": " + this.var.getAbstract() +
+                kml.append("<name>" + this.layer.getDataset().getId() + ", " +
+                    this.layer.getId() + "</name>");
+                kml.append("<description>" + this.layer.getDataset().getTitle() + ", "
+                    + this.layer.getTitle() + ": " + this.layer.getAbstract() +
                     "</description>");
 
                 // Add the screen overlay containing the colour scale
@@ -107,11 +107,11 @@ public class KmzMaker extends PicMaker
                 timestamp = WmsUtils.millisecondsToISO8601(millisecondsSinceEpoch);
                 kml.append("<TimeStamp><when>" + timestamp + "</when></TimeStamp>");
             }
-            if (this.zValue != null && !this.zValue.equals("") && this.var.getZvalues() != null)
+            if (this.zValue != null && !this.zValue.equals("") && this.layer.getZvalues() != null)
             {
                 z = "";
                 if (timestamp != null) z += "<br />";
-                z += "Elevation: " + this.zValue + " " + this.var.getZunits();
+                z += "Elevation: " + this.zValue + " " + this.layer.getZunits();
             }
             kml.append("<name>");
             if (timestamp == null && z == null)
@@ -154,8 +154,8 @@ public class KmzMaker extends PicMaker
         
         // Write the KML file: todo get filename properly
         logger.debug("Writing KML file to KMZ file");
-        ZipEntry kmlEntry = new ZipEntry(this.var.getDataset().getId() + "_" +
-            this.var.getId() + ".kml");
+        ZipEntry kmlEntry = new ZipEntry(this.layer.getDataset().getId() + "_" +
+            this.layer.getId() + ".kml");
         kmlEntry.setTime(System.currentTimeMillis());
         zipOut.putNextEntry(kmlEntry);
         zipOut.write(kml.toString().getBytes());

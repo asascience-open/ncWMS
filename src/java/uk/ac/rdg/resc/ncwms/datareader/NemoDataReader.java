@@ -38,13 +38,15 @@ import java.util.List;
 import java.util.Vector;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
-import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * Description of NemoDataReader
@@ -66,14 +68,14 @@ public class NemoDataReader extends DefaultDataReader
      * by Float.NaN.
      * 
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, VariableMetadata vm,
+    public float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception
     {
@@ -94,8 +96,8 @@ public class NemoDataReader extends DefaultDataReader
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, Float.NaN);
 
-            EnhancedCoordAxis xAxis = vm.getXaxis();
-            EnhancedCoordAxis yAxis = vm.getYaxis();
+            EnhancedCoordAxis xAxis = layer.getXaxis();
+            EnhancedCoordAxis yAxis = layer.getYaxis();
       
             // Maps y indices to scanlines
             Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
@@ -133,7 +135,7 @@ public class NemoDataReader extends DefaultDataReader
 
             // Now build the picture array
             nc = getDataset(filename);
-            Variable var = nc.findVariable(vm.getId());
+            Variable var = nc.findVariable(layer.getId());
             
             float scaleFactor = 1.0f;
             float addOffset = 0.0f;
@@ -197,7 +199,7 @@ public class NemoDataReader extends DefaultDataReader
                         if (val != missingValue)
                         {
                             float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= vm.getValidMin() && realVal <= vm.getValidMax())
+                            if (realVal >= layer.getValidMin() && realVal <= layer.getValidMax())
                             {
                                 picData[p] = realVal;
                             }
@@ -277,13 +279,13 @@ public class NemoDataReader extends DefaultDataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<VariableMetadata> getVariableMetadata(String filename)
+    protected List<Layer> getLayers(String filename)
         throws IOException
     {
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
+        List<Layer> layers = new ArrayList<Layer>();
         NetcdfDataset nc = null;
         
         try
@@ -325,22 +327,22 @@ public class NemoDataReader extends DefaultDataReader
                 if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
                     && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))
                 {
-                    VariableMetadata vm = new VariableMetadata();
-                    vm.setId(var.getName());
+                    LayerImpl layer = new LayerImpl();
+                    layer.setId(var.getName());
                     //vm.setTitle(getStandardName(var));
-                    //vm.setAbstract(var.getDescription());
-                    vm.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
-                    vm.setUnits(var.getUnitsString());
-                    vm.setZpositive(false);
+                    layer.setAbstract(var.getDescription());
+                    layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
+                    layer.setUnits(var.getUnitsString());
+                    layer.setZpositive(false);
                     // TODO: check for the presence of a z axis in a neater way
                     if (var.getRank() == 4)
                     {
-                        vm.setZvalues(zVals);
-                        vm.setZunits(zUnits);
+                        layer.setZvalues(zVals);
+                        layer.setZunits(zUnits);
                     }
                     // TODO: should check these values exist
-                    vm.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
-                    vm.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
+                    layer.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
+                    layer.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
                     
                     // Create the coordinate axes
                     if (nc.findGlobalAttributeIgnoreCase("resolution") == null)
@@ -350,27 +352,26 @@ public class NemoDataReader extends DefaultDataReader
                     String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
                     if (res.equals("one_degree"))
                     {
-                        vm.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat"));
-                        vm.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat"));
+                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat"));
+                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat"));
                     }
                     else
                     {
-                        vm.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat"));
-                        vm.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat"));
+                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat"));
+                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat"));
                     }
                     
                     // Set the time axis
                     for (int i = 0; i < ftVals.length; i++)
                     {
                         Date timestep = dateUnit.makeDate(ftVals[i]);
-                        vm.addTimestepInfo(new VariableMetadata.TimestepInfo(
-                            timestep, filename, i));
+                        layer.addTimestepInfo(new TimestepInfo(timestep, filename, i));
                     }
 
-                    vars.add(vm);
+                    layers.add(layer);
                 }
             }
-            return vars;
+            return layers;
         }
         finally
         {

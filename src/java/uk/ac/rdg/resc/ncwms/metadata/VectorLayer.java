@@ -28,47 +28,19 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import java.util.Collection;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import java.util.List;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.datareader.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
+import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 
 /**
- * Interface describing a persistent store of metadata
- *
- * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * A displayable Layer that is made up of two vector components (e.g. northward
+ * and eastward velocities).
+ * @author Jon
  */
-public interface MetadataStore
+public interface VectorLayer extends Layer
 {
-    /**
-     * Gets a Layer object based on its unique id
-     * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The Layer object corresponding with this ID, or null
-     * if there is no object with this ID
-     * @throws LayerNotDefinedException if the layer does not exist.
-     * @throws Exception if an error occurs reading from the persistent store
-     */
-    public Layer getLayerById(String layerId)
-        throws LayerNotDefinedException, Exception;
-    
-    /**
-     * Gets all the Layers that belong to a dataset
-     * @param datasetId The unique ID of the dataset, as defined in the config
-     * file
-     * @return a Collection of Layer objects that belong to this dataset
-     * @throws Exception if an error occurs reading from the persistent store
-     */
-    public Collection<Layer> getLayersInDataset(String datasetId)
-        throws Exception;
-    
-    /**
-     * Adds or updates a Layer object
-     * @param Layer The Layer object to add or update.  This object must
-     * have all of its fields (including its ID and the Dataset ID) set before
-     * calling this method.
-     * @throws Exception if an error occurs writing to the persistent store
-     */
-    public void addOrUpdateLayer(Layer layer) throws Exception;
-    
+    public Layer getEastwardComponent();
+    public Layer getNorthwardComponent();
 }

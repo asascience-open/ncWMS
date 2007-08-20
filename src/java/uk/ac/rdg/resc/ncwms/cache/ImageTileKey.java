@@ -46,7 +46,7 @@ public class ImageTileKey
     private int width;           // Width of tile in pixels
     private int height;          // Height of tile in pixels
     private double time;         // value of time for this tile (s since epoch),
-                                 // mirroring VariableMetadata
+                                 // mirroring Layer (TODO: change to long!!)
                                  // TODO: watch out - overwriting of new data for a given
                                  // time (e.g. analysis replacing a forecast).  Should
                                  // we clear the cache when reloading metadata?

@@ -39,7 +39,6 @@ import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 
 /**
  * Class that handles the periodic reloading of metadata (manages calls to
@@ -141,14 +140,15 @@ public class MetadataLoader
             logger.debug("Getting data reader of type {}", ds.getDataReaderClass());
             DataReader dr = DataReader.getDataReader(ds.getDataReaderClass(), ds.getLocation());
             // Read the metadata
-            Map<String, VariableMetadata> vars = dr.getAllVariableMetadata(ds.getLocation());
-            logger.debug("loaded VariableMetadata");
+            Map<String, Layer> layers = dr.getAllLayers(ds.getLocation());
+            logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
-            findVectorQuantities(vars);
-            for (VariableMetadata vm : vars.values())
+            findVectorQuantities(layers);
+            for (Layer layer : layers.values())
             {
-                vm.setDataset(ds);
-                metadataStore.addOrUpdateVariable(vm);
+                // Must convert to mutable layer before altering
+                ((LayerImpl)layer).setDataset(ds);
+                metadataStore.addOrUpdateLayer(layer);
             }
             ds.setState(State.READY);
             Date lastUpdate = new Date();
@@ -166,98 +166,98 @@ public class MetadataLoader
     }
     
     /**
-     * Searches through the collection of VariableMetadata objects, looking for
+     * Searches through the collection of Layer objects, looking for
      * pairs of quantities that represent the components of a vector, e.g.
      * northward/eastward_sea_water_velocity.  Modifies the given Hashtable
      * in-place.
      * @todo Only works for northward/eastward and x/y components so far
      */
-    private static void findVectorQuantities(Map<String, VariableMetadata> vars)
+    private static void findVectorQuantities(Map<String, Layer> layers)
     {
         // This hashtable will store pairs of components in eastward-northward
         // order, keyed by the standard name for the vector quantity
-        Map<String, VariableMetadata[]> components = new HashMap<String, VariableMetadata[]>();
-        for (VariableMetadata vm : vars.values())
+        Map<String, Layer[]> components = new HashMap<String, Layer[]>();
+        for (Layer layer : layers.values())
         {
-            if (vm.getTitle().contains("eastward"))
+            if (layer.getTitle().contains("eastward"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("eastward_", "");
+                String vectorKey = layer.getTitle().replaceFirst("eastward_", "");
                 // Look to see if we've already found the northward component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the northward component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[0] = vm;
+                components.get(vectorKey)[0] = layer;
             }
-            else if (vm.getTitle().contains("northward"))
+            else if (layer.getTitle().contains("northward"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("northward_", "");
+                String vectorKey = layer.getTitle().replaceFirst("northward_", "");
                 // Look to see if we've already found the eastward component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the eastward component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[1] = vm;
+                components.get(vectorKey)[1] = layer;
             }
-            else if (vm.getTitle().contains("_x_"))
+            else if (layer.getTitle().contains("_x_"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("_x_", "_");
+                String vectorKey = layer.getTitle().replaceFirst("_x_", "_");
                 // Look to see if we've already found the y component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the y component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[0] = vm;
+                components.get(vectorKey)[0] = layer;
             }
-            else if (vm.getTitle().contains("_y_"))
+            else if (layer.getTitle().contains("_y_"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("_y_", "_");
+                String vectorKey = layer.getTitle().replaceFirst("_y_", "_");
                 // Look to see if we've already found the x component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the x component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[1] = vm;
+                components.get(vectorKey)[1] = layer;
             }
-            else if (vm.getTitle().startsWith("x_"))
+            else if (layer.getTitle().startsWith("x_"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("x_", "");
+                String vectorKey = layer.getTitle().replaceFirst("x_", "");
                 // Look to see if we've already found the y component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the y component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[0] = vm;
+                components.get(vectorKey)[0] = layer;
             }
-            else if (vm.getTitle().startsWith("y_"))
+            else if (layer.getTitle().startsWith("y_"))
             {
-                String vectorKey = vm.getTitle().replaceFirst("y_", "");
+                String vectorKey = layer.getTitle().replaceFirst("y_", "");
                 // Look to see if we've already found the x component
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the x component yet
-                    components.put(vectorKey, new VariableMetadata[2]);
+                    components.put(vectorKey, new Layer[2]);
                 }
-                components.get(vectorKey)[1] = vm;
+                components.get(vectorKey)[1] = layer;
             }
         }
         
-        // Now add the vector quantities to the collection of VariableMetadata objects
+        // Now add the vector quantities to the collection of Layer objects
         for (String key : components.keySet())
         {
-            VariableMetadata[] comps = components.get(key);
+            Layer[] comps = components.get(key);
             if (comps[0] != null && comps[1] != null)
             {
-                // We've found both components.  Create a new VariableMetadata object
-                VariableMetadata vec = new VariableMetadata(key, comps[0], comps[1]);
+                // We've found both components.  Create a new Layer object
+                LayerImpl vec = new VectorLayerImpl(key, comps[0], comps[1]);
                 // Use the title as the unique ID for this variable
                 vec.setId(key);
-                vars.put(key, vec);
+                layers.put(key, vec);
             }
         }
     }

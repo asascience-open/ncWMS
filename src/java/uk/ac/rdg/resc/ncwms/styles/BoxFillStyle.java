@@ -42,8 +42,8 @@ import java.awt.image.WritableRaster;
 import java.text.DecimalFormat;
 import java.util.List;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Renders an image using a boxfill style (i.e. solid regions of colour)
@@ -342,10 +342,10 @@ public class BoxFillStyle extends AbstractStyle
     /**
      * Creates and returns a BufferedImage representing the legend for this 
      * Style instance
-     * @param var The VariableMetadata object for which this legend is being 
+     * @param layer The Layer object for which this legend is being 
      * created (needed for title and units strings)
      */
-    public BufferedImage createLegend(VariableMetadata var)
+    public BufferedImage createLegend(Layer layer)
     {
         BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();
@@ -380,10 +380,10 @@ public class BoxFillStyle extends AbstractStyle
         rot.setToRotation(Math.PI / 2.0);
         trans.concatenate(rot);
         gfx.setTransform(trans);
-        String title = var.getTitle();
-        if (var.getUnits() != null)
+        String title = layer.getTitle();
+        if (layer.getUnits() != null)
         {
-            title += " (" + var.getUnits() + ")";
+            title += " (" + layer.getUnits() + ")";
         }
         gfx.drawString(title, 5, 0);
         

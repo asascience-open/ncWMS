@@ -37,9 +37,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -177,17 +177,16 @@ public class MetadataController
     public ModelAndView showVariableDetails(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        VariableMetadata var = this.getVariable(request);
-        return new ModelAndView("showVariableDetails", "variable", var);
+        Layer layer = this.getLayer(request);
+        return new ModelAndView("showVariableDetails", "layer", layer);
     }
     
     /**
-     * @return the Variable that the user is requesting, throwing an
+     * @return the Layer that the user is requesting, throwing an
      * Exception if it doesn't exist or if there was a problem reading from the
      * data store.
      */
-    private VariableMetadata getVariable(HttpServletRequest request)
-        throws Exception
+    private Layer getLayer(HttpServletRequest request) throws Exception
     {
         Dataset ds = this.getDataset(request);
         String varId = request.getParameter("variable");
@@ -195,15 +194,14 @@ public class MetadataController
         {
             throw new Exception("Must provide a value for the variable parameter");
         }
-        // This logic for constructing the layer name must match up with VariableMetadata.getLayerName()!
-        VariableMetadata var =
-            this.metadataStore.getVariableByLayerName(ds.getId() + "/" + varId);
-        if (var == null)
+        // This logic for constructing the layer name must match up with Layer.getLayerName()!
+        Layer layer = this.metadataStore.getLayerById(ds.getId() + "/" + varId);
+        if (layer == null)
         {
             throw new Exception("There is no variable with id " + varId
                 + " in the dataset " + ds.getId());
         }
-        return var;
+        return layer;
     }
     
     /**
@@ -215,7 +213,7 @@ public class MetadataController
     public ModelAndView showCalendar(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        VariableMetadata vm = getVariable(request);
+        Layer layer = getLayer(request);
         String focusTimeIso = request.getParameter("dateTime");
         if (focusTimeIso == null)
         {
@@ -226,7 +224,7 @@ public class MetadataController
         long focusTime = WmsUtils.iso8601ToMilliseconds(focusTimeIso);
         
         // Get the array of time axis values (in milliseconds since the epoch)
-        long[] tVals = vm.getTvalues();
+        long[] tVals = layer.getTvalues();
         if (tVals.length == 0) return null; // return no data if no time axis present
         
         // Find the closest time step to the focus time
@@ -252,7 +250,7 @@ public class MetadataController
         
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("nearestIndex", nearestIndex);
-        models.put("variable", vm);
+        models.put("layer", layer);
         return new ModelAndView("showCalendar", models);
     }
     
@@ -263,7 +261,7 @@ public class MetadataController
     public ModelAndView showTimesteps(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        VariableMetadata vm = getVariable(request);
+        Layer layer = getLayer(request);
         String tIndexStr = request.getParameter("tIndex");
         if (tIndexStr == null)
         {
@@ -279,7 +277,7 @@ public class MetadataController
             throw new WmsException("The value of the tIndex parameter must be a valid integer");
         }
         // Get the array of time axis values (in milliseconds since the epoch)
-        long[] tVals = vm.getTvalues();
+        long[] tVals = layer.getTvalues();
         if (tVals.length == 0) return null; // return no data if no time axis present
         
         // List of times (in milliseconds since the epoch) that fall on this day
@@ -318,19 +316,19 @@ public class MetadataController
         // TODO: some of the code below is repetitive of WmsController: refactor?
         
         // Get the variable we're interested in
-        VariableMetadata var = this.metadataStore.getVariableByLayerName(dataRequest.getLayers()[0]);
+        Layer layer = this.metadataStore.getLayerById(dataRequest.getLayers()[0]);
         
         // Get the grid onto which the data is being projected
         AbstractGrid grid = WmsController.getGrid(dataRequest, this.gridFactory);
         
         // Get the index along the z axis
-        int zIndex = WmsController.getZIndex(dataRequest.getElevationString(), var); // -1 if no z axis present
+        int zIndex = WmsController.getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
         
         // Get the information about the requested timestep (taking the first only)
-        int tIndex = WmsController.getTIndices(dataRequest.getTimeString(), var).get(0);
+        int tIndex = WmsController.getTIndices(dataRequest.getTimeString(), layer).get(0);
         
         // Now read the data
-        List<float[]> picData = WmsController.readData(var, tIndex, zIndex, grid);
+        List<float[]> picData = WmsController.readData(layer, tIndex, zIndex, grid);
 
         // Now find the minimum and maximum values: for a vector this is the magnitude
         boolean allFillValue = true;

@@ -37,6 +37,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * Abstract superclass for classes that read data and metadata from NetCDF datasets.
@@ -101,25 +104,25 @@ public abstract class DataReader
      * by Float.NaN.
      * 
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public abstract float[] read(String filename, VariableMetadata vm,
+    public abstract float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception;
     
     /**
-     * Reads and returns the metadata for all the variables in the dataset
+     * Reads and returns the metadata for all the layers (i.e. variables) in the dataset
      * at the given location, which may be a glob aggregation (e.g. "/path/to/*.nc").
      * @param location Full path to the dataset, may be a glob aggregation
-     * @return Map of variable IDs mapped to {@link VariableMetadata} objects
+     * @return Map of layer IDs mapped to {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    public Map<String, VariableMetadata> getAllVariableMetadata(String location)
+    public Map<String, Layer> getAllLayers(String location)
         throws IOException
     {
         // A list of names of files resulting from glob expansion
@@ -157,43 +160,44 @@ public abstract class DataReader
             }
         }
         // Now extract the data for each individual file
-        Map<String, VariableMetadata> aggVars = new HashMap<String, VariableMetadata>();
+        Map<String, Layer> aggLayers = new HashMap<String, Layer>();
         for (String filename : filenames)
         {
             // Read the metadata from the file and add them to the aggregation
-            for (VariableMetadata newVar : this.getVariableMetadata(filename))
+            for (Layer newLayer : this.getLayers(filename))
             {
-                // Look to see if this variable is already present in the aggregation
-                VariableMetadata existingVar = aggVars.get(newVar.getId());
-                if (existingVar == null)
+                // Look to see if this layer is already present in the aggregation
+                Layer existingLayer = aggLayers.get(newLayer.getId());
+                if (existingLayer == null)
                 {
                     // We haven't seen this variable before: just add it to the aggregation
-                    aggVars.put(newVar.getId(), newVar);
+                    aggLayers.put(newLayer.getId(), newLayer);
                 }
                 else
                 {
                     // We've already seen this variable: just update the timesteps
                     // TODO: check that the rest of the metadata matches
-                    for (VariableMetadata.TimestepInfo tInfo : newVar.getTimesteps())
+                    for (TimestepInfo tInfo : newLayer.getTimesteps())
                     {
-                        existingVar.addTimestepInfo(tInfo);
+                        // Must convert to a mutable layer before adding info
+                        ((LayerImpl)existingLayer).addTimestepInfo(tInfo);
                     }
                 }
             }
         }
-        return aggVars;
+        return aggLayers;
     }
     
     /**
-     * Reads and returns the metadata for all the variables in the dataset
+     * Reads and returns the metadata for all the layers in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected abstract List<VariableMetadata> getVariableMetadata(String filename)
+    protected abstract List<Layer> getLayers(String filename)
         throws IOException;
     
     private static boolean isOpendapLocation(String location)

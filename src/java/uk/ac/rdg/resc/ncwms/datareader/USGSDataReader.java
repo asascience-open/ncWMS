@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Vector;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
-import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.CoordinateAxis1D;
@@ -50,6 +49,9 @@ import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for Rich Signell's example data
@@ -71,14 +73,14 @@ public class USGSDataReader extends DefaultDataReader
      * by Float.NaN.
      *
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, VariableMetadata vm,
+    public float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception
     {
@@ -98,8 +100,8 @@ public class USGSDataReader extends DefaultDataReader
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, Float.NaN);
             
-            EnhancedCoordAxis xAxis = vm.getXaxis();
-            EnhancedCoordAxis yAxis = vm.getYaxis();
+            EnhancedCoordAxis xAxis = layer.getXaxis();
+            EnhancedCoordAxis yAxis = layer.getYaxis();
             
             // Maps y indices to scanlines
             Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
@@ -137,7 +139,7 @@ public class USGSDataReader extends DefaultDataReader
             
             // Now build the picture
             nc = getDataset(filename);
-            Variable var = nc.findVariable(vm.getId());
+            Variable var = nc.findVariable(layer.getId());
             
             float scaleFactor = 1.0f;
             float addOffset = 0.0f;
@@ -205,7 +207,7 @@ public class USGSDataReader extends DefaultDataReader
                         if (val != missingValue)
                         {
                             float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= vm.getValidMin() && realVal <= vm.getValidMax())
+                            if (realVal >= layer.getValidMin() && realVal <= layer.getValidMax())
                             {
                                 picData[p] = realVal;
                             }
@@ -285,14 +287,13 @@ public class USGSDataReader extends DefaultDataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<VariableMetadata> getVariableMetadata(String filename)
-        throws IOException
+    protected List<Layer> getLayers(String filename) throws IOException
     {
         logger.debug("Reading metadata for dataset {}", filename);
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
+        List<Layer> layers = new ArrayList<Layer>();
         NetcdfDataset nc = null;
         try
         {
@@ -312,22 +313,22 @@ public class USGSDataReader extends DefaultDataReader
                     continue;
                 }
                 GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new VariableMetadata object for {}", gg.getName());
-                VariableMetadata vm = new VariableMetadata();
-                vm.setId(gg.getName());
-                vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                vm.setAbstract(gg.getDescription());
-                vm.setUnits(gg.getUnitsString());
-                vm.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
-                vm.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
+                logger.debug("Creating new Layer object for {}", gg.getName());
+                LayerImpl layer = new LayerImpl();
+                layer.setId(gg.getName());
+                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
+                layer.setAbstract(gg.getDescription());
+                layer.setUnits(gg.getUnitsString());
+                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
+                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
                 
                 if (coordSys.hasVerticalAxis())
                 {
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                    vm.setZunits(zAxis.getUnitsString());
+                    layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
-                    vm.setZpositive(false);
-                    vm.setZvalues(zVals);
+                    layer.setZpositive(false);
+                    layer.setZvalues(zVals);
                 }
                 
                 // Set the bounding box
@@ -344,21 +345,20 @@ public class USGSDataReader extends DefaultDataReader
                     minLon = -180.0;
                     maxLon = 180.0;
                 }
-                vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
+                layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
-                vm.setValidMin(gg.getVariable().getValidMin());
-                vm.setValidMax(gg.getVariable().getValidMax());
+                layer.setValidMin(gg.getVariable().getValidMin());
+                layer.setValidMax(gg.getVariable().getValidMax());
                 
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);
                 for (int i = 0; i < tVals.length; i++)
                 {
-                    VariableMetadata.TimestepInfo tInfo = new
-                        VariableMetadata.TimestepInfo(tVals[i], filename, i);
-                    vm.addTimestepInfo(tInfo);
+                    TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);
+                    layer.addTimestepInfo(tInfo);
                 }
                 // Add this to the Hashtable
-                vars.add(vm);
+                layers.add(layer);
             }
         }
         finally
@@ -375,6 +375,6 @@ public class USGSDataReader extends DefaultDataReader
                 }
             }
         }
-        return vars;
+        return layers;
     }
 }

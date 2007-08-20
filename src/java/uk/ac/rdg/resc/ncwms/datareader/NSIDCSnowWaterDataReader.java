@@ -41,6 +41,9 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for NSIDC snow/water data
@@ -86,26 +89,25 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the individual file
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<VariableMetadata> getVariableMetadata(String filename)
-        throws IOException
+    protected List<Layer> getLayers(String filename) throws IOException
     {
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
-        VariableMetadata vm = new VariableMetadata();
+        List<Layer> layers = new ArrayList<Layer>();
+        LayerImpl layer = new LayerImpl();
         
-        vm.setId("swe");
-        vm.setTitle("snow_water_equivalent");
-        vm.setUnits("mm");
-        vm.setValidMin(0.0);
-        vm.setValidMax(10000.0); // TODO: is this OK?
-        vm.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
+        layer.setId("swe");
+        layer.setTitle("snow_water_equivalent");
+        layer.setUnits("mm");
+        layer.setValidMin(0.0);
+        layer.setValidMax(10000.0); // TODO: is this OK?
+        layer.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
         
         try
         {
             Date timestep = DATE_FORMAT.parse(filename);
-            vm.addTimestepInfo(new VariableMetadata.TimestepInfo(timestep, filename, 0));
+            layer.addTimestepInfo(new TimestepInfo(timestep, filename, 0));
         }
         catch(ParseException pe)
         {
@@ -114,8 +116,8 @@ public class NSIDCSnowWaterDataReader extends DataReader
             throw new IOException("Error parsing filename " + filename);
         }
         
-        vars.add(vm);
-        return vars;
+        layers.add(layer);
+        return layers;
     }
     
     /**
@@ -135,7 +137,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * by Float.NaN.
      * 
      * @param filename Full path to the individual file containing the data
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis).
      * This is ignored in this class as there is only one timestep per file.
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
@@ -143,7 +145,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, VariableMetadata vm,
+    public float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception
     {

@@ -35,8 +35,8 @@ import java.awt.Polygon;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Style for plotting vector data as arrows
@@ -97,7 +97,7 @@ public class VectorStyle extends AbstractStyle
         }
     }
 
-    protected BufferedImage createLegend(VariableMetadata var)
+    protected BufferedImage createLegend(Layer layer)
     {
         return null; // TODO:
     }

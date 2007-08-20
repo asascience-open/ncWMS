@@ -32,8 +32,8 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * An abstract definition of a Style
@@ -199,25 +199,25 @@ public abstract class AbstractStyle
     /**
      * Creates and returns a BufferedImage representing the legend for this 
      * Style instance.  Sets the colour scale if we need to.
-     * @param var The VariableMetadata object for which this legend is being 
+     * @param layer The Layer object for which this legend is being 
      * created (needed for title and units strings)
      * @todo Allow setting of width and height of legend
      */
-    public BufferedImage getLegend(VariableMetadata var)
+    public BufferedImage getLegend(Layer layer)
     {
         this.setScale();
-        return this.createLegend(var);
+        return this.createLegend(layer);
     }
     
     /**
      * Creates and returns a BufferedImage representing the legend for this 
      * Style instance.  The colour scale will already have been set before this
      * is called.
-     * @param var The VariableMetadata object for which this legend is being 
+     * @param layer The Layer object for which this legend is being 
      * created (needed for title and units strings)
      * @todo Allow setting of width and height of legend
      */
-    protected abstract BufferedImage createLegend(VariableMetadata var);
+    protected abstract BufferedImage createLegend(Layer layer);
 
     /**
      * Gets the frames as BufferedImages, ready to be turned into a picture or

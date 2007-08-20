@@ -48,7 +48,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -58,7 +57,10 @@ import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
 import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
+import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -208,31 +210,31 @@ public class WmsController extends AbstractController
                 WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
         }
         // TODO: support more than one layer
-        VariableMetadata var = this.metadataStore.getVariableByLayerName(layers[0]);
+        Layer layer = this.metadataStore.getLayerById(layers[0]);
         
         // Get the grid onto which the data will be projected
         AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
             this.gridFactory);
         
-        AbstractStyle style = this.getStyle(getMapRequest, var);
+        AbstractStyle style = this.getStyle(getMapRequest, layer);
         
         String zValue = getMapRequest.getDataRequest().getElevationString();
-        int zIndex = getZIndex(zValue, var); // -1 if no z axis present
+        int zIndex = getZIndex(zValue, layer); // -1 if no z axis present
         
         // Cycle through all the provided timesteps, extracting data for each step
         // If there is no time axis getTimesteps will return a single value of null
         List<String> tValues = new ArrayList<String>();
         String timeString = getMapRequest.getDataRequest().getTimeString();
-        List<Integer> tIndices = getTIndices(timeString, var);
+        List<Integer> tIndices = getTIndices(timeString, layer);
         for (int tIndex : tIndices)
         {
             // tIndex == -1 if there is no t axis present
-            List<float[]> picData = readData(var, tIndex, zIndex, grid);
+            List<float[]> picData = readData(layer, tIndex, zIndex, grid);
             // Only add a label if this is part of an animation
             String tValue = "";
-            if (var.isTaxisPresent() && tIndices.size() > 1)
+            if (layer.isTaxisPresent() && tIndices.size() > 1)
             {
-                tValue = WmsUtils.dateToISO8601(var.getTimesteps().get(tIndex).getDate());
+                tValue = WmsUtils.dateToISO8601(layer.getTimesteps().get(tIndex).getDate());
             }
             tValues.add(tValue);
             style.addFrame(picData, tValue); // the tValue is the label for the image
@@ -240,12 +242,12 @@ public class WmsController extends AbstractController
 
         // We write some of the request elements to the picMaker - this is
         // used to create labels and metadata, e.g. in KMZ.
-        picMaker.setVar(var);
+        picMaker.setLayer(layer);
         picMaker.setTvalues(tValues);
         picMaker.setZvalue(zValue);
         picMaker.setBbox(grid.getBbox());
         // Set the legend if we need one (required for KMZ files, for instance)
-        if (picMaker.needsLegend()) picMaker.setLegend(style.getLegend(var));
+        if (picMaker.needsLegend()) picMaker.setLegend(style.getLegend(layer));
         
         // Write the image to the client
         response.setStatus(HttpServletResponse.SC_OK);
@@ -254,7 +256,7 @@ public class WmsController extends AbstractController
         if (picMaker instanceof KmzMaker)
         {
             response.setHeader("Content-Disposition", "inline; filename=" +
-                var.getDataset().getId() + "_" + var.getId() + ".kmz");
+                layer.getDataset().getId() + "_" + layer.getId() + ".kmz");
         }
 
         // Send the images to the picMaker and write to the output
@@ -270,18 +272,19 @@ public class WmsController extends AbstractController
      * This List will have a single element if the variable is scalar, or two
      * elements if the variable is a vector
      */
-    static List<float[]> readData(VariableMetadata var, int tIndex, int zIndex,
+    static List<float[]> readData(Layer layer, int tIndex, int zIndex,
         AbstractGrid grid) throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
-        if (var.isVector())
+        if (layer instanceof VectorLayer)
         {
-            picData.add(var.getEastwardComponent().read(tIndex, zIndex, grid));
-            picData.add(var.getNorthwardComponent().read(tIndex, zIndex, grid));
+            VectorLayer vecLayer = (VectorLayer)layer;
+            picData.add(vecLayer.getEastwardComponent().read(tIndex, zIndex, grid));
+            picData.add(vecLayer.getNorthwardComponent().read(tIndex, zIndex, grid));
         }
         else
         {
-            picData.add(var.read(tIndex, zIndex, grid));
+            picData.add(layer.read(tIndex, zIndex, grid));
         }
         return picData;
     }
@@ -312,12 +315,12 @@ public class WmsController extends AbstractController
                 request.getOutputFormat() + " is not valid for GetFeatureInfo");
         }
         
-        // Get the variable we're interested in
-        String layer = dataRequest.getLayers()[0];
-        VariableMetadata var = this.metadataStore.getVariableByLayerName(layer);
-        if (!var.isQueryable())
+        // Get the layer we're interested in
+        String layerId = dataRequest.getLayers()[0];
+        Layer layer = this.metadataStore.getLayerById(layerId);
+        if (!layer.isQueryable())
         {
-            throw new LayerNotQueryableException(layer);
+            throw new LayerNotQueryableException(layerId);
         }
         
         // Get the grid onto which the data is being projected
@@ -327,30 +330,35 @@ public class WmsController extends AbstractController
         float lat = grid.getLatitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
         
         // Get the index along the z axis
-        int zIndex = getZIndex(dataRequest.getElevationString(), var); // -1 if no z axis present
+        int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
         
         // Get the information about the requested timesteps
-        List<Integer> tIndices = getTIndices(dataRequest.getTimeString(), var);
+        List<Integer> tIndices = getTIndices(dataRequest.getTimeString(), layer);
         
         // Now read the data, mapping date-times to data values
         // The map is sorted in order of ascending time
         SortedMap<Date, Float> featureData = new TreeMap<Date, Float>();
         for (int tIndex : tIndices)
         {
-            Date date = tIndex < 0 ? null : var.getTimesteps().get(tIndex).getDate();
-            if (var.isVector())
+            Date date = tIndex < 0 ? null : layer.getTimesteps().get(tIndex).getDate();
+            
+            // Create a trivial Grid for reading a single point of data
+            AbstractGrid singlePointGrid = new PlateCarreeGrid();
+            singlePointGrid.setWidth(1);
+            singlePointGrid.setHeight(1);
+            singlePointGrid.setBbox(new float[]{lon, lat, lon, lat});
+            
+            if (layer instanceof VectorLayer)
             {
-                float x = var.getEastwardComponent().read(tIndex, zIndex,
-                    new float[]{lat}, new float[]{lon})[0];
-                float y = var.getNorthwardComponent().read(tIndex, zIndex,
-                    new float[]{lat}, new float[]{lon})[0];
+                VectorLayer vecLayer = (VectorLayer)layer;
+                float x = vecLayer.getEastwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
+                float y = vecLayer.getNorthwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
                 float val = (float)Math.sqrt(x * x + y * y);
                 featureData.put(date, Float.isNaN(val) ? null : val);
             }
             else
             {
-                float val = var.read(tIndex, zIndex, new float[]{lat},
-                    new float[]{lon})[0];
+                float val = layer.read(tIndex, zIndex, singlePointGrid)[0];
                 featureData.put(date, Float.isNaN(val) ? null : val);
             }
         }
@@ -377,7 +385,7 @@ public class WmsController extends AbstractController
 
             // Create a chart with no legend, tooltips or URLs
             String title = "Lon: " + lon + ", Lat: " + lat;
-            String yLabel = var.getTitle() + " (" + var.getUnits() + ")";
+            String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
             JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                 "Date / time", yLabel, xydataset, false, false, false);
             response.setContentType("image/png");
@@ -392,14 +400,14 @@ public class WmsController extends AbstractController
      * @todo support returning of multiple styles
      */
     private AbstractStyle getStyle(GetMapRequest getMapRequest,
-        VariableMetadata var) throws StyleNotDefinedException, Exception
+        Layer layer) throws StyleNotDefinedException, Exception
     {
         AbstractStyle style = null;
         String[] styleSpecs = getMapRequest.getStyleRequest().getStyles();
         if (styleSpecs.length == 0)
         {
             // Use the default style for the variable
-            style = this.styleFactory.createObject(var.getDefaultStyleKey());
+            style = this.styleFactory.createObject(layer.getDefaultStyleKey());
             assert style != null;
         }
         else
@@ -411,7 +419,7 @@ public class WmsController extends AbstractController
             {
                 throw new StyleNotDefinedException(style + " is not a valid STYLE");
             }
-            if (!var.supportsStyle(els[0]))
+            if (!layer.supportsStyle(els[0]))
             {
                 throw new StyleNotDefinedException("The style \"" + els[0] +
                     "\" is not supported by this layer");
@@ -469,7 +477,7 @@ public class WmsController extends AbstractController
      * @throws InvalidDimensionValueException if the provided z value is not
      * a valid floating-point number or if it is not a valid value for this axis.
      */
-    static int getZIndex(String zValue, VariableMetadata var)
+    static int getZIndex(String zValue, Layer layer)
         throws InvalidDimensionValueException
     {
         // Get the z value.  The default value is the first value in the array
@@ -477,10 +485,10 @@ public class WmsController extends AbstractController
         if (zValue == null)
         {
             // No value has been specified
-            return var.isZaxisPresent() ? var.getDefaultZIndex() : -1;
+            return layer.isZaxisPresent() ? layer.getDefaultZIndex() : -1;
         }
         // The user has specified a z value.  Check that we have a z axis
-        if (!var.isZaxisPresent())
+        if (!layer.isZaxisPresent())
         {
             return -1; // We ignore the given value
         }
@@ -490,7 +498,7 @@ public class WmsController extends AbstractController
         {
             throw new InvalidDimensionValueException("elevation", zValue);
         }
-        return var.findZIndex(zValue);
+        return layer.findZIndex(zValue);
     }
     
     /**
@@ -498,17 +506,17 @@ public class WmsController extends AbstractController
      * requested TIME parameter.  If there is no time axis, this will return
      * a List with a single value of -1.
      */
-    static List<Integer> getTIndices(String timeString, VariableMetadata var)
+    static List<Integer> getTIndices(String timeString, Layer layer)
         throws WmsException
     {
         List<Integer> tIndices = new ArrayList<Integer>();
-        if (var.isTaxisPresent())
+        if (layer.isTaxisPresent())
         {
             if (timeString == null)
             {
                 // The default time is the last value along the axis
                 // TODO: this should be the time closest to now
-                tIndices.add(var.getDefaultTIndex());
+                tIndices.add(layer.getDefaultTIndex());
             }
             else
             {
@@ -519,12 +527,12 @@ public class WmsController extends AbstractController
                     if (startStopPeriod.length == 1)
                     {
                         // This is a single time value
-                        tIndices.add(var.findTIndex(startStopPeriod[0]));
+                        tIndices.add(layer.findTIndex(startStopPeriod[0]));
                     }
                     else if (startStopPeriod.length == 2)
                     {
                         // Use all time values from start to stop inclusive
-                        tIndices.addAll(var.findTIndices(startStopPeriod[0],
+                        tIndices.addAll(layer.findTIndices(startStopPeriod[0],
                             startStopPeriod[1]));
                     }
                     else if (startStopPeriod.length == 3)

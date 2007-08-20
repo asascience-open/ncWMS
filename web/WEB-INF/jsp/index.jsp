@@ -41,17 +41,17 @@
             <th>${dataset.value.title}</th>
             <c:forEach var="mimeType" items="${supportedImageFormats}">
             <td>
-                <c:forEach var="variable" items="${dataset.value.variables}">
-                <c:set var="bbox" value="${variable.bbox}"/>
-                <a href="wms?REQUEST=GetMap&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=true&amp;LAYERS=${variable.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${variable.title}</a><br />
+                <c:forEach var="layer" items="${dataset.value.layers}">
+                <c:set var="bbox" value="${variable.layer}"/>
+                <a href="wms?REQUEST=GetMap&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=true&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
             </c:forEach>
             <c:if test="${config.server.allowFeatureInfo}">
             <td>
-                <c:forEach var="variable" items="${dataset.value.variables}">
-                <c:set var="bbox" value="${variable.bbox}"/>
-                <a href="wms?REQUEST=GetFeatureInfo&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;I=128&amp;J=128&amp;INFO_FORMAT=text/xml&amp;QUERY_LAYERS=${variable.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${variable.title}</a><br />
+                <c:forEach var="layer" items="${dataset.value.layers}">
+                <c:set var="bbox" value="${layer.bbox}"/>
+                <a href="wms?REQUEST=GetFeatureInfo&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;I=128&amp;J=128&amp;INFO_FORMAT=text/xml&amp;QUERY_LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
             </c:if>

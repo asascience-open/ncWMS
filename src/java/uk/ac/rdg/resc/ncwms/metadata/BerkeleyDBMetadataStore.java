@@ -43,7 +43,6 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -64,15 +63,15 @@ public class BerkeleyDBMetadataStore implements MetadataStore
      */
     private static final String DATABASE_DIR_NAME = "metadataDB";
     /**
-     * The name of the database in which we will store VariableMetadata objects
+     * The name of the database in which we will store Layer objects
      */
-    private static final String STORE_NAME = "variables";
+    private static final String STORE_NAME = "layers";
     
     private Environment env;
-    private EntityStore store; // This is where we keep VariableMetadata objects
+    private EntityStore store; // This is where we keep Layer objects
     
-    private PrimaryIndex<String, VariableMetadata> variablesByLayerName;
-    private SecondaryIndex<String, String, VariableMetadata> variablesByDatasetId;
+    private PrimaryIndex<String, Layer> layersById;
+    private SecondaryIndex<String, String, Layer> layersByDatasetId;
     
     // Injected by Spring: gives the path to the working directory
     private NcwmsContext ncwmsContext;
@@ -98,39 +97,37 @@ public class BerkeleyDBMetadataStore implements MetadataStore
         this.env = new Environment(dbPath, envConfig);
         this.store = new EntityStore(this.env, STORE_NAME, storeConfig);
         
-        // Set up the indices that we will use to access VariableMetadata objects
-        this.variablesByLayerName = this.store.getPrimaryIndex(String.class,
-            VariableMetadata.class);
+        // Set up the indices that we will use to access Layer objects
+        this.layersById = this.store.getPrimaryIndex(String.class, Layer.class);
         // The string "datasetId" matches the name of the dataset id field in
-        // VariableMetadata
-        this.variablesByDatasetId = this.store.getSecondaryIndex(this.variablesByLayerName,
+        // Layer
+        this.layersByDatasetId = this.store.getSecondaryIndex(this.layersById,
             String.class, "datasetId");
         
-        logger.debug("Database for VariableMetadata objects created in " + dbPath.getPath());
+        logger.debug("Database for Layer objects created in " + dbPath.getPath());
     }
 
     /**
-     * Gets all the variables that belong to a dataset
-     * 
+     * Gets all the Layers that belong to a dataset
      * @param datasetId The unique ID of the dataset, as defined in the config
      * file
-     * @return a Collection of VariableMetadata objects that belong to this dataset
+     * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public Collection<VariableMetadata> getVariablesInDataset(String datasetId)
+    public Collection<Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
         // EntityCursors are not thread-safe so this method must be synchronized
-        EntityCursor<VariableMetadata> cursor = null;
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
+        EntityCursor<Layer> cursor = null;
+        List<Layer> layers = new ArrayList<Layer>();
         try
         {
-            cursor = this.variablesByDatasetId.subIndex(datasetId).entities();
-            for (VariableMetadata var : cursor)
+            cursor = this.layersByDatasetId.subIndex(datasetId).entities();
+            for (Layer layer : cursor)
             {
-                vars.add(var);
+                layers.add(layer);
             }
-            return vars;
+            return layers;
         }
         finally
         {
@@ -142,31 +139,29 @@ public class BerkeleyDBMetadataStore implements MetadataStore
     }
 
     /**
-     * Gets a VariableMetadata object based on its unique layer name
-     * 
+     * Gets a Layer object based on its unique id
      * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The VariableMetadata object corresponding with this ID, or null
+     * @return The Layer object corresponding with this ID, or null
      * if there is no object with this ID
      * @throws LayerNotDefinedException if the layer does not exist.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public VariableMetadata getVariableByLayerName(String layerName)
+    public Layer getLayerById(String layerId)
         throws LayerNotDefinedException, Exception
     {
-        return this.variablesByLayerName.get(layerName);
+        return this.layersById.get(layerId);
     }
 
     /**
-     * Adds or updates a VariableMetadata object
-     * 
-     * @param vm The VariableMetadata object to add or update.  This object must
+     * Adds or updates a Layer object
+     * @param Layer The Layer object to add or update.  This object must
      * have all of its fields (including its ID and the Dataset ID) set before
      * calling this method.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void addOrUpdateVariable(VariableMetadata vm) throws Exception
+    public void addOrUpdateLayer(Layer layer) throws Exception
     {
-        this.variablesByLayerName.put(vm);
+        this.layersById.put(layer);
     }
     
     /**
@@ -182,7 +177,7 @@ public class BerkeleyDBMetadataStore implements MetadataStore
             this.env.cleanLog();
             this.env.close();
         }
-        logger.debug("Database of VariableMetadata objects closed");
+        logger.debug("Database of Layer objects closed");
     }
     
     /**

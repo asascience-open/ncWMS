@@ -49,6 +49,9 @@ import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * Default data reading class for CF-compliant NetCDF datasets.
@@ -70,14 +73,14 @@ public class DefaultDataReader extends DataReader
      * by Float.NaN.
      * 
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable to read
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, VariableMetadata vm,
+    public float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception
     {
@@ -94,8 +97,8 @@ public class DefaultDataReader extends DataReader
             Range tRange = new Range(tIndex, tIndex);
             Range zRange = new Range(zIndex, zIndex);
             
-            EnhancedCoordAxis xAxis = vm.getXaxis();
-            EnhancedCoordAxis yAxis = vm.getYaxis();
+            EnhancedCoordAxis xAxis = layer.getXaxis();
+            EnhancedCoordAxis yAxis = layer.getYaxis();
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
@@ -132,8 +135,8 @@ public class DefaultDataReader extends DataReader
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
             GridDataset gd = new GridDataset(nc);
-            logger.debug("Getting GeoGrid with id {}", vm.getId());
-            GeoGrid gg = gd.findGridByName(vm.getId());
+            logger.debug("Getting GeoGrid with id {}", layer.getId());
+            GeoGrid gg = gd.findGridByName(layer.getId());
             logger.debug("filename = {}, gg = " + gg, filename);
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
@@ -220,14 +223,13 @@ public class DefaultDataReader extends DataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<VariableMetadata> getVariableMetadata(String filename)
-        throws IOException
+    protected List<Layer> getLayers(String filename) throws IOException
     {
         logger.debug("Reading metadata for file {}", filename);
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
+        List<Layer> layers = new ArrayList<Layer>();
         
         NetcdfDataset nc = null;
         try
@@ -240,24 +242,24 @@ public class DefaultDataReader extends DataReader
             {
                 GeoGrid gg = (GeoGrid)it.next();
                 GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new VariableMetadata object for {}", gg.getName());
-                VariableMetadata vm = new VariableMetadata();
-                vm.setId(gg.getName());
-                vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                vm.setAbstract(gg.getDescription());
-                vm.setUnits(gg.getUnitsString());
-                vm.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
-                vm.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
+                logger.debug("Creating new Layer object for {}", gg.getName());
+                LayerImpl layer = new LayerImpl();
+                layer.setId(gg.getName());
+                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
+                layer.setAbstract(gg.getDescription());
+                layer.setUnits(gg.getUnitsString());
+                layer.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
+                layer.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
 
                 if (coordSys.hasVerticalAxis())
                 {
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                    vm.setZunits(zAxis.getUnitsString());
+                    layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
-                    vm.setZpositive(coordSys.isZPositive());
+                    layer.setZpositive(coordSys.isZPositive());
                     if (coordSys.isZPositive())
                     {
-                        vm.setZvalues(zVals);
+                        layer.setZvalues(zVals);
                     }
                     else
                     {
@@ -266,7 +268,7 @@ public class DefaultDataReader extends DataReader
                         {
                             zVals2[i] = 0.0 - zVals[i];
                         }
-                        vm.setZvalues(zVals2);
+                        layer.setZvalues(zVals2);
                     }
                 }
 
@@ -284,21 +286,20 @@ public class DefaultDataReader extends DataReader
                     minLon = -180.0;
                     maxLon = 180.0;
                 }
-                vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
+                layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
-                vm.setValidMin(gg.getVariable().getValidMin());
-                vm.setValidMax(gg.getVariable().getValidMax());
+                layer.setValidMin(gg.getVariable().getValidMin());
+                layer.setValidMax(gg.getVariable().getValidMax());
 
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);
                 for (int i = 0; i < tVals.length; i++)
                 {
-                    VariableMetadata.TimestepInfo tInfo = new
-                        VariableMetadata.TimestepInfo(tVals[i], filename, i);
-                    vm.addTimestepInfo(tInfo);
+                    TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);
+                    layer.addTimestepInfo(tInfo);
                 }
-                // Add this variable to the List
-                vars.add(vm);
+                // Add this layer to the List
+                layers.add(layer);
             }
         }
         finally
@@ -315,7 +316,7 @@ public class DefaultDataReader extends DataReader
                 }
             }
         }
-        return vars;
+        return layers;
     }
     
     /**

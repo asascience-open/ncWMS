@@ -38,6 +38,8 @@ import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.units.DateUnit;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 
 /**
  * Data and metadata reader for ECMWF System 3 Reanalysis Data.  Based on
@@ -56,15 +58,15 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * Corrects problem with reading bounding box in source data (use of latitude
      * values > +/- 90 degrees causes latitude portion of BBOX to be NaN)
      */
-    public List<VariableMetadata> getVariableMetadata(String location)
-        throws IOException
+    public List<Layer> getLayers(String location) throws IOException
     {
-        List<VariableMetadata> vars = super.getVariableMetadata(location);
-        for (VariableMetadata vm : vars)
+        List<Layer> layers = super.getLayers(location);
+        for (Layer layer : layers)
         {
-            vm.setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
+            // Must convert to a mutable Layer: we know this is safe
+            ((LayerImpl)layer).setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
         }
-        return vars;
+        return layers;
     }
     
     /**

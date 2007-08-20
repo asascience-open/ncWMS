@@ -41,6 +41,9 @@ import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for ROMS data from Damian Smyth (damian.smyth@marine.ie)
@@ -60,14 +63,13 @@ public class ROMSDataReader extends USGSDataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link VariableMetadata} objects
+     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<VariableMetadata> getVariableMetadata(String filename)
-        throws IOException
+    protected List<Layer> getLayers(String filename) throws IOException
     {
         logger.debug("Reading metadata for dataset {}", filename);
-        List<VariableMetadata> vars = new ArrayList<VariableMetadata>();
+        List<Layer> layers = new ArrayList<Layer>();
         
         NetcdfDataset nc = null;
         try
@@ -87,22 +89,22 @@ public class ROMSDataReader extends USGSDataReader
                     continue;
                 }
                 GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new VariableMetadata object for {}", gg.getName());
-                VariableMetadata vm = new VariableMetadata();
-                vm.setId(gg.getName());
-                vm.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                vm.setAbstract(gg.getDescription());
-                vm.setUnits(gg.getUnitsString());
-                vm.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
-                vm.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
+                logger.debug("Creating new Layer object for {}", gg.getName());
+                LayerImpl layer = new LayerImpl();
+                layer.setId(gg.getName());
+                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
+                layer.setAbstract(gg.getDescription());
+                layer.setUnits(gg.getUnitsString());
+                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
+                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
                 
                 if (coordSys.hasVerticalAxis())
                 {
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                    vm.setZunits(zAxis.getUnitsString());
+                    layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
-                    vm.setZpositive(false);
-                    vm.setZvalues(zVals);
+                    layer.setZpositive(false);
+                    layer.setZvalues(zVals);
                 }
                 
                 // Set the bounding box
@@ -119,21 +121,20 @@ public class ROMSDataReader extends USGSDataReader
                     minLon = -180.0;
                     maxLon = 180.0;
                 }
-                vm.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
+                layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
-                vm.setValidMin(gg.getVariable().getValidMin());
-                vm.setValidMax(gg.getVariable().getValidMax());
+                layer.setValidMin(gg.getVariable().getValidMin());
+                layer.setValidMax(gg.getVariable().getValidMax());
                 
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);
                 for (int i = 0; i < tVals.length; i++)
                 {
-                    VariableMetadata.TimestepInfo tInfo = new
-                        VariableMetadata.TimestepInfo(tVals[i], filename, i);
-                    vm.addTimestepInfo(tInfo);
+                    TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);
+                    layer.addTimestepInfo(tInfo);
                 }
                 // Add this to the List
-                vars.add(vm);
+                layers.add(layer);
             }
         }
         finally
@@ -150,7 +151,7 @@ public class ROMSDataReader extends USGSDataReader
                 }
             }
         }
-        return vars;
+        return layers;
     }
     
 }

@@ -28,47 +28,60 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import java.util.Collection;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import java.util.Date;
 
 /**
- * Interface describing a persistent store of metadata
+ * Simple class that holds information about which files in an aggregation
+ * hold which timesteps for this variable.  Implements Comparable to allow
+ * collections of this class to be sorted in order of their timestep.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public interface MetadataStore
+public class TimestepInfo implements Comparable<TimestepInfo>
 {
+    private Date timestep;
+    private String filename;
+    private int indexInFile;
+
     /**
-     * Gets a Layer object based on its unique id
-     * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The Layer object corresponding with this ID, or null
-     * if there is no object with this ID
-     * @throws LayerNotDefinedException if the layer does not exist.
-     * @throws Exception if an error occurs reading from the persistent store
+     * Creates a new TimestepInfo object
+     * @param timestep The real date/time of this timestep
+     * @param filename The filename containing this timestep
+     * @param indexInFile The index of this timestep in the file
      */
-    public Layer getLayerById(String layerId)
-        throws LayerNotDefinedException, Exception;
-    
+    public TimestepInfo(Date timestep, String filename, int indexInFile)
+    {
+        this.timestep = timestep;
+        this.filename = filename;
+        this.indexInFile = indexInFile;
+    }
+
+    public String getFilename()
+    {
+        return this.filename;
+    }
+
+    public int getIndexInFile()
+    {
+        return this.indexInFile;
+    }
+
     /**
-     * Gets all the Layers that belong to a dataset
-     * @param datasetId The unique ID of the dataset, as defined in the config
-     * file
-     * @return a Collection of Layer objects that belong to this dataset
-     * @throws Exception if an error occurs reading from the persistent store
+     * @return the date-time that this timestep represents
      */
-    public Collection<Layer> getLayersInDataset(String datasetId)
-        throws Exception;
-    
+    public Date getDate()
+    {
+        return this.timestep;
+    }
+
     /**
-     * Adds or updates a Layer object
-     * @param Layer The Layer object to add or update.  This object must
-     * have all of its fields (including its ID and the Dataset ID) set before
-     * calling this method.
-     * @throws Exception if an error occurs writing to the persistent store
+     * Sorts based on the timestep only
      */
-    public void addOrUpdateLayer(Layer layer) throws Exception;
-    
+    public int compareTo(TimestepInfo otherInfo)
+    {
+        return this.timestep.compareTo(otherInfo.timestep);
+    }
 }

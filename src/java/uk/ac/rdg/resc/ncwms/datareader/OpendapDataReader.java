@@ -30,16 +30,15 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Hashtable;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
-import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * DataReader for OPeNDAP datasets.  This is very similar to the DefaultDataReader
@@ -64,14 +63,14 @@ public class OpendapDataReader extends DefaultDataReader
      * by Float.NaN.
      * 
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param vm {@link VariableMetadata} object representing the variable
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param latValues Array of latitude values
      * @param lonValues Array of longitude values
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, VariableMetadata vm,
+    public float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception
     {
@@ -87,8 +86,8 @@ public class OpendapDataReader extends DefaultDataReader
             Range tRange = new Range(tIndex, tIndex);
             Range zRange = new Range(zIndex, zIndex);
             
-            EnhancedCoordAxis xAxis = vm.getXaxis();
-            EnhancedCoordAxis yAxis = vm.getYaxis();
+            EnhancedCoordAxis xAxis = layer.getXaxis();
+            EnhancedCoordAxis yAxis = layer.getYaxis();
             
             // Create an array to hold the data
             float[] picData = new float[lonValues.length * latValues.length];
@@ -153,7 +152,7 @@ public class OpendapDataReader extends DefaultDataReader
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
             GridDataset gd = new GridDataset(nc);
-            GeoGrid gg = gd.findGridByName(vm.getId());
+            GeoGrid gg = gd.findGridByName(layer.getId());
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
             

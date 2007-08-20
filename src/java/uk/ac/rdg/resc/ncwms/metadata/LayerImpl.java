@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.datareader;
+package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,52 +34,50 @@ import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.datareader.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.grids.RectangularLatLonGrid;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
-import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
- * Stores the metadata for a layer: saves reading in the metadata every
- * time the dataset is opened (a significant performance hit especially for
- * large NcML aggregations.
+ * Concrete implementation of the Layer interface.  Stores the metadata for
+ * a layer in the WMS
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class VariableMetadata
+public class LayerImpl implements Layer
 {
-    private static final Logger logger = Logger.getLogger(VariableMetadata.class);
+    private static final Logger logger = Logger.getLogger(LayerImpl.class);
     
-    private String id;
-    private String title;
-    private String abstr; // "abstract" is a reserved word
-    private String units;
-    private String zUnits;
-    private double[] zValues;
-    private boolean zPositive;
-    private double[] bbox; // Bounding box : minx, miny, maxx, maxy
-    private double validMin;
-    private double validMax;
-    private EnhancedCoordAxis xaxis;
-    private EnhancedCoordAxis yaxis;
-    private Dataset dataset;
+    protected String id;
+    protected String title;
+    protected String abstr; // "abstract" is a reserved word
+    protected String units;
+    protected String zUnits;
+    protected double[] zValues;
+    protected boolean zPositive;
+    protected double[] bbox; // Bounding box : minx, miny, maxx, maxy
+    protected double validMin;
+    protected double validMax;
+    protected EnhancedCoordAxis xaxis;
+    protected EnhancedCoordAxis yaxis;
+    protected Dataset dataset;
     // Sorted in ascending order of time
-    private List<TimestepInfo> timesteps;
+    protected List<TimestepInfo> timesteps;
     // Stores the keys of the styles that this variable supports
-    private List<String> supportedStyles = new ArrayList<String>();
+    protected List<String> supportedStyles = new ArrayList<String>();
     
-    // If this is a vector quantity, these values will be the northward and
-    // eastward components
-    private VariableMetadata eastward;
-    private VariableMetadata northward;
-    
-    /** Creates a new instance of VariableMetadata */
-    public VariableMetadata()
+    /**
+     * Creates a new Layer using a default bounding box (covering the whole 
+     * earth) and with a default boxfill style
+     */
+    public LayerImpl()
     {
         this.title = null;
         this.abstr = null;
@@ -90,58 +88,15 @@ public class VariableMetadata
         this.yaxis = null;
         this.dataset = null;
         this.timesteps = new ArrayList<TimestepInfo>();
-        this.eastward = null;
-        this.northward = null;
         this.addStyles(BoxFillStyle.KEYS);
     }
     
-    /**
-     * Creates a VariableMetadata object that comprises an eastward and 
-     * northward component (e.g. for velocities)
-     */
-    public VariableMetadata(String title, VariableMetadata eastward, VariableMetadata northward)
-    {
-        // Copy the metadata from the eastward component
-        // TODO: check that the two components match
-        this.title = title;
-        this.abstr = "Automatically-generated vector field, composed of the fields "
-            + eastward.title + " and " + northward.title;
-        this.zUnits = eastward.zUnits;
-        this.zValues = eastward.zValues;
-        this.bbox = eastward.bbox;
-        this.xaxis = eastward.xaxis;
-        this.yaxis = eastward.yaxis;
-        this.dataset = eastward.dataset;
-        this.units = eastward.units;
-        this.timesteps = eastward.getTimesteps(); // Only used for metadata:
-                                                  // have to be careful reading
-                                                  // data as some datasets might
-                                                  // store different variables in
-                                                  // different files.
-        
-        // Vector is the default style, but we can also render as a boxfill
-        // (magnitude only)
-        this.addStyles(VectorStyle.KEYS);
-        this.addStyles(BoxFillStyle.KEYS);
-        
-        this.eastward = eastward;
-        this.northward = northward;
-    }
-    
-    private void addStyles(String[] styles)
+    protected void addStyles(String[] styles)
     {
         for (String style : styles)
         {
             this.supportedStyles.add(style.trim());
         }
-    }
-    
-    /**
-     * @return true if this is a vector quantity (e.g. velocity)
-     */
-    public boolean isVector()
-    {
-        return this.getEastwardComponent() != null && this.getNorthwardComponent() != null;
     }
 
     public String getTitle()
@@ -193,7 +148,7 @@ public class VariableMetadata
         int i = 0;
         for (TimestepInfo tInfo : timesteps)
         {
-            tVals[i] = tInfo.timestep.getTime();
+            tVals[i] = tInfo.getDate().getTime();
             i++;
         }
         return tVals;
@@ -298,7 +253,7 @@ public class VariableMetadata
     public synchronized void addTimestepInfo(TimestepInfo tInfo)
     {
         // See if we already have a TimestepInfo object for this date
-        int tIndex = this.findTIndex(tInfo.timestep);
+        int tIndex = this.findTIndex(tInfo.getDate());
         if (tIndex < 0)
         {
             // We don't have an info for this date, so we add the new info
@@ -311,7 +266,7 @@ public class VariableMetadata
         {
             // We already have a timestep for this time
             TimestepInfo existingTStep = this.getTimesteps().get(tIndex);
-            if (tInfo.indexInFile < existingTStep.indexInFile)
+            if (tInfo.getIndexInFile() < existingTStep.getIndexInFile())
             {
                 // The new info probably has a shorter forecast time and so we
                 // replace the existing version with this one
@@ -330,8 +285,8 @@ public class VariableMetadata
     {
         if (this.timesteps.size() == 0) return -1;
         // Check that the point is within range
-        if (target.before(this.timesteps.get(0).timestep) ||
-            target.after(this.timesteps.get(this.timesteps.size()  - 1).timestep))
+        if (target.before(this.timesteps.get(0).getDate()) ||
+            target.after(this.timesteps.get(this.timesteps.size()  - 1).getDate()))
         {
             return -1;
         }
@@ -342,7 +297,7 @@ public class VariableMetadata
         while (low <= high)
         {
             int mid = (low + high) >> 1;
-            Date midVal = this.timesteps.get(mid).timestep;
+            Date midVal = this.timesteps.get(mid).getDate();
             if (midVal.equals(target)) return mid;
             else if (midVal.before(target)) low = mid + 1;
             else high = mid - 1;
@@ -350,8 +305,8 @@ public class VariableMetadata
         
         // If we've got this far we have to decide between values[low]
         // and values[high]
-        if (this.timesteps.get(low).timestep.equals(target)) return low;
-        else if (this.timesteps.get(high).timestep.equals(target)) return high;
+        if (this.timesteps.get(low).getDate().equals(target)) return low;
+        else if (this.timesteps.get(high).getDate().equals(target)) return high;
         // The given time doesn't match any axis value
         return -1;
     }
@@ -438,67 +393,6 @@ public class VariableMetadata
         {
             throw new InvalidDimensionValueException("elevation", targetVal);
         }
-    }
-
-    /**
-     * Simple class that holds information about which files in an aggregation
-     * hold which timesteps for this variable.  Implements Comparable to allow
-     * collections of this class to be sorted in order of their timestep.
-     */
-    public static class TimestepInfo implements Comparable<TimestepInfo>
-    {
-        private Date timestep;
-        private String filename;
-        private int indexInFile;
-
-        /**
-         * Creates a new TimestepInfo object
-         * @param timestep The real date/time of this timestep
-         * @param filename The filename containing this timestep
-         * @param indexInFile The index of this timestep in the file
-         */
-        public TimestepInfo(Date timestep, String filename, int indexInFile)
-        {
-            this.timestep = timestep;
-            this.filename = filename;
-            this.indexInFile = indexInFile;
-        }
-        
-        public String getFilename()
-        {
-            return this.filename;
-        }
-        
-        public int getIndexInFile()
-        {
-            return this.indexInFile;
-        }
-        
-        /**
-         * @return the date-time that this timestep represents
-         */
-        public Date getDate()
-        {
-            return this.timestep;
-        }
-        
-        /**
-         * Sorts based on the timestep only
-         */
-        public int compareTo(TimestepInfo otherInfo)
-        {
-            return this.timestep.compareTo(otherInfo.timestep);
-        }
-    }
-
-    public VariableMetadata getEastwardComponent()
-    {
-        return this.eastward;
-    }
-
-    public VariableMetadata getNorthwardComponent()
-    {
-        return this.northward;
     }
 
     /**
@@ -596,7 +490,9 @@ public class VariableMetadata
     }
     
     /**
-     * @return a unique identifier string for this VariableMetadata object (used
+     * 
+     * 
+     * @return a unique identifier string for thisLayerImpla object (used
      * in the display of Layers in a Capabilities document).
      */
     public String getLayerName()
@@ -631,18 +527,7 @@ public class VariableMetadata
             throw new Exception("Grid is not rectangular");
         }
         RectangularLatLonGrid rectGrid = (RectangularLatLonGrid)grid;
-        return this.read(tIndex, zIndex, rectGrid.getLatArray(),
-            rectGrid.getLonArray());
-    }
-    
-    /**
-     * Reads a layer of data from this variable (which must be a scalar or a
-     * single component of a vector).  Missing values will be represented by
-     * Float.NaN.
-     */
-    public float[] read(int tIndex, int zIndex, float[] latValues,
-        float[] lonValues) throws Exception
-    {
+        
         // Get a DataReader object for reading the data
         String dataReaderClass = this.dataset.getDataReaderClass();
         String location = this.dataset.getLocation();
@@ -665,7 +550,8 @@ public class VariableMetadata
             filename = this.dataset.getLocation();
             tIndexInFile = tIndex;
         }
-        return dr.read(filename, this, tIndexInFile, zIndex, latValues, lonValues);
+        return dr.read(filename, this, tIndexInFile, zIndex, rectGrid.getLatArray(),
+            rectGrid.getLonArray());
     }
     
     /**

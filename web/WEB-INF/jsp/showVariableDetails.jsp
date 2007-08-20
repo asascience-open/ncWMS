@@ -5,18 +5,18 @@
      See MetadataController.showVariableDetails().
      
      Data (models) passed in to this page:
-         variable = VariableMetadata object --%>
+         layer = Layer object --%>
 
-<variableDetails dataset="${variable.dataset.id}" variable="${variable.title}" units="${variable.units}">
+<variableDetails dataset="${layer.dataset.id}" variable="${layer.title}" units="${layer.units}">
     <axes>
-        <c:if test="${not empty variable.zvalues}">
-        <axis type="z" units="${variable.zunits}" positive="${variable.zpositive}">
-            <c:forEach var="z" items="${variable.zvalues}">
+        <c:if test="${not empty layer.zvalues}">
+        <axis type="z" units="${layer.zunits}" positive="${layer.zpositive}">
+            <c:forEach var="z" items="${layer.zvalues}">
             <value>${utils:abs(z)}</value>
             </c:forEach>
         </axis>
         </c:if>
     </axes>
-    <range><min>${variable.validMin}</min><max>${variable.validMax}</max></range>
-    <bbox>${variable.bbox[0]},${variable.bbox[1]},${variable.bbox[2]},${variable.bbox[3]}</bbox>
+    <range><min>${layer.validMin}</min><max>${varilayerble.validMax}</max></range>
+    <bbox>${layer.bbox[0]},${layer.bbox[1]},${layer.bbox[2]},${layer.bbox[3]}</bbox>
 </variableDetails>

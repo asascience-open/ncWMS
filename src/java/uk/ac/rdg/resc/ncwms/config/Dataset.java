@@ -34,10 +34,10 @@ import java.util.Date;
 import org.apache.log4j.Logger;
 import simple.xml.Attribute;
 import simple.xml.Root;
-import uk.ac.rdg.resc.ncwms.datareader.VariableMetadata;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
- * A dataset Java bean: contains a number of VariableMetadata objects.
+ * A dataset Java bean: contains a number of Layer objects.
  *
  * @author Jon Blower
  * $Revision$
@@ -253,12 +253,12 @@ public class Dataset
     }
     
     /**
-     * @return a Collection of all the variables in this dataset.  A convenience
+     * @return a Collection of all the layers in this dataset.  A convenience
      * method that reads from the metadata store.
      * @throws Exception if there was an error reading from the store.
      */
-    public Collection<VariableMetadata> getVariables() throws Exception
+    public Collection<Layer> getLayers() throws Exception
     {
-        return this.config.getMetadataStore().getVariablesInDataset(this.id);
+        return this.config.getMetadataStore().getLayersInDataset(this.id);
     }
 }
