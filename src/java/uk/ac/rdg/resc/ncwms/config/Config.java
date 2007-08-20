@@ -79,13 +79,19 @@ public class Config
     
     private Date lastUpdateTime = new Date(); // Time of the last update to this configuration
                                               // or any of the contained metadata
-    private MetadataStore metadataStore; // Injected by Spring. Gives access to
-                                         // metadata
+    private MetadataStore metadataStore; // Gives access to metadata
     
     /**
      * This contains the map of dataset IDs to Dataset objects
      */
     private Map<String, Dataset> datasets = new HashMap<String, Dataset>();
+    
+    /**
+     * Package-private constructor: only the NcwmsContext object is allowed to
+     * create new Config objects.  This prevents other classes being tempted to
+     * create new Config objects instead of accessing through NcwmsContext.
+     */
+    Config() {}
     
     /**
      * Checks that the data we have read are valid.  Checks that there are no
@@ -236,7 +242,7 @@ public class Config
     }
     
     /**
-     * Called by Spring to inject the metadata store
+     * Called by NcwmsContext to inject the metadata store
      */
     public void setMetadataStore(MetadataStore metadataStore)
     {

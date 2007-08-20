@@ -52,7 +52,6 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
 public class AdminController extends MultiActionController
 {
     // These will be injected by Spring
-    private Config config;
     private MetadataLoader metadataLoader;
     private NcwmsContext ncwmsContext; // Gives method to save config information 
     
@@ -62,7 +61,7 @@ public class AdminController extends MultiActionController
     public ModelAndView displayAdminPage(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        return new ModelAndView("admin", "config", this.config);
+        return new ModelAndView("admin", "config", this.ncwmsContext.getConfig());
     }
     
     /**
@@ -77,7 +76,7 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("Must provide a dataset id");
         }
-        Dataset dataset = this.config.getDatasets().get(datasetId);
+        Dataset dataset = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
         if (dataset == null)
         {
             throw new Exception("There is no dataset with id " + datasetId);
@@ -91,8 +90,9 @@ public class AdminController extends MultiActionController
     public ModelAndView updateConfig(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        Contact contact = this.config.getContact();
-        Server server = this.config.getServer();
+        final Config config = this.ncwmsContext.getConfig();
+        Contact contact = config.getContact();
+        Server server = config.getServer();
 
         if (request.getParameter("contact.name") != null)
         {
@@ -112,7 +112,7 @@ public class AdminController extends MultiActionController
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.
             List<Dataset> datasetsToRemove = new ArrayList<Dataset>();
-            for (Dataset ds : this.config.getDatasets().values())
+            for (Dataset ds : config.getDatasets().values())
             {
                 boolean refreshDataset = false;
                 if (request.getParameter("dataset." + ds.getId() + ".remove") != null)
@@ -152,7 +152,7 @@ public class AdminController extends MultiActionController
             // Now we can remove the datasets
             for (Dataset ds : datasetsToRemove)
             {
-                this.config.removeDataset(ds);
+                config.removeDataset(ds);
             }
             // Now look for the new datasets. This logic means that we don't have
             // to know in advance how many new datasets the user has created (or
@@ -170,7 +170,7 @@ public class AdminController extends MultiActionController
                     ds.setDataReaderClass(request.getParameter("dataset.new" + i + ".reader"));
                     ds.setQueryable(request.getParameter("dataset.new" + i + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
-                    this.config.addDataset(ds);
+                    config.addDataset(ds);
                     this.metadataLoader.forceReloadMetadata(ds);
                 }
                 i++;
@@ -178,9 +178,9 @@ public class AdminController extends MultiActionController
             
             // Set the location of the THREDDS catalog if it has changed
             String newThreddsCatalogLocation = request.getParameter("thredds.catalog.location");
-            if (!this.config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
+            if (!config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
             {
-                this.config.setThreddsCatalogLocation(newThreddsCatalogLocation);
+                config.setThreddsCatalogLocation(newThreddsCatalogLocation);
                 // Reload Thredds datasets in a new thread
                 new Thread()
                 {
@@ -191,21 +191,13 @@ public class AdminController extends MultiActionController
                 }.start();
             }
 
-            // Save the config information to disk
-            this.ncwmsContext.saveConfig(this.config);
+            // Save the updated config information to disk
+            this.ncwmsContext.saveConfig();
         }
         
         // This causes a client-side redirect, meaning that the user can safely
         // press refresh in their browser without resubmitting the new config information.
         return new ModelAndView("postConfigUpdate");
-    }
-    
-    /**
-     * Called by Spring to inject the configuration object
-     */
-    public void setConfig(Config config)
-    {
-        this.config = config;
     }
     
     /**

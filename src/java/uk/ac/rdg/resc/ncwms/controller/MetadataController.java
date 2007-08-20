@@ -35,12 +35,11 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
-import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -59,9 +58,8 @@ public class MetadataController
     private static final WmsUtils.DayComparator DAY_COMPARATOR =
         new WmsUtils.DayComparator();
     
-    private Config config; // Will be injected by Spring
+    private NcwmsContext ncwmsContext; // Will be injected by Spring
     private Factory<AbstractGrid> gridFactory; // Ditto
-    private MetadataStore metadataStore;
     
     public ModelAndView handleRequest(HttpServletRequest request,
         HttpServletResponse response) throws Exception
@@ -114,7 +112,7 @@ public class MetadataController
         // Find the list of displayable datasets that match any of the
         // provided filters
         List<Dataset> displayables = new ArrayList<Dataset>();
-        for (Dataset ds : this.config.getDatasets().values())
+        for (Dataset ds : this.ncwmsContext.getConfig().getDatasets().values())
         {
             if (ds.isReady()) // Check that the dataset is loaded properly
             {
@@ -162,7 +160,7 @@ public class MetadataController
         {
             throw new WmsException("Must provide a value for the dataset parameter");
         }
-        Dataset ds = this.config.getDatasets().get(dsId);
+        Dataset ds = this.ncwmsContext.getConfig().getDatasets().get(dsId);
         if (ds == null)
         {
             throw new WmsException("There is no dataset with id " + dsId);
@@ -195,7 +193,7 @@ public class MetadataController
             throw new Exception("Must provide a value for the variable parameter");
         }
         // This logic for constructing the layer name must match up with Layer.getLayerName()!
-        Layer layer = this.metadataStore.getLayerById(ds.getId() + "/" + varId);
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(ds.getId() + "/" + varId);
         if (layer == null)
         {
             throw new Exception("There is no variable with id " + varId
@@ -316,7 +314,7 @@ public class MetadataController
         // TODO: some of the code below is repetitive of WmsController: refactor?
         
         // Get the variable we're interested in
-        Layer layer = this.metadataStore.getLayerById(dataRequest.getLayers()[0]);
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(dataRequest.getLayers()[0]);
         
         // Get the grid onto which the data is being projected
         AbstractGrid grid = WmsController.getGrid(dataRequest, this.gridFactory);
@@ -360,14 +358,6 @@ public class MetadataController
     {
         return DAY_COMPARATOR.compare(s1, s2) == 0;
     }
-
-    /**
-     * Called by Spring to inject the configuration object
-     */
-    public void setConfig(Config config)
-    {
-        this.config = config;
-    }
     
     /**
      * Called by Spring to inject the gridFactory object
@@ -376,13 +366,13 @@ public class MetadataController
     {
         this.gridFactory = gridFactory;
     }
-    
+
     /**
-     * Called by Spring to inject the metadata store
+     * Called by the Spring framework to inject the context object
      */
-    public void setMetadataStore(MetadataStore metadataStore)
+    public void setNcwmsContext(NcwmsContext ncwmsContext)
     {
-        this.metadataStore = metadataStore;
+        this.ncwmsContext = ncwmsContext;
     }
     
 }
