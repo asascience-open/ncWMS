@@ -208,7 +208,7 @@ public class WmsController extends AbstractController
                 WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
         }
         // TODO: support more than one layer
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(layers[0]);
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayerByUniqueName(layers[0]);
         
         // Get the grid onto which the data will be projected
         AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
@@ -314,11 +314,11 @@ public class WmsController extends AbstractController
         }
         
         // Get the layer we're interested in
-        String layerId = dataRequest.getLayers()[0];
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(layerId);
+        String layerName = dataRequest.getLayers()[0];
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayerByUniqueName(layerName);
         if (!layer.isQueryable())
         {
-            throw new LayerNotQueryableException(layerId);
+            throw new LayerNotQueryableException(layerName);
         }
         
         // Get the grid onto which the data is being projected

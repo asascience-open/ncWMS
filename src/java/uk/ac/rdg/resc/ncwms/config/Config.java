@@ -57,11 +57,10 @@ public class Config
 {
     private static final Logger logger = Logger.getLogger(Config.class);
     
-    @Element(name="contact", required=false)
-    private Contact contact = new Contact();
-    
-    @Element(name="server")
-    private Server server = new Server();
+    // Time of the last update to this configuration or any of the contained
+    // metadata, in milliseconds since the epoch
+    @Element(name="lastUpdateTime", required=false)
+    private long lastUpdateTime = new Date().getTime(); 
     
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
@@ -73,12 +72,16 @@ public class Config
     private ArrayList<Dataset> datasetList = new ArrayList<Dataset>();
     
     @Element(name="threddsCatalog", required=false)
-    private String threddsCatalogLocation = null;    //location of the Thredds Catalog.xml (if there is one...)
+    private String threddsCatalogLocation = " ";    //location of the Thredds Catalog.xml (if there is one...)
     // This will store the datasets we have read from the thredds catalog
     private List<Dataset> threddsDatasets = new ArrayList<Dataset>();
     
-    private Date lastUpdateTime = new Date(); // Time of the last update to this configuration
-                                              // or any of the contained metadata
+    @Element(name="contact", required=false)
+    private Contact contact = new Contact();
+    
+    @Element(name="server")
+    private Server server = new Server();
+    
     private MetadataStore metadataStore; // Gives access to metadata
     
     /**
@@ -136,17 +139,21 @@ public class Config
         this.loadThreddsCatalog();
     }
     
-    public synchronized void setLastUpdateTime(Date date)
+    public void setLastUpdateTime(Date date)
     {
-        if (date.after(this.lastUpdateTime))
+        if (date.after(new Date(this.lastUpdateTime)))
         {
-            this.lastUpdateTime = date;
+            this.lastUpdateTime = date.getTime();
         }
     }
     
+    /**
+     * @return a newly-created Date object representing the time at which this
+     * configuration was last updated
+     */
     public Date getLastUpdateTime()
     {
-        return this.lastUpdateTime;
+        return new Date(this.lastUpdateTime);
     }
     
     /**
@@ -155,7 +162,7 @@ public class Config
      */
     public long getLastUpdateTimeMilliseconds()
     {
-        return this.lastUpdateTime.getTime();
+        return this.lastUpdateTime;
     }
 
     public Server getServer()
@@ -183,14 +190,16 @@ public class Config
         return this.datasets;
     }
     
-    public void addDataset(Dataset ds)
+    public synchronized void addDataset(Dataset ds)
     {
         ds.setConfig(this);
+        this.datasetList.add(ds);
         this.datasets.put(ds.getId(), ds);
     }
     
-    public void removeDataset(Dataset ds)
+    public synchronized void removeDataset(Dataset ds)
     {
+        this.datasetList.remove(ds);
         this.datasets.remove(ds.getId());
     }
     
@@ -231,6 +240,17 @@ public class Config
         }
     }
     
+    /**
+     * If s is whitespace only or empty, returns a space, otherwise returns s.
+     * This is to work around problems with the Simple XML software, which throws
+     * an Exception if it tries to read an empty field from an XML file.
+     */
+    public static String checkEmpty(String s)
+    {
+        s = s.trim();
+        return s.equals("") ? " " : s;
+    }
+    
     public String getThreddsCatalogLocation()
     {
         return this.threddsCatalogLocation;
@@ -238,7 +258,7 @@ public class Config
     
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
-        this.threddsCatalogLocation = threddsCatalogLocation;
+        this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
     }
     
     /**

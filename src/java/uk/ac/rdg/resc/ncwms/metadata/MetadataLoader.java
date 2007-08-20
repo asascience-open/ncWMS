@@ -102,6 +102,7 @@ public class MetadataLoader
             public void run()
             {
                 logger.debug("Loading metadata for {}", ds.getLocation());
+                ds.setState(Dataset.State.TO_BE_LOADED); // causes needsRefresh() to return true
                 boolean loaded = reloadMetadata(ds);
                 String message = loaded ? "Loaded metadata for {}" :
                     "Did not load metadata for {}";
@@ -122,6 +123,8 @@ public class MetadataLoader
         // TODO: re-examine this strategy
         synchronized(ds)
         {
+            // needsRefresh() examines the last update time of the dataset from
+            // the MetadataStore
             if (ds.needsRefresh())
             {
                 ds.setState(ds.getState() == State.READY ? State.UPDATING : State.LOADING);
@@ -142,17 +145,19 @@ public class MetadataLoader
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(layers);
+            // Set the Dataset property for all layers
             for (Layer layer : layers.values())
             {
                 // Must convert to mutable layer before altering
                 ((LayerImpl)layer).setDataset(ds);
-                this.ncwmsContext.getMetadataStore().addOrUpdateLayer(layer);
             }
+            // Update the metadata store
+            this.ncwmsContext.getMetadataStore().setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
             Date lastUpdate = new Date();
-            ds.setLastUpdate(lastUpdate);
             this.ncwmsContext.getConfig().setLastUpdateTime(lastUpdate);
-            // TODO: save the config information now we have updated the last update time?
+            this.ncwmsContext.saveConfig(); // Save the updated config information
+                                            // (updates the lastUpdateTime)
             return true;
         }
         catch(Exception e)

@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
@@ -42,43 +43,31 @@ import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
  * $Date$
  * $Log$
  */
-public class InMemoryMetadataStore implements MetadataStore
+public class InMemoryMetadataStore extends MetadataStore
 {
     /**
      * Maps dataset IDs to maps of variable IDs to Layer objects
      */
     private Map<String, Map<String, Layer>> layers =
         new HashMap<String, Map<String, Layer>>();
+    /**
+     * Maps datasetIDs to times of last metadata updates (in ms since the epoch).
+     */
+    private Map<String, Long> lastUpdateTimes = new HashMap<String, Long>();
     
     /**
-     * Gets a Layer object based on its unique id
-     * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The Layer object corresponding with this ID, or null
-     * if there is no object with this ID
-     * @throws LayerNotDefinedException if the layer does not exist.
+     * Gets a Layer object from a dataset
+     * @param datasetId The ID of the dataset to which the layer belongs
+     * @param layerId The unique ID of the layer within the dataset
+     * @return The corresponding Layer, or null if there is no corresponding
+     * layer in the store.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public synchronized Layer getLayerById(String layerId)
-        throws LayerNotDefinedException, Exception
+    public Layer getLayer(String datasetId, String layerId)
+        throws Exception
     {
-        // NOTE!! The logic of this method must match up with
-        // Layer.getLayerName()!
-        String[] dsAndVarIds = layerId.split("/");
-        if (dsAndVarIds.length != 2)
-        {
-            throw new LayerNotDefinedException(layerId);
-        }
-        Map<String, Layer> layersInDataset = this.layers.get(dsAndVarIds[0]);
-        if (layersInDataset == null)
-        {
-            throw new LayerNotDefinedException(layerId);
-        }
-        Layer layer = layersInDataset.get(dsAndVarIds[1]);
-        if (layer == null)
-        {
-            throw new LayerNotDefinedException(layerId);
-        }
-        return layer;
+        Map<String, Layer> layersInDataset = this.layers.get(datasetId);
+        return layersInDataset == null ? null : layersInDataset.get(layerId);
     }
     
     /**
@@ -96,22 +85,28 @@ public class InMemoryMetadataStore implements MetadataStore
     }
     
     /**
-     * Adds or updates a Layer object
-     * @param Layer The Layer object to add or update.  This object must
-     * have all of its fields (including its ID and the Dataset ID) set before
-     * calling this method.
+     * Sets the Layers that belong to the dataset with the given id, overwriting
+     * all previous layers in the dataset.  This method also updates
+     * the lastUpdateTime for the dataset (to harmonize with this.getLastUpdateTime()).
+     * @param datasetId The ID of the dataset.
+     * @param layers The Layers that belong to the dataset.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public synchronized void addOrUpdateLayer(Layer layer) throws Exception
+    public void setLayersInDataset(String datasetId, Map<String, Layer> layers)
     {
-        String datasetId = layer.getDataset().getId();
-        Map<String, Layer> layersInDataset = this.layers.get(datasetId);
-        if (layersInDataset == null)
-        {
-            layersInDataset = new HashMap<String, Layer>();
-            this.layers.put(datasetId, layersInDataset);
-        }
-        layersInDataset.put(layer.getId(), layer);
+        this.layers.put(datasetId, layers);
+        this.lastUpdateTimes.put(datasetId, new Date().getTime());
+    }
+
+    /**
+     * @return the time of the last update of the dataset with the given id,
+     * or null if the dataset has not yet been loaded into this store.  Returns
+     * a new Date object with every invocation.
+     */
+    public Date getLastUpdateTime(String datasetId)
+    {
+        Long lastUpdateTime = this.lastUpdateTimes.get(datasetId);
+        return lastUpdateTime == null ? null : new Date(lastUpdateTime);
     }
     
 }

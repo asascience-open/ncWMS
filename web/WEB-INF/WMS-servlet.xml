@@ -16,17 +16,17 @@
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. -->
-    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.BerkeleyDBMetadataStore"
+    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"
             init-method="init" destroy-method="close">
         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
-    </bean>-->
+    </bean>
     <!-- Replace with the line below if you want to store the metadata in memory -->
-    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>
+    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>-->
     
     <!-- An object that stores the context of the ncWMS application.  This contains
          the location of the application's working directory, which defaults to
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
-         workingDirectory property. -->
+         workingDirectory property.  It also creates and contains the config object.-->
      <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
          <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
         <property name="metadataStore"><ref local="metadataStore"/></property>

@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.utils;
 
 import java.io.File;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.util.Date;
 import ucar.nc2.units.DateFormatter;
 import java.text.SimpleDateFormat;
@@ -370,6 +371,40 @@ public class WmsUtils
                 throw new Exception("Could not create directory "
                     + dir.getPath());
             }
+        }
+    }
+    
+    /**
+     * Creates a unique name for a Layer (for display in the Capabilities
+     * document) based on a dataset ID and a Layer ID that is unique within a
+     * dataset.  Matches up with parseUniqueLayerName.
+     */
+    public static String createUniqueLayerName(String datasetId, String layerId)
+    {
+        return datasetId + "/" + layerId;
+    }
+    
+    /**
+     * Parses a unique layer name and returns a two-element String array containing
+     * the dataset id (first element) and the layer id (second element).  Matches
+     * up with getUniqueLayerName().  This method does not check for the existence
+     * or otherwise of the dataset or layer.
+     * @throws ParseException if the provided layer name is not in the correct
+     * format.
+     */
+    public static String[] parseUniqueLayerName(String uniqueLayerName)
+        throws ParseException
+    {
+        String[] els = uniqueLayerName.split("/");
+        if (els.length == 2)
+        {
+            return els;
+        }
+        else
+        {
+            // We don't bother looking for the position in the string where the
+            // parse error occurs
+            throw new ParseException(uniqueLayerName + " is not in the correct format", -1);
         }
     }
     

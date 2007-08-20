@@ -61,31 +61,26 @@ public class Dataset
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
+    
     @Attribute(name="location")
     private String location; // Location of this dataset (NcML file, OPeNDAP location etc)
+    
     @Attribute(name="queryable", required=false)
-    private boolean queryable; // True if we want GetFeatureInfo enabled for this dataset
+    private boolean queryable = true; // True if we want GetFeatureInfo enabled for this dataset
+    
     @Attribute(name="dataReaderClass", required=false)
-    private String dataReaderClass;
+    private String dataReaderClass = ""; // We'll use a default data reader
+                                         // unless this is overridden in the config file
     @Attribute(name="title")
     private String title;
+    
     @Attribute(name="updateInterval", required=false)
-    private int updateInterval; // The update interval in minutes
+    private int updateInterval = -1; // The update interval in minutes. -1 means "never update automatically"
     
-    private State state;     // State of this dataset
+    private State state = State.TO_BE_LOADED;     // State of this dataset
+    
     private Exception err;   // Set if there is an error loading the dataset
-    private Date lastUpdate; // Time at which the dataset was last updated
     private Config config;   // The Config object to which this belongs
-    
-    public Dataset()
-    {
-        this.state = State.TO_BE_LOADED;
-        this.queryable = true;
-        // We'll use a default data reader unless this is overridden in the config file
-        this.dataReaderClass = "";
-        this.updateInterval = -1; // Means "never update automatically"
-        this.lastUpdate = null;
-    }
 
     public String getId()
     {
@@ -143,6 +138,7 @@ public class Dataset
     
     /**
      * @return true if the metadata from this dataset needs to be reloaded
+     * automatically via the periodic reloader in MetadataLoader
      */
     public boolean needsRefresh()
     {
@@ -151,7 +147,7 @@ public class Dataset
             return false;
         }
         else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED
-            || this.lastUpdate == null)
+            || this.getLastUpdate() == null)
         {
             return true;
         }
@@ -163,7 +159,7 @@ public class Dataset
         {
             // State = READY.  Check the age of the metadata
             Calendar cal = Calendar.getInstance();
-            cal.setTime(this.lastUpdate);
+            cal.setTime(this.getLastUpdate());
             cal.add(Calendar.MINUTE, this.updateInterval);
             // Return true if we are after the next scheduled update
             return new Date().after(cal.getTime());
@@ -242,14 +238,16 @@ public class Dataset
         this.config = config;
     }
     
+    /**
+     * @return a Date object representing the time at which this dataset was
+     * last updated, or null if this dataset has never been updated.  Delegates
+     * to MetadataStore.getLastUpdateTime() (because the last update time is 
+     * stored with the metadata - which may or may not be persistent across
+     * server reboots, depending on the type of MetadataStore).
+     */
     public Date getLastUpdate()
     {
-        return this.lastUpdate;
-    }
-    
-    public void setLastUpdate(Date lastUpdate)
-    {
-        this.lastUpdate = lastUpdate;
+        return this.config.getMetadataStore().getLastUpdateTime(this.id);
     }
     
     /**

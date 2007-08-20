@@ -28,8 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import java.text.ParseException;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Map;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Interface describing a persistent store of metadata
@@ -39,18 +43,44 @@ import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
  * $Date$
  * $Log$
  */
-public interface MetadataStore
+public abstract class MetadataStore
 {
     /**
-     * Gets a Layer object based on its unique id
-     * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The Layer object corresponding with this ID, or null
-     * if there is no object with this ID
-     * @throws LayerNotDefinedException if the layer does not exist.
+     * Gets a Layer object from the metadata store.  This is a convenience
+     * method that wraps this.getLayer(), checking for valid input and throwing a
+     * LayerNotDefinedException if the layer is not present in the store.
+     * @param uniqueLayerName The unique Id of the layer, as returned by
+     * WmsUtils.createUniqueLayerName().
+     */
+    public final Layer getLayerByUniqueName(String uniqueLayerName)
+        throws LayerNotDefinedException, Exception
+    {
+        try
+        {
+            String[] els = WmsUtils.parseUniqueLayerName(uniqueLayerName);
+            Layer layer = this.getLayer(els[0], els[1]);
+            if (layer == null)
+            {
+                throw new LayerNotDefinedException(uniqueLayerName);
+            }
+            return layer;
+        }
+        catch(ParseException pe)
+        {
+            throw new LayerNotDefinedException(uniqueLayerName);
+        }
+    }
+    
+    /**
+     * Gets a Layer object from a dataset
+     * @param datasetId The ID of the dataset to which the layer belongs
+     * @param layerId The unique ID of the layer within the dataset
+     * @return The corresponding Layer, or null if there is no corresponding
+     * layer in the store.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public Layer getLayerById(String layerId)
-        throws LayerNotDefinedException, Exception;
+    public abstract Layer getLayer(String datasetId, String layerId)
+        throws Exception;
     
     /**
      * Gets all the Layers that belong to a dataset
@@ -59,16 +89,27 @@ public interface MetadataStore
      * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public Collection<Layer> getLayersInDataset(String datasetId)
+    public abstract Collection<Layer> getLayersInDataset(String datasetId)
         throws Exception;
     
     /**
-     * Adds or updates a Layer object
-     * @param Layer The Layer object to add or update.  This object must
-     * have all of its fields (including its ID and the Dataset ID) set before
-     * calling this method.
+     * Sets the Layers that belong to the dataset with the given id, overwriting
+     * all previous layers in the dataset.  This method should also update
+     * the lastUpdateTime for the dataset (to harmonize with this.getLastUpdateTime()).
+     * @param datasetId The ID of the dataset.
+     * @param layers The Layers that belong to the dataset.  Maps layer IDs
+     * (unique within a dataset) to Layer objects.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void addOrUpdateLayer(Layer layer) throws Exception;
+    public abstract void setLayersInDataset(String datasetId, Map<String, Layer> layers)
+        throws Exception;
+    
+    /**
+     * @return the time of the last update of the dataset with the given id,
+     * or null if the dataset has not yet been loaded into this store.  If an
+     * error occurs loading the last update time (which should be unlikely)
+     * implementing classes should log the error and return null.
+     */
+    public abstract Date getLastUpdateTime(String datasetId);
     
 }

@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import com.sleepycat.persist.model.Persistent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -51,6 +52,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * $Date$
  * $Log$
  */
+@Persistent // Berkeley DB code uses this
 public class LayerImpl implements Layer
 {
     private static final Logger logger = Logger.getLogger(LayerImpl.class);
@@ -67,7 +69,7 @@ public class LayerImpl implements Layer
     protected double validMax;
     protected EnhancedCoordAxis xaxis;
     protected EnhancedCoordAxis yaxis;
-    protected Dataset dataset;
+    protected transient Dataset dataset; // Not stored in the metadata database
     // Sorted in ascending order of time
     protected List<TimestepInfo> timesteps;
     // Stores the keys of the styles that this variable supports
@@ -490,16 +492,12 @@ public class LayerImpl implements Layer
     }
     
     /**
-     * 
-     * 
      * @return a unique identifier string for thisLayerImpla object (used
      * in the display of Layers in a Capabilities document).
      */
     public String getLayerName()
     {
-        // NOTE!! The logic of this method must match up with
-        // Config.getVariable(layerName)!
-        return this.dataset.getId() + "/" + this.id;
+        return WmsUtils.createUniqueLayerName(this.dataset.getId(), this.id);
     }
     
     /**

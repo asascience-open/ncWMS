@@ -85,7 +85,7 @@ public class Server
 
     public void setTitle(String title)
     {
-        this.title = Contact.checkEmpty(title);
+        this.title = Config.checkEmpty(title);
     }
 
     public boolean isAllowFeatureInfo()
@@ -125,7 +125,7 @@ public class Server
 
     public void setAbstract(String abstr)
     {
-        this.abstr = Contact.checkEmpty(abstr);
+        this.abstr = Config.checkEmpty(abstr);
     }
     
     /**
@@ -138,7 +138,7 @@ public class Server
 
     public void setKeywords(String keywords)
     {
-        this.keywords = Contact.checkEmpty(keywords);
+        this.keywords = Config.checkEmpty(keywords);
     }
 
     public String getUrl()
@@ -148,7 +148,7 @@ public class Server
 
     public void setUrl(String url)
     {
-        this.url = Contact.checkEmpty(url);
+        this.url = Config.checkEmpty(url);
     }
 
     public String getAdminPassword()

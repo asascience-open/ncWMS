@@ -192,8 +192,7 @@ public class MetadataController
         {
             throw new Exception("Must provide a value for the variable parameter");
         }
-        // This logic for constructing the layer name must match up with Layer.getLayerName()!
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(ds.getId() + "/" + varId);
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayer(ds.getId(), varId);
         if (layer == null)
         {
             throw new Exception("There is no variable with id " + varId
@@ -314,7 +313,7 @@ public class MetadataController
         // TODO: some of the code below is repetitive of WmsController: refactor?
         
         // Get the variable we're interested in
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerById(dataRequest.getLayers()[0]);
+        Layer layer = this.ncwmsContext.getMetadataStore().getLayerByUniqueName(dataRequest.getLayers()[0]);
         
         // Get the grid onto which the data is being projected
         AbstractGrid grid = WmsController.getGrid(dataRequest, this.gridFactory);

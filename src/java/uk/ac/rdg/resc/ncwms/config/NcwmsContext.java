@@ -145,6 +145,7 @@ public class NcwmsContext implements ApplicationContextAware
             throw new IllegalStateException("No location set for config file");
         }
         new Persister().write(this.config, this.configFile);
+        logger.debug("Config information saved to {}", this.configFile.getPath());
     }
 
     /**

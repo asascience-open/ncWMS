@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.metadata.berkeley;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -40,10 +40,13 @@ import com.sleepycat.persist.StoreConfig;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.*;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -54,7 +57,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * $Date$
  * $Log$
  */
-public class BerkeleyDBMetadataStore implements MetadataStore
+public class BerkeleyDBMetadataStore extends MetadataStore
 {
     private static final Logger logger = Logger.getLogger(BerkeleyDBMetadataStore.class);
     
@@ -70,8 +73,7 @@ public class BerkeleyDBMetadataStore implements MetadataStore
     private Environment env;
     private EntityStore store; // This is where we keep Layer objects
     
-    private PrimaryIndex<String, Layer> layersById;
-    private SecondaryIndex<String, String, Layer> layersByDatasetId;
+    private PrimaryIndex<String, Dataset> datasetsById;
     
     // Injected by Spring: gives the path to the working directory
     private NcwmsContext ncwmsContext;
@@ -97,12 +99,8 @@ public class BerkeleyDBMetadataStore implements MetadataStore
         this.env = new Environment(dbPath, envConfig);
         this.store = new EntityStore(this.env, STORE_NAME, storeConfig);
         
-        // Set up the indices that we will use to access Layer objects
-        this.layersById = this.store.getPrimaryIndex(String.class, Layer.class);
-        // The string "datasetId" matches the name of the dataset id field in
-        // Layer
-        this.layersByDatasetId = this.store.getSecondaryIndex(this.layersById,
-            String.class, "datasetId");
+        // Set up the index that will be used to store simple Dataset objects
+        this.datasetsById = this.store.getPrimaryIndex(String.class, Dataset.class);
         
         logger.debug("Database for Layer objects created in " + dbPath.getPath());
     }
@@ -117,51 +115,73 @@ public class BerkeleyDBMetadataStore implements MetadataStore
     public Collection<Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
-        // EntityCursors are not thread-safe so this method must be synchronized
-        EntityCursor<Layer> cursor = null;
-        List<Layer> layers = new ArrayList<Layer>();
+        // TODO: set the Dataset object for each Layer
+        return this.datasetsById.get(datasetId).getLayers().values();
+    }
+
+    /**
+     * @return the time of the last update of the dataset with the given id,
+     * or null if the dataset has not yet been loaded into this store.  Returns
+     * null (and logs the error) if an error occurs reading the Date from the
+     * persistent store.
+     */
+    public Date getLastUpdateTime(String datasetId)
+    {
         try
         {
-            cursor = this.layersByDatasetId.subIndex(datasetId).entities();
-            for (Layer layer : cursor)
-            {
-                layers.add(layer);
-            }
-            return layers;
+            Dataset ds = this.datasetsById.get(datasetId);
+            return ds == null ? null : ds.getLastUpdate();
         }
-        finally
+        catch (DatabaseException dbe)
         {
-            if (cursor != null)
-            {
-                cursor.close();
-            }
+            logger.error("Error reading last update time for dataset " + datasetId, dbe);
+            return null;
         }
     }
 
     /**
-     * Gets a Layer object based on its unique id
-     * @param id The layer name of the variable (e.g. "FOAM_ONE/TMP")
-     * @return The Layer object corresponding with this ID, or null
-     * if there is no object with this ID
-     * @throws LayerNotDefinedException if the layer does not exist.
-     * @throws Exception if an error occurs reading from the persistent store
-     */
-    public Layer getLayerById(String layerId)
-        throws LayerNotDefinedException, Exception
-    {
-        return this.layersById.get(layerId);
-    }
-
-    /**
-     * Adds or updates a Layer object
-     * @param Layer The Layer object to add or update.  This object must
-     * have all of its fields (including its ID and the Dataset ID) set before
-     * calling this method.
+     * Sets the Layers that belong to the dataset with the given id, overwriting
+     * all previous layers in the dataset.  This method should also update
+     * the lastUpdateTime for the dataset (to harmonize with this.getLastUpdateTime()).
+     * 
+     * @param datasetId The ID of the dataset.
+     * @param layers The Layers that belong to the dataset.  Maps layer IDs
+     * (unique within a dataset) to Layer objects.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void addOrUpdateLayer(Layer layer) throws Exception
+    public void setLayersInDataset(String datasetId, Map<String, Layer> layers) throws Exception
     {
-        this.layersById.put(layer);
+        // TODO: should we do this in a Transaction?  There's only one write
+        // operation so I assume we're OK.
+        Dataset ds = this.datasetsById.get(datasetId);
+        if (ds == null)
+        {
+            ds = new Dataset();
+            ds.setId(datasetId);
+        }
+        ds.setLayers(layers);
+        ds.setLastUpdate(new Date());
+        this.datasetsById.put(ds);
+    }
+
+    /**
+     * Gets a Layer object from a dataset
+     * 
+     * @param datasetId The ID of the dataset to which the layer belongs
+     * @param layerId The unique ID of the layer within the dataset
+     * @return The corresponding Layer, or null if there is no corresponding
+     * layer in the store.
+     * @throws Exception if an error occurs reading from the persistent store
+     */
+    public Layer getLayer(String datasetId, String layerId) throws Exception
+    {
+        Dataset ds = this.datasetsById.get(datasetId);
+        if (ds != null)
+        {
+            // TODO: set the Dataset object!
+            return ds.getLayers().get(layerId);
+        }
+        return null;
     }
     
     /**
