@@ -68,7 +68,7 @@ public abstract class DataReader
      * created (hence methods have to be thread-safe).
      * 
      * @param className Name of the class to generate
-     * @param the location of the dataset: used to detect OPeNDAP URLs
+     * @param location the location of the dataset: used to detect OPeNDAP URLs
      * @return a DataReader object of the given class, or {@link DefaultDataReader}
      * or {@link OpendapDataReader} (depending on whether the location starts with
      * "http://" or "dods://") if <code>className</code> is null or the empty string
@@ -143,13 +143,13 @@ public abstract class DataReader
             {
                 throw new IOException(locFile.getPath() + " is not a valid path");
             }
-            // Find the files that match the glob pattern
-            File[] files = parentFile.listFiles(filter);
-            if (files == null)
+            if (!parentFile.isDirectory())
             {
                 throw new IOException(parentFile.getPath() + " is not a valid directory");
             }
-            if (files.length == 0)
+            // Find the files that match the glob pattern
+            File[] files = parentFile.listFiles(filter);
+            if (files == null || files.length == 0)
             {
                 throw new IOException(location + " does not match any files");
             }

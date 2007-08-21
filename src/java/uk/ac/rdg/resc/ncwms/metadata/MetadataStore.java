@@ -32,6 +32,8 @@ import java.text.ParseException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
+import uk.ac.rdg.resc.ncwms.config.Config;
+import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -45,6 +47,24 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public abstract class MetadataStore
 {
+    
+    // This is set by Spring and is needed so that subclasses know where to
+    // store metadata
+    protected NcwmsContext ncwmsContext;
+    
+    // This is set by Config.readConfig() once the config information has been
+    // read.  It is needed to allow the methods that return Layers to set 
+    // the Dataset objects to which Layers belong.
+    protected Config config;
+    
+    /**
+     * Subclasses can override this method to provide initialization code, which
+     * is called after injection of all fields by Spring (i.e. the context object
+     * will be set before calling this method
+     * This default method does nothing.
+     */
+    public void init() throws Exception {}
+    
     /**
      * Gets a Layer object from the metadata store.  This is a convenience
      * method that wraps this.getLayer(), checking for valid input and throwing a
@@ -111,5 +131,28 @@ public abstract class MetadataStore
      * implementing classes should log the error and return null.
      */
     public abstract Date getLastUpdateTime(String datasetId);
+    
+    /**
+     * Called by Spring to clean up this store. Subclasses should override if
+     * necessary.
+     */
+    public void close() throws Exception {}
+
+    /**
+     * Called by Config.readConfig() to set the config object containing
+     * the configuration of this ncWMS server.
+     */
+    public void setConfig(Config config)
+    {
+        this.config = config;
+    }
+
+    /**
+     * Called by Spring to inject the context object
+     */
+    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    {
+        this.ncwmsContext = ncwmsContext;
+    }
     
 }

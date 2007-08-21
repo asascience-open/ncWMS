@@ -85,7 +85,7 @@ public abstract class AbstractStyle
     }
 
     /**
-     * @param width The width of the picture in pixels
+     * @param picWidth The width of the picture in pixels
      */
     public void setPicWidth(int picWidth)
     {
@@ -98,7 +98,7 @@ public abstract class AbstractStyle
     }
 
     /**
-     * @param height The height of the picture in pixels
+     * @param picHeight The height of the picture in pixels
      */
     public void setPicHeight(int picHeight)
     {
@@ -124,7 +124,7 @@ public abstract class AbstractStyle
     }
 
     /**
-     * @param bgcolor Colour of background pixels if not transparent
+     * @param bgColor Colour of background pixels if not transparent
      */
     public void setBgColor(int bgColor)
     {

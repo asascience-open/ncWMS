@@ -40,7 +40,6 @@ import java.util.Date;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
@@ -72,11 +71,8 @@ public class BerkeleyDBMetadataStore extends MetadataStore
     
     private PrimaryIndex<String, BerkeleyDBDataset> datasetsById;
     
-    // Injected by Spring: gives the path to the working directory
-    private NcwmsContext ncwmsContext;
-    
     /**
-     * This is called by the Spring framework to initialize this object
+     * Initializes this store.
      * @throws Exception if there was an error initializing the database
      * @todo can the environment be shared with the cache of image data?
      */
@@ -121,7 +117,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             Layer layer = bds.getLayers().get(layerId);
             if (layer != null)
             {
-                Dataset ds = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
+                Dataset ds = this.config.getDatasets().get(datasetId);
                 ((LayerImpl)layer).setDataset(ds);
             }
             logger.debug("... found.");
@@ -147,7 +143,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
         BerkeleyDBDataset bds = this.datasetsById.get(datasetId);
         if (bds != null)
         {
-            Dataset ds = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
+            Dataset ds = this.config.getDatasets().get(datasetId);
             Collection<Layer> layers = bds.getLayers().values();
             for (Layer layer : layers)
             {
@@ -231,16 +227,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             this.env.cleanLog();
             this.env.close();
         }
-        logger.debug("Database of Layer objects closed");
-    }
-    
-    /**
-     * Called by Spring to inject the context containing the path to the ncWMS
-     * working directory.
-     */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
-    {
-        this.ncwmsContext = ncwmsContext;
+        logger.debug("Berkeley database of Layer objects closed");
     }
     
 }

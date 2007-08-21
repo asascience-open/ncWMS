@@ -59,7 +59,8 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
     
     /**
      * Creates a new instance of OneDCoordAxis
-     * @param axis1D A {@link CoordinateAxis1D}
+     * @param count the number of points on this axis
+     * @param isLongitude true if this is a longitude axis
      */
     protected OneDCoordAxis(int count, boolean isLongitude)
     {

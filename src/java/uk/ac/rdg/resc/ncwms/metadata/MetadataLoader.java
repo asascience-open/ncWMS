@@ -35,6 +35,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import org.apache.log4j.Logger;
 import ucar.nc2.dataset.NetcdfDatasetCache;
+import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
@@ -55,7 +56,8 @@ public class MetadataLoader
     
     private Timer timer;
     
-    private NcwmsContext ncwmsContext; // Will be injected by Spring
+    private Config config; // Will be injected by Spring
+    private MetadataStore metadataStore; // Ditto
     
     /**
      * Called by the Spring framework to initialize this object
@@ -83,7 +85,7 @@ public class MetadataLoader
         public void run()
         {
             logger.debug("Reloading metadata...");
-            for (Dataset ds : ncwmsContext.getConfig().getDatasets().values())
+            for (Dataset ds : config.getDatasets().values())
             {
                 reloadMetadata(ds);
             }
@@ -152,12 +154,11 @@ public class MetadataLoader
                 ((LayerImpl)layer).setDataset(ds);
             }
             // Update the metadata store
-            this.ncwmsContext.getMetadataStore().setLayersInDataset(ds.getId(), layers);
+            this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
             Date lastUpdate = new Date();
-            this.ncwmsContext.getConfig().setLastUpdateTime(lastUpdate);
-            this.ncwmsContext.saveConfig(); // Save the updated config information
-                                            // (updates the lastUpdateTime)
+            // TODO: set this when reading from database too.
+            this.config.setLastUpdateTime(lastUpdate);
             return true;
         }
         catch(Exception e)
@@ -272,17 +273,25 @@ public class MetadataLoader
     public void close()
     {
         if (this.timer != null) this.timer.cancel();
-        this.ncwmsContext = null;
+        this.config = null;
         NetcdfDatasetCache.exit();
         logger.debug("Cleaned up MetadataLoader");
     }
 
     /**
-     * Called by the Spring framework to inject the context object
+     * Called by the Spring framework to inject the config object
      */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    public void setConfig(Config config)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.config = config;
+    }
+
+    /**
+     * Called by Spring to inject the metadata store
+     */
+    public void setMetadataStore(MetadataStore metadataStore)
+    {
+        this.metadataStore = metadataStore;
     }
     
 }

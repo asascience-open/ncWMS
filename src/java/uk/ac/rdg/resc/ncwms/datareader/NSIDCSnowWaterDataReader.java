@@ -88,11 +88,11 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param filename Full path to the individual file
+     * @param filepath Full path to the individual file
      * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<Layer> getLayers(String filename) throws IOException
+    protected List<Layer> getLayers(String filepath) throws IOException
     {
         List<Layer> layers = new ArrayList<Layer>();
         LayerImpl layer = new LayerImpl();
@@ -106,14 +106,15 @@ public class NSIDCSnowWaterDataReader extends DataReader
         
         try
         {
+            String filename = new File(filepath).getName();
             Date timestep = DATE_FORMAT.parse(filename);
-            layer.addTimestepInfo(new TimestepInfo(timestep, filename, 0));
+            layer.addTimestepInfo(new TimestepInfo(timestep, filepath, 0));
         }
         catch(ParseException pe)
         {
-            logger.error("Error parsing filename " + filename, pe);
+            logger.error("Error parsing filepath " + filepath, pe);
             // TODO: not really an IOException
-            throw new IOException("Error parsing filename " + filename);
+            throw new IOException("Error parsing filepath " + filepath);
         }
         
         layers.add(layer);

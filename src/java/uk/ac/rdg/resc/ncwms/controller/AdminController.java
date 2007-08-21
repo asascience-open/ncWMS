@@ -53,7 +53,7 @@ public class AdminController extends MultiActionController
 {
     // These will be injected by Spring
     private MetadataLoader metadataLoader;
-    private NcwmsContext ncwmsContext; // Gives method to save config information 
+    private Config config;
     
     /**
      * Displays the administrative web page
@@ -61,7 +61,7 @@ public class AdminController extends MultiActionController
     public ModelAndView displayAdminPage(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        return new ModelAndView("admin", "config", this.ncwmsContext.getConfig());
+        return new ModelAndView("admin", "config", this.config);
     }
     
     /**
@@ -76,7 +76,7 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("Must provide a dataset id");
         }
-        Dataset dataset = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
+        Dataset dataset = this.config.getDatasets().get(datasetId);
         if (dataset == null)
         {
             throw new Exception("There is no dataset with id " + datasetId);
@@ -90,9 +90,8 @@ public class AdminController extends MultiActionController
     public ModelAndView updateConfig(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        final Config config = this.ncwmsContext.getConfig();
-        Contact contact = config.getContact();
-        Server server = config.getServer();
+        Contact contact = this.config.getContact();
+        Server server = this.config.getServer();
 
         if (request.getParameter("contact.name") != null)
         {
@@ -112,7 +111,7 @@ public class AdminController extends MultiActionController
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.
             List<Dataset> datasetsToRemove = new ArrayList<Dataset>();
-            for (Dataset ds : config.getDatasets().values())
+            for (Dataset ds : this.config.getDatasets().values())
             {
                 boolean refreshDataset = false;
                 if (request.getParameter("dataset." + ds.getId() + ".remove") != null)
@@ -192,7 +191,7 @@ public class AdminController extends MultiActionController
             }
 
             // Save the updated config information to disk
-            this.ncwmsContext.saveConfig();
+            this.config.save();
         }
         
         // This causes a client-side redirect, meaning that the user can safely
@@ -212,9 +211,9 @@ public class AdminController extends MultiActionController
      * Called by Spring to inject the context containing method to save the
      * configuration information
      */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    public void setConfig(Config config)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.config = config;
     }
     
 }

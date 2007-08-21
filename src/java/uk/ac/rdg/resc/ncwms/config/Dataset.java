@@ -77,7 +77,7 @@ public class Dataset
     @Attribute(name="updateInterval", required=false)
     private int updateInterval = -1; // The update interval in minutes. -1 means "never update automatically"
     
-    private State state = State.TO_BE_LOADED;     // State of this dataset
+    private State state;     // State of this dataset.  Will be set in Config.build()
     
     private Exception err;   // Set if there is an error loading the dataset
     private Config config;   // The Config object to which this belongs
@@ -142,12 +142,15 @@ public class Dataset
      */
     public boolean needsRefresh()
     {
+        Date lastUpdate = this.getLastUpdate();
+        logger.debug("Last update time for dataset {} is {}", this.id, lastUpdate);
+        logger.debug("State of dataset {} is {}", this.id, this.state);
         if (this.state == State.LOADING || this.state == State.UPDATING)
         {
             return false;
         }
         else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED
-            || this.getLastUpdate() == null)
+            || lastUpdate == null)
         {
             return true;
         }
@@ -159,7 +162,7 @@ public class Dataset
         {
             // State = READY.  Check the age of the metadata
             Calendar cal = Calendar.getInstance();
-            cal.setTime(this.getLastUpdate());
+            cal.setTime(lastUpdate);
             cal.add(Calendar.MINUTE, this.updateInterval);
             // Return true if we are after the next scheduled update
             return new Date().after(cal.getTime());

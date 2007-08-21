@@ -46,7 +46,7 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
+import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
@@ -59,6 +59,7 @@ import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
 import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
 import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -87,7 +88,8 @@ public class WmsController extends AbstractController
     private static final String FEATURE_INFO_PNG_FORMAT = "image/png";
     
     // These objects will be injected by Spring
-    private NcwmsContext ncwmsContext;
+    private Config config;
+    private MetadataStore metadataStore;
     private Factory<PicMaker> picMakerFactory;
     private Factory<AbstractStyle> styleFactory;
     private Factory<AbstractGrid> gridFactory;
@@ -174,7 +176,7 @@ public class WmsController extends AbstractController
         // TODO: check the UPDATESEQUENCE parameter
         
         Map<String, Object> models = new HashMap<String, Object>();
-        models.put("config", this.ncwmsContext.getConfig());
+        models.put("config", this.config);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
@@ -208,7 +210,7 @@ public class WmsController extends AbstractController
                 WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
         }
         // TODO: support more than one layer
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerByUniqueName(layers[0]);
+        Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
         
         // Get the grid onto which the data will be projected
         AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
@@ -315,7 +317,7 @@ public class WmsController extends AbstractController
         
         // Get the layer we're interested in
         String layerName = dataRequest.getLayers()[0];
-        Layer layer = this.ncwmsContext.getMetadataStore().getLayerByUniqueName(layerName);
+        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         if (!layer.isQueryable())
         {
             throw new LayerNotQueryableException(layerName);
@@ -587,10 +589,18 @@ public class WmsController extends AbstractController
     }
 
     /**
-     * Called by the Spring framework to inject the context object
+     * Called by the Spring framework to inject the config object
      */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    public void setConfig(Config config)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.config = config;
+    }
+
+    /**
+     * Called by Spring to inject the metadata store
+     */
+    public void setMetadataStore(MetadataStore metadataStore)
+    {
+        this.metadataStore = metadataStore;
     }
 }

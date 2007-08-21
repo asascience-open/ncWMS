@@ -41,7 +41,7 @@ public class PlateCarreeGrid extends RectangularLatLonGrid
     public static final String[] KEYS = new String[]{"CRS:84"};
 
     /**
-     * @returns a new array of points along the longitude axis
+     * @return a new array of points along the longitude axis
      */
     public float[] getLonArray()
     {
@@ -57,7 +57,7 @@ public class PlateCarreeGrid extends RectangularLatLonGrid
     }
 
     /**
-     * @returns a new array of points along the latitude axis
+     * @return a new array of points along the latitude axis
      */
     public float[] getLatArray()
     {

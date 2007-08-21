@@ -73,10 +73,7 @@ public class NcwmsContext implements ApplicationContextAware
     // overridden by setting a new path in WMS-servlet.xml
     private File workingDirectory = new File(System.getProperty("user.home"), ".ncWMS");
     private File configFile; // location of the configuration file
-    private Config config; // Configuration of the ncWMS server
     private ApplicationContext applicationContext; // Will be set by Spring
-    private MetadataStore metadataStore; // Injected by Spring. Gives access to
-                                         // metadata
     
     /**
      * Does the actual initialization of the context: creates the necessary
@@ -100,60 +97,8 @@ public class NcwmsContext implements ApplicationContextAware
         logProps.put("log4j.appender.R.File", logFile.getPath());
         PropertyConfigurator.configure(logProps);
         
-        // Load the configuration information
+        // Set the location of the config file
         this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
-        loadConfig();
-        // Set the metadata store in the config object: needed by the Dataset class
-        this.config.setMetadataStore(this.metadataStore);
-    }
-    
-    /**
-     * Reads configuration information from the file config.xml in the working
-     * directory.  If the configuration file does not exist in the given location
-     * it will be created.
-     * @throws Exception if there was an error reading the configuration
-     */
-    private void loadConfig() throws Exception
-    {
-        if (this.configFile.exists())
-        {
-            this.config = new Persister().read(Config.class, this.configFile);
-            logger.debug("Loaded configuration from {}", configFile.getPath());
-        }
-        else
-        {
-            // We must make a new config file and save it
-            this.config = new Config();
-            saveConfig();
-            logger.debug("Created new configuration object and saved to {}",
-                this.configFile.getPath());
-        }
-    }
-    
-    /**
-     * Saves configuration information to the disk.  Other classes can call this
-     * method when they have altered the configuration information that they 
-     * have gotten through getConfig()
-     * @throws Exception if there was an error saving the configuration
-     * @throws IllegalStateException if the config file has not previously been
-     * saved.
-     */
-    public void saveConfig() throws Exception
-    {
-        if (this.configFile == null)
-        {
-            throw new IllegalStateException("No location set for config file");
-        }
-        new Persister().write(this.config, this.configFile);
-        logger.debug("Config information saved to {}", this.configFile.getPath());
-    }
-
-    /**
-     * @return the configuration information for this ncWMS server.
-     */
-    public Config getConfig()
-    {
-        return config;
     }
     
     /**
@@ -179,6 +124,15 @@ public class NcwmsContext implements ApplicationContextAware
         }
         this.workingDirectory = workingDirectory;
     }
+    
+    /**
+     * @return a java.io.File representing the location of the config file.
+     * Does not guarantee that this file exists
+     */
+    public File getConfigFile()
+    {
+        return this.configFile;
+    }
 
     /**
      * Called automatically by Spring
@@ -186,19 +140,6 @@ public class NcwmsContext implements ApplicationContextAware
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException
     {
         this.applicationContext = applicationContext;
-    }
-
-    public MetadataStore getMetadataStore()
-    {
-        return metadataStore;
-    }
-
-    /**
-     * Called by Spring to inject the metadata store object
-     */
-    public void setMetadataStore(MetadataStore metadataStore)
-    {
-        this.metadataStore = metadataStore;
     }
     
 }

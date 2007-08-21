@@ -41,8 +41,8 @@ public class InvalidPointException extends WmsException
 {
     
     /**
-     * Creates a new instance of InvalidCrsException
-     * @param crsCode The code of the unsupported CRS
+     * Creates a new instance of InvalidPointException
+     * @param i_or_j The string "i" or "j" denoting which coordinate is invalid
      */
     public InvalidPointException(String i_or_j)
     {

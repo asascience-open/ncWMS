@@ -13,23 +13,31 @@
        xsi:schemaLocation='http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd'>
     
     <!-- TODO: Need a bean for the tile cache -->
-          
-    <!-- An object that is used to store and read metadata about the variables
-         that are being exposed through this server. -->
-    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"
-            init-method="init" destroy-method="close">
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
-    </bean>
-    <!-- Replace with the line below if you want to store the metadata in memory -->
-    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"/>-->
     
     <!-- An object that stores the context of the ncWMS application.  This contains
          the location of the application's working directory, which defaults to
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
          workingDirectory property.  It also creates and contains the config object.-->
-     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
-         <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
-        <property name="metadataStore"><ref local="metadataStore"/></property>
+    <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
+        <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
+    </bean>
+          
+    <!-- An object that is used to store and read metadata about the variables
+         that are being exposed through this server. To change the store to
+         an in-memory store (for performance or debugging purposes change
+         the class to "uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore" -->
+    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"-->
+    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"
+            init-method="init" destroy-method="close">
+        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+    </bean>
+    
+    <!-- Configuration of this ncWMS server.  This gets the location of the 
+         config file from the ncwmsContext. -->
+     <bean id="config" class="uk.ac.rdg.resc.ncwms.config.Config"
+           factory-method="readConfig">
+         <constructor-arg ref="ncwmsContext"/>
+         <constructor-arg ref="metadataStore"/>
      </bean>
     
     <!-- An object that is used to create PicMakers. -->
@@ -77,13 +85,15 @@
     <!-- Object that handles the periodic refreshing of metadata. -->
     <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.metadata.MetadataLoader"
             init-method="init" destroy-method="close">
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="config"><ref local="config"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
     </bean>
     
     <!-- This Controller will handle all the requests to the WMS -->
     <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController">
         <property name="supportedMethods" value="GET"/>
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="config"><ref local="config"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
         <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
         <property name="styleFactory"><ref local="styleFactory"/></property>
         <property name="gridFactory"><ref local="gridFactory"/></property>
@@ -94,7 +104,8 @@
          metadata that are required by the Godiva2 site.  It is called from the
          WmsController and therefore does not need a mapping to be set up here. -->
     <bean id="metadataController" class="uk.ac.rdg.resc.ncwms.controller.MetadataController">
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="config"><ref local="config"/></property>
+        <property name="metadataStore"><ref local="metadataStore"/></property>
         <property name="gridFactory"><ref local="gridFactory"/></property>
     </bean>
     
@@ -103,7 +114,7 @@
          layer.  Mapped to index.jsp. -->
     <bean id="frontPageController" class="uk.ac.rdg.resc.ncwms.controller.FrontPageController">
         <property name="supportedMethods" value="GET"/>
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="config"><ref local="config"/></property>
         <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
     </bean>
     
@@ -112,7 +123,7 @@
          for each page under the /admin/ directory -->
     <bean id="adminController" class="uk.ac.rdg.resc.ncwms.controller.AdminController">
         <property name="supportedMethods" value="GET,POST"/>
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="config"><ref local="config"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
     </bean>

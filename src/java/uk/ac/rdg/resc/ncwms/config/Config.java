@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -39,7 +40,9 @@ import simple.xml.ElementList;
 import simple.xml.Root;
 import simple.xml.load.Commit;
 import simple.xml.load.PersistenceException;
+import simple.xml.load.Persister;
 import simple.xml.load.Validate;
+import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.config.thredds.ThreddsConfig;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 
@@ -56,11 +59,6 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 public class Config
 {
     private static final Logger logger = Logger.getLogger(Config.class);
-    
-    // Time of the last update to this configuration or any of the contained
-    // metadata, in milliseconds since the epoch
-    @Element(name="lastUpdateTime", required=false)
-    private long lastUpdateTime = new Date().getTime(); 
     
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
@@ -82,6 +80,12 @@ public class Config
     @Element(name="server")
     private Server server = new Server();
     
+    // Time of the last update to this configuration or any of the contained
+    // metadata, in milliseconds since the epoch
+    private long lastUpdateTime = new Date().getTime(); 
+    
+    private File configFile; // Location of the file from which this information has been read
+    
     private MetadataStore metadataStore; // Gives access to metadata
     
     /**
@@ -90,11 +94,87 @@ public class Config
     private Map<String, Dataset> datasets = new HashMap<String, Dataset>();
     
     /**
-     * Package-private constructor: only the NcwmsContext object is allowed to
-     * create new Config objects.  This prevents other classes being tempted to
-     * create new Config objects instead of accessing through NcwmsContext.
+     * Private constructor.  This prevents other classes from creating
+     * new Config objects directly.
      */
-    Config() {}
+    private Config() {}
+    
+    /**
+     * Reads configuration information from the file location given by the
+     * provided Context object
+     * @param ncwmsContext object containing the context of this ncWMS application
+     * (including the location of the config file)
+     * @param metadataStore object that is used to read metadata from a store.
+     * We need this here to set the state of each Dataset, based upon the last
+     * update time.
+     */
+    public static Config readConfig(NcwmsContext ncwmsContext,
+        MetadataStore metadataStore) throws Exception
+    {
+        Config config;
+        File configFile = ncwmsContext.getConfigFile();
+        if (configFile.exists())
+        {
+            config = new Persister().read(Config.class, configFile);
+            config.configFile = configFile;
+            logger.debug("Loaded configuration from {}", configFile.getPath());
+        }
+        else
+        {
+            // We must make a new config file and save it
+            config = new Config();
+            config.configFile = configFile;
+            config.save();
+            logger.debug("Created new configuration object and saved to {}",
+                configFile.getPath());
+        }
+        
+        // Now set the state of each Dataset, based on the last update time in
+        // the metadata store
+        for (Dataset ds : config.getDatasets().values())
+        {
+            // Read the time at which this dataset was last updated from the
+            // metadata store
+            Date lastUpdate = metadataStore.getLastUpdateTime(ds.getId());
+            if (lastUpdate == null)
+            {
+                // The dataset has never been loaded
+                ds.setState(State.TO_BE_LOADED);
+            }
+            else
+            {
+                // The metadata are already present in the database. We say that this
+                // dataset is ready for use, allowing the periodic reloader
+                // (see MetadataLoader) to refresh the metadata when necessary.
+                ds.setState(State.READY);
+            }
+        }
+        
+        // Set the reference to the metadata store, which is needed by the
+        // Dataset object to read metadata
+        config.metadataStore = metadataStore;
+        // The config object is needed by the metadata store when setting
+        // properties of the returned Layer objects.
+        metadataStore.setConfig(config);
+        return config;
+    }
+    
+    /**
+     * Saves configuration information to the disk.  Other classes can call this
+     * method when they have altered the contents of this object.
+     * @throws Exception if there was an error saving the configuration
+     * @throws IllegalStateException if the config file has not previously been
+     * saved.
+     */
+    public void save() throws Exception
+    {
+        if (this.configFile == null)
+        {
+            throw new IllegalStateException("No location set for config file");
+        }
+        new Persister().write(this, this.configFile);
+        logger.debug("Config information saved to {}", this.configFile.getPath());
+    }
     
     /**
      * Checks that the data we have read are valid.  Checks that there are no
@@ -134,6 +214,8 @@ public class Config
         for (Dataset ds : this.datasetList)
         {
             ds.setConfig(this);
+            // The state of the datasets is set based on the contents of the
+            // metadata store: see MetadataStore.init()
             this.datasets.put(ds.getId(), ds);
         }
         this.loadThreddsCatalog();
@@ -259,14 +341,6 @@ public class Config
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
         this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
-    }
-    
-    /**
-     * Called by NcwmsContext to inject the metadata store
-     */
-    public void setMetadataStore(MetadataStore metadataStore)
-    {
-        this.metadataStore = metadataStore;
     }
     
 }
