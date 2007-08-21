@@ -43,7 +43,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
  * $Log$
  */
 @Entity
-class Dataset
+class BerkeleyDBDataset
 {
     @PrimaryKey
     private String id;

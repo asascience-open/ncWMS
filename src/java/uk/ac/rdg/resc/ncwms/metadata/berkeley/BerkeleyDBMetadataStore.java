@@ -31,22 +31,19 @@ package uk.ac.rdg.resc.ncwms.metadata.berkeley;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.Transaction;
-import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
-import com.sleepycat.persist.SecondaryIndex;
 import com.sleepycat.persist.StoreConfig;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
-import uk.ac.rdg.resc.ncwms.metadata.*;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -73,7 +70,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
     private Environment env;
     private EntityStore store; // This is where we keep Layer objects
     
-    private PrimaryIndex<String, Dataset> datasetsById;
+    private PrimaryIndex<String, BerkeleyDBDataset> datasetsById;
     
     // Injected by Spring: gives the path to the working directory
     private NcwmsContext ncwmsContext;
@@ -100,7 +97,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
         this.store = new EntityStore(this.env, STORE_NAME, storeConfig);
         
         // Set up the index that will be used to store simple Dataset objects
-        this.datasetsById = this.store.getPrimaryIndex(String.class, Dataset.class);
+        this.datasetsById = this.store.getPrimaryIndex(String.class, BerkeleyDBDataset.class);
         
         logger.debug("Database for Dataset objects created in " + dbPath.getPath());
     }
@@ -116,16 +113,21 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      */
     public Layer getLayer(String datasetId, String layerId) throws Exception
     {
-        Dataset ds = this.datasetsById.get(datasetId);
-        if (ds != null)
+        logger.debug("Retrieving layer {} from dataset {} from Berkeley DB...",
+            layerId, datasetId);
+        BerkeleyDBDataset bds = this.datasetsById.get(datasetId);
+        if (bds != null)
         {
-            Layer layer = ds.getLayers().get(layerId);
+            Layer layer = bds.getLayers().get(layerId);
             if (layer != null)
             {
-                // TODO: set the Dataset object!
+                Dataset ds = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
+                ((LayerImpl)layer).setDataset(ds);
             }
+            logger.debug("... found.");
             return layer;
         }
+        logger.debug("... not found.");
         return null;
     }
 
@@ -133,14 +135,29 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      * Gets all the Layers that belong to a dataset
      * @param datasetId The unique ID of the dataset, as defined in the config
      * file
-     * @return a Collection of Layer objects that belong to this dataset
+     * @return a Collection of Layer objects that belong to this dataset, or null
+     * if there is no dataset with the given ID.
      * @throws Exception if an error occurs reading from the persistent store
      */
     public Collection<Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
-        // TODO: set the Dataset object for each Layer
-        return this.datasetsById.get(datasetId).getLayers().values();
+        logger.debug("Retrieving all layers from dataset {} from Berkeley DB...",
+            datasetId);
+        BerkeleyDBDataset bds = this.datasetsById.get(datasetId);
+        if (bds != null)
+        {
+            Dataset ds = this.ncwmsContext.getConfig().getDatasets().get(datasetId);
+            Collection<Layer> layers = bds.getLayers().values();
+            for (Layer layer : layers)
+            {
+                ((LayerImpl)layer).setDataset(ds);
+            }
+            logger.debug("... found");
+            return layers;
+        }
+        logger.debug("... not found");
+        return null;
     }
 
     /**
@@ -153,7 +170,10 @@ public class BerkeleyDBMetadataStore extends MetadataStore
     {
         try
         {
-            Dataset ds = this.datasetsById.get(datasetId);
+            logger.debug("Retrieving last update time for dataset {} from Berkeley DB...",
+                datasetId);
+            BerkeleyDBDataset ds = this.datasetsById.get(datasetId);
+            logger.debug("... {}found", ds == null ? "not " : "");
             return ds == null ? null : ds.getLastUpdate();
         }
         catch (DatabaseException dbe)
@@ -175,17 +195,27 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      */
     public void setLayersInDataset(String datasetId, Map<String, Layer> layers) throws Exception
     {
-        // TODO: should we do this in a Transaction?  There's only one write
-        // operation so I assume we're OK.
-        Dataset ds = this.datasetsById.get(datasetId);
-        if (ds == null)
+        try
         {
-            ds = new Dataset();
-            ds.setId(datasetId);
+            logger.debug("Setting new layers for dataset {}...", datasetId);
+            // TODO: should we do this in a Transaction?  There's only one write
+            // operation so I assume we're OK.
+            BerkeleyDBDataset ds = this.datasetsById.get(datasetId);
+            if (ds == null)
+            {
+                ds = new BerkeleyDBDataset();
+                ds.setId(datasetId);
+            }
+            ds.setLayers(layers);
+            ds.setLastUpdate(new Date());
+            this.datasetsById.put(ds);
+            logger.debug("... done");
         }
-        ds.setLayers(layers);
-        ds.setLastUpdate(new Date());
-        this.datasetsById.put(ds);
+        catch(Exception e)
+        {
+            logger.error("Error setting new layers for dataset " + datasetId, e);
+            throw e;
+        }
     }
     
     /**
