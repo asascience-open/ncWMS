@@ -42,7 +42,7 @@ import ucar.ma2.Index;
  * $Date$
  * $Log$
  */
-public class DataChunk
+class DataChunk
 {
     private Array array;
     private Index index;

@@ -49,6 +49,8 @@ import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -304,10 +306,10 @@ public class USGSDataReader extends DefaultDataReader
             for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
             {
                 GeoGrid gg = (GeoGrid)it.next();
-                if (!gg.getName().equals("temp") && !gg.getName().equals("shflux")
-                && !gg.getName().equals("ssflux") && !gg.getName().equals("latent")
-                && !gg.getName().equals("sensible") && !gg.getName().equals("lwrad")
-                && !gg.getName().equals("swrad") && !gg.getName().equals("zeta"))
+                if (!gg.getName().equals("temp") && !gg.getName().equals("shflux") &&
+                    !gg.getName().equals("ssflux") && !gg.getName().equals("latent") &&
+                    !gg.getName().equals("sensible") && !gg.getName().equals("lwrad") &&
+                    !gg.getName().equals("swrad") && !gg.getName().equals("zeta"))
                 {
                     // Only display temperature data for the moment
                     continue;
@@ -319,8 +321,8 @@ public class USGSDataReader extends DefaultDataReader
                 layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
                 layer.setAbstract(gg.getDescription());
                 layer.setUnits(gg.getUnitsString());
-                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
-                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
+                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
+                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
                 
                 if (coordSys.hasVerticalAxis())
                 {

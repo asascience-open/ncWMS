@@ -36,7 +36,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.datareader.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.grids.RectangularLatLonGrid;

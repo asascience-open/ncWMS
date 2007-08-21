@@ -41,6 +41,7 @@ import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -95,8 +96,8 @@ public class ROMSDataReader extends USGSDataReader
                 layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
                 layer.setAbstract(gg.getDescription());
                 layer.setUnits(gg.getUnitsString());
-                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
-                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
+                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
+                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
                 
                 if (coordSys.hasVerticalAxis())
                 {

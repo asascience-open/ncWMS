@@ -26,17 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.datareader;
+package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
-import ucar.nc2.dataset.CoordinateAxis;
+import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.unidata.geoloc.LatLonPoint;
 
 /**
- * Enhances a {@link CoordinateAxis} by providing an efficient means of finding
- * the index for a given value and by providing a correct method for calculating
- * the horizontal bounding box in lat-lon space.
+ * A one-dimensional coordinate axis
  *
  * @author Jon Blower
  * $Revision$
@@ -44,46 +41,43 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Log$
  */
 @Persistent
-public abstract class EnhancedCoordAxis
+public abstract class OneDCoordAxis extends EnhancedCoordAxis
 {
     
+    private int count; // The number of points along the axis
+    
+    protected boolean isLongitude; // True if this is a longitude axis
+    
     /**
-     * Method for creating an EnhancedCoordAxis.
-     * @param axis The {@link CoordinateAxis} to wrap, which must be a 
-     * latitude or longitude axis
-     * @return an EnhancedCoordAxis
-     * @throws IllegalArgumentException if the provided axis cannot be turned into
-     * an EnhancedCoordAxis
+     * Creates a new instance of OneDCoordAxis
+     * @param axis1D A {@link CoordinateAxis1D}
      */
-    public static EnhancedCoordAxis create(CoordinateAxis axis)
+    protected OneDCoordAxis(CoordinateAxis1D axis1D)
     {
-        if (axis instanceof CoordinateAxis1D)
-        {
-            CoordinateAxis1D axis1D = (CoordinateAxis1D)axis;
-            if (axis1D.isRegular())
-            {
-                return new Regular1DCoordAxis(axis1D);
-            }
-            else
-            {
-                return new Irregular1DCoordAxis(axis1D);
-            }
-        }
-        else
-        {
-            throw new IllegalArgumentException("Cannot yet deal with coordinate" +
-                " axes of >1 dimension");
-        }
+        this((int)axis1D.getSize(), (axis1D.getAxisType() == AxisType.Lon));
     }
     
     /**
-     * Gets the index of the given point
-     * @param point The {@link LatLonPoint}, which will have lon in range
-     * [-180,180] and lat in range [-90,90]
-     * @return the index that is nearest to this point, or -1 if the point is
-     * out of range for the axis
+     * Creates a new instance of OneDCoordAxis
+     * @param count the number of points on this axis
+     * @param isLongitude true if this is a longitude axis
      */
-    public abstract int getIndex(LatLonPoint point);
+    protected OneDCoordAxis(int count, boolean isLongitude)
+    {
+        this.count = count;
+        this.isLongitude = isLongitude;
+    }
     
+    /**
+     * Default constructor (used by Berkeley DB).  This can still be protected
+     * and apparently the Berkeley DB will get around this (we don't need public
+     * setters for the fields for the same reason).
+     */
+    protected OneDCoordAxis() {}
+
+    public int getCount()
+    {
+        return count;
+    }
     
 }

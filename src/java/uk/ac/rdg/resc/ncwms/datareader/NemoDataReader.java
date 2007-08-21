@@ -44,6 +44,8 @@ import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -352,13 +354,13 @@ public class NemoDataReader extends DefaultDataReader
                     String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
                     if (res.equals("one_degree"))
                     {
-                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat"));
-                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat"));
+                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat"));
+                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat"));
                     }
                     else
                     {
-                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat"));
-                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/datareader/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat"));
+                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat"));
+                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat"));
                     }
                     
                     // Set the time axis
