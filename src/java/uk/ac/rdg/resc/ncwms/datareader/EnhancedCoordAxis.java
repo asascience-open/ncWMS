@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import com.sleepycat.persist.model.Persistent;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -42,6 +43,7 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Date$
  * $Log$
  */
+@Persistent
 public abstract class EnhancedCoordAxis
 {
     

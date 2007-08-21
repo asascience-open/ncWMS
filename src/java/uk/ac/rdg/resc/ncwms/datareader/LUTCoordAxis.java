@@ -28,9 +28,9 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import com.sleepycat.persist.model.Persistent;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,6 +50,7 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Date$
  * $Log$
  */
+@Persistent
 public class LUTCoordAxis extends EnhancedCoordAxis
 {
     private static final Logger logger = Logger.getLogger(LUTCoordAxis.class);

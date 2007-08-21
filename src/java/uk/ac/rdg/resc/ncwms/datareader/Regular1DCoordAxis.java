@@ -28,8 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import com.sleepycat.persist.model.Persistent;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
 
@@ -42,6 +42,7 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Date$
  * $Log$
  */
+@Persistent
 public class Regular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(Regular1DCoordAxis.class);
@@ -70,6 +71,13 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         super(count, isLongitude);
         this.init(start, stride);
     }
+    
+    /**
+     * Default constructor (used by Berkeley DB).  This can still be private
+     * and apparently the Berkeley DB will get around this (we don't need public
+     * setters for the fields for the same reason).
+     */
+    private Regular1DCoordAxis() {}
     
     private void init(double start, double stride)
     {

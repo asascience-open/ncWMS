@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import com.sleepycat.persist.model.Persistent;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 
@@ -39,13 +40,13 @@ import ucar.nc2.dataset.CoordinateAxis1D;
  * $Date$
  * $Log$
  */
+@Persistent
 public abstract class OneDCoordAxis extends EnhancedCoordAxis
 {
     
     private int count; // The number of points along the axis
     
     protected boolean isLongitude; // True if this is a longitude axis
-    protected CoordinateAxis1D axis1D;
     
     /**
      * Creates a new instance of OneDCoordAxis
@@ -54,7 +55,6 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
     protected OneDCoordAxis(CoordinateAxis1D axis1D)
     {
         this((int)axis1D.getSize(), (axis1D.getAxisType() == AxisType.Lon));
-        this.axis1D = axis1D;
     }
     
     /**
@@ -65,8 +65,14 @@ public abstract class OneDCoordAxis extends EnhancedCoordAxis
     {
         this.count = count;
         this.isLongitude = isLongitude;
-        this.axis1D = null;
     }
+    
+    /**
+     * Default constructor (used by Berkeley DB).  This can still be protected
+     * and apparently the Berkeley DB will get around this (we don't need public
+     * setters for the fields for the same reason).
+     */
+    protected OneDCoordAxis() {}
 
     public int getCount()
     {

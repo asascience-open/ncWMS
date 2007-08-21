@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import com.sleepycat.persist.model.Persistent;
 import java.util.Collections;
 import java.util.Vector;
 import org.apache.log4j.Logger;
@@ -42,6 +43,7 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Date$
  * $Log$
  */
+@Persistent
 public class Irregular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(Irregular1DCoordAxis.class);

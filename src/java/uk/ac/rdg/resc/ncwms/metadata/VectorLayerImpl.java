@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import com.sleepycat.persist.model.Persistent;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
 
@@ -41,6 +42,7 @@ import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
  * $Date$
  * $Log$
  */
+@Persistent
 public class VectorLayerImpl extends LayerImpl implements VectorLayer
 {
     private Layer northwardComponent;
@@ -74,6 +76,13 @@ public class VectorLayerImpl extends LayerImpl implements VectorLayer
         this.eastwardComponent = eastwardComponent;
         this.northwardComponent = northwardComponent;
     }
+    
+    /**
+     * Default constructor (used by Berkeley DB).  This can still be private
+     * and apparently the Berkeley DB will get around this (we don't need public
+     * setters for the fields for the same reason).
+     */
+    private VectorLayerImpl() {}
 
     public Layer getNorthwardComponent()
     {

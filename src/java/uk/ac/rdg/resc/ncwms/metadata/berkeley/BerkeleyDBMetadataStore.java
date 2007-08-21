@@ -66,9 +66,9 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      */
     private static final String DATABASE_DIR_NAME = "metadataDB";
     /**
-     * The name of the database in which we will store Layer objects
+     * The name of the database in which we will store Dataset objects
      */
-    private static final String STORE_NAME = "layers";
+    private static final String STORE_NAME = "datasets";
     
     private Environment env;
     private EntityStore store; // This is where we keep Layer objects
@@ -102,7 +102,31 @@ public class BerkeleyDBMetadataStore extends MetadataStore
         // Set up the index that will be used to store simple Dataset objects
         this.datasetsById = this.store.getPrimaryIndex(String.class, Dataset.class);
         
-        logger.debug("Database for Layer objects created in " + dbPath.getPath());
+        logger.debug("Database for Dataset objects created in " + dbPath.getPath());
+    }
+
+    /**
+     * Gets a Layer object from a dataset
+     * 
+     * @param datasetId The ID of the dataset to which the layer belongs
+     * @param layerId The unique ID of the layer within the dataset
+     * @return The corresponding Layer, or null if there is no corresponding
+     * layer in the store.
+     * @throws Exception if an error occurs reading from the persistent store
+     */
+    public Layer getLayer(String datasetId, String layerId) throws Exception
+    {
+        Dataset ds = this.datasetsById.get(datasetId);
+        if (ds != null)
+        {
+            Layer layer = ds.getLayers().get(layerId);
+            if (layer != null)
+            {
+                // TODO: set the Dataset object!
+            }
+            return layer;
+        }
+        return null;
     }
 
     /**
@@ -162,26 +186,6 @@ public class BerkeleyDBMetadataStore extends MetadataStore
         ds.setLayers(layers);
         ds.setLastUpdate(new Date());
         this.datasetsById.put(ds);
-    }
-
-    /**
-     * Gets a Layer object from a dataset
-     * 
-     * @param datasetId The ID of the dataset to which the layer belongs
-     * @param layerId The unique ID of the layer within the dataset
-     * @return The corresponding Layer, or null if there is no corresponding
-     * layer in the store.
-     * @throws Exception if an error occurs reading from the persistent store
-     */
-    public Layer getLayer(String datasetId, String layerId) throws Exception
-    {
-        Dataset ds = this.datasetsById.get(datasetId);
-        if (ds != null)
-        {
-            // TODO: set the Dataset object!
-            return ds.getLayers().get(layerId);
-        }
-        return null;
     }
     
     /**

@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import com.sleepycat.persist.model.Persistent;
 import java.util.Date;
 
 /**
@@ -40,6 +41,7 @@ import java.util.Date;
  * $Date$
  * $Log$
  */
+@Persistent
 public class TimestepInfo implements Comparable<TimestepInfo>
 {
     private Date timestep;
@@ -58,6 +60,13 @@ public class TimestepInfo implements Comparable<TimestepInfo>
         this.filename = filename;
         this.indexInFile = indexInFile;
     }
+    
+    /**
+     * Default constructor (used by Berkeley DB).  This can still be private
+     * and apparently the Berkeley DB will get around this (we don't need public
+     * setters for the fields for the same reason).
+     */
+    private TimestepInfo() {}
 
     public String getFilename()
     {
