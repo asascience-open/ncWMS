@@ -75,6 +75,12 @@ public class NcwmsContext implements ApplicationContextAware
     private File configFile; // location of the configuration file
     private ApplicationContext applicationContext; // Will be set by Spring
     
+    public NcwmsContext()
+    {
+        // Set the location of the config file
+        this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
+    }
+    
     /**
      * Does the actual initialization of the context: creates the necessary
      * directories and initializes the logging system
@@ -96,9 +102,6 @@ public class NcwmsContext implements ApplicationContextAware
         // Set the location of the log file: see log4j.properties
         logProps.put("log4j.appender.R.File", logFile.getPath());
         PropertyConfigurator.configure(logProps);
-        
-        // Set the location of the config file
-        this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
     }
     
     /**
@@ -123,6 +126,8 @@ public class NcwmsContext implements ApplicationContextAware
                 " an absolute path");
         }
         this.workingDirectory = workingDirectory;
+        // Set the location of the config file
+        this.configFile = new File(this.workingDirectory, CONFIG_FILE_NAME);
     }
     
     /**

@@ -39,7 +39,9 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
@@ -228,6 +230,30 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             this.env.close();
         }
         logger.debug("Berkeley database of Layer objects closed");
+    }
+    
+    /**
+     * Runs some speed test to see how long it takes to retrieve a particular
+     * dataset
+     */
+    public static void main(String[] args) throws Exception
+    {
+        MetadataStore ms = new BerkeleyDBMetadataStore();
+        NcwmsContext context = new NcwmsContext();
+        ms.setNcwmsContext(context);
+        ms.init();
+        Config config = Config.readConfig(context, ms);
+        ms.setConfig(config);
+        
+        System.out.println("Starting test");
+        long start = System.currentTimeMillis();
+        int n = 10;
+        for (int i = 0; i < n; i++)
+        {
+            ms.getLayersInDataset("NCOF_AMM");
+        }
+        long finish = System.currentTimeMillis();
+        System.out.println("Finished in " + (finish - start) + " ms");
     }
     
 }
