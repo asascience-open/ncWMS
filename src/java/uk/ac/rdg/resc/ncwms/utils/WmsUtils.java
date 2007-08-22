@@ -395,9 +395,13 @@ public class WmsUtils
     public static String[] parseUniqueLayerName(String uniqueLayerName)
         throws ParseException
     {
-        String[] els = uniqueLayerName.split("/");
-        if (els.length == 2)
+        String[] els = new String[2];
+        
+        if(uniqueLayerName.lastIndexOf("/") > 0)
         {
+            els[0] = uniqueLayerName.substring(0, uniqueLayerName.lastIndexOf("/"));
+            els[1] = uniqueLayerName.substring(uniqueLayerName.lastIndexOf("/") + 1, uniqueLayerName.length());
+            
             return els;
         }
         else
