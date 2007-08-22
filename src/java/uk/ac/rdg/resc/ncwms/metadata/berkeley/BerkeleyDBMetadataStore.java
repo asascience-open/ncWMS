@@ -45,6 +45,7 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -120,7 +121,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             if (layer != null)
             {
                 Dataset ds = this.config.getDatasets().get(datasetId);
-                ((LayerImpl)layer).setDataset(ds);
+                this.addDatasetProperty(layer, ds);
             }
             logger.debug("... found.");
             return layer;
@@ -149,13 +150,29 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             Collection<Layer> layers = bds.getLayers().values();
             for (Layer layer : layers)
             {
-                ((LayerImpl)layer).setDataset(ds);
+                this.addDatasetProperty(layer, ds);
             }
             logger.debug("... found");
             return layers;
         }
         logger.debug("... not found");
         return null;
+    }
+    
+    /**
+     * Sets the Dataset property on the given layer.  This is not stored in the
+     * Berkeley DB.  Checks for Vector layers, setting the dataset property on
+     * the component layers too.
+     */
+    private void addDatasetProperty(Layer layer, Dataset ds)
+    {
+        ((LayerImpl)layer).setDataset(ds);
+        if (layer instanceof VectorLayer)
+        {
+            VectorLayer vecLayer = (VectorLayer)layer;
+            ((LayerImpl)vecLayer.getEastwardComponent()).setDataset(ds);
+            ((LayerImpl)vecLayer.getNorthwardComponent()).setDataset(ds);
+        }
     }
 
     /**

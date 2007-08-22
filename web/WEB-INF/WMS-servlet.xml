@@ -24,7 +24,7 @@
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. To change the store to
-         an in-memory store (for performance or debugging purposes change
+         an in-memory store (for performance or debugging purposes) change
          the class to "uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore" -->
     <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"-->
     <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"
