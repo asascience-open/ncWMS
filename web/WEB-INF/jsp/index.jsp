@@ -19,7 +19,7 @@
 
     <h1>${config.server.title}</h1>
     
-    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities">Capabilities document</a></p>
+    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0">Capabilities document (WMS 1.3.0)</a></p>
     <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">Capabilities document (WMS 1.1.1)</a></p>
     <p><a href="godiva2.html">Godiva2 interface</a></p>
     <p><a href="admin/">Admin interface (requires login)</a></p>
@@ -45,7 +45,7 @@
             <td>
                 <c:forEach var="layer" items="${layers}">
                 <c:set var="bbox" value="${layer.bbox}"/>
-                <a href="wms?REQUEST=GetMap&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=true&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
+                <a href="wms?REQUEST=GetMap&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=true&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
             </c:forEach>
@@ -53,7 +53,7 @@
             <td>
                 <c:forEach var="layer" items="${layers}">
                 <c:set var="bbox" value="${layer.bbox}"/>
-                <a href="wms?REQUEST=GetFeatureInfo&amp;VERSION=${utils:wmsVersion()}&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;I=128&amp;J=128&amp;INFO_FORMAT=text/xml&amp;QUERY_LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
+                <a href="wms?REQUEST=GetFeatureInfo&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;I=128&amp;J=128&amp;INFO_FORMAT=text/xml&amp;QUERY_LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
             </c:if>

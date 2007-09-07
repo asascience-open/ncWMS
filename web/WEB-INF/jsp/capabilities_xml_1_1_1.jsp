@@ -9,9 +9,7 @@
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
-<!-- The DTD (Document Type Definition) given here must correspond to the version number
-declared in the WMT_MS_Capabilities element below. -->
-<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://www.digitalearth.gov/wmt/xml/capabilities_1_1_1.dtd"> <!-- end of DOCTYPE declaration -->
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://www.digitalearth.gov/wmt/xml/capabilities_1_1_1.dtd">
 <WMT_MS_Capabilities version="1.1.1"><%-- TODO: do UpdateSequence properly --%>
     <!-- Service Metadata -->
     <Service>
