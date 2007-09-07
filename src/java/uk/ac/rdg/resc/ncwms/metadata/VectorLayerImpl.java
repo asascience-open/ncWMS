@@ -70,6 +70,7 @@ public class VectorLayerImpl extends LayerImpl implements VectorLayer
         
         // Vector is the default style, but we can also render as a boxfill
         // (magnitude only)
+        this.supportedStyles.clear(); // Remove the styles added by superclasses: TODO not neat!
         this.addStyles(VectorStyle.KEYS);
         this.addStyles(BoxFillStyle.KEYS);
         

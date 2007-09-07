@@ -5,12 +5,6 @@
   <short-name>wmsutils</short-name>
   <uri>/WEB-INF/taglib/wmsUtils</uri>
   <function>
-      <description>Returns the version of the WMS that this server supports</description>
-      <name>wmsVersion</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getVersion()</function-signature>
-  </function>
-  <function>
       <description>Converts milliseconds since epoch to ISO8601-formatted String</description>
       <name>millisecondsToISO8601</name>
       <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>

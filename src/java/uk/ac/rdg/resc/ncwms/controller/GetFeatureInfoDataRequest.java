@@ -52,10 +52,10 @@ public class GetFeatureInfoDataRequest extends GetMapDataRequest
     /**
      * Creates a new instance of GetFeatureInfoDataRequest
      */
-    public GetFeatureInfoDataRequest(RequestParams params) throws WmsException
+    public GetFeatureInfoDataRequest(RequestParams params, String version) throws WmsException
     {
         this.layers = params.getMandatoryString("query_layers").split(",");
-        this.init(params); // Initialize parameters that are shared with GetMap
+        this.init(params, version); // Initialize parameters that are shared with GetMap
         this.featureCount = params.getPositiveInt("feature_count", 1);
         this.pixelColumn = params.getMandatoryPositiveInt("i");
         if (this.pixelColumn > this.getWidth() - 1)

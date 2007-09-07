@@ -38,7 +38,8 @@ package uk.ac.rdg.resc.ncwms.grids;
  */
 public class PlateCarreeGrid extends RectangularLatLonGrid
 {
-    public static final String[] KEYS = new String[]{"CRS:84"};
+    // TODO: mixing WMS 1.3.0 and 1.1.1 version codes
+    public static final String[] KEYS = new String[]{"CRS:84", "EPSG:4326"};
 
     /**
      * @return a new array of points along the longitude axis

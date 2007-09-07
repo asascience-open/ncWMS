@@ -179,6 +179,8 @@ public class WmsController extends AbstractController
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
+        models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
+            FEATURE_INFO_XML_FORMAT});
         if (version == null || version.equals("1.3.0"))
         {
             return new ModelAndView("capabilities_xml", models);

@@ -53,12 +53,12 @@ class GetFeatureInfoRequest
     public GetFeatureInfoRequest(RequestParams params) throws WmsException
     {
         String version = params.getMandatoryString("version");
-        if (!version.equals(WmsUtils.VERSION))
+        if (!WmsUtils.SUPPORTED_VERSIONS.contains(version))
         {
-            throw new WmsException("VERSION must be " + WmsUtils.VERSION);
+            throw new WmsException("VERSION " + version + " not supported");
         }
         // TODO: deal with the EXCEPTIONS parameter
-        this.dataRequest = new GetFeatureInfoDataRequest(params);
+        this.dataRequest = new GetFeatureInfoDataRequest(params, version);
         this.outputFormat = params.getMandatoryString("info_format");
     }
 

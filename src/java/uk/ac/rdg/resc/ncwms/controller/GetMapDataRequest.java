@@ -56,10 +56,10 @@ class GetMapDataRequest
      * Creates a new instance of GetMapDataRequest from the given parameters
      * @throws WmsException if the request is invalid
      */
-    public GetMapDataRequest(RequestParams params) throws WmsException
+    public GetMapDataRequest(RequestParams params, String version) throws WmsException
     {
         this.layers = params.getMandatoryString("layers").split(",");
-        this.init(params);
+        this.init(params, version);
     }
     
     /**
@@ -70,9 +70,10 @@ class GetMapDataRequest
     /**
      * Initializes the parameters that are common to GetMap and GetFeatureInfo
      */
-    protected void init(RequestParams params) throws WmsException
+    protected void init(RequestParams params, String version) throws WmsException
     {
-        this.crs = params.getMandatoryString("crs");
+        // WMS1.3.0 uses "CRS", 1.1.1 uses "SRS".  This is a bit of a kludge
+        this.crs = params.getMandatoryString(version.equals("1.3.0") ? "crs" : "srs");
         String[] bboxEls = params.getMandatoryString("bbox").split(",");
         // Check the validity of the bounding box
         if (bboxEls.length != 4)

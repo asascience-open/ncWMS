@@ -36,6 +36,7 @@ import ucar.nc2.units.DateFormatter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TimeZone;
@@ -58,10 +59,15 @@ import java.util.TimeZone;
 public class WmsUtils
 {
     /**
-     * The version of the WMS standard that this server supports
-     * @todo Support more versions (e.g. 1.1.1)?
+     * The versions of the WMS standard that this server supports
      */
-    public static final String VERSION = "1.3.0";
+    public static final Collection<String> SUPPORTED_VERSIONS = new ArrayList<String>();
+    
+    static
+    {
+        SUPPORTED_VERSIONS.add("1.1.1");
+        SUPPORTED_VERSIONS.add("1.3.0");
+    }
     
     /**
      * Time zone representing Greenwich Mean Time
@@ -101,15 +107,6 @@ public class WmsUtils
     public static long iso8601ToMilliseconds(String isoDateTime)
     {
         return iso8601ToDate(isoDateTime).getTime();
-    }
-        
-    /**
-     * @return the version of WMS that this server supports (equal to the VERSION
-     * field but wrapped as a function to support the creation of JSP tags.
-     */
-    public static final String getVersion()
-    {
-        return VERSION;
     }
     
     /**

@@ -311,7 +311,9 @@ public class MetadataController
     {
         RequestParams params = new RequestParams(request.getParameterMap());
         // We only need the bit of the GetMap request that pertains to data extraction
-        GetMapDataRequest dataRequest = new GetMapDataRequest(params);
+        // TODO: the hard-coded "1.3.0" is ugly: it basically means that the
+        // GetMapDataRequest object will look for "CRS" instead of "SRS"
+        GetMapDataRequest dataRequest = new GetMapDataRequest(params, "1.3.0");
         
         // TODO: some of the code below is repetitive of WmsController: refactor?
         

@@ -19,7 +19,8 @@
 
     <h1>${config.server.title}</h1>
     
-    <p><a href="wms?SERVICE=WMS&REQUEST=GetCapabilities">Capabilities document</a></p>
+    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities">Capabilities document</a></p>
+    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">Capabilities document (WMS 1.1.1)</a></p>
     <p><a href="godiva2.html">Godiva2 interface</a></p>
     <p><a href="admin/">Admin interface (requires login)</a></p>
     

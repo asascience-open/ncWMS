@@ -7,9 +7,10 @@
          wmsBaseUrl = Base URL of this server (java.lang.String)
          supportedImageFormats = Set of Strings representing MIME types of supported image formats
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
+         featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
 <WMS_Capabilities
-        version="${utils:wmsVersion()}"
+        version="1.3.0"
         <%-- TODO: do UpdateSequence properly --%>
         xmlns="http://www.opengis.net/wms"
         xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -68,8 +69,9 @@
             </GetMap>
             <c:if test="${config.server.allowFeatureInfo}">
             <GetFeatureInfo>
-                <Format>text/xml</Format> <%-- TODO: get these formats properly --%>
-                <Format>image/png</Format>
+                <c:forEach var="mimeType" items="${featureInfoFormats}">
+                <Format>${mimeType}</Format>
+                </c:forEach>
                 <DCPType>
                     <HTTP>
                         <Get>

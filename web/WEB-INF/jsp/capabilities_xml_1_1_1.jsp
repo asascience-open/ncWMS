@@ -7,11 +7,12 @@
          wmsBaseUrl = Base URL of this server (java.lang.String)
          supportedImageFormats = Set of Strings representing MIME types of supported image formats
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
+         featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
 <!-- The DTD (Document Type Definition) given here must correspond to the version number
 declared in the WMT_MS_Capabilities element below. -->
 <!DOCTYPE WMT_MS_Capabilities SYSTEM "http://www.digitalearth.gov/wmt/xml/capabilities_1_1_1.dtd"> <!-- end of DOCTYPE declaration -->
-<WMT_MS_Capabilities version="1.1.1" updateSequence="0">
+<WMT_MS_Capabilities version="1.1.1"><%-- TODO: do UpdateSequence properly --%>
     <!-- Service Metadata -->
     <Service>
         <!-- The WMT-defined name for this type of service -->
@@ -51,8 +52,6 @@ declared in the WMT_MS_Capabilities element below. -->
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <!-- The URL here for invoking GetCapabilities using HTTP GET
-                            is only a prefix to which a query string is appended. -->
                             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
                                 xlink:type="simple" xlink:href="${wmsBaseUrl}" />
                         </Get>
@@ -66,8 +65,6 @@ declared in the WMT_MS_Capabilities element below. -->
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <!-- The URL here for invoking GetCapabilities using HTTP GET
-                            is only a prefix to which a query string is appended. -->
                             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
                                 xlink:type="simple" xlink:href="${wmsBaseUrl}" />
                         </Get>
@@ -75,8 +72,9 @@ declared in the WMT_MS_Capabilities element below. -->
                 </DCPType>
             </GetMap>
             <GetFeatureInfo>
-                <Format>text/xml</Format> <%-- TODO: get these formats properly --%>
-                <Format>image/png</Format>
+                <c:forEach var="mimeType" items="${featureInfoFormats}">
+                <Format>${mimeType}</Format>
+                </c:forEach>
                 <DCPType>
                     <HTTP>
                         <Get>
