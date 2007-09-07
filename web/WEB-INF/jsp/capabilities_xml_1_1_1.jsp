@@ -1,0 +1,138 @@
+<%@page contentType="text/xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="/WEB-INF/taglib/wmsUtils" prefix="utils"%> <%-- tag library for useful utility functions --%>
+<%-- Displays the Capabilities document in XML for WMS 1.1.1
+     Data (models) passed in to this page:
+         config     = Configuration of this server (uk.ac.rdg.resc.ncwms.config.Config)
+         wmsBaseUrl = Base URL of this server (java.lang.String)
+         supportedImageFormats = Set of Strings representing MIME types of supported image formats
+         layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
+     --%>
+<!-- The DTD (Document Type Definition) given here must correspond to the version number
+declared in the WMT_MS_Capabilities element below. -->
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://www.digitalearth.gov/wmt/xml/capabilities_1_1_1.dtd"> <!-- end of DOCTYPE declaration -->
+<WMT_MS_Capabilities version="1.1.1" updateSequence="0">
+    <!-- Service Metadata -->
+    <Service>
+        <!-- The WMT-defined name for this type of service -->
+        <Name>OGC:WMS</Name>
+        <!-- Human-readable title for pick lists -->
+        <Title>${config.server.title}</Title>
+        <!-- Narrative description providing additional information -->
+        <Abstract>${config.server.abstract}</Abstract>
+        <KeywordList>
+            <%-- forEach recognizes that keywords is a comma-delimited String --%>
+            <c:forEach var="keyword" items="${config.server.keywords}">
+            <Keyword>${keyword}</Keyword>
+            </c:forEach>
+        </KeywordList>
+        <!-- Top-level web address of service or service provider. See also OnlineResource
+        elements under <DCPType>. -->
+        <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
+            xlink:type="simple" xlink:href="${config.server.url}" />
+        <!-- Contact information -->
+        <ContactInformation>
+            <ContactPersonPrimary>
+                <ContactPerson>${config.contact.name}</ContactPerson>
+                <ContactOrganization>${config.contact.org}</ContactOrganization>
+            </ContactPersonPrimary>
+            <ContactVoiceTelephone>${config.contact.tel}</ContactVoiceTelephone>
+            <ContactElectronicMailAddress>${config.contact.email}</ContactElectronicMailAddress>
+        </ContactInformation>
+        <!-- Fees or access constraints imposed. -->
+        <Fees>none</Fees>
+        <AccessConstraints>none</AccessConstraints>
+    </Service>
+    
+    <Capability>
+        <Request>
+            <GetCapabilities>
+                <Format>application/vnd.ogc.wms_xml</Format>
+                <DCPType>
+                    <HTTP>
+                        <Get>
+                            <!-- The URL here for invoking GetCapabilities using HTTP GET
+                            is only a prefix to which a query string is appended. -->
+                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
+                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                        </Get>
+                    </HTTP>
+                </DCPType>
+            </GetCapabilities>
+            <GetMap>
+                <c:forEach var="mimeType" items="${supportedImageFormats}">
+                <Format>${mimeType}</Format>
+                </c:forEach>
+                <DCPType>
+                    <HTTP>
+                        <Get>
+                            <!-- The URL here for invoking GetCapabilities using HTTP GET
+                            is only a prefix to which a query string is appended. -->
+                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
+                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                        </Get>
+                    </HTTP>
+                </DCPType>
+            </GetMap>
+            <GetFeatureInfo>
+                <Format>text/xml</Format> <%-- TODO: get these formats properly --%>
+                <Format>image/png</Format>
+                <DCPType>
+                    <HTTP>
+                        <Get>
+                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
+                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                        </Get>
+                    </HTTP>
+                </DCPType>
+            </GetFeatureInfo>
+        </Request>
+        <Exception>
+            <Format>application/vnd.ogc.se_xml</Format>
+            <!--<Format>application/vnd.ogc.se_inimage</Format>
+            <Format>application/vnd.ogc.se_blank</Format>-->
+        </Exception>
+        
+        <Layer>
+            <Title>${config.server.title}</Title>
+            <SRS>EPSG:4326</SRS> <!-- all layers are available in at least this SRS.  TODO: get properly -->
+            <c:forEach var="dataset" items="${config.datasets}">
+            <c:if test="${dataset.value.ready}">
+            <Layer>
+                <Title>${dataset.value.title}</Title>
+                <c:forEach var="layer" items="${dataset.value.layers}">
+                <Layer<c:if test="${config.server.allowFeatureInfo} and ${layer.queryable}"> queryable="1"</c:if>>
+                    <Name>${layer.layerName}</Name>
+                    <Title>${layer.title}</Title>
+                    <Abstract>${layer.abstract}</Abstract>
+                    <c:set var="bbox" value="${layer.bbox}"/>
+                    <LatLonBoundingBox minx="${bbox[0]}" maxx="${bbox[2]}" miny="${bbox[1]}" maxy="${bbox[3]}"/>
+                    <BoundingBox SRS="EPSG:4326" minx="${bbox[0]}" maxx="${bbox[2]}" miny="${bbox[1]}" maxy="${bbox[3]}"/>
+                    <c:if test="${layer.zaxisPresent}"><Dimension name="elevation" units="${layer.zunits}"/><!-- TODO: units correct? --></c:if>
+                    <c:if test="${layer.taxisPresent}"><Dimension name="time" units="ISO8601"/></c:if>
+                    <c:if test="${layer.zaxisPresent}">
+                    <Extent name="elevation" default="${layer.defaultZValue}">
+                        <%-- Print out the dimension values, comma separated, making sure
+                             that there is no comma at the start or end of the list.  Note that
+                             we can't use ${fn:join} because the z values are an array of doubles,
+                             not strings. --%>
+                        <c:forEach var="zval" items="${layer.zvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${zval}</c:forEach>
+                    </Extent>
+                    </c:if>
+                    <c:set var="tvalues" value="${layer.tvalues}"/>
+                    <c:if test="${layer.taxisPresent}">
+                    <Extent name="time" multipleValues="1" current="1" default="${utils:millisecondsToISO8601(layer.defaultTValue)}">
+                        <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:millisecondsToISO8601(tval)}</c:forEach>
+                    </Extent>
+                    </c:if>
+                    <c:forEach var="style" items="${layer.supportedStyleKeys}">
+                    <Style><Name>${style}</Name><Title>${style}</Title></Style>
+                    </c:forEach>
+                </Layer>
+                </c:forEach> <%-- End loop through variables --%>
+            </Layer>
+            </c:if>
+            </c:forEach>
+        </Layer>
+    </Capability>
+</WMT_MS_Capabilities>

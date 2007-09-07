@@ -165,7 +165,6 @@ public class WmsController extends AbstractController
         
         // Check the VERSION parameter
         String version = params.getString("version");
-        // We do nothing else here because we only support one version
         
         // Check the FORMAT parameter
         String format = params.getString("format");
@@ -180,8 +179,27 @@ public class WmsController extends AbstractController
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
-        return new ModelAndView("capabilities_xml", models);
+        if (version == null || version.equals("1.3.0"))
+        {
+            return new ModelAndView("capabilities_xml", models);
+        }
+        else if (version.equals("1.1.1"))
+        {
+            return new ModelAndView("capabilities_xml_1_1_1", models);
+        }
+        else
+        {
+            // TODO: do version negotiation properly
+            throw new WmsException("Version " + version + " is not supported by this server");
+        }
     }
+    
+    /**
+     * @return a WmsVersion object representing the version of the capabilities
+     * document that the client will see (based on the version negotiation defined
+     * in the WMS spec
+     */
+    //private static WmsVersion 
     
     /**
      * Executes the GetMap operation
@@ -602,5 +620,83 @@ public class WmsController extends AbstractController
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
+    }
+}
+
+/**
+ * Represents a WMS version number.  Used in version negotiation for Capabilities
+ * document
+ */
+class WmsVersion implements Comparable<WmsVersion>
+{
+    private int x,y,z; // The three components of the version number
+    
+    public static final WmsVersion VERSION_1_1_1 = new WmsVersion("1.1.1");
+    public static final WmsVersion VERSION_1_3_0 = new WmsVersion("1.3.0");
+    
+    /**
+     * Creates a new WmsVersion object based on the given String
+     * (e.g. "1.3.0")
+     * @throws IllegalArgumentException if the given String does not represent
+     * a valid WMS version number
+     */
+    public WmsVersion(String versionStr)
+    {
+        String[] els = versionStr.split(".");
+        if (els.length != 3)
+        {
+            throw new IllegalArgumentException(versionStr +
+                " is not a valid WMS version number");
+        }
+        try
+        {
+            this.x = Integer.parseInt(els[0]);
+            this.y = Integer.parseInt(els[1]);
+            this.z = Integer.parseInt(els[2]);
+        }
+        catch(NumberFormatException nfe)
+        {
+            throw new IllegalArgumentException(versionStr +
+                " is not a valid WMS version number");
+        }
+        if (this.y > 99 || this.z > 99)
+        {
+            throw new IllegalArgumentException(versionStr +
+                " is not a valid WMS version number");
+        }
+    }
+
+    /**
+     * Compares this WmsVersion with the specified Version for order.  Returns a
+     * negative integer, zero, or a positive integer as this Version is less
+     * than, equal to, or greater than the specified Version.
+     */
+    public int compareTo(WmsVersion otherVersion)
+    {
+        // Could also do this by calculating a single integer value for the
+        // version: 100*100*x + 100*y + z
+        if (this.x == otherVersion.x)
+        {
+            if (this.y == otherVersion.y)
+            {
+                return new Integer(this.z).compareTo(otherVersion.z);
+            }
+            else
+            {
+                return new Integer(this.y).compareTo(otherVersion.y);
+            }
+        }
+        else
+        {
+            return new Integer(this.x).compareTo(otherVersion.x);
+        }
+    }
+    
+    /**
+     * @return String representation of this version, e.g. "1.3.0"
+     */
+    public String toString()
+    {
+        return this.x + "." + this.y + "." + this.z;
     }
 }
