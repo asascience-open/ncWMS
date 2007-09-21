@@ -62,9 +62,6 @@ public class BoxFillStyle extends AbstractStyle
      */
     public static final String[] KEYS = new String[]{"boxfill"};
     
-    private static DecimalFormat DECIMAL_FORMATTER = new DecimalFormat("0.#####");
-    private static DecimalFormat SCIENTIFIC_FORMATTER = new DecimalFormat("0.###E0");
-    
     // Scale range of the picture
     private float scaleMin;
     private float scaleMax;
@@ -390,21 +387,19 @@ public class BoxFillStyle extends AbstractStyle
         return colourScale;
     }
     
-    
     /**
      * Formats a number to a limited number of d.p., using scientific notation
      * if necessary
      */
     private static String format(double d)
     {
-        // Try decimal format first
-        String dec = DECIMAL_FORMATTER.format(d);
-        // See if we have at least 3 s.f.:
-        if (dec.length() > 4 && dec.charAt(0) == '0' && dec.charAt(2) == '0'
-            && dec.charAt(3) == '0' && dec.charAt(4) == '0')
+        if (Math.abs(d) > 1000 || Math.abs(d) < 0.01)
         {
-            return SCIENTIFIC_FORMATTER.format(d);
+            return new DecimalFormat("0.###E0").format(d);
         }
-        return dec;
+        else
+        {
+            return new DecimalFormat("0.#####").format(d);
+        }
     }
 }

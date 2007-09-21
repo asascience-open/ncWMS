@@ -178,9 +178,9 @@ function gotFeatureInfo(response)
     var lat = xmldoc.getElementsByTagName('latitude')[0];
     var val = xmldoc.getElementsByTagName('value')[0];
     if (lon) {
-        $('featureInfo').innerHTML = "<b>Lon:</b> " + toNSigFigs(lon.firstChild.nodeValue, 4) + 
-            "&nbsp;&nbsp;<b>Lat:</b> " + toNSigFigs(lat.firstChild.nodeValue, 4) + "&nbsp;&nbsp;<b>Value:</b> " +
-            toNSigFigs(val.firstChild.nodeValue, 4);
+        $('featureInfo').innerHTML = "<b>Lon:</b> " + lon.firstChild.nodeValue + 
+            "&nbsp;&nbsp;<b>Lat:</b> " + lat.firstChild.nodeValue + "&nbsp;&nbsp;<b>Value:</b> " +
+            toNSigFigs(parseFloat(val.firstChild.nodeValue), 4);
         if (timeSeriesSelected()) {
             // Construct a GetFeatureInfo request for the timeseries plot
             // Get a URL for a WMS request that covers the current map extent
@@ -304,7 +304,7 @@ function variableSelected(datasetName, variableName)
                 var axisType = theAxes[i].getAttribute('type');
                 if (axisType == 'z')
                 {
-                    zPositive = parseInt(theAxes[i].getAttribute('positive'));
+                    zPositive = theAxes[i].getAttribute('positive').toLowerCase() == "true";
                     var zUnits = theAxes[i].getAttribute('units');
                     if (zPositive) {
                         $('zAxis').innerHTML = '<b>Elevation (' + zUnits + '): </b>';
@@ -488,8 +488,8 @@ function autoScale()
         function(req) {
             var xmldoc = req.responseXML;
             // set the size of the panel to match the number of variables
-            $('scaleMin').value = xmldoc.getElementsByTagName('min')[0].firstChild.nodeValue;
-            $('scaleMax').value = xmldoc.getElementsByTagName('max')[0].firstChild.nodeValue;
+            $('scaleMin').value = toNSigFigs(parseFloat(xmldoc.getElementsByTagName('min')[0].firstChild.nodeValue), 4);
+            $('scaleMax').value = toNSigFigs(parseFloat(xmldoc.getElementsByTagName('max')[0].firstChild.nodeValue), 4);
             validateScale(); // This calls updateMap()
         }
     );
@@ -754,40 +754,16 @@ function getIntersectionBBOX()
 }
 
 // Formats the given value to numSigFigs significant figures
+// WARNING: Javascript 1.5 only!
 function toNSigFigs(value, numSigFigs)
 {
-    var strValue = '' + value;
-    var newValue = '';
-    var firstSigFigPos = -1;
-    var dpSeen = 0; // Will be 1 when we have seen the decimal point
-
-    for (var i = 0; i < strValue.length; i++)
-    {
-        if (firstSigFigPos < 0)
-        {
-            // Haven't found the first significant figure yet
-            newValue += strValue.charAt(i);
-            if (strValue.charAt(i) != '0' && strValue.charAt(i) != '.'
-                && strValue.charAt(i) != '-')
-            {
-                // We've found the first significant figure
-                firstSigFigPos = i;
-            }
-        }
-        else
-        {
-            // We don't want to count the decimal point as a sig fig!
-            if (strValue.charAt(i) == '.')
-            {
-                dpSeen = 1;
-            }
-            if (i - firstSigFigPos < numSigFigs + dpSeen)
-            {
-                newValue += strValue.charAt(i);
-            }
-        }
+    if (!value.toPrecision) {
+        // TODO: do this somewhere more useful
+        alert("Your browser doesn't support Javascript 1.5");
+        return value;
+    } else {
+        return value.toPrecision(numSigFigs);
     }
-    return newValue;
 }
 
 // Returns true if the user has selected a time series

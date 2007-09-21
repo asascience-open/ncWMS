@@ -43,7 +43,7 @@
             </list>
         </property>
     </bean>
-    <!-- We store the login details for the admin user in memory -->
+    <!-- The Config object provides user details -->
     <bean id="daoAuthenticationProvider" class="org.acegisecurity.providers.dao.DaoAuthenticationProvider">
         <property name="userDetailsService"><ref bean="config"/></property>
     </bean>
