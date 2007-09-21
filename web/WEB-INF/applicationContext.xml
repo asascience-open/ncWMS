@@ -3,6 +3,10 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
     
+    <!-- We need to import the servlet config file because it contains the definition
+         of the config bean -->
+    <import resource="WMS-servlet.xml"/>
+    
     <!-- Acegi Security configuration -->
     <bean id="filterChainProxy" class="org.acegisecurity.util.FilterChainProxy">
         <property name="filterInvocationDefinitionSource">
@@ -22,7 +26,7 @@
     
     <!-- HTTP Digest Authentication -->
     <bean id="digestProcessingFilter" class="org.acegisecurity.ui.digestauth.DigestProcessingFilter">
-        <property name="userDetailsService"><ref local="inMemoryDaoImpl"/></property>
+        <property name="userDetailsService"><ref bean="config"/></property>
         <property name="authenticationEntryPoint"><ref local="digestProcessingFilterEntryPoint"/></property>
         <!-- We don't need to use a UserCache -->
     </bean>    
@@ -41,17 +45,8 @@
     </bean>
     <!-- We store the login details for the admin user in memory -->
     <bean id="daoAuthenticationProvider" class="org.acegisecurity.providers.dao.DaoAuthenticationProvider">
-        <property name="userDetailsService"><ref local="inMemoryDaoImpl"/></property>
+        <property name="userDetailsService"><ref bean="config"/></property>
     </bean>
-    
-    <!-- These are the users that can log on to the admin application -->
-    <bean id="inMemoryDaoImpl" class="org.acegisecurity.userdetails.memory.InMemoryDaoImpl">
-        <property name="userMap">
-            <value>
-                admin=ncWMS,ROLE_ADMIN
-            </value>
-        </property>
-    </bean>  
     
     <bean id="exceptionTranslationFilter" class="org.acegisecurity.ui.ExceptionTranslationFilter">
         <property name="authenticationEntryPoint"><ref local="digestProcessingFilterEntryPoint"/></property>

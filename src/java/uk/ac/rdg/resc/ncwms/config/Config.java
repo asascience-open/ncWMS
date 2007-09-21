@@ -34,7 +34,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.acegisecurity.GrantedAuthority;
+import org.acegisecurity.userdetails.UserDetails;
+import org.acegisecurity.userdetails.UserDetailsService;
+import org.acegisecurity.userdetails.UsernameNotFoundException;
 import org.apache.log4j.Logger;
+import org.springframework.dao.DataAccessException;
 import simple.xml.Element;
 import simple.xml.ElementList;
 import simple.xml.Root;
@@ -56,7 +61,7 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
  * $Log$
  */
 @Root(name="config")
-public class Config
+public class Config implements UserDetailsService
 {
     private static final Logger logger = Logger.getLogger(Config.class);
     
@@ -79,6 +84,8 @@ public class Config
     
     @Element(name="server")
     private Server server = new Server();
+    
+    private AdminUser adminUser; // This is created in build()
     
     // Time of the last update to this configuration or any of the contained
     // metadata, in milliseconds since the epoch
@@ -207,6 +214,7 @@ public class Config
     /**
      * Called when we have checked that the configuration is valid.  Populates
      * the datasets hashmap and loads the datasets from the THREDDS catalog.
+     * Creates the AdminUser object.
      */
     @Commit
     public void build()
@@ -219,6 +227,9 @@ public class Config
             this.datasets.put(ds.getId(), ds);
         }
         this.loadThreddsCatalog();
+        
+        // Create the admin user
+        this.adminUser = new AdminUser(this.server.getAdminPassword());
     }
     
     public void setLastUpdateTime(Date date)
@@ -341,6 +352,82 @@ public class Config
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
         this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
+    }
+
+    /**
+     * Required by the UserDetailsService interface
+     */
+    public UserDetails loadUserByUsername(String username)
+        throws UsernameNotFoundException, DataAccessException
+    {
+        if (username.equals("admin"))
+        {
+            return this.adminUser;
+        }
+        throw new UsernameNotFoundException(username);
+    }
+    
+}
+
+/**
+ * Class to describe the admin user: has the username "admin"
+ */
+class AdminUser implements UserDetails
+{
+    private String password;
+    
+    public AdminUser(String password)
+    {
+        this.password = password;
+    }
+    
+    public boolean isEnabled()
+    {
+        return true;
+    }
+
+    public boolean isCredentialsNonExpired()
+    {
+        return true;
+    }
+
+    public boolean isAccountNonLocked()
+    {
+        return true;
+    }
+
+    public boolean isAccountNonExpired()
+    {
+        return true;
+    }
+
+    public String getUsername()
+    {
+        return "admin";
+    }
+
+    public String getPassword()
+    {
+        return this.password;
+    }
+
+    /**
+     * @return a single GrantedAuthority called "ROLE_ADMIN"
+     */
+    public GrantedAuthority[] getAuthorities()
+    {
+        return new GrantedAuthority[]
+        {
+            new GrantedAuthority()
+            {
+                public String getAuthority()
+                {
+                    // This string must match up with the roles in the
+                    // filterInvocationInterceptor in applicationContext.xml
+                    return "ROLE_ADMIN";
+                }
+            }
+        };
     }
     
 }
