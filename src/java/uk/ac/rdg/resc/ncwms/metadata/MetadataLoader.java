@@ -99,13 +99,21 @@ public class MetadataLoader
      */
     public void forceReloadMetadata(final Dataset ds)
     {
+        ds.setState(Dataset.State.TO_BE_LOADED); // causes needsRefresh() to return true
+        reloadMetadata(ds);
+    }
+    
+    /**
+     * Reloads the metadata for a given dataset in a new thread
+     */
+    private void reloadMetadata(final Dataset ds)
+    {
         new Thread()
         {
             public void run()
             {
                 logger.debug("Loading metadata for {}", ds.getLocation());
-                ds.setState(Dataset.State.TO_BE_LOADED); // causes needsRefresh() to return true
-                boolean loaded = reloadMetadata(ds);
+                boolean loaded = doReloadMetadata(ds);
                 String message = loaded ? "Loaded metadata for {}" :
                     "Did not load metadata for {}";
                 logger.debug(message, ds.getLocation());
@@ -118,7 +126,7 @@ public class MetadataLoader
      * @return true if the metadata were (re)loaded, false if no reload was
      * necessary, or if there was an error loading the metadata.
      */
-    private boolean reloadMetadata(Dataset ds)
+    private boolean doReloadMetadata(Dataset ds)
     {
         // We must make this part of the method thread-safe because more than
         // one thread might be trying to update the metadata.
