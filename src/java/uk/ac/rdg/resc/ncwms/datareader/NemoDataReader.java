@@ -154,7 +154,7 @@ public class NemoDataReader extends DefaultDataReader
 
             int yAxisIndex = 1;
             int xAxisIndex = 2;
-            Vector<Range> ranges = new Vector<Range>();
+            List<Range> ranges = new ArrayList<Range>();
             ranges.add(tRange);
             // TODO: logic is fragile here
             if (var.getRank() == 4)
@@ -172,10 +172,10 @@ public class NemoDataReader extends DefaultDataReader
             for (int yIndex : scanlines.keySet())
             {
                 Scanline scanline = scanlines.get(yIndex);
-                ranges.setElementAt(new Range(yIndex, yIndex), yAxisIndex);
-                Vector<Integer> xIndices = scanline.getSortedXIndices();
-                Range xRange = new Range(xIndices.firstElement(), xIndices.lastElement());
-                ranges.setElementAt(xRange, xAxisIndex);
+                ranges.set(yAxisIndex, new Range(yIndex, yIndex));
+                List<Integer> xIndices = scanline.getSortedXIndices();
+                Range xRange = new Range(xIndices.get(0), xIndices.get(xIndices.size() - 1));
+                ranges.set(xAxisIndex, xRange);
 
                 // Read the scanline from the disk, from the first to the last x index
                 Array data = var.read(ranges);
@@ -188,12 +188,12 @@ public class NemoDataReader extends DefaultDataReader
                         float val;
                         if (arrObj instanceof float[])
                         {
-                            val = ((float[])arrObj)[xIndex - xIndices.firstElement()];
+                            val = ((float[])arrObj)[xIndex - xIndices.get(0)];
                         }
                         else
                         {
                             // We assume this is an array of shorts
-                            val = ((short[])arrObj)[xIndex - xIndices.firstElement()];
+                            val = ((short[])arrObj)[xIndex - xIndices.get(0)];
                         }
                         // The missing value is calculated based on the compressed,
                         // not the uncompressed, data, despite the fact that it's
@@ -225,53 +225,6 @@ public class NemoDataReader extends DefaultDataReader
                     logger.error("IOException closing " + nc.getLocation(), ex);
                 }
             }
-        }
-    }
-    
-    private static class Scanline
-    {
-        // Maps x indices to a collection of pixel indices
-        //                  x          pixels
-        private Hashtable<Integer, Vector<Integer>> xIndices;
-        
-        public Scanline()
-        {
-            this.xIndices = new Hashtable<Integer, Vector<Integer>>();
-        }
-        
-        /**
-         * @param xIndex The x index of the point in the source data
-         * @param pixelIndex The index of the corresponding point in the picture
-         */
-        public void put(int xIndex, int pixelIndex)
-        {
-            Vector<Integer> pixelIndices = this.xIndices.get(xIndex);
-            if (pixelIndices == null)
-            {
-                pixelIndices = new Vector<Integer>();
-                this.xIndices.put(xIndex, pixelIndices);
-            }
-            pixelIndices.add(pixelIndex);
-        }
-        
-        /**
-         * @return a Vector of all the x indices in this scanline, sorted in
-         * ascending order
-         */
-        public Vector<Integer> getSortedXIndices()
-        {
-            Vector<Integer> v = new Vector<Integer>(this.xIndices.keySet());
-            Collections.sort(v);
-            return v;
-        }
-        
-        /**
-         * @return a Vector of all the pixel indices that correspond to the
-         * given x index, or null if the x index does not exist in the scanline
-         */
-        public Vector<Integer> getPixelIndices(int xIndex)
-        {
-            return this.xIndices.get(xIndex);
         }
     }
     

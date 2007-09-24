@@ -236,53 +236,6 @@ public class USGSDataReader extends DefaultDataReader
         }
     }
     
-    private static class Scanline
-    {
-        // Maps x indices to a collection of pixel indices
-        //                  x          pixels
-        private Map<Integer, List<Integer>> xIndices;
-        
-        public Scanline()
-        {
-            this.xIndices = new HashMap<Integer, List<Integer>>();
-        }
-        
-        /**
-         * @param xIndex The x index of the point in the source data
-         * @param pixelIndex The index of the corresponding point in the picture
-         */
-        public void put(int xIndex, int pixelIndex)
-        {
-            List<Integer> pixelIndices = this.xIndices.get(xIndex);
-            if (pixelIndices == null)
-            {
-                pixelIndices = new ArrayList<Integer>();
-                this.xIndices.put(xIndex, pixelIndices);
-            }
-            pixelIndices.add(pixelIndex);
-        }
-        
-        /**
-         * @return a Vector of all the x indices in this scanline, sorted in
-         * ascending order
-         */
-        public List<Integer> getSortedXIndices()
-        {
-            List<Integer> v = new ArrayList<Integer>(this.xIndices.keySet());
-            Collections.sort(v);
-            return v;
-        }
-        
-        /**
-         * @return a Vector of all the pixel indices that correspond to the
-         * given x index, or null if the x index does not exist in the scanline
-         */
-        public List<Integer> getPixelIndices(int xIndex)
-        {
-            return this.xIndices.get(xIndex);
-        }
-    }
-    
     /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
@@ -378,5 +331,52 @@ public class USGSDataReader extends DefaultDataReader
             }
         }
         return layers;
+    }
+}
+    
+class Scanline
+{
+    // Maps x indices to a collection of pixel indices
+    //             x         pixels
+    private Map<Integer, List<Integer>> xIndices;
+
+    public Scanline()
+    {
+        this.xIndices = new HashMap<Integer, List<Integer>>();
+    }
+
+    /**
+     * @param xIndex The x index of the point in the source data
+     * @param pixelIndex The index of the corresponding point in the picture
+     */
+    public void put(int xIndex, int pixelIndex)
+    {
+        List<Integer> pixelIndices = this.xIndices.get(xIndex);
+        if (pixelIndices == null)
+        {
+            pixelIndices = new ArrayList<Integer>();
+            this.xIndices.put(xIndex, pixelIndices);
+        }
+        pixelIndices.add(pixelIndex);
+    }
+
+    /**
+     * @return a Vector of all the x indices in this scanline, sorted in
+     * ascending order
+     */
+    public List<Integer> getSortedXIndices()
+    {
+        List<Integer> v = new ArrayList<Integer>(this.xIndices.keySet());
+        Collections.sort(v);
+        return v;
+    }
+
+    /**
+     * @return a Vector of all the pixel indices that correspond to the
+     * given x index, or null if the x index does not exist in the scanline
+     */
+    public List<Integer> getPixelIndices(int xIndex)
+    {
+        return this.xIndices.get(xIndex);
     }
 }
