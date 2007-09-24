@@ -33,10 +33,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
@@ -106,7 +106,7 @@ public class USGSDataReader extends DefaultDataReader
             EnhancedCoordAxis yAxis = layer.getYaxis();
             
             // Maps y indices to scanlines
-            Hashtable<Integer, Scanline> scanlines = new Hashtable<Integer, Scanline>();
+            Map<Integer, Scanline> scanlines = new HashMap<Integer, Scanline>();
             // Cycle through each pixel in the picture and work out which
             // x and y index in the source data it corresponds to
             int pixelIndex = 0;
@@ -162,7 +162,7 @@ public class USGSDataReader extends DefaultDataReader
             
             int yAxisIndex = 1;
             int xAxisIndex = 2;
-            Vector<Range> ranges = new Vector<Range>();
+            List<Range> ranges = new ArrayList<Range>();
             ranges.add(tRange);
             // TODO: logic is fragile here
             if (var.getRank() == 4)
@@ -180,10 +180,10 @@ public class USGSDataReader extends DefaultDataReader
             for (int yIndex : scanlines.keySet())
             {
                 Scanline scanline = scanlines.get(yIndex);
-                ranges.setElementAt(new Range(yIndex, yIndex), yAxisIndex);
-                Vector<Integer> xIndices = scanline.getSortedXIndices();
-                Range xRange = new Range(xIndices.firstElement(), xIndices.lastElement());
-                ranges.setElementAt(xRange, xAxisIndex);
+                ranges.set(yAxisIndex, new Range(yIndex, yIndex));
+                List<Integer> xIndices = scanline.getSortedXIndices();
+                Range xRange = new Range(xIndices.get(0), xIndices.get(xIndices.size() - 1));
+                ranges.set(xAxisIndex, xRange);
                 
                 // Read the scanline from the disk, from the first to the last x index
                 Array data = var.read(ranges);
@@ -196,12 +196,12 @@ public class USGSDataReader extends DefaultDataReader
                         float val;
                         if (arrObj instanceof float[])
                         {
-                            val = ((float[])arrObj)[xIndex - xIndices.firstElement()];
+                            val = ((float[])arrObj)[xIndex - xIndices.get(0)];
                         }
                         else
                         {
                             // We assume this is an array of shorts
-                            val = ((short[])arrObj)[xIndex - xIndices.firstElement()];
+                            val = ((short[])arrObj)[xIndex - xIndices.get(0)];
                         }
                         // The missing value is calculated based on the compressed,
                         // not the uncompressed, data, despite the fact that it's
@@ -240,11 +240,11 @@ public class USGSDataReader extends DefaultDataReader
     {
         // Maps x indices to a collection of pixel indices
         //                  x          pixels
-        private Hashtable<Integer, Vector<Integer>> xIndices;
+        private Map<Integer, List<Integer>> xIndices;
         
         public Scanline()
         {
-            this.xIndices = new Hashtable<Integer, Vector<Integer>>();
+            this.xIndices = new HashMap<Integer, List<Integer>>();
         }
         
         /**
@@ -253,10 +253,10 @@ public class USGSDataReader extends DefaultDataReader
          */
         public void put(int xIndex, int pixelIndex)
         {
-            Vector<Integer> pixelIndices = this.xIndices.get(xIndex);
+            List<Integer> pixelIndices = this.xIndices.get(xIndex);
             if (pixelIndices == null)
             {
-                pixelIndices = new Vector<Integer>();
+                pixelIndices = new ArrayList<Integer>();
                 this.xIndices.put(xIndex, pixelIndices);
             }
             pixelIndices.add(pixelIndex);
@@ -266,9 +266,9 @@ public class USGSDataReader extends DefaultDataReader
          * @return a Vector of all the x indices in this scanline, sorted in
          * ascending order
          */
-        public Vector<Integer> getSortedXIndices()
+        public List<Integer> getSortedXIndices()
         {
-            Vector<Integer> v = new Vector<Integer>(this.xIndices.keySet());
+            List<Integer> v = new ArrayList<Integer>(this.xIndices.keySet());
             Collections.sort(v);
             return v;
         }
@@ -277,7 +277,7 @@ public class USGSDataReader extends DefaultDataReader
          * @return a Vector of all the pixel indices that correspond to the
          * given x index, or null if the x index does not exist in the scanline
          */
-        public Vector<Integer> getPixelIndices(int xIndex)
+        public List<Integer> getPixelIndices(int xIndex)
         {
             return this.xIndices.get(xIndex);
         }
