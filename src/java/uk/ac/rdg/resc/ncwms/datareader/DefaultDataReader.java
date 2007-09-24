@@ -142,7 +142,8 @@ public class DefaultDataReader extends DataReader
             // Get an enhanced version of the variable for fast reading of data
             EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
             
-            DataChunk dataChunk;
+            DataChunk dataChunk = null;
+            int lastYIndex = -1;
             // Cycle through the latitude values, extracting a scanline of
             // data each time from minX to maxX
             for (int j = 0; j < latValues.length; j++)
@@ -153,11 +154,16 @@ public class DefaultDataReader extends DataReader
                     int yIndex = yAxis.getIndex(new LatLonPointImpl(latValues[j], 0.0));
                     if (yIndex >= 0)
                     {
-                        Range yRange = new Range(yIndex, yIndex);
-                        // Read a chunk of data - values will not be unpacked or
-                        // checked for missing values yet
-                        GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
-                        dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
+                        if (yIndex != lastYIndex)
+                        {
+                            // We're not reading the same data as in the last iteration
+                            Range yRange = new Range(yIndex, yIndex);
+                            // Read a chunk of data - values will not be unpacked or
+                            // checked for missing values yet
+                            GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
+                            dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
+                            lastYIndex = yIndex;
+                        }
                         // Now copy the scanline's data to the picture array
                         for (int i = 0; i < xIndices.length; i++)
                         {
