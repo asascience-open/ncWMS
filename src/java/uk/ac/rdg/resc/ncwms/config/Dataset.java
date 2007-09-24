@@ -32,8 +32,8 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import org.apache.log4j.Logger;
-import simple.xml.Attribute;
-import simple.xml.Root;
+import org.simpleframework.xml.Attribute;
+import org.simpleframework.xml.Root;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**

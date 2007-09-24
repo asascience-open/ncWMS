@@ -28,8 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
-import simple.xml.Element;
-import simple.xml.Root;
+import org.simpleframework.xml.Element;
+import org.simpleframework.xml.Root;
 
 /**
  * JavaBean holding contact details for the ncWMS configuration file

@@ -28,11 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
-import java.util.ArrayList;
-import java.util.List;
-import simple.xml.Element;
-import simple.xml.Root;
-import simple.xml.load.Commit;
+import org.simpleframework.xml.Element;
+import org.simpleframework.xml.Root;
 
 /**
  * The part of the configuration file that pertains to the server itself.

@@ -55,10 +55,6 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="1">
-                    <file>${file.reference.simple-xml-1.1.2.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="1">
                     <file>${file.reference.je-3.2.23.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
@@ -76,6 +72,10 @@
                 </library>
                 <library files="1">
                     <file>${file.reference.acegi-security-1.0.4.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library files="1">
+                    <file>${file.reference.simple-xml-1.4.2.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>
