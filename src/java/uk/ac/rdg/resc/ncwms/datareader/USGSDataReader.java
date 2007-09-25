@@ -102,41 +102,9 @@ public class USGSDataReader extends DefaultDataReader
             float[] picData = new float[lonValues.length * latValues.length];
             Arrays.fill(picData, Float.NaN);
             
-            EnhancedCoordAxis xAxis = layer.getXaxis();
-            EnhancedCoordAxis yAxis = layer.getYaxis();
-            
-            // Maps y indices to scanlines
-            Map<Integer, Scanline> scanlines = new HashMap<Integer, Scanline>();
-            // Cycle through each pixel in the picture and work out which
-            // x and y index in the source data it corresponds to
-            int pixelIndex = 0;
-            for (float lat : latValues)
-            {
-                if (lat >= -90.0f && lat <= 90.0f)
-                {
-                    for (float lon : lonValues)
-                    {
-                        LatLonPoint latLon = new LatLonPointImpl(lat, lon);
-                        // Translate lat-lon to projection coordinates
-                        int xCoord = xAxis.getIndex(latLon);
-                        int yCoord = yAxis.getIndex(latLon);
-                        //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
-                        if (xCoord >= 0 && yCoord >= 0)
-                        {
-                            // Get the scanline for this y index
-                            Scanline scanline = scanlines.get(yCoord);
-                            if (scanline == null)
-                            {
-                                scanline = new Scanline();
-                                scanlines.put(yCoord, scanline);
-                            }
-                            scanline.put(xCoord, pixelIndex);
-                        }
-                        pixelIndex++;
-                    }
-                }
-            }
-            logger.debug("Built scanlines in {} ms", System.currentTimeMillis() - start);
+            // Maps x and y indices to pixel indices
+            PixelMap pixelMap = this.getPixelMap(layer, latValues, lonValues);
+            if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
             
             // Now build the picture
@@ -176,32 +144,34 @@ public class USGSDataReader extends DefaultDataReader
             ranges.add(new Range(0,0));
             ranges.add(new Range(0,0));
             
-            // Iterate through the scanlines, the order doesn't matter
-            for (int yIndex : scanlines.keySet())
+            // Iterate through the y indices, the order doesn't matter
+            for (int yIndex : pixelMap.getYIndices())
             {
-                Scanline scanline = scanlines.get(yIndex);
+                // Set the Ranges to read all the data between x_min and x_max
+                // in this row
                 ranges.set(yAxisIndex, new Range(yIndex, yIndex));
-                List<Integer> xIndices = scanline.getSortedXIndices();
-                Range xRange = new Range(xIndices.get(0), xIndices.get(xIndices.size() - 1));
+                int xmin = pixelMap.getMinXIndexInRow(yIndex);
+                int xmax = pixelMap.getMaxXIndexInRow(yIndex);
+                Range xRange = new Range(xmin, xmax);
                 ranges.set(xAxisIndex, xRange);
                 
                 // Read the scanline from the disk, from the first to the last x index
                 Array data = var.read(ranges);
                 Object arrObj = data.copyTo1DJavaArray();
                 
-                for (int xIndex : xIndices)
+                for (int xIndex : pixelMap.getXIndices(yIndex))
                 {
-                    for (int p : scanline.getPixelIndices(xIndex))
+                    for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
                     {
                         float val;
                         if (arrObj instanceof float[])
                         {
-                            val = ((float[])arrObj)[xIndex - xIndices.get(0)];
+                            val = ((float[])arrObj)[xIndex - xmin];
                         }
                         else
                         {
                             // We assume this is an array of shorts
-                            val = ((short[])arrObj)[xIndex - xIndices.get(0)];
+                            val = ((short[])arrObj)[xIndex - xmin];
                         }
                         // The missing value is calculated based on the compressed,
                         // not the uncompressed, data, despite the fact that it's
