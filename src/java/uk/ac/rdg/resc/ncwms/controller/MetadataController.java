@@ -111,7 +111,7 @@ public class MetadataController
         HttpServletResponse response) throws Exception
     {
         // There could be more than one filter
-        String[] filters = request.getParameterValues("filter");
+        String[] filters = request.getParameter("filter").split(",");
         // Find the list of displayable datasets that match any of the
         // provided filters
         List<Dataset> displayables = new ArrayList<Dataset>();
