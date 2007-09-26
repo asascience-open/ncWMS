@@ -37,12 +37,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
-import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
@@ -117,49 +113,6 @@ public abstract class DataReader
     public abstract float[] read(String filename, Layer layer,
         int tIndex, int zIndex, float[] latValues, float[] lonValues)
         throws Exception;
-    
-    /**
-     * Creates a PixelMap, i.e. a map of x and y indices (in the source data)
-     * to pixel indices.
-     */
-    protected PixelMap getPixelMap(Layer layer, float[] latValues, float[] lonValues)
-    {
-        long start = System.currentTimeMillis();
-        PixelMap pixelMap = new PixelMap();
-        
-        EnhancedCoordAxis xAxis = layer.getXaxis();
-        EnhancedCoordAxis yAxis = layer.getYaxis();
-        
-        // Cycle through each pixel in the picture and work out which
-        // x and y index in the source data it corresponds to
-        int pixelIndex = 0;
-        
-        // Can we can gain efficiency if both coordinate axes are 1D?
-        /*if (xAxis instanceof OneDCoordAxis &&
-            yAxis instanceof OneDCoordAxis)
-        {
-        }*/
-        // We use a generic, but slower, algorithm
-        // TODO: use the profiler to figure out where this is slow
-        for (float lat : latValues)
-        {
-            if (lat >= -90.0f && lat <= 90.0f)
-            {
-                for (float lon : lonValues)
-                {
-                    LatLonPoint latLon = new LatLonPointImpl(lat, lon);
-                    // Translate lat-lon to projection coordinates
-                    int x = xAxis.getIndex(latLon);
-                    int y = yAxis.getIndex(latLon);
-                    //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
-                    pixelMap.put(x, y, pixelIndex); // Ignores negative indices
-                    pixelIndex++;
-                }
-            }
-        }
-        logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);
-        return pixelMap;
-    }
     
     /**
      * Reads and returns the metadata for all the layers (i.e. variables) in the dataset

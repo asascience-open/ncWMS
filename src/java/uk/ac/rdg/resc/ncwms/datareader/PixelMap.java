@@ -33,8 +33,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import org.apache.log4j.Logger;
+import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.LatLonPointImpl;
+import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
  * Class that maps x and y indices in source data arrays to pixel indices in
@@ -47,13 +53,76 @@ import java.util.TreeMap;
  */
 public class PixelMap
 {
+    private static final Logger logger = Logger.getLogger(PixelMap.class);
+    
     // These define the bounding box of the data to extract from the source files
     private int minXIndex, minYIndex, maxXIndex, maxYIndex = 0;
     
-    // Maps Y indices to Maps of X indices to pixel indices
-    //            y            x            pixel
-    private Map<Integer, SortedMap<Integer, List<Integer>>> pixelMap =
-        new HashMap<Integer, SortedMap<Integer, List<Integer>>>();
+    // Maps Y indices to row information
+    private Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
+    
+    /**
+     * Generates a PixelMap for the given Layer for the given arrays of latitude
+     * and longitude values in the destination picture
+     */
+    public PixelMap(Layer layer, float[] latValues, float[] lonValues)
+    {
+        long start = System.currentTimeMillis();
+        
+        EnhancedCoordAxis xAxis = layer.getXaxis();
+        EnhancedCoordAxis yAxis = layer.getYaxis();
+        
+        // Cycle through each pixel in the picture and work out which
+        // x and y index in the source data it corresponds to
+        int pixelIndex = 0;
+        
+        // We can gain efficiency if both coordinate axes are 1D by minimizing
+        // the number of calls to axis.getIndex().
+        if (xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
+        {
+            logger.debug("Using optimized method for 1-D axes");
+            // Calculate the indices along the x axis.
+            int[] xIndices = new int[lonValues.length];
+            for (int i = 0; i < xIndices.length; i++)
+            {
+                xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
+            }
+            for (float lat : latValues)
+            {
+                if (lat >= -90.0f && lat <= 90.0f)
+                {
+                    int yIndex = yAxis.getIndex(new LatLonPointImpl(lat, 0.0));
+                    for (int xIndex : xIndices)
+                    {
+                        this.put(xIndex, yIndex, pixelIndex);
+                        pixelIndex++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            logger.debug("Using generic method for complex axes");
+            // We use a generic, but slower, algorithm
+            for (float lat : latValues)
+            {
+                if (lat >= -90.0f && lat <= 90.0f)
+                {
+                    for (float lon : lonValues)
+                    {
+                        LatLonPoint latLon = new LatLonPointImpl(lat, lon);
+                        // Translate lat-lon to projection coordinates
+                        int x = xAxis.getIndex(latLon);
+                        int y = yAxis.getIndex(latLon);
+                        //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
+                        this.put(x, y, pixelIndex); // Ignores negative indices
+                        pixelIndex++;
+                    }
+                }
+            }
+        }
+        logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);
+    }
     
     /**
      * Adds a new pixel index to this map.  Does nothing if either x or y is
@@ -62,39 +131,29 @@ public class PixelMap
      * @param y The y index of the point in the source data
      * @param pixel The index of the corresponding point in the picture
      */
-    public void put(int x, int y, int pixel)
+    private void put(int x, int y, int pixel)
     {
         // If either of the indices are negative there is no data for this
         // pixel index
         if (x < 0 || y < 0) return;
         
         // Modify the bounding box if necessary
-        if (x < getMinXIndex()) minXIndex = x;
-        if (x > getMaxXIndex()) maxXIndex = x;
-        if (y < getMinYIndex()) minYIndex = y;
-        if (y > getMaxYIndex()) maxYIndex = y;
+        if (x < this.minXIndex) this.minXIndex = x;
+        if (x > this.maxXIndex) this.maxXIndex = x;
+        if (y < this.minYIndex) this.minYIndex = y;
+        if (y > this.maxYIndex) this.maxYIndex = y;
         
-        // Get the set of x indices for this row (i.e. this y index),
-        // creating a new set if necessary
-        // TODO: are we taking a performance hit by using a SortedMap?
-        SortedMap<Integer, List<Integer>> row = this.pixelMap.get(y);
+        // Get the information for this row (i.e. this y index),
+        // creating a new row if necessary
+        Row row = this.pixelMap.get(y);
         if (row == null)
         {
-            row = new TreeMap<Integer, List<Integer>>();
+            row = new Row();
             this.pixelMap.put(y, row);
         }
         
-        // Get the set of pixel indices that correspond with this x index,
-        // creating a new set if necessary
-        List<Integer> pixelIndices = row.get(x);
-        if (pixelIndices == null)
-        {
-            pixelIndices = new ArrayList<Integer>();
-            row.put(x, pixelIndices);
-        }
-        
-        // Add the pixel index to the set
-        pixelIndices.add(pixel);
+        // Add the pixel to this row
+        row.put(x, pixel);
     }
     
     /**
@@ -120,7 +179,7 @@ public class PixelMap
      */
     public Set<Integer> getXIndices(int y)
     {
-        return this.getRow(y).keySet();
+        return this.getRow(y).getXIndices().keySet();
     }
     
     /**
@@ -131,7 +190,7 @@ public class PixelMap
      */
     public List<Integer> getPixelIndices(int x, int y)
     {
-        SortedMap<Integer, List<Integer>> row = this.getRow(y);
+        Map<Integer, List<Integer>> row = this.getRow(y).getXIndices();
         if (!row.containsKey(x))
         {
             throw new IllegalArgumentException("The x index " + x +
@@ -146,7 +205,7 @@ public class PixelMap
      */
     public int getMinXIndexInRow(int y)
     {
-        return this.getRow(y).firstKey();
+        return this.getRow(y).getMinXIndex();
     }
     
     /**
@@ -155,14 +214,14 @@ public class PixelMap
      */
     public int getMaxXIndexInRow(int y)
     {
-        return this.getRow(y).lastKey();
+        return this.getRow(y).getMaxXIndex();
     }
     
     /**
      * @return the row with the given y index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
-    private SortedMap<Integer, List<Integer>> getRow(int y)
+    private Row getRow(int y)
     {
         if (!this.pixelMap.containsKey(y))
         {
@@ -201,6 +260,52 @@ public class PixelMap
     public int getMaxYIndex()
     {
         return maxYIndex;
+    }
+    
+    /**
+     * Contains information about a particular row in the data
+     */
+    private static class Row
+    {
+        // Maps x Indices to a list of pixel indices
+        //             x        pixels
+        private Map<Integer, List<Integer>> xIndices =
+            new HashMap<Integer, List<Integer>>();
+        // Min and max x Indices in this row
+        private int minXIndex, maxXIndex = 0;
+        
+        /**
+         * Adds a mapping of an x index to a pixel index
+         */
+        public void put(int x, int pixel)
+        {
+            if (x < this.minXIndex) this.minXIndex = x;
+            if (x > this.maxXIndex) this.maxXIndex = x;
+            
+            List<Integer> pixelIndices = this.xIndices.get(x);
+            if (pixelIndices == null)
+            {
+                pixelIndices = new ArrayList<Integer>();
+                this.xIndices.put(x, pixelIndices);
+            }
+            // Add the pixel index to the set
+            pixelIndices.add(pixel);
+        }
+
+        public Map<Integer, List<Integer>> getXIndices()
+        {
+            return xIndices;
+        }
+
+        public int getMinXIndex()
+        {
+            return minXIndex;
+        }
+
+        public int getMaxXIndex()
+        {
+            return maxXIndex;
+        }
     }
     
 }

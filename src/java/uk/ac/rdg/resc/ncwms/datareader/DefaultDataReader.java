@@ -47,7 +47,6 @@ import ucar.nc2.dataset.grid.GeoGrid;
 import ucar.nc2.dataset.grid.GridCoordSys;
 import ucar.nc2.dataset.grid.GridDataset;
 import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
@@ -65,6 +64,8 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 public class DefaultDataReader extends DataReader
 {
     private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
+    // We'll use this logger to output performance information
+    private static final Logger benchmarkLogger = Logger.getLogger("ncwms.benchmark");
     
     /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular
@@ -103,7 +104,7 @@ public class DefaultDataReader extends DataReader
             // Use NaNs to represent missing data
             Arrays.fill(picData, Float.NaN);
             
-            PixelMap pixelMap = this.getPixelMap(layer, latValues, lonValues);
+            PixelMap pixelMap = new PixelMap(layer, latValues, lonValues);
             if (pixelMap.isEmpty()) return picData;
             
             long readMetadata = System.currentTimeMillis();
@@ -117,37 +118,11 @@ public class DefaultDataReader extends DataReader
             logger.debug("Getting GeoGrid with id {}", layer.getId());
             GeoGrid gg = gd.findGridByName(layer.getId());
             logger.debug("filename = {}, gg = " + gg, filename);
-            // Get an enhanced version of the variable for fast reading of data
-            EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
             
-            DataChunk dataChunk = null;
-            // Cycle through the latitude values, extracting a scanline of
-            // data each time from minX to maxX
-            for (int yIndex : pixelMap.getYIndices())
-            {
-                Range yRange = new Range(yIndex, yIndex);
-                // Read a scanline of data from the source
-                int xmin = pixelMap.getMinXIndexInRow(yIndex);
-                int xmax = pixelMap.getMaxXIndexInRow(yIndex);
-                Range xRange = new Range(xmin, xmax);
-                // Read a chunk of data - values will not be unpacked or
-                // checked for missing values yet
-                GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
-                dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
-                
-                // Now copy the scanline's data to the picture array
-                for (int xIndex : pixelMap.getXIndices(yIndex))
-                {
-                    float val = dataChunk.getValue(xIndex - xmin);
-                    // We unpack and check for missing values just for
-                    // the points we need to display.
-                    val = (float)enhanced.convertScaleOffsetMissing(val);
-                    for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
-                    {
-                        picData[p] = val;
-                    }
-                }
-            }
+            long before = System.currentTimeMillis();
+            this.populatePixelArray(picData, tRange, zRange, pixelMap, gg);
+            long after = System.currentTimeMillis();
+            benchmarkLogger.info(this.getClass().getName() + "\t" + (after - before));
             
             long builtPic = System.currentTimeMillis();
             logger.debug("Built picture array in {} milliseconds", (builtPic - readMetadata));
@@ -166,6 +141,48 @@ public class DefaultDataReader extends DataReader
                 catch (IOException ex)
                 {
                     logger.error("IOException closing " + nc.getLocation(), ex);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Reads data from the given GeoGrid and populates the given pixel array.
+     * This uses a scanline-based algorithm: subclasses can override this to
+     * use alternative strategies, e.g. point-by-point or bounding box
+     */
+    protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
+        PixelMap pixelMap, GeoGrid gg) throws Exception
+    {
+        // Get an enhanced version of the variable for conversion of data
+        EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
+        DataChunk dataChunk = null;
+        // Cycle through the latitude values, extracting a scanline of
+        // data each time from minX to maxX
+        for (int yIndex : pixelMap.getYIndices())
+        {
+            Range yRange = new Range(yIndex, yIndex);
+            // Read a row of data from the source
+            int xmin = pixelMap.getMinXIndexInRow(yIndex);
+            int xmax = pixelMap.getMaxXIndexInRow(yIndex);
+            Range xRange = new Range(xmin, xmax);
+            // Read a chunk of data - values will not be unpacked or
+            // checked for missing values yet
+            GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
+            dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
+
+            // Now copy the scanline's data to the picture array
+            for (int xIndex : pixelMap.getXIndices(yIndex))
+            {
+                float val = dataChunk.getValue(xIndex - xmin);
+                // We unpack and check for missing values just for
+                // the points we need to display.
+                val = (float)enhanced.convertScaleOffsetMissing(val);
+                // Now we set the value of all the image pixels associated with
+                // this data point.
+                for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
+                {
+                    picData[p] = val;
                 }
             }
         }

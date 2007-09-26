@@ -99,7 +99,7 @@ public class NemoDataReader extends DefaultDataReader
             Arrays.fill(picData, Float.NaN);
             
             // Maps x and y indices to pixel indices
-            PixelMap pixelMap = this.getPixelMap(layer, latValues, lonValues);
+            PixelMap pixelMap = new PixelMap(layer, latValues, lonValues);
             if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
 
