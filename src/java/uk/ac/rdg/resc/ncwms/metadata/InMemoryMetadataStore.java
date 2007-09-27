@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 
 /**
  * A MetadataStore that stores metadata in memory.  This is likely to be fast

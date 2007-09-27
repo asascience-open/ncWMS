@@ -96,8 +96,8 @@
             </c:forEach>
         </table>
         
-        <h2>THREDDS (experimental!)</h2>
-        THREDDS catalog location: <input type="text" name="thredds.catalog.location" value="${config.threddsCatalogLocation}" size="60"/>
+        <!--<h2>THREDDS (experimental!)</h2>
+        THREDDS catalog location: <input type="text" name="thredds.catalog.location" value="${config.threddsCatalogLocation}" size="60"/>-->
         
         <h2>Server metadata</h2>
         <table border="1">

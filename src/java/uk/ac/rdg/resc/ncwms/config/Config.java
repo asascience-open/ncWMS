@@ -34,10 +34,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.acegisecurity.GrantedAuthority;
-import org.acegisecurity.userdetails.UserDetails;
-import org.acegisecurity.userdetails.UserDetailsService;
-import org.acegisecurity.userdetails.UsernameNotFoundException;
 import org.apache.log4j.Logger;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
@@ -46,10 +42,13 @@ import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Persister;
 import org.simpleframework.xml.load.Validate;
-import org.springframework.dao.DataAccessException;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.config.thredds.ThreddsConfig;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.security.Users;
 
 /**
  * Configuration of the server.  We use Simple XML Serialization
@@ -61,9 +60,12 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
  * $Log$
  */
 @Root(name="config")
-public class Config implements UserDetailsService
+public class Config implements ApplicationContextAware
 {
     private static final Logger logger = Logger.getLogger(Config.class);
+    
+    // When we've created a Config object, this field remembers it
+    private static Config storedConfig;
     
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
@@ -85,8 +87,6 @@ public class Config implements UserDetailsService
     @Element(name="server")
     private Server server = new Server();
     
-    private AdminUser adminUser; // This is created in build()
-    
     // Time of the last update to this configuration or any of the contained
     // metadata, in milliseconds since the epoch
     private long lastUpdateTime = new Date().getTime(); 
@@ -105,6 +105,14 @@ public class Config implements UserDetailsService
      * new Config objects directly.
      */
     private Config() {}
+    
+    /**
+     * Gets an already-created config object
+     */
+    public static Config getConfig()
+    {
+        return storedConfig;
+    }
     
     /**
      * Reads configuration information from the file location given by the
@@ -163,6 +171,7 @@ public class Config implements UserDetailsService
         // The config object is needed by the metadata store when setting
         // properties of the returned Layer objects.
         metadataStore.setConfig(config);
+        storedConfig = config;
         return config;
     }
     
@@ -227,9 +236,6 @@ public class Config implements UserDetailsService
             this.datasets.put(ds.getId(), ds);
         }
         this.loadThreddsCatalog();
-        
-        // Create the admin user
-        this.adminUser = new AdminUser(this.server.getAdminPassword());
     }
     
     public void setLastUpdateTime(Date date)
@@ -355,79 +361,24 @@ public class Config implements UserDetailsService
     }
 
     /**
-     * Required by the UserDetailsService interface
+     * Called automatically by Spring.  When we have the application context
+     * we can set the admin password in the Users object that is used by Acegi.
+     * This is called after the Config object has been created.
      */
-    public UserDetails loadUserByUsername(String username)
-        throws UsernameNotFoundException, DataAccessException
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException
     {
-        if (username.equals("admin"))
+        // Set the admin password in the Users bean, which we'll need to
+        // get from the app context
+        Users users = (Users)applicationContext.getBean("users");
+        if (users == null)
         {
-            return this.adminUser;
+            logger.error("Could not retrieve Users object from application context");
         }
-        throw new UsernameNotFoundException(username);
-    }
-    
-}
-
-/**
- * Class to describe the admin user: has the username "admin"
- */
-class AdminUser implements UserDetails
-{
-    private String password;
-    
-    public AdminUser(String password)
-    {
-        this.password = password;
-    }
-    
-    public boolean isEnabled()
-    {
-        return true;
-    }
-
-    public boolean isCredentialsNonExpired()
-    {
-        return true;
-    }
-
-    public boolean isAccountNonLocked()
-    {
-        return true;
-    }
-
-    public boolean isAccountNonExpired()
-    {
-        return true;
-    }
-
-    public String getUsername()
-    {
-        return "admin";
-    }
-
-    public String getPassword()
-    {
-        return this.password;
-    }
-
-    /**
-     * @return a single GrantedAuthority called "ROLE_ADMIN"
-     */
-    public GrantedAuthority[] getAuthorities()
-    {
-        return new GrantedAuthority[]
+        else
         {
-            new GrantedAuthority()
-            {
-                public String getAuthority()
-                {
-                    // This string must match up with the roles in the
-                    // filterInvocationInterceptor in applicationContext.xml
-                    return "ROLE_ADMIN";
-                }
-            }
-        };
+            logger.debug("Setting admin password in Users object");
+            users.setAdminPassword(this.server.getAdminPassword());
+        }
     }
     
 }

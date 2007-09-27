@@ -73,6 +73,8 @@ public class NcwmsContext implements ApplicationContextAware
     private File configFile; // location of the configuration file
     private ApplicationContext applicationContext; // Will be set by Spring
     
+    private boolean initialized = false;
+    
     public NcwmsContext()
     {
         // Set the location of the config file
@@ -95,11 +97,25 @@ public class NcwmsContext implements ApplicationContextAware
         // Set up the log4j logging system
         Properties logProps = new Properties();
         // Load properties from the config file
-        Resource logConfig = this.applicationContext.getResource("/WEB-INF/conf/log4j.properties");
+        Resource logConfig = this.applicationContext
+            .getResource("/WEB-INF/conf/log4j.properties");
         logProps.load(logConfig.getInputStream());
-        // Set the location of the log file: see log4j.properties
+        // Set the location of the log file: see /WEB-INF/conf/log4j.properties
         logProps.put("log4j.appender.R.File", logFile.getPath());
         PropertyConfigurator.configure(logProps);
+        
+        // Set the headings for the benchmark logger
+        // Matches up with code in DefaultDataReader.read()
+        Logger.getLogger("ncwms.benchmark").info
+        (
+            "Dataset," +
+            "Variable," +
+            "Class," +
+            "Num unique data points," +
+            "Sum row lengths," +
+            "Bounding box size," +
+            "Time to extract data (ms)"
+        );
     }
     
     /**

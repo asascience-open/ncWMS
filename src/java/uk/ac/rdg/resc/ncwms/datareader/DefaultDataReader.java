@@ -113,7 +113,7 @@ public class DefaultDataReader extends DataReader
             // Get the dataset from the cache, without enhancing it
             nc = getDataset(filename);
             long openedDS = System.currentTimeMillis();
-            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));            
+            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
             GridDataset gd = new GridDataset(nc);
             logger.debug("Getting GeoGrid with id {}", layer.getId());
             GeoGrid gg = gd.findGridByName(layer.getId());
@@ -123,12 +123,15 @@ public class DefaultDataReader extends DataReader
             long before = System.currentTimeMillis();
             this.populatePixelArray(picData, tRange, zRange, pixelMap, gg);
             long after = System.currentTimeMillis();
+            // Headings are written in NcwmsContext.init()
             benchmarkLogger.info
             (
-                this.getClass().getSimpleName() + "\t" +
-                pixelMap.getNumUniqueXYPairs() + "\t" +
-                pixelMap.getSumRowLengths() + "\t" +
-                pixelMap.getBoundingBoxSize() + "\t" +
+                layer.getDataset().getId() + "," +
+                layer.getId() + "," +
+                this.getClass().getSimpleName() + "," +
+                pixelMap.getNumUniqueXYPairs() + "," +
+                pixelMap.getSumRowLengths() + "," +
+                pixelMap.getBoundingBoxSize() + "," +
                 (after - before)
             );
             
