@@ -119,10 +119,18 @@ public class DefaultDataReader extends DataReader
             GeoGrid gg = gd.findGridByName(layer.getId());
             logger.debug("filename = {}, gg = " + gg, filename);
             
+            // Read the data from the dataset
             long before = System.currentTimeMillis();
             this.populatePixelArray(picData, tRange, zRange, pixelMap, gg);
             long after = System.currentTimeMillis();
-            benchmarkLogger.info(this.getClass().getName() + "\t" + (after - before));
+            benchmarkLogger.info
+            (
+                this.getClass().getSimpleName() + "\t" +
+                pixelMap.getNumUniqueXYPairs() + "\t" +
+                pixelMap.getSumRowLengths() + "\t" +
+                pixelMap.getBoundingBoxSize() + "\t" +
+                (after - before)
+            );
             
             long builtPic = System.currentTimeMillis();
             logger.debug("Built picture array in {} milliseconds", (builtPic - readMetadata));

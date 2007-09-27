@@ -61,6 +61,9 @@ public class PixelMap
     // Maps Y indices to row information
     private Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
     
+    // Number of unique x-y pairs
+    private int numUniqueXYPairs = 0;
+    
     /**
      * Generates a PixelMap for the given Layer for the given arrays of latitude
      * and longitude values in the destination picture
@@ -265,7 +268,7 @@ public class PixelMap
     /**
      * Contains information about a particular row in the data
      */
-    private static class Row
+    private class Row
     {
         // Maps x Indices to a list of pixel indices
         //             x        pixels
@@ -287,6 +290,8 @@ public class PixelMap
             {
                 pixelIndices = new ArrayList<Integer>();
                 this.xIndices.put(x, pixelIndices);
+                // We have a new unique x-y pair
+                numUniqueXYPairs++;
             }
             // Add the pixel index to the set
             pixelIndices.add(pixel);
@@ -306,6 +311,42 @@ public class PixelMap
         {
             return maxXIndex;
         }
+    }
+
+    /**
+     * @return the number of unique x-y pairs in this pixel map.  When combined
+     * with the size of the resulting image we can quantify the under- or
+     * oversampling.  This is the number of data points that will be extracted
+     * by the PixelByPixelDataReader.
+     */
+    public int getNumUniqueXYPairs()
+    {
+        return numUniqueXYPairs;
+    }
+    
+    /**
+     * @return the sum of the lengths of each row of data points,
+     * i.e. sum(xmax - xmin + 1).  This is the number of data points that will
+     * be extracted by the DefaultDataReader.
+     */
+    public int getSumRowLengths()
+    {
+        int sumRowLengths = 0;
+        for (Row row : this.pixelMap.values())
+        {
+            sumRowLengths += (row.getMaxXIndex() - row.getMinXIndex() + 1);
+        }
+        return sumRowLengths;
+    }
+    
+    /**
+     * @return the size of the bounding box that encompasses all data.  This is
+     * the number of data points that will be extracted by the OpendapDataReader.
+     */
+    public int getBoundingBoxSize()
+    {
+        return (this.maxXIndex - this.minXIndex + 1) *
+               (this.maxYIndex - this.minYIndex + 1);
     }
     
 }
