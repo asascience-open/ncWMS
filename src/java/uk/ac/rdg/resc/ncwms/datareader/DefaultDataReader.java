@@ -137,7 +137,7 @@ public class DefaultDataReader extends DataReader
             
             long builtPic = System.currentTimeMillis();
             logger.debug("Built picture array in {} milliseconds", (builtPic - readMetadata));
-            logger.info("Whole read() operation took {} milliseconds", (builtPic - start));
+            logger.debug("Whole read() operation took {} milliseconds", (builtPic - start));
             
             return picData;
         }

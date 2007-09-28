@@ -109,11 +109,11 @@ public class MetadataLoader
         {
             public void run()
             {
-                logger.info("Loading metadata for {}", ds.getLocation());
+                logger.debug("Loading metadata for {}", ds.getLocation());
                 boolean loaded = doReloadMetadata(ds);
                 String message = loaded ? "Loaded metadata for {}" :
                     "Did not load metadata for {}";
-                logger.info(message, ds.getLocation());
+                logger.debug(message, ds.getLocation());
             }
         }.start();
     }
@@ -135,7 +135,6 @@ public class MetadataLoader
             if (ds.needsRefresh())
             {
                 ds.setState(ds.getState() == State.READY ? State.UPDATING : State.LOADING);
-                ds.setException(null);
             }
             else
             {
@@ -168,14 +167,14 @@ public class MetadataLoader
         }
         catch(Exception e)
         {
+            ds.setState(State.ERROR);
             // Reduce logging volume by only logging the error if it's a new
-            // type of exception
-            if (ds.getState() != State.ERROR || ds.getException().getClass() != e.getClass())
+            // type of exception.
+            if (ds.getException() == null || ds.getException().getClass() != e.getClass())
             {
                 logger.error("Error loading metadata for dataset " + ds.getId(), e);
             }
             ds.setException(e);
-            ds.setState(State.ERROR);
             return false;
         }
     }
@@ -285,7 +284,7 @@ public class MetadataLoader
         if (this.timer != null) this.timer.cancel();
         this.config = null;
         NetcdfDatasetCache.exit();
-        logger.debug("Cleaned up MetadataLoader");
+        logger.info("Cleaned up MetadataLoader");
     }
 
     /**

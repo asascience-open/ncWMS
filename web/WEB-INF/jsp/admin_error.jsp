@@ -15,14 +15,15 @@
 
     <h1>Error report for dataset ${dataset.id} (for debugging)</h1>
     
+    <c:set var="err" value="${dataset.exception}"/>
     <c:choose>
-        <c:when test="${empty dataset.exception}">
+        <c:when test="${empty err}">
             This dataset does not contain any errors
         </c:when>
         <c:otherwise>
             <b>Stack trace:</b><br />
-            ${dataset.exception.class.name}: ${dataset.exception.message}<br />
-            <c:forEach var="stacktraceelement" items="${dataset.exception.stackTrace}">
+            ${err.class.name}: ${err.message}<br />
+            <c:forEach var="stacktraceelement" items="${err.stackTrace}">
             ${stacktraceelement}<br />
             </c:forEach>
         </c:otherwise>

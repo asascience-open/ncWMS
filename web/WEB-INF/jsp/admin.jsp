@@ -30,7 +30,7 @@
             <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th></tr>
             
             <c:forEach var="dataset" items="${config.datasets}">
-                <tr>
+                <tr<c:if test="${dataset.value.disabled}"> bgcolor="lightgrey"</c:if>>
                     <td><input type="text" name="dataset.${dataset.value.id}.id" value="${dataset.value.id}"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.title" value="${dataset.value.title}"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.location" value="${dataset.value.location}"/></td>
@@ -66,7 +66,7 @@
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.disabled"<c:if test="${dataset.value.disabled}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.queryable"<c:if test="${dataset.value.queryable}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.remove"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.reader" value="${dataset.value.dataReaderClass}"/></td>
+                    <td><input type="text" name="dataset.${dataset.value.id}.reader" value="${dataset.value.dataReaderClass}"/></td>                    </font>
                 </tr>
             </c:forEach>
             <%-- Now add lines for the user to add new datasets --%>
