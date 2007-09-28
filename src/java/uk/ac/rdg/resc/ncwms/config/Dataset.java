@@ -71,6 +71,10 @@ public class Dataset
     @Attribute(name="dataReaderClass", required=false)
     private String dataReaderClass = ""; // We'll use a default data reader
                                          // unless this is overridden in the config file
+    
+    @Attribute(name="disabled", required=false)
+    private boolean disabled = false; // Set true to disable the dataset without removing it completely
+    
     @Attribute(name="title")
     private String title;
     
@@ -107,7 +111,8 @@ public class Dataset
      */
     public synchronized boolean isReady()
     {
-        return this.state == State.READY || this.state == State.UPDATING;
+        return this.disabled == false &&
+            (this.state == State.READY || this.state == State.UPDATING);
     }
     
     /**
@@ -145,7 +150,8 @@ public class Dataset
         Date lastUpdate = this.getLastUpdate();
         logger.debug("Last update time for dataset {} is {}", this.id, lastUpdate);
         logger.debug("State of dataset {} is {}", this.id, this.state);
-        if (this.state == State.LOADING || this.state == State.UPDATING)
+        logger.debug("Disabled = {}", this.disabled);
+        if (this.disabled || this.state == State.LOADING || this.state == State.UPDATING)
         {
             return false;
         }
@@ -261,5 +267,15 @@ public class Dataset
     public Collection<Layer> getLayers() throws Exception
     {
         return this.config.getMetadataStore().getLayersInDataset(this.id);
+    }
+
+    public boolean isDisabled()
+    {
+        return disabled;
+    }
+
+    public void setDisabled(boolean disabled)
+    {
+        this.disabled = disabled;
     }
 }

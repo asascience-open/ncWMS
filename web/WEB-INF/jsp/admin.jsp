@@ -19,7 +19,7 @@
     
     <p><a href="../">ncWMS Front page</a></p>
     <p><a href="../godiva2.html">Godiva2 interface</a></p>
-    <p><a href="../wms?SERVICE=WMS&REQUEST=GetCapabilities">Capabilities document</a></p>
+    <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities">Capabilities document</a></p>
     
     <form id="config" action="updateConfig" method="POST">
         
@@ -27,7 +27,7 @@
         
         <h2>Datasets</h2>
         <table border="1">
-            <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th></tr>
+            <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th></tr>
             
             <c:forEach var="dataset" items="${config.datasets}">
                 <tr>
@@ -63,6 +63,7 @@
                         </select>
                     </td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.refresh"/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.value.id}.disabled"<c:if test="${dataset.value.disabled}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.queryable"<c:if test="${dataset.value.queryable}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.remove"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.reader" value="${dataset.value.dataReaderClass}"/></td>
@@ -89,6 +90,7 @@
                         </select>
                     </td>
                     <td>N/A</td>
+                    <td><input type="checkbox" name="dataset.new${i}.disabled"/></td>
                     <td><input type="checkbox" name="dataset.new${i}.queryable" checked="checked"/></td>
                     <td>N/A</td>
                     <td><input type="text" name="dataset.new${i}.reader" value=""/></td>

@@ -135,6 +135,7 @@ public class AdminController extends MultiActionController
                         refreshDataset = true;
                     }
                     ds.setDataReaderClass(newDataReaderClass);
+                    ds.setDisabled(request.getParameter("dataset." + ds.getId() + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
                     ds.setId(request.getParameter("dataset." + ds.getId() + ".id"));
@@ -167,6 +168,7 @@ public class AdminController extends MultiActionController
                     ds.setTitle(request.getParameter("dataset.new" + i + ".title"));
                     ds.setLocation(request.getParameter("dataset.new" + i + ".location"));
                     ds.setDataReaderClass(request.getParameter("dataset.new" + i + ".reader"));
+                    ds.setDisabled(request.getParameter("dataset.new" + i + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset.new" + i + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
                     config.addDataset(ds);

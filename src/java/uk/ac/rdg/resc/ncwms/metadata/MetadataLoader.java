@@ -38,7 +38,6 @@ import ucar.nc2.dataset.NetcdfDatasetCache;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 
 /**
@@ -84,12 +83,10 @@ public class MetadataLoader
     {
         public void run()
         {
-            logger.debug("Reloading metadata...");
             for (Dataset ds : config.getDatasets().values())
             {
                 reloadMetadata(ds);
             }
-            logger.debug("... Metadata reloaded");
         }
     }
     
@@ -99,7 +96,7 @@ public class MetadataLoader
      */
     public void forceReloadMetadata(final Dataset ds)
     {
-        ds.setState(Dataset.State.TO_BE_LOADED); // causes needsRefresh() to return true
+        ds.setState(State.TO_BE_LOADED); // causes needsRefresh() to return true
         reloadMetadata(ds);
     }
     
@@ -112,11 +109,11 @@ public class MetadataLoader
         {
             public void run()
             {
-                logger.debug("Loading metadata for {}", ds.getLocation());
+                logger.info("Loading metadata for {}", ds.getLocation());
                 boolean loaded = doReloadMetadata(ds);
                 String message = loaded ? "Loaded metadata for {}" :
                     "Did not load metadata for {}";
-                logger.debug(message, ds.getLocation());
+                logger.info(message, ds.getLocation());
             }
         }.start();
     }
@@ -171,7 +168,12 @@ public class MetadataLoader
         }
         catch(Exception e)
         {
-            logger.error("Error loading metadata for dataset " + ds.getId(), e);
+            // Reduce logging volume by only logging the error if it's a new
+            // type of exception
+            if (ds.getState() != State.ERROR || ds.getException().getClass() != e.getClass())
+            {
+                logger.error("Error loading metadata for dataset " + ds.getId(), e);
+            }
             ds.setException(e);
             ds.setState(State.ERROR);
             return false;
