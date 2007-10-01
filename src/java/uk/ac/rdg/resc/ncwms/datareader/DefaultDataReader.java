@@ -117,23 +117,28 @@ public class DefaultDataReader extends DataReader
             GridDataset gd = new GridDataset(nc);
             logger.debug("Getting GeoGrid with id {}", layer.getId());
             GeoGrid gg = gd.findGridByName(layer.getId());
-            logger.debug("filename = {}, gg = " + gg, filename);
+            logger.debug("filename = {}, gg = {}", filename, gg.toString());
             
             // Read the data from the dataset
             long before = System.currentTimeMillis();
             this.populatePixelArray(picData, tRange, zRange, pixelMap, gg);
             long after = System.currentTimeMillis();
             // Headings are written in NcwmsContext.init()
-            benchmarkLogger.info
-            (
-                layer.getDataset().getId() + "," +
-                layer.getId() + "," +
-                this.getClass().getSimpleName() + "," +
-                pixelMap.getNumUniqueXYPairs() + "," +
-                pixelMap.getSumRowLengths() + "," +
-                pixelMap.getBoundingBoxSize() + "," +
-                (after - before)
-            );
+            if (pixelMap.getNumUniqueXYPairs() > 1)
+            {
+                // Don't log single-pixel (GetFeatureInfo) requests
+                benchmarkLogger.info
+                (
+                    layer.getDataset().getId() + "," +
+                    layer.getId() + "," +
+                    this.getClass().getSimpleName() + "," +
+                    (latValues.length * lonValues.length) + "," +
+                    pixelMap.getNumUniqueXYPairs() + "," +
+                    pixelMap.getSumRowLengths() + "," +
+                    pixelMap.getBoundingBoxSize() + "," +
+                    (after - before)
+                );
+            }
             
             long builtPic = System.currentTimeMillis();
             logger.debug("Built picture array in {} milliseconds", (builtPic - readMetadata));

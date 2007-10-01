@@ -111,6 +111,7 @@ public class NcwmsContext implements ApplicationContextAware
             "Dataset," +
             "Variable," +
             "Class," +
+            "Pixels in image," +
             "Num unique data points," +
             "Sum row lengths," +
             "Bounding box size," +
