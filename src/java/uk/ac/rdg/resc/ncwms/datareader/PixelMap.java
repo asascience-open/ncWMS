@@ -56,7 +56,10 @@ public class PixelMap
     private static final Logger logger = Logger.getLogger(PixelMap.class);
     
     // These define the bounding box of the data to extract from the source files
-    private int minXIndex, minYIndex, maxXIndex, maxYIndex = 0;
+    private int minXIndex = Integer.MAX_VALUE;
+    private int minYIndex = Integer.MAX_VALUE;
+    private int maxXIndex = -1;
+    private int maxYIndex = -1;
     
     // Maps Y indices to row information
     private Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
@@ -275,7 +278,8 @@ public class PixelMap
         private Map<Integer, List<Integer>> xIndices =
             new HashMap<Integer, List<Integer>>();
         // Min and max x Indices in this row
-        private int minXIndex, maxXIndex = 0;
+        private int minXIndex = Integer.MAX_VALUE;
+        private int maxXIndex = -1;
         
         /**
          * Adds a mapping of an x index to a pixel index
