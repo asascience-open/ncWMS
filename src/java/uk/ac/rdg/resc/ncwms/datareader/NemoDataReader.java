@@ -252,7 +252,6 @@ public class NemoDataReader extends DefaultDataReader
                 {
                     LayerImpl layer = new LayerImpl();
                     layer.setId(var.getName());
-                    //vm.setTitle(getStandardName(var));
                     layer.setAbstract(var.getDescription());
                     layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
                     layer.setUnits(var.getUnitsString());
