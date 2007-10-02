@@ -34,11 +34,11 @@
     
     <!-- Configuration of this ncWMS server.  This gets the location of the 
          config file from the ncwmsContext. -->
-     <bean id="config" class="uk.ac.rdg.resc.ncwms.config.Config"
+    <bean id="config" class="uk.ac.rdg.resc.ncwms.config.Config"
            factory-method="readConfig">
-         <constructor-arg ref="ncwmsContext"/>
-         <constructor-arg ref="metadataStore"/>
-     </bean>
+        <constructor-arg ref="ncwmsContext"/>
+        <constructor-arg ref="metadataStore"/>
+    </bean>
     
     <!-- An object that is used to create PicMakers. -->
     <bean id="picMakerFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
