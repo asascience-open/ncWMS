@@ -165,12 +165,12 @@ public interface Layer
     boolean isQueryable();
 
     /**
-     * @return true if this variable has a time axis
+     * @return true if this Layer has a time axis
      */
     boolean isTaxisPresent();
 
     /**
-     * @return true if this variable has a depth/elevation axis
+     * @return true if this Layer has a depth/elevation axis
      */
     boolean isZaxisPresent();
 
@@ -180,7 +180,6 @@ public interface Layer
      * Reads a layer of data from this variable (which must be a scalar or a
      * single component of a vector).  Missing values will be represented by
      * Float.NaN.
-     * Currently only works for RectangularLatLonGrids.
      */
     float[] read(int tIndex, int zIndex, AbstractGrid grid) throws Exception;
     
