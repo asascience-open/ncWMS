@@ -4,6 +4,8 @@
 
 var map = null;
 var layerName = '';
+var datasetID = ''; // The currently-selected dataset
+var variableID = ''; // The currently-selected variable
 var prettyDsName = ''; // The dataset name, formatted for human reading
 var zPositive = 0; // Will be 1 if the selected z axis is positive
 var tValue = null;
@@ -131,7 +133,7 @@ window.onload = function()
                     // certain datasets)
                     filter = keyAndVal[1];
                     if (filter == 'MERSEA' || filter == 'ECOOP') {
-                        // If we're viewing through the MERSEA or ECOOPpage, the logo
+                        // If we're viewing through the MERSEA or ECOOP page, the logo
                         // is displayed in the header and footer so we blank it
                         // out here.
                         $('jcommlogo').src = 'images/blank.png';
@@ -219,7 +221,23 @@ function loadDatasets(dsDivId, filter)
 {
     downloadUrl('wms', 'REQUEST=GetMetadata&item=datasets&filter=' + filter,
         function(req) {
-            $(dsDivId).innerHTML = req.responseText;
+            // We get back a JSON object containing dataset IDs and titles
+            var datasets = req.responseText.evalJSON();
+            // We need to build up the HTML nested DIVs in preparation for creating
+            // the Accordion control
+            var s = '';
+            for (var dsId in datasets) {
+                // Prototype seems to add an extend() function to every object,
+                // which we can't seem to delete.  Grr.
+                if (typeof datasets[dsId] != 'function') {
+                    s += '<div id="' + dsId + 'Div">';
+                    s += '<div id="' + dsId + '">' + datasets[dsId] + '</div>';
+                    s += '<div id="' + dsId + 'Content">Variables will appear here</div>';
+                    s += '</div>';
+                }
+            }
+            $(dsDivId).innerHTML = s;
+            // Now we can create the accordion control
             var accordion = new Rico.Accordion (
                 dsDivId,
                 { onShowTab: datasetSelected, panelHeight: 200 }
@@ -250,21 +268,36 @@ function loadDatasets(dsDivId, filter)
 // the correct panel in the left-hand menu
 function datasetSelected(expandedTab)
 {
-    var dataset = expandedTab.titleBar.id;
+    datasetId = expandedTab.titleBar.id;
     // Get the pretty-printed name of the dataset
     prettyDsName = expandedTab.titleBar.firstChild.nodeValue;
     // returns a table of variable names in HTML format
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=variables&dataset=' + dataset,
+    downloadUrl('wms', 'REQUEST=GetMetadata&item=variables&dataset=' + datasetId,
         function(req) {
-            var xmldoc = req.responseXML;
+            var variables = req.responseText.evalJSON();
+            // Build up the HTML table of variable names and links
+            var s = '<table cellspacing="0">';
+            var numVars = 0;
+            for (var varId in variables) {
+                // Prototype seems to add an extend() function to every object,
+                // which we can't seem to delete.  Grr.
+                if (typeof variables[varId] != 'function') {
+                    s += '<tr><td><a href="#" onclick="variableSelected(\'' + varId + '\')">';
+                    s += variables[varId];
+                    s += '</a></td></tr>';
+                    numVars++;
+                }
+            }
+            s += '</table>';
+            
             // set the size of the panel to match the number of variables
-            var panel = $(dataset + 'Content');
-            var varList = xmldoc.getElementsByTagName('tr');
-            panel.style.height = varList.length * 20 + 'px';
-            panel.innerHTML = req.responseText;
+            var panel = $(datasetId + 'Content');
+            panel.innerHTML = s;
+            panel.style.height = numVars * 20 + 'px';
+            
             if (autoLoad != null && autoLoad.variable != null) {
                 // TODO: how do we check that this variable exists?
-                variableSelected(dataset, autoLoad.variable);
+                variableSelected(autoLoad.variable);
             }
         }
     );
@@ -272,79 +305,65 @@ function datasetSelected(expandedTab)
 
 // Called when the user clicks on the name of a variable in the left-hand menu
 // Gets the details (units, grid etc) of the given variable. 
-function variableSelected(datasetName, variableName)
+function variableSelected(varId)
 {
+    variableId = varId;
+    layerName = datasetId + '/' + variableId;
     newVariable = true;
     resetAnimation();
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetName +
-        '&variable=' + variableName,
+    downloadUrl('wms', 'REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetId +
+        '&variable=' + variableId,
         function(req) {
-            var xmldoc = req.responseXML;
-            var varDetails = xmldoc.getElementsByTagName('variableDetails')[0];
-            // Set the global variables for dataset and variable name
-            var dataset = varDetails.getAttribute('dataset');
-            layerName = dataset + '/' + variableName;
-            var units = varDetails.getAttribute('units');
+            var varDetails = req.responseText.evalJSON();
             $('datasetName').innerHTML = prettyDsName;
-            $('variableName').innerHTML = varDetails.getAttribute('variable');
-            $('units').innerHTML = '<b>Units: </b>' + units;
+            $('variableName').innerHTML = varDetails.title;
+            $('units').innerHTML = '<b>Units: </b>' + varDetails.units;
             
             // clear the list of z values
             $('zValues').options.length = 0; 
 
             // Set the range selector objects
-            var theAxes = xmldoc.getElementsByTagName('axis');
             if (autoLoad == null || autoLoad.zValue == null) {
                 var zValue = getZValue();
             } else {
                 var zValue = parseFloat(autoLoad.zValue);
             }
-            for (var i = 0; i < theAxes.length; i++)
-            {
-                var axisType = theAxes[i].getAttribute('type');
-                if (axisType == 'z')
-                {
-                    zPositive = theAxes[i].getAttribute('positive').toLowerCase() == "true";
-                    var zUnits = theAxes[i].getAttribute('units');
-                    if (zPositive) {
-                        $('zAxis').innerHTML = '<b>Elevation (' + zUnits + '): </b>';
-                    } else {
-                        $('zAxis').innerHTML = '<b>Depth (' + zUnits + '): </b>';
-                    }
-                    // Populate the drop-down list of z values
-                    var values = theAxes[i].getElementsByTagName('value');
-                    // Make z range selector invisible if there are no z values
-                    $('zValues').style.visibility = (values.length == 0) ? 'hidden' : 'visible';
-                    var zDiff = 1e10; // Set to some ridiculously-high value
-                    var nearestIndex = 0;
-                    for (var j = 0; j < values.length; j++) {
-                        var optionZValue = values[j].firstChild.nodeValue;
-                        // Create an item in the drop-down list for this z level
-                        $('zValues').options[j] = new Option(optionZValue, j);
-                        // Find the nearest value to the currently-selected
-                        // depth level
-                        var diff;
-                        // This is nasty: improve!
-                        if (zPositive) {
-                            diff = Math.abs(parseFloat(optionZValue) - zValue);
-                        } else {
-                            diff = Math.abs(parseFloat(optionZValue) + zValue);
-                        }
-                        if (diff < zDiff) {
-                            zDiff = diff;
-                            nearestIndex = j;
-                        }
-                    }
-                    $('zValues').selectedIndex = nearestIndex;
-                    var zFound = true;
-                }
-            }
-
-            if (zFound) {
-                $('zValues').style.visibility = 'visible';
-            } else {
+            
+            zAxis = varDetails.zaxis;
+            if (zAxis == null) {
                 $('zAxis').innerHTML = ''
                 $('zValues').style.visibility = 'hidden';
+            } else {
+                if (zAxis.positive) {
+                    $('zAxis').innerHTML = '<b>Elevation (' + zAxis.units + '): </b>';
+                } else {
+                    $('zAxis').innerHTML = '<b>Depth (' + zAxis.units + '): </b>';
+                }
+                // Populate the drop-down list of z values
+                // Make z range selector invisible if there are no z values
+                var zValues = zAxis.values;
+                $('zValues').style.visibility = (zValues.length == 0) ? 'hidden' : 'visible';
+                var zDiff = 1e10; // Set to some ridiculously-high value
+                var nearestIndex = 0;
+                for (var j = 0; j < zValues.length; j++) {
+                    // Create an item in the drop-down list for this z level
+                    $('zValues').options[j] = new Option(zValues[j], j);
+                    // Find the nearest value to the currently-selected
+                    // depth level
+                    var diff;
+                    // This is nasty: improve!
+                    if (zPositive) {
+                        diff = Math.abs(parseFloat(zValues) - zValue);
+                    } else {
+                        diff = Math.abs(parseFloat(zValues) + zValue);
+                    }
+                    if (diff < zDiff) {
+                        zDiff = diff;
+                        nearestIndex = j;
+                    }
+                }
+                $('zValues').selectedIndex = nearestIndex;
+                $('zValues').style.visibility = 'visible';
             }
             
             $('scaleBar').style.visibility = 'visible';
@@ -357,8 +376,10 @@ function variableSelected(datasetName, variableName)
             }
             
             // Set the auto-zoom box
-            bbox = xmldoc.getElementsByTagName('bbox')[0].firstChild.nodeValue;
-            $('autoZoom').innerHTML = "<a href=\"#\" onclick=\"javascript:map.zoomToExtent(new OpenLayers.Bounds(" + bbox + "));\">Fit data to window</a>";
+            bbox = varDetails.bbox;
+            $('autoZoom').innerHTML = '<a href="#" onclick="map.zoomToExtent(new OpenLayers.Bounds(' +
+                bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
+                '));\">Fit data to window</a>';
             
             // See if we're auto-loading a certain time value
             if (autoLoad != null && autoLoad.tValue != null) {
@@ -375,7 +396,7 @@ function variableSelected(datasetName, variableName)
                 tValue += '-' + (now.getDate() < 10 ? '0' : '') + now.getDate();
                 tValue += 'T00:00:00Z';
             }
-            setCalendar(dataset, variableName, tValue);
+            setCalendar(datasetId, variableId, tValue);
         }
     );
 }
@@ -431,7 +452,20 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
     downloadUrl('wms', 'REQUEST=GetMetadata&item=timesteps&dataset=' +  dataset + 
         '&variable=' + variable + '&tIndex=' + tIndex,
         function(req) {
-            $('time').innerHTML = req.responseText; // the data will be a selection box
+            // We'll get back a JSON object of ISO8601 times mapped to "pretty" times
+            var times = req.responseText.evalJSON();
+            // Build the select box
+            var s = '<select id="tValues" onchange="javascript:updateMap()">';
+            for (var isoTime in times) {
+                // Prototype seems to add an extend() function to every object,
+                // which we can't seem to delete.  Grr.
+                if (typeof times[isoTime] != 'function') {
+                    s += '<option value="' + isoTime + '">' + times[isoTime] + '</option>';
+                }
+            }
+            s += '</select>';
+            
+            $('time').innerHTML = s;
             if (autoLoad != null && autoLoad.tValue != null) {
                 // Now select the relevant item in the selection box
                 var timeSelect = $('tValues');
@@ -486,10 +520,10 @@ function autoScale()
         layerName + '&BBOX=' + dataBounds + '&WIDTH=50&HEIGHT=50'
         + '&CRS=CRS:84&ELEVATION=' + getZValue() + '&TIME=' + tValue,
         function(req) {
-            var xmldoc = req.responseXML;
+            var minmax = req.responseText.evalJSON();
             // set the size of the panel to match the number of variables
-            $('scaleMin').value = toNSigFigs(parseFloat(xmldoc.getElementsByTagName('min')[0].firstChild.nodeValue), 4);
-            $('scaleMax').value = toNSigFigs(parseFloat(xmldoc.getElementsByTagName('max')[0].firstChild.nodeValue), 4);
+            $('scaleMin').value = toNSigFigs(minmax[0], 4);
+            $('scaleMax').value = toNSigFigs(minmax[1], 4);
             validateScale(); // This calls updateMap()
         }
     );
@@ -649,7 +683,6 @@ function updateMap()
             elevation: getZValue(),
             time: tValue,
             transparent: 'true',
-            // Temporarily commented out to allow default style to be used.
             // TODO: provide option to choose STYLE on web interface.
             styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity},
             {buffer: 1, ratio: 1.5}
@@ -745,11 +778,10 @@ function getIntersectionBBOX()
     var mapBounds = map.getExtent();
     var mapBboxEls = mapBounds.toBBOX().split(',');
     // bbox is the bounding box of the currently-visible layer
-    var layerBboxEls = bbox.split(',');
-    var newBBOX = Math.max(parseFloat(mapBboxEls[0]), parseFloat(layerBboxEls[0])) + ',';
-    newBBOX += Math.max(parseFloat(mapBboxEls[1]), parseFloat(layerBboxEls[1])) + ',';
-    newBBOX += Math.min(parseFloat(mapBboxEls[2]), parseFloat(layerBboxEls[2])) + ',';
-    newBBOX += Math.min(parseFloat(mapBboxEls[3]), parseFloat(layerBboxEls[3]));
+    var newBBOX = Math.max(parseFloat(mapBboxEls[0]), bbox[0]) + ',';
+    newBBOX += Math.max(parseFloat(mapBboxEls[1]), bbox[1]) + ',';
+    newBBOX += Math.min(parseFloat(mapBboxEls[2]), bbox[2]) + ',';
+    newBBOX += Math.min(parseFloat(mapBboxEls[3]), bbox[3]);
     return newBBOX;
 }
 

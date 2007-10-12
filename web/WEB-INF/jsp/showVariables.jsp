@@ -1,16 +1,11 @@
-<%@include file="xml_header.jsp"%><%-- This has to be XML or the AJAX code doesn't work --%>
+<%@page contentType="application/json"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
-<%-- Displays the variables of a dataset as an HTML table.
-     See MetadataController.showVariables().  This is tightly coupled
-     with the javascript code in godiva2.js, which is bad.
+<%-- Displays the variables of a dataset as JSON object.
+     See MetadataController.showVariables().
      
      Data (models) passed in to this page:
          dataset = Dataset containing the variables --%>
-
- <table cellspacing="0">
-     <tbody>
-         <c:forEach var="layer" items="${dataset.layers}">
-         <tr><td><a href="#" onclick="javascript:variableSelected('${dataset.id}', '${layer.id}')">${layer.title}</a></td></tr>
-         </c:forEach>
-     </tbody>
- </table>
+ 
+{<c:forEach var="layer" items="${dataset.layers}" varStatus="status">
+        <c:if test="${status.index > 0}">,</c:if>'${layer.id}':'${layer.title}'
+</c:forEach>}
