@@ -8,7 +8,10 @@ var datasetID = ''; // The currently-selected dataset
 var variableID = ''; // The currently-selected variable
 var prettyDsName = ''; // The dataset name, formatted for human reading
 var zPositive = 0; // Will be 1 if the selected z axis is positive
-var tValue = null;
+var calendar = null; // The calendar object
+var datesWithData = null; // Will be populated with the dates on which we have data
+                          // for the currently-selected variable
+var tValue = null; // The currently-selected t value
 var prettyTValue = null; // The t value, formatted for human reading
 var isIE;
 var scaleMinVal;
@@ -145,10 +148,51 @@ window.onload = function()
                 }
             }
         }
-    }       
+    }
+    
+    // Set up the calendar
+    // TODO: do this elsewhere, when variableDetails have been loaded
+    calendar = Calendar.setup({
+        flat : "calendar", // ID of the parent element
+        weekNumbers : false,
+        dateStatusFunc : isDateDisabled,
+        range : [2000,2007]
+    });
+    calendar.hide();
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv', filter);
+}
+
+// Function that is used by the calendar to see whether a date should be disabled
+function isDateDisabled(date, year, month, day)
+{
+    datesWithData = {
+        2007 : {
+            0 : [1,2,3],
+            9 : [5,6,7]
+        },
+        2006 : {
+            1 : [10,11,12]
+        }
+    };
+    if (datesWithData == null) {
+        // We haven't yet loaded the dates for which we have data
+        return true;
+    }
+    // datesWithData is a hash of year numbers mapped to a hash of month numbers
+    // to an array of day numbers, i.e. {'2007' : {'0' : [3,4,5]}}.
+    // Month numbers are zero-based.
+    if (datesWithData[year] == null || datesWithData[year][month] == null) {
+        // No data for this year or month
+        return true;
+    }
+    for (var d in datesWithData[year][month]) {
+        alert(d);
+        if (d == day) return false; // We have data for this day
+    }
+    // If we've got this far, we've found no data
+    return true;
 }
 
 // Event handler for when a user clicks on a map
@@ -413,16 +457,17 @@ function setCalendar(dataset, variable, dateTime)
         function(req) {
             if (req.responseText == '') {
                 // There is no calendar data.  Just update the map
-                $('calendar').innerHTML = '';
+                calendar.hide();
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
                 $('utc').style.visibility = 'hidden';
                 autoScale(); // this also updates the map
                 return;
             }
+            calendar.show();
             var xmldoc = req.responseXML;
-            $('calendar').innerHTML =
-                RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
+            //$('calendar').innerHTML =
+            //    RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
             // If this call has resulted from the selection of a new variable,
             // choose the timestep based on the result from the server
             if (newVariable) {
