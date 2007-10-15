@@ -23,58 +23,10 @@
       <function-signature>double abs(double)</function-signature>
   </function>
   <function>
-      <description>Creates a heading (e.g. "Oct 2006") for the given date</description>
-      <name>getCalendarHeading</name>
+      <description>Formats a date (in milliseconds since the epoch) as the time only
+      in the format "HH:mm:ss", e.g. "14:53:03".  Time zone offset is zero (UTC).</description>
+      <name>formatUTCTimeOnly</name>
       <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getCalendarHeading(long)</function-signature>
-  </function>
-  <function>
-      <description>Gets an ISO8601-formatted date that is exactly one year earlier than
-      the given date, in milliseconds since the epoch.</description>
-      <name>getYearBefore</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getYearBefore(long)</function-signature>
-  </function>
-  <function>
-      <description>Gets an ISO8601-formatted date that is exactly one year later than
-      the given date, in milliseconds since the epoch.</description>
-      <name>getYearAfter</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getYearAfter(long)</function-signature>
-  </function>
-  <function>
-      <description>Gets an ISO8601-formatted date that is exactly one month earlier than
-      the given date, in milliseconds since the epoch.</description>
-      <name>getMonthBefore</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getMonthBefore(long)</function-signature>
-  </function>
-  <function>
-      <description>Gets an ISO8601-formatted date that is exactly one month later than
-      the given date, in milliseconds since the epoch.</description>
-      <name>getMonthAfter</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String getMonthAfter(long)</function-signature>
-  </function>
-  <function>
-      <description>Formats a date (in milliseconds since the epoch) as human-readable "dd MMM yyyy",
-      e.g. "02 Jul 2007".</description>
-      <name>formatPrettyDate</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String formatPrettyDate(long)</function-signature>
-  </function>
-  <function>
-      <description>Formats a date (in milliseconds since the epoch) as human-readable "HH:mm:ss",
-      e.g. "14:53:03".</description>
-      <name>formatPrettyTime</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.lang.String formatPrettyTime(long)</function-signature>
-  </function>
-  <function>
-      <description>Gets a List of Lists of day numbers, representing the calendar
-      for the month containing the given date in milliseconds since the epoch.</description>
-      <name>getMonthCalendar</name>
-      <function-class>uk.ac.rdg.resc.ncwms.utils.WmsUtils</function-class>
-      <function-signature>java.util.List getMonthCalendar(long, long[])</function-signature>
+      <function-signature>java.lang.String formatUTCTimeOnly(long)</function-signature>
   </function>
 </taglib>

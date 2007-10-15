@@ -261,13 +261,13 @@ public class LayerImpl implements Layer
             // We don't have an info for this date, so we add the new info
             // and make sure the List is sorted correctly (TODO: could do a
             // simple insertion into the correct locaion?)
-            this.getTimesteps().add(tInfo);
-            Collections.sort(this.getTimesteps());
+            this.timesteps.add(tInfo);
+            Collections.sort(this.timesteps);
         }
         else
         {
             // We already have a timestep for this time
-            TimestepInfo existingTStep = this.getTimesteps().get(tIndex);
+            TimestepInfo existingTStep = this.timesteps.get(tIndex);
             if (tInfo.getIndexInFile() < existingTStep.getIndexInFile())
             {
                 // The new info probably has a shorter forecast time and so we
@@ -295,7 +295,7 @@ public class LayerImpl implements Layer
         
         // do a binary search to find the nearest index
         int low = 0;
-        int high = this.getTimesteps().size() - 1;
+        int high = this.timesteps.size() - 1;
         while (low <= high)
         {
             int mid = (low + high) >> 1;

@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,11 +55,8 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * $Date$
  * $Log$
  */
-
 public class MetadataController
 {
-    private static final WmsUtils.DayComparator DAY_COMPARATOR =
-        new WmsUtils.DayComparator();
     
     // These objects will be injected by Spring
     private Config config;
@@ -84,10 +83,6 @@ public class MetadataController
         {
             return this.showVariableDetails(request, response);
         }
-        else if (item.equals("calendar"))
-        {
-            return this.showCalendar(request, response);
-        }
         else if (item.equals("timesteps"))
         {
             return this.showTimesteps(request, response);
@@ -103,9 +98,9 @@ public class MetadataController
     }
     
     /**
-     * Shows HTML nested divs representing the datasets available from this
-     * server.  This HTML is injected directly into the Godiva2 page to form
-     * the left-hand accordion-style menu.
+     * Shows the datasets available from this server, optionally filtered.
+     * Filtering is currently done by matching the first part of the dataset
+     * id (e.g. "MERSEA_BALTIC").
      */
     public ModelAndView showDatasets(HttpServletRequest request,
         HttpServletResponse response) throws Exception
@@ -140,9 +135,7 @@ public class MetadataController
     }
     
     /**
-     * Shows an HTML table containing a set of variables for the given dataset.
-     * This HTML is injected directly into the Godiva2 page to form
-     * the left-hand accordion-style menu.
+     * Shows a JSON document containing the set of variables for the given dataset.
      */
     public ModelAndView showVariables(HttpServletRequest request,
         HttpServletResponse response) throws Exception
@@ -172,14 +165,17 @@ public class MetadataController
     }
     
     /**
-     * Shows an XML document containing the details of the given variable (units,
-     * axes, range etc).
+     * Shows an JSON document containing the details of the given variable (units,
+     * zvalues, tvalues etc).  See showVariableDetails.jsp.
      */
     public ModelAndView showVariableDetails(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Layer layer = this.getLayer(request);
-        return new ModelAndView("showVariableDetails", "layer", layer);
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("layer", layer);
+        models.put("datesWithData", getDatesWithData(layer.getTvalues()));
+        return new ModelAndView("showVariableDetails", models);
     }
     
     /**
@@ -205,101 +201,107 @@ public class MetadataController
     }
     
     /**
-     * Shows an XML document (containing an HTML calendar, yuck) that the Godiva2
-     * site uses to display the calendar for a particular variable.  The request
-     * includes the "focus time", i.e. the time that the user is currently
-     * focussed on, in ISO8601 format.
+     * Takes an array of time values for a layer and turns it into a Map of
+     * year numbers to month numbers to day numbers, for use in
+     * showVariableDetails.jsp.  This is used to provide a list of days for
+     * which we have data.  TODO: move this to Layer(Impl)?
+     * @param array of time values in milliseconds since the epoch
      */
-    public ModelAndView showCalendar(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
+    public static Map<Integer, Map<Integer, List<Integer>>> getDatesWithData(long[] dates)
     {
-        Layer layer = getLayer(request);
-        String focusTimeIso = request.getParameter("dateTime");
-        if (focusTimeIso == null)
+        Map<Integer, Map<Integer, List<Integer>>> datesWithData =
+            new HashMap<Integer, Map<Integer, List<Integer>>>();
+        for (long ms : dates)
         {
-            throw new WmsException("Must provide a value for the dateTime parameter");
-        }
-        // Convert the focus time to milliseconds since the epoch
-        // TODO: this method should throw a ParseException, which we should trap
-        long focusTime = WmsUtils.iso8601ToMilliseconds(focusTimeIso);
-        
-        // Get the array of time axis values (in milliseconds since the epoch)
-        long[] tVals = layer.getTvalues();
-        if (tVals.length == 0) return null; // return no data if no time axis present
-        
-        // Find the closest time step to the focus time
-        // TODO: binary search would be more efficient
-        double diff = 1.0e20;
-        int nearestIndex = 0;
-        for (int i = 0; i < tVals.length; i++)
-        {
-            double testDiff = Math.abs(tVals[i] - focusTime);
-            if (testDiff < diff)
+            Calendar cal = getCalendar(ms);
+            int year = cal.get(Calendar.YEAR);
+            Map<Integer, List<Integer>> months = datesWithData.get(year);
+            if (months == null)
             {
-                // Axis is monotonic so we should move closer and closer
-                // to the nearest value
-                diff = testDiff;
-                nearestIndex = i;
+                months = new HashMap<Integer, List<Integer>>();
+                datesWithData.put(year, months);
             }
-            else if (i > 0)
+            int month = cal.get(Calendar.MONTH); // zero-based
+            List<Integer> days = months.get(month);
+            if (days == null)
             {
-                // We've moved past the closest date
-                break;
+                days = new ArrayList<Integer>();
+                months.put(month, days);
+            }
+            int day = cal.get(Calendar.DAY_OF_MONTH); // one-based
+            if (!days.contains(day))
+            {
+                days.add(day);
             }
         }
-        
-        Map<String, Object> models = new HashMap<String, Object>();
-        models.put("nearestIndex", nearestIndex);
-        models.put("layer", layer);
-        return new ModelAndView("showCalendar", models);
+        return datesWithData;
     }
     
     /**
-     * Shows an XML document (containing an HTML select box, yuck) that the Godiva2
-     * site uses to display the available timesteps for a given date.
+     * @return a new Calendar object, set to the given time (in milliseconds
+     * since the epoch).
+     */
+    public static Calendar getCalendar(long millisecondsSinceEpoch)
+    {
+        Date date = new Date(millisecondsSinceEpoch);
+        Calendar cal = Calendar.getInstance();
+        // Must set the time zone to avoid problems with daylight saving
+        cal.setTimeZone(WmsUtils.GMT);
+        cal.setTime(date);
+        return cal;
+    }
+    
+    /**
+     * Finds all the timesteps that occur on the given date, which will be provided
+     * in the form "2007-10-18".
      */
     public ModelAndView showTimesteps(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Layer layer = getLayer(request);
-        String tIndexStr = request.getParameter("tIndex");
-        if (tIndexStr == null)
+        String dayStr = request.getParameter("day");
+        if (dayStr == null)
         {
-            throw new WmsException("Must provide a value for the tIndex parameter");
+            throw new WmsException("Must provide a value for the day parameter");
         }
-        int tIndex = 0;
-        try
-        {
-            tIndex = Integer.parseInt(tIndexStr);
-        }
-        catch(NumberFormatException nfe)
-        {
-            throw new WmsException("The value of the tIndex parameter must be a valid integer");
-        }
-        // Get the array of time axis values (in milliseconds since the epoch)
-        long[] tVals = layer.getTvalues();
-        if (tVals.length == 0) return null; // return no data if no time axis present
+        Date date = WmsUtils.iso8601ToDate(dayStr);
+        if (!layer.isTaxisPresent()) return null; // return no data if no time axis present
         
         // List of times (in milliseconds since the epoch) that fall on this day
         List<Long> timesteps = new ArrayList<Long>();
-        // add the reference time
-        timesteps.add(tVals[tIndex]);
-        
-        // Add the rest of the times that fall on this day
-        // First count forwards from the reference time...
-        for (int i = tIndex + 1; i < tVals.length; i++)
+        // Search exhaustively through the time values
+        // TODO: inefficient: should stop once last day has been found.
+        for (long tVal : layer.getTvalues())
         {
-            if (onSameDay(tVals[tIndex], tVals[i])) timesteps.add(tVals[i]);
-            else break; // Timesteps are in order so we won't find any more
-        }
-        // ... now count backwards from the reference time
-        for (int i = tIndex - 1; i >= 0; i--)
-        {
-            if (onSameDay(tVals[tIndex], tVals[i])) timesteps.add(tVals[i]);
-            else break; // Timesteps are in order so we won't find any more
+            if (onSameDay(tVal, date.getTime()))
+            {
+                timesteps.add(tVal);
+            }
         }
         
         return new ModelAndView("showTimesteps", "timesteps", timesteps);
+    }
+    
+    /**
+     * @return true if the two given dates (in milliseconds since the epoch) fall on
+     * the same day
+     */
+    private static boolean onSameDay(long s1, long s2)
+    {
+        Calendar cal1 = getCalendar(s1);
+        Calendar cal2 = getCalendar(s2);
+        // Set hours, minutes, seconds and milliseconds to zero for both
+        // calendars
+        cal1.set(Calendar.HOUR_OF_DAY, 0);
+        cal1.set(Calendar.MINUTE, 0);
+        cal1.set(Calendar.SECOND, 0);
+        cal1.set(Calendar.MILLISECOND, 0);
+        cal2.set(Calendar.HOUR_OF_DAY, 0);
+        cal2.set(Calendar.MINUTE, 0);
+        cal2.set(Calendar.SECOND, 0);
+        cal2.set(Calendar.MILLISECOND, 0);
+        // Now we know that any differences are due to the day, month or year
+        return cal1.compareTo(cal2) == 0;
     }
     
     /**
@@ -352,15 +354,6 @@ public class MetadataController
             }
         }
         return new ModelAndView("showMinMax", "minMax", new float[]{min, max});
-    }
-    
-    /**
-     * @return true if the two given dates (in milliseconds since the epoch) fall on
-     * the same day
-     */
-    private boolean onSameDay(long s1, long s2)
-    {
-        return DAY_COMPARATOR.compare(s1, s2) == 0;
     }
     
     /**

@@ -11,7 +11,7 @@ var zPositive = 0; // Will be 1 if the selected z axis is positive
 var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
-var tValue = null; // The currently-selected t value
+var tValue = null; // The currently-selected t value (Javascript Date object)
 var prettyTValue = null; // The t value, formatted for human reading
 var isIE;
 var scaleMinVal;
@@ -149,16 +149,6 @@ window.onload = function()
             }
         }
     }
-    
-    // Set up the calendar
-    // TODO: do this elsewhere, when variableDetails have been loaded
-    calendar = Calendar.setup({
-        flat : "calendar", // ID of the parent element
-        weekNumbers : false,
-        dateStatusFunc : isDateDisabled,
-        range : [2000,2007]
-    });
-    calendar.hide();
 
     // Load the list of datasets to populate the left-hand menu
     loadDatasets('accordionDiv', filter);
@@ -167,29 +157,19 @@ window.onload = function()
 // Function that is used by the calendar to see whether a date should be disabled
 function isDateDisabled(date, year, month, day)
 {
-    datesWithData = {
-        2007 : {
-            0 : [1,2,3],
-            9 : [5,6,7]
-        },
-        2006 : {
-            1 : [10,11,12]
-        }
-    };
-    if (datesWithData == null) {
-        // We haven't yet loaded the dates for which we have data
-        return true;
-    }
     // datesWithData is a hash of year numbers mapped to a hash of month numbers
-    // to an array of day numbers, i.e. {'2007' : {'0' : [3,4,5]}}.
+    // to an array of day numbers, i.e. {2007 : {0 : [3,4,5]}}.
     // Month numbers are zero-based.
-    if (datesWithData[year] == null || datesWithData[year][month] == null) {
+    if (datesWithData == null ||
+        datesWithData[year] == null || 
+        datesWithData[year][month] == null) {
         // No data for this year or month
         return true;
     }
-    for (var d in datesWithData[year][month]) {
-        alert(d);
-        if (d == day) return false; // We have data for this day
+    // Cycle through the array of days for this month, looking for the one we want
+    var numDays = datesWithData[year][month].length;
+    for (var d = 0; d < numDays; d++) {
+        if (datesWithData[year][month][d] == day) return false; // We have data for this day
     }
     // If we've got this far, we've found no data
     return true;
@@ -373,7 +353,7 @@ function variableSelected(varId)
                 var zValue = parseFloat(autoLoad.zValue);
             }
             
-            zAxis = varDetails.zaxis;
+            var zAxis = varDetails.zaxis;
             if (zAxis == null) {
                 $('zAxis').innerHTML = ''
                 $('zValues').style.visibility = 'hidden';
@@ -427,92 +407,98 @@ function variableSelected(varId)
             
             // See if we're auto-loading a certain time value
             if (autoLoad != null && autoLoad.tValue != null) {
-                tValue = autoLoad.tValue;
+                tValue = autoLoad.tValue; // TODO: get a Date object
+            } else {
+                tValue = new Date();
             }
             
-            // Get the currently-selected time and date or the current time if
-            // none has been selected
-            if (tValue == null) {
-                var now = new Date();
-                // Format the date in ISO8601 format
-                tValue = now.getFullYear();
-                tValue += '-' + (now.getMonth() < 9 ? '0' : '') + (now.getMonth() + 1);
-                tValue += '-' + (now.getDate() < 10 ? '0' : '') + now.getDate();
-                tValue += 'T00:00:00Z';
-            }
-            setCalendar(datasetId, variableId, tValue);
-        }
-    );
-}
-
-// This requests a calendar for the given date and time for the given dataset
-// and variable.  If there is data for the given date and time, this will
-// return a calendar for the given month.  If there is no data for the given
-// date and time, this will return a calendar for the nearest month.
-function setCalendar(dataset, variable, dateTime)
-{
-    // Set the calendar. When the calendar arrives the map will be updated
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=calendar&dataset=' +  dataset + 
-        '&variable=' + variable + '&dateTime=' + dateTime,
-        function(req) {
-            if (req.responseText == '') {
+            // Now set up the calendar control
+            if (varDetails.datesWithData == null) {
                 // There is no calendar data.  Just update the map
-                calendar.hide();
+                if (calendar != null) calendar.hide();
                 $('date').innerHTML = '';
                 $('time').innerHTML = '';
                 $('utc').style.visibility = 'hidden';
                 autoScale(); // this also updates the map
-                return;
-            }
-            calendar.show();
-            var xmldoc = req.responseXML;
-            //$('calendar').innerHTML =
-            //    RicoUtil.getContentAsString(xmldoc.getElementsByTagName('calendar')[0]);
-            // If this call has resulted from the selection of a new variable,
-            // choose the timestep based on the result from the server
-            if (newVariable) {
-                var tIndex = parseInt(xmldoc.getElementsByTagName('nearestIndex')[0].firstChild.nodeValue);
-                var tVal = xmldoc.getElementsByTagName('nearestValue')[0].firstChild.nodeValue;
-                var prettyTVal = xmldoc.getElementsByTagName('prettyNearestValue')[0].firstChild.nodeValue;
-                // Get the timesteps for this day and update the map
-                getTimesteps(dataset, variable, tIndex, tVal, prettyTVal);
-            } else if ($('t' + timestep)) {
-                // Highlight the currently-selected timestep if it happens to
-                // exist in this calendar
-                $('t' + timestep).style.backgroundColor = '#dadee9';
+            } else {
+                datesWithData = varDetails.datesWithData; // Tells the calendar which dates to disable
+                if (calendar == null) {
+                    // Set up the calendar
+                    calendar = Calendar.setup({
+                        flat : 'calendar', // ID of the parent element
+                        align : 'bl', // Aligned to top-left of parent element
+                        weekNumbers : false,
+                        flatCallback : dateSelected
+                    });
+                    // For some reason, if we add this to setup() things don't work
+                    // as expected (dates not selectable on web page when first loaded).
+                    calendar.setDateStatusHandler(isDateDisabled);
+                }
+                // Set the range of valid years in the calendar.  Look through
+                // the years for which we have data, finding the min and max
+                var minYear = 100000000;
+                var maxYear = -100000000;
+                var yearDiff = 1000000000;
+                var closestYear;
+                for (var year in datesWithData) {
+                    if (typeof datesWithData[year] != 'function') { // avoid built-in functions
+                        if (year < minYear) minYear = year;
+                        if (year > maxYear) maxYear = year;
+                        if (year - tValue.getYear() < yearDiff) closestYear = year;
+                    }
+                }
+                // Look for the closest month to the required t value
+                var closestMonth;
+                //if 
+                calendar.setRange(minYear, maxYear);
+                calendar.setDate(tValue);
+                // TODO: set the date of the calendar to the closest date to tValue
+                calendar.refresh();
+                calendar.show();
+                // Load the timesteps for this date
+                loadTimesteps();
             }
         }
     );
 }
 
-// Updates the time selector control.  Finds all the timesteps that occur on
-// the same day as the timestep with the given index.   Called from the calendar
-// control (see getCalendar.jsp)
-function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
+// Function that is called when a user clicks on a date in the calendar
+function dateSelected(cal)
 {
-    $('date').innerHTML = '<b>Date/time: </b>' + prettyTVal;
-    $('utc').style.visibility = 'visible';
-    
-    // Get the timesteps
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=timesteps&dataset=' +  dataset + 
-        '&variable=' + variable + '&tIndex=' + tIndex,
+    if (cal.dateClicked) {
+        loadTimesteps();
+    }
+}
+
+// Updates the time selector control.  Finds all the timesteps that occur on
+// the same day as the currently-selected date.   Called from the calendar
+// control when the user selects a new date
+function loadTimesteps()
+{
+    // Print out date, e.g. "15 Oct 2007"
+    $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
+    var isoDate = calendar.date.print('%Y-%m-%d'); // Date only (no time) in ISO format
+
+    // Get the timesteps for this day
+    downloadUrl('wms', 'REQUEST=GetMetadata&item=timesteps&dataset=' +  datasetId + 
+        '&variable=' + variableId + '&day=' + isoDate,
         function(req) {
-            // We'll get back a JSON object of ISO8601 times mapped to "pretty" times
-            var times = req.responseText.evalJSON();
+            // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", no date information)
+            var times = req.responseText.evalJSON().timesteps;
             // Build the select box
             var s = '<select id="tValues" onchange="javascript:updateMap()">';
-            for (var isoTime in times) {
-                // Prototype seems to add an extend() function to every object,
-                // which we can't seem to delete.  Grr.
-                if (typeof times[isoTime] != 'function') {
-                    s += '<option value="' + isoTime + '">' + times[isoTime] + '</option>';
-                }
+            for (var i = 0; i < times.length; i++) {
+                // Construct the full ISO Date-time
+                var isoDateTime = isoDate + 'T' + times[i] + 'Z';
+                s += '<option value="' + isoDateTime + '">' + times[i] + '</option>';
             }
             s += '</select>';
-            
+
             $('time').innerHTML = s;
+            $('utc').style.visibility = 'visible';
+
+            // If we're autoloading, set the right time in the selection box
             if (autoLoad != null && autoLoad.tValue != null) {
-                // Now select the relevant item in the selection box
                 var timeSelect = $('tValues');
                 for (var i = 0; i < timeSelect.options.length; i++) {
                     if (timeSelect.options[i].value == autoLoad.tValue) {
@@ -522,15 +508,7 @@ function getTimesteps(dataset, variable, tIndex, tVal, prettyTVal)
                 }
             }
             $('setFrames').style.visibility = 'visible';
-            // Make sure the correct day is highlighted in the calendar
-            // TODO: doesn't work if there are many timesteps on the same day!
-            if ($('t' + timestep)) {
-                $('t' + timestep).style.backgroundColor = 'white';
-            }
-            timestep = tIndex;
-            if ($('t' + timestep)) {
-                $('t' + timestep).style.backgroundColor = '#dadee9';
-            }
+
             if (autoLoad != null && autoLoad.scaleMin != null && autoLoad.scaleMax != null) {
                 $('scaleMin').value = autoLoad.scaleMin;
                 $('scaleMax').value = autoLoad.scaleMax;
@@ -567,8 +545,8 @@ function autoScale()
         function(req) {
             var minmax = req.responseText.evalJSON();
             // set the size of the panel to match the number of variables
-            $('scaleMin').value = toNSigFigs(minmax[0], 4);
-            $('scaleMax').value = toNSigFigs(minmax[1], 4);
+            $('scaleMin').value = toNSigFigs(minmax.min, 4);
+            $('scaleMax').value = toNSigFigs(minmax.max, 4);
             validateScale(); // This calls updateMap()
         }
     );
