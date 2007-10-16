@@ -16,7 +16,6 @@
                 axis that is closest to the required date (as passed to the server)
 --%>
 <json:object>
-    <json:property name="title" value="${layer.title}"/>
     <json:property name="units" value="${layer.units}"/>
     <json:array name="bbox" items="${layer.bbox}"/>
     <c:if test="${layer.zaxisPresent}">

@@ -17,16 +17,24 @@
         <script type="text/javascript" src="js/calendar-en.js"></script>
         <script type="text/javascript" src="js/calendar-setup.js"></script>
         
-        <!-- Rico needs Prototype and godiva2.js needs Rico for the accordion control -->
+        <!-- Prototype is used for various things, e.g. Ajax requests -->
         <script type="text/javascript" src="js/prototype-1.5.1.1.js"></script>
-        <script type="text/javascript" src="js/rico-1.1.2.js"></script>
+        <script type="text/javascript" src="js/server.js"></script>
+        
+        <link type="text/css" rel="stylesheet" href="http://yui.yahooapis.com/2.3.1/build/treeview/assets/skins/sam/treeview.css">
+ 
+        <!-- For the tree control: TODO: download and serve locally --> 
+        <script src = "http://yui.yahooapis.com/2.3.1/build/yahoo/yahoo-min.js" ></script>
+        <script src = "http://yui.yahooapis.com/2.3.1/build/event/event-min.js" ></script>
+        <script src = "http://yui.yahooapis.com/2.3.1/build/treeview/treeview-min.js" ></script>
+
         <script type="text/javascript" src="js/godiva2.js"></script>
     </head>
     
     <body>
 
-    <!-- This is the left menu bar that will contain the list of datasets and variables -->
-    <div id="accordionDiv" class="leftmenu"></div>
+    <!-- This is the left menu bar that will contain the layer selector -->
+    <div id="layerSelector" class="yui-skin-sam"></div>
 
     <div id="help" class="help">
         <p><a href="info.html">More info</a></p>
@@ -35,22 +43,23 @@
     <a href="http://www.resc.rdg.ac.uk/" target="_top"><img id="resclogo" src="http://www.resc.rdg.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
     
     <div id="mainPanel" class="mainPanel">
-        <div class="panelHeader">
-            <b>Dataset:</b> <span id="datasetName">Please select from the left panel</span><br />
-            <b>Variable:</b> <span id="variableName">Please select from the left panel</span><br />
-            <span id="units"></span><br />
-            <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
-            <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span>
+        <div id="panelHeader">
+            <div id="panelText">
+                <b>Layer:</b> <span id="layerPath">Please select from the left panel</span><br />
+                <span id="units"></span><br />
+                <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
+                <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span>
                 <span id="setFrames"><span id="setFirstFrame"><a href="#" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
                 <span id="setLastFrame"><a href="#" onclick="javascript:setLastAnimationFrame()">last frame</a></span></span><br />
                 <span id="animation"><span id="createAnimation"><a href="#" onclick="javascript:createAnimation()">Create animation</a></span> from 
                 <span id="firstFrame"></span>&nbsp;to&nbsp;<span id="lastFrame"></span></span><br /><br />
-            <span id="featureInfo"></span><br />
-            <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
-                <option value="" selected>Other useful datasets...</option>
-                <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>
-                <option value="http://www.seaice.dk/damocles/google/DAMOCLES.kmz">DAMOCLES Arctic sea-ice</option>
-            </select>-->
+                <span id="featureInfo"></span><br />
+                <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
+                    <option value="" selected>Other useful datasets...</option>
+                    <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>
+                    <option value="http://www.seaice.dk/damocles/google/DAMOCLES.kmz">DAMOCLES Arctic sea-ice</option>
+                </select>-->
+            </div>
             <div id="calendar"></div>            
         </div>
         

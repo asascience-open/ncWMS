@@ -3,11 +3,8 @@
 //
 
 var map = null;
-var layerName = '';
-var datasetID = ''; // The currently-selected dataset
-var variableID = ''; // The currently-selected variable
-var prettyDsName = ''; // The dataset name, formatted for human reading
-var zPositive = 0; // Will be 1 if the selected z axis is positive
+var layerName = ''; // The unique name of the currently-displayed WMS layer
+var zPositive = false; // Will be true if the selected z axis is positive
 var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
@@ -15,16 +12,17 @@ var isoTValue = null; // The currently-selected t value (ISO8601)
 var isIE;
 var scaleMinVal;
 var scaleMaxVal;
-var timestep = 0;
 var newVariable = true;  // This will be true when we have chosen a new variable
 var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
+var server = null; // Server object (see server.js) for getting information from the server
 
-// Adds ISO8601 parsing capabilities to the Javascript Date object
+// Converts ISO8601 string to Date object
 // From http://delete.me.uk/2005/03/iso8601.html, copied 16th October 2007
-Date.prototype.setISO8601 = function (string) {
+function iso8601ToDate(string)
+{
     var regexp = "([0-9]{4})(-([0-9]{2})(-([0-9]{2})" +
         "(T([0-9]{2}):([0-9]{2})(:([0-9]{2})(\.([0-9]+))?)?" +
         "(Z|(([-+])([0-9]{2}):([0-9]{2})))?)?)?)?";
@@ -45,23 +43,10 @@ Date.prototype.setISO8601 = function (string) {
     }
 
     offset -= date.getTimezoneOffset();
-    time = (Number(date) + (offset * 60 * 1000));
-    this.setTime(Number(time));
-}
-
-// Ajax call using the OpenLayers library
-// url: The URL of the data source
-// params: The parameters to append to the URL
-// onsuccess: A function that will be called with the original request object
-function downloadUrl(url, params, onsuccess)
-{
-    var myAjax = new OpenLayers.Ajax.Request(
-        url, 
-        {
-            method: 'get', 
-            parameters: params, 
-            onComplete: onsuccess
-        });
+    var time = (Number(date) + (offset * 60 * 1000));
+    var ret = new Date();
+    ret.setTime(Number(time));
+    return ret;
 }
 
 // Called when the page has loaded
@@ -165,9 +150,14 @@ window.onload = function()
             }
         }
     }
-
-    // Load the list of datasets to populate the left-hand menu
-    loadDatasets('accordionDiv', filter);
+    
+    server = new Server('urlgoeshere');
+    // Check out version of server: can we handle this?
+    // The getLayerHierarchy() function is asynchronous.  Once we have received
+    // the result from the server we shall pass it to the makeLayerMenu() function.
+    // Construct the menu of layers from the layer hierarchy we've got from the server
+    var layerHierarchy = server.getLayerHierarchy(makeLayerMenu); // Not filtered for now
+    // Construct the menu of layers from the layer hierarchy we've got from the server
 }
 
 // Function that is used by the calendar to see whether a date should be disabled
@@ -256,223 +246,183 @@ function popUp(url, width, height)
         + width + ',height=' + height + ',left = 300,top = 300');
 }
 
-// Populates the left-hand menu with a set of datasets
-function loadDatasets(dsDivId, filter)
+// Populates the left-hand menu with a hierarchy of layers
+function makeLayerMenu(layerHierarchy)
 {
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=datasets&filter=' + filter,
-        function(req) {
-            // We get back a JSON array containing dataset IDs and titles
-            var datasets = req.responseText.evalJSON().datasets;
-            // We need to build up the HTML nested DIVs in preparation for creating
-            // the Accordion control
-            var s = '';
-            for (var i = 0; i < datasets.length; i++) {
-                var id = datasets[i].id;
-                var title = datasets[i].title;
-                s += '<div id="' + id + 'Div">';
-                s += '<div id="' + id + '">' + title + '</div>';
-                s += '<div id="' + id + 'Content">Variables will appear here</div>';
-                s += '</div>';
-            }
-            $(dsDivId).innerHTML = s;
-            // Now we can create the accordion control
-            var accordion = new Rico.Accordion (
-                dsDivId,
-                { onShowTab: datasetSelected, panelHeight: 200 }
-            );
-            var foundAuto = false;
-            if (autoLoad != null && autoLoad.dataset != null) {
-                // We are automatically loading a dataset from a permalink
-                for (var i = 0; i < accordion.accordionTabs.length && !foundAuto; i++) {
-                    if (autoLoad.dataset == accordion.accordionTabs[i].titleBar.id) {
-                        foundAuto = true;
-                        accordion.showTab(accordion.accordionTabs[i]);
-                    }
-                }
-            }
-            if (!foundAuto) {
-                // Make sure that the variables are loaded for the first data set
-                autoLoad = null; // Don't try to load anything else automatically
-                datasetSelected( accordion.accordionTabs[0] );
-            }
-        }
-    );
-}    
-
-// Called when a new tab has been selected in the left-hand menu
-// TODO: Cache the results so we don't have to query the server again when the
-// same dataset is selected in future?
-// Gets the list of variables for a given dataset from the server and populates
-// the correct panel in the left-hand menu
-function datasetSelected(expandedTab)
-{
-    datasetId = expandedTab.titleBar.id;
-    // Get the pretty-printed name of the dataset
-    prettyDsName = expandedTab.titleBar.firstChild.nodeValue;
-    // returns a table of variable names in HTML format
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=variables&dataset=' + datasetId,
-        function(req) {
-            var variables = req.responseText.evalJSON().variables;
-            // Build up the HTML table of variable names and links
-            var s = '<table cellspacing="0">';
-            var numVars = 0;
-            for (var i = 0; i < variables.length; i++) {
-                var id = variables[i].id;
-                var title = variables[i].title;
-                s += '<tr><td><a href="#" onclick="variableSelected(\'' + id + '\')">';
-                s += title;
-                s += '</a></td></tr>';
-                numVars++;
-            }
-            s += '</table>';
+    var tree = new YAHOO.widget.TreeView("layerSelector");
+    // Add root node for this server
+    // TODO: add root for every server we can access
+    var serverRoot = new YAHOO.widget.TextNode({label: server.title}, tree.getRoot(), true);
+    serverRoot.multiExpand = false;
+    // Add nodes recursively
+    addNodes(serverRoot, layerHierarchy.layers);
+    // Add an event callback that gets fired when a tree node is clicked
+    tree.subscribe('labelClick', function(node) {
+        if (typeof node.data.id != 'undefined') {
+            // We're only interested if this is a displayable layer, i.e. it has an id.
             
-            // set the size of the panel to match the number of variables
-            var panel = $(datasetId + 'Content');
-            panel.innerHTML = s;
-            panel.style.height = numVars * 20 + 'px';
-            
-            if (autoLoad != null && autoLoad.variable != null) {
-                // TODO: how do we check that this variable exists?
-                variableSelected(autoLoad.variable);
+            // Update the breadcrumb trail
+            var s = node.data.label;
+            var theNode = node;
+            while(theNode.parent != tree.getRoot()) {
+                theNode = theNode.parent;
+                s = theNode.data.label + ' &gt; ' + s;
             }
+            $('layerPath').innerHTML = s;
+            
+            // Store the layer name for later use
+            layerName = node.data.id;
+            
+            // See if we're auto-loading a certain time value
+            if (autoLoad != null && autoLoad.isoTValue != null) {
+                isoTValue = autoLoad.isoTValue;
+            } else if (isoTValue == null ) {
+                // Set to the present time if we don't already have a time selected
+                isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
+            }
+            
+            // Get the details of this layer from the server, calling layerSelected()
+            // when we have the result
+            var layerDetails = server.getLayerDetails(layerSelected, node.data.id, isoTValue);
         }
-    );
+    });
+    tree.draw();
 }
 
-// Called when the user clicks on the name of a variable in the left-hand menu
-// Gets the details (units, grid etc) of the given variable. 
-function variableSelected(varId)
+// Recursive method to add nodes to the layer selector tree control
+function addNodes(parentNode, layerArray)
 {
-    variableId = varId;
-    layerName = datasetId + '/' + variableId;
+    for (var i = 0; i < layerArray.length; i++) {
+        var layer = layerArray[i];
+        // The treeview control uses the layer.label string for display
+        var newNode = new YAHOO.widget.TextNode(layer, parentNode, false);
+        if (layer.children != null) {
+            newNode.multiExpand = false;
+            addNodes(newNode, layer.children);
+        }
+    }
+}
+
+// Called when the user clicks on the name of a displayable layer in the left-hand menu
+// Gets the details (units, grid etc) of the given layer. 
+function layerSelected(layerDetails)
+{
+    // TODO: what do we do with these two?
     newVariable = true;
     resetAnimation();
-            
-    // See if we're auto-loading a certain time value
-    if (autoLoad != null && autoLoad.isoTValue != null) {
-        isoTValue = autoLoad.isoTValue;
-    } else if (isoTValue == null ) {
-        // Set to the present time if we don't already have a time selected
-        isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
-    }
-    // We pass the currently-selected time to the server so that the server can
-    // work out which date on the time axis is closest to this time.  Then we
-    // can update the calendar
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetId +
-        '&variable=' + variableId + '&time=' + isoTValue,
-        function(req) {
-            var varDetails = req.responseText.evalJSON();
-            $('datasetName').innerHTML = prettyDsName;
-            $('variableName').innerHTML = varDetails.title;
-            $('units').innerHTML = '<b>Units: </b>' + varDetails.units;
-            
-            // clear the list of z values
-            $('zValues').options.length = 0; 
+    
+    // TODO: units are ncWMS-specific
+    $('units').innerHTML = '<b>Units: </b>' + layerDetails.units;
 
-            // Set the range selector objects
-            if (autoLoad == null || autoLoad.zValue == null) {
-                var zValue = getZValue();
+    // clear the list of z values
+    $('zValues').options.length = 0; 
+
+    // Set the range selector objects
+    if (autoLoad == null || autoLoad.zValue == null) {
+        var zValue = getZValue();
+    } else {
+        var zValue = parseFloat(autoLoad.zValue);
+    }
+
+    var zAxis = layerDetails.zaxis;
+    if (zAxis == null) {
+        $('zAxis').innerHTML = ''
+        $('zValues').style.visibility = 'hidden';
+    } else {
+        if (zAxis.positive) {
+            $('zAxis').innerHTML = '<b>Elevation (' + zAxis.units + '): </b>';
+        } else {
+            $('zAxis').innerHTML = '<b>Depth (' + zAxis.units + '): </b>';
+        }
+        // Populate the drop-down list of z values
+        // Make z range selector invisible if there are no z values
+        var zValues = zAxis.values;
+        zPositive = zAxis.positive;
+        $('zValues').style.visibility = (zValues.length == 0) ? 'hidden' : 'visible';
+        var zDiff = 1e10; // Set to some ridiculously-high value
+        var nearestIndex = 0;
+        for (var j = 0; j < zValues.length; j++) {
+            // Create an item in the drop-down list for this z level
+            $('zValues').options[j] = new Option(zValues[j], j);
+            // Find the nearest value to the currently-selected
+            // depth level
+            var diff;
+            // This is nasty: improve!
+            if (zPositive) {
+                diff = Math.abs(parseFloat(zValues) - zValue);
             } else {
-                var zValue = parseFloat(autoLoad.zValue);
+                diff = Math.abs(parseFloat(zValues) + zValue);
             }
-            
-            var zAxis = varDetails.zaxis;
-            if (zAxis == null) {
-                $('zAxis').innerHTML = ''
-                $('zValues').style.visibility = 'hidden';
-            } else {
-                if (zAxis.positive) {
-                    $('zAxis').innerHTML = '<b>Elevation (' + zAxis.units + '): </b>';
-                } else {
-                    $('zAxis').innerHTML = '<b>Depth (' + zAxis.units + '): </b>';
-                }
-                // Populate the drop-down list of z values
-                // Make z range selector invisible if there are no z values
-                var zValues = zAxis.values;
-                $('zValues').style.visibility = (zValues.length == 0) ? 'hidden' : 'visible';
-                var zDiff = 1e10; // Set to some ridiculously-high value
-                var nearestIndex = 0;
-                for (var j = 0; j < zValues.length; j++) {
-                    // Create an item in the drop-down list for this z level
-                    $('zValues').options[j] = new Option(zValues[j], j);
-                    // Find the nearest value to the currently-selected
-                    // depth level
-                    var diff;
-                    // This is nasty: improve!
-                    if (zPositive) {
-                        diff = Math.abs(parseFloat(zValues) - zValue);
-                    } else {
-                        diff = Math.abs(parseFloat(zValues) + zValue);
-                    }
-                    if (diff < zDiff) {
-                        zDiff = diff;
-                        nearestIndex = j;
-                    }
-                }
-                $('zValues').selectedIndex = nearestIndex;
-                $('zValues').style.visibility = 'visible';
-            }
-            
-            $('scaleBar').style.visibility = 'visible';
-            $('scaleMin').style.visibility = 'visible';
-            $('scaleMax').style.visibility = 'visible';
-            $('autoScale').style.visibility = 'visible';
-            if (!isIE) {
-                // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
-                $('opacityControl').style.visibility = 'visible';
-            }
-            
-            // Set the auto-zoom box
-            bbox = varDetails.bbox;
-            $('autoZoom').innerHTML = '<a href="#" onclick="map.zoomToExtent(new OpenLayers.Bounds(' +
-                bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
-                '));\">Fit data to window</a>';
-            
-            // Now set up the calendar control
-            if (varDetails.datesWithData == null) {
-                // There is no calendar data.  Just update the map
-                if (calendar != null) calendar.hide();
-                $('date').innerHTML = '';
-                $('time').innerHTML = '';
-                $('utc').style.visibility = 'hidden';
-                autoScale(); // this also updates the map
-            } else {
-                datesWithData = varDetails.datesWithData; // Tells the calendar which dates to disable
-                if (calendar == null) {
-                    // Set up the calendar
-                    calendar = Calendar.setup({
-                        flat : 'calendar', // ID of the parent element
-                        align : 'bl', // Aligned to top-left of parent element
-                        weekNumbers : false,
-                        flatCallback : dateSelected
-                    });
-                    // For some reason, if we add this to setup() things don't work
-                    // as expected (dates not selectable on web page when first loaded).
-                    calendar.setDateStatusHandler(isDateDisabled);
-                }
-                // Set the range of valid years in the calendar.  Look through
-                // the years for which we have data, finding the min and max
-                var minYear = 100000000;
-                var maxYear = -100000000;
-                for (var year in datesWithData) {
-                    if (typeof datesWithData[year] != 'function') { // avoid built-in functions
-                        if (year < minYear) minYear = year;
-                        if (year > maxYear) maxYear = year;
-                    }
-                }
-                calendar.setRange(minYear, maxYear);
-                // Get the time on the t axis that is nearest to the currently-selected
-                // time, as calculated on the server
-                var nearestTime = new Date();
-                nearestTime.setISO8601(varDetails.nearestTimeIso);
-                calendar.setDate(nearestTime);
-                calendar.refresh();
-                calendar.show();
-                // Load the timesteps for this date
-                loadTimesteps();
+            if (diff < zDiff) {
+                zDiff = diff;
+                nearestIndex = j;
             }
         }
-    );
+        $('zValues').selectedIndex = nearestIndex;
+        $('zValues').style.visibility = 'visible';
+    }
+    
+    // Only show the scale bar if the data are coming from an ncWMS server
+    var scaleVisibility = server.type == 'ncWMS' ? 'visible' : 'hidden';
+    // TODO: could put these in a container and make all (in)visible at the same time
+    $('scaleBar').style.visibility = scaleVisibility;
+    $('scaleMin').style.visibility = scaleVisibility;
+    $('scaleMax').style.visibility = scaleVisibility;
+    $('autoScale').style.visibility = scaleVisibility;
+    
+    if (!isIE) {
+        // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
+        $('opacityControl').style.visibility = 'visible';
+    }
+
+    // Set the auto-zoom box
+    bbox = layerDetails.bbox;
+    $('autoZoom').innerHTML = '<a href="#" onclick="map.zoomToExtent(new OpenLayers.Bounds(' +
+        bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
+        '));\">Fit layer to window</a>';
+
+    // Now set up the calendar control
+    if (layerDetails.datesWithData == null) {
+        // There is no calendar data.  Just update the map
+        if (calendar != null) calendar.hide();
+        $('date').innerHTML = '';
+        $('time').innerHTML = '';
+        $('utc').style.visibility = 'hidden';
+        autoScale(); // this also updates the map
+    } else {
+        datesWithData = layerDetails.datesWithData; // Tells the calendar which dates to disable
+        if (calendar == null) {
+            // Set up the calendar
+            calendar = Calendar.setup({
+                flat : 'calendar', // ID of the parent element
+                align : 'bl', // Aligned to top-left of parent element
+                weekNumbers : false,
+                flatCallback : dateSelected
+            });
+            // For some reason, if we add this to setup() things don't work
+            // as expected (dates not selectable on web page when first loaded).
+            calendar.setDateStatusHandler(isDateDisabled);
+        }
+        // Set the range of valid years in the calendar.  Look through
+        // the years for which we have data, finding the min and max
+        var minYear = 100000000;
+        var maxYear = -100000000;
+        for (var year in datesWithData) {
+            if (typeof datesWithData[year] != 'function') { // avoid built-in functions
+                if (year < minYear) minYear = year;
+                if (year > maxYear) maxYear = year;
+            }
+        }
+        calendar.setRange(minYear, maxYear);
+        // Get the time on the t axis that is nearest to the currently-selected
+        // time, as calculated on the server
+        var nearestTime = iso8601ToDate(layerDetails.nearestTimeIso);
+        calendar.setDate(nearestTime);
+        calendar.refresh();
+        calendar.show();
+        // Load the timesteps for this date
+        loadTimesteps();
+    }
 }
 
 // Function that is called when a user clicks on a date in the calendar
@@ -490,49 +440,61 @@ function loadTimesteps()
 {
     // Print out date, e.g. "15 Oct 2007"
     $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
-    var isoDate = calendar.date.print('%Y-%m-%d'); // Date only (no time) in ISO format
 
     // Get the timesteps for this day
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=timesteps&dataset=' +  datasetId + 
-        '&variable=' + variableId + '&day=' + isoDate,
-        function(req) {
-            // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
-            var times = req.responseText.evalJSON().timesteps;
-            // Build the select box
-            var s = '<select id="tValues" onchange="javascript:updateMap()">';
-            for (var i = 0; i < times.length; i++) {
-                // Construct the full ISO Date-time
-                var isoDateTime = isoDate + 'T' + times[i] + 'Z';
-                s += '<option value="' + isoDateTime + '">' + times[i] + '</option>';
-            }
-            s += '</select>';
+    server.getTimesteps(updateTimesteps, layerName, makeIsoDate(calendar.date));
+}
 
-            $('time').innerHTML = s;
-            $('utc').style.visibility = 'visible';
+// Gets an ISO Date ("yyyy-mm-dd") for the given Javascript date object.
+// Does not contain the time.
+function makeIsoDate(date)
+{
+    // Watch out for low-numbered years when calculating the ISO string
+    var prefix = '';
+    var year = date.getFullYear();
+    if (year < 10) prefix = '000';
+    else if (year < 100) prefix = '00';
+    else if (year < 1000) prefix = '0';
+    return prefix + date.print('%Y-%m-%d'); // Date only (no time) in ISO format
+}
 
-            // If we're autoloading, set the right time in the selection box
-            if (autoLoad != null && autoLoad.isoTValue != null) {
-                var timeSelect = $('tValues');
-                for (var i = 0; i < timeSelect.options.length; i++) {
-                    if (timeSelect.options[i].value == autoLoad.isoTValue) {
-                        timeSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            }
-            $('setFrames').style.visibility = 'visible';
+// Called when we have received the timestepss from the server
+function updateTimesteps(times)
+{
+    // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
+    // Build the select box
+    var s = '<select id="tValues" onchange="javascript:updateMap()">';
+    for (var i = 0; i < times.length; i++) {
+        // Construct the full ISO Date-time
+        var isoDateTime = makeIsoDate(calendar.date) + 'T' + times[i] + 'Z';
+        s += '<option value="' + isoDateTime + '">' + times[i] + '</option>';
+    }
+    s += '</select>';
 
-            if (autoLoad != null && autoLoad.scaleMin != null && autoLoad.scaleMax != null) {
-                $('scaleMin').value = autoLoad.scaleMin;
-                $('scaleMax').value = autoLoad.scaleMax;
-                validateScale(); // this calls updateMap()
-            } else if (newVariable) {
-                autoScale(); // Scales the map automatically and updates it
-            } else {
-                updateMap(); // Update the map without changing the scale
+    $('time').innerHTML = s;
+    $('utc').style.visibility = 'visible';
+
+    // If we're autoloading, set the right time in the selection box
+    if (autoLoad != null && autoLoad.isoTValue != null) {
+        var timeSelect = $('tValues');
+        for (var i = 0; i < timeSelect.options.length; i++) {
+            if (timeSelect.options[i].value == autoLoad.isoTValue) {
+                timeSelect.selectedIndex = i;
+                break;
             }
         }
-    );
+    }
+    $('setFrames').style.visibility = 'visible';
+
+    if (autoLoad != null && autoLoad.scaleMin != null && autoLoad.scaleMax != null) {
+        $('scaleMin').value = autoLoad.scaleMin;
+        $('scaleMax').value = autoLoad.scaleMax;
+        validateScale(); // this calls updateMap()
+    } else if (newVariable) {
+        autoScale(); // Scales the map automatically and updates it
+    } else {
+        updateMap(); // Update the map without changing the scale
+    }
 }
 
 // Calls the WMS to find the min and max data values, then rescales.
@@ -540,7 +502,7 @@ function loadTimesteps()
 // for the whole layer.  If not, this gets the min and max values for the viewport.
 function autoScale()
 {
-    var dataBounds = bbox;
+    var dataBounds = bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3];
     if ($('tValues')) {
         isoTValue = $('tValues').value;
     }
@@ -550,19 +512,15 @@ function autoScale()
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
     }
-    // Get the minmax metadata item.  This gets a grid of 50x50 data points
-    // covering the BBOX and finds the min and max values
-    downloadUrl('wms', 'REQUEST=GetMetadata&item=minmax&layers=' +
-        layerName + '&BBOX=' + dataBounds + '&WIDTH=50&HEIGHT=50'
-        + '&CRS=CRS:84&ELEVATION=' + getZValue() + '&TIME=' + isoTValue,
-        function(req) {
-            var minmax = req.responseText.evalJSON();
-            // set the size of the panel to match the number of variables
-            $('scaleMin').value = toNSigFigs(minmax.min, 4);
-            $('scaleMax').value = toNSigFigs(minmax.max, 4);
-            validateScale(); // This calls updateMap()
-        }
-    );
+    server.getMinMax(gotMinMax, layerName, dataBounds, getZValue(), isoTValue);
+}
+
+// This function is called when we have received the min and max values from the server
+function gotMinMax(minmax)
+{
+    $('scaleMin').value = toNSigFigs(minmax.min, 4);
+    $('scaleMax').value = toNSigFigs(minmax.max, 4);
+    validateScale(); // This calls updateMap()
 }
 
 // Validates the entries for the scale bar

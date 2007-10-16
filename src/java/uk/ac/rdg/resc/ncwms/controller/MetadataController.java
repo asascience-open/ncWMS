@@ -71,17 +71,13 @@ public class MetadataController
         {
             throw new WmsException("Must provide an ITEM parameter");
         }
-        else if (item.equals("datasets"))
+        else if (item.equals("layers"))
         {
-            return this.showDatasets(request, response);
+            return this.showLayerHierarchy(request, response);
         }
-        else if (item.equals("variables"))
+        else if (item.equals("layerDetails"))
         {
-            return this.showVariables(request, response);
-        }
-        else if (item.equals("variableDetails"))
-        {
-            return this.showVariableDetails(request, response);
+            return this.showLayerDetails(request, response);
         }
         else if (item.equals("timesteps"))
         {
@@ -98,11 +94,11 @@ public class MetadataController
     }
     
     /**
-     * Shows the datasets available from this server, optionally filtered.
+     * Shows the hierarchy of layers available from this server, optionally filtered.
      * Filtering is currently done by matching the first part of the dataset
      * id (e.g. "MERSEA_BALTIC").
      */
-    public ModelAndView showDatasets(HttpServletRequest request,
+    public ModelAndView showLayerHierarchy(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         // There could be more than one filter
@@ -131,49 +127,19 @@ public class MetadataController
                 }
             }
         }
-        return new ModelAndView("showDatasets", "datasets", displayables);
-    }
-    
-    /**
-     * Shows a JSON document containing the set of variables for the given dataset.
-     */
-    public ModelAndView showVariables(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
-    {
-        // Find the dataset that the user is interested in
-        Dataset ds = this.getDataset(request);
-        return new ModelAndView("showVariables", "dataset", ds);
-    }
-    
-    /**
-     * @return the Dataset that the user is requesting, throwing an exception if
-     * it doesn't exist
-     */
-    private Dataset getDataset(HttpServletRequest request) throws WmsException
-    {
-        String dsId = request.getParameter("dataset");
-        if (dsId == null)
-        {
-            throw new WmsException("Must provide a value for the dataset parameter");
-        }
-        Dataset ds = this.config.getDatasets().get(dsId);
-        if (ds == null)
-        {
-            throw new WmsException("There is no dataset with id " + dsId);
-        }
-        return ds;
+        return new ModelAndView("showLayerHierarchy", "datasets", displayables);
     }
     
     /**
      * Shows an JSON document containing the details of the given variable (units,
-     * zvalues, tvalues etc).  See showVariableDetails.jsp.
+     * zvalues, tvalues etc).  See showLayerDetails.jsp.
      */
-    public ModelAndView showVariableDetails(HttpServletRequest request,
+    public ModelAndView showLayerDetails(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Layer layer = this.getLayer(request);
         String targetDateIso = request.getParameter("time");
-        if (targetDateIso == null)
+        if (targetDateIso == null || targetDateIso.trim().equals(""))
         {
             throw new WmsException("Must provide a value for the time parameter");
         }
@@ -181,7 +147,8 @@ public class MetadataController
         
         Map<Integer, Map<Integer, List<Integer>>> datesWithData =
             new HashMap<Integer, Map<Integer, List<Integer>>>();
-        long nearestTimeMs = 0;
+        long nearestTimeMs = layer.isTaxisPresent() && layer.getTvalues().length > 0 
+            ? layer.getTvalues()[0] : 0;
         
         // Takes an array of time values for a layer and turns it into a Map of
         // year numbers to month numbers to day numbers, for use in
@@ -230,17 +197,15 @@ public class MetadataController
      */
     private Layer getLayer(HttpServletRequest request) throws Exception
     {
-        Dataset ds = this.getDataset(request);
-        String varId = request.getParameter("variable");
-        if (varId == null)
+        String layerName = request.getParameter("layerName");
+        if (layerName == null)
         {
-            throw new Exception("Must provide a value for the variable parameter");
+            throw new Exception("Must provide a value for the layerName parameter");
         }
-        Layer layer = this.metadataStore.getLayer(ds.getId(), varId);
+        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         if (layer == null)
         {
-            throw new Exception("There is no variable with id " + varId
-                + " in the dataset " + ds.getId());
+            throw new Exception("There is no layer with the name " + layerName);
         }
         return layer;
     }

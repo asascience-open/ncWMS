@@ -5,38 +5,21 @@ div
     font-size: 12px;
 }
 
-/* Style for the left-hand menu */
-div.leftmenu
+/* Style for the left-hand layer selector menu */
+#layerSelector
 {
     position: absolute;
     overflow: auto;
     margin: 8px;
     padding: 0px;
-    width: 300px;
-}
-
-div.leftmenu a:link
-{
-    color: blue;
-    text-decoration: none;
-}
-
-div.leftmenu a:visited
-{
-    color: blue;
-    text-decoration: none;
-}
-
-div.leftmenu a:hover
-{
-    cursor: pointer;
-    color: red;
+    width: 250px;
+    height: 500px;
 }
 
 div.help
 {
     position: absolute;
-    top: 420px;
+    top: 520px;
     left: 20px;
     font-size: 11px;
 }
@@ -44,15 +27,7 @@ div.help
 #resclogo
 {
     position: absolute;
-    top: 470px;
-    left: 20px;
-    border: 0;
-}
-
-#jcommlogo
-{
-    position: absolute;
-    top: 520px;
+    top: 570px;
     left: 20px;
     border: 0;
 }
@@ -63,10 +38,10 @@ div.mainPanel
     position: absolute;
     margin: 8px;
     padding: 0px;
-    left: 330px;
+    left: 280px;
 }
 
-div.panelHeader
+#panelHeader
 {
     position: absolute;
     top: 0px;
@@ -74,25 +49,16 @@ div.panelHeader
     width: 500px;
 }
 
+#panelText
+{
+    width: 390px;
+}
+
 #calendar
 {
     position: absolute;
     top: 0px;
-    left: 400px;
-    font-size: 12px;
-    text-align: center;
-}
-
-#calendar a:link
-{
-    color: blue;
-    text-decoration: none;
-}
-
-#calendar a:visited
-{
-    color: blue;
-    text-decoration: none;
+    left: 390px;
 }
 
 #zValues
