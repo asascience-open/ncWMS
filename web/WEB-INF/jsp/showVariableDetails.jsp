@@ -12,6 +12,8 @@
          datesWithData = Map<Integer, Map<Integer, List<Integer>>>.  Contains
                 information about which days contain data for the Layer.  Maps
                 years to a map of months to an array of day numbers.
+         nearestTimeIso = ISO8601 String representing the point along the time
+                axis that is closest to the required date (as passed to the server)
 --%>
 <json:object>
     <json:property name="title" value="${layer.title}"/>
@@ -36,5 +38,8 @@
                 </json:object>
             </c:forEach>
         </json:object>
+        <%-- The nearest time on the time axis to the time that's currently
+             selected on the web interface, in ISO8601 format --%>
+        <json:property name="nearestTimeIso" value="${nearestTimeIso}"/>
     </c:if>
 </json:object>

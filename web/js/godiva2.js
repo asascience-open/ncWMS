@@ -11,8 +11,7 @@ var zPositive = 0; // Will be 1 if the selected z axis is positive
 var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
-var tValue = null; // The currently-selected t value (Javascript Date object)
-var prettyTValue = null; // The t value, formatted for human reading
+var isoTValue = null; // The currently-selected t value (ISO8601)
 var isIE;
 var scaleMinVal;
 var scaleMaxVal;
@@ -23,7 +22,34 @@ var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
-// Ajax call using the Prototype library
+// Adds ISO8601 parsing capabilities to the Javascript Date object
+// From http://delete.me.uk/2005/03/iso8601.html, copied 16th October 2007
+Date.prototype.setISO8601 = function (string) {
+    var regexp = "([0-9]{4})(-([0-9]{2})(-([0-9]{2})" +
+        "(T([0-9]{2}):([0-9]{2})(:([0-9]{2})(\.([0-9]+))?)?" +
+        "(Z|(([-+])([0-9]{2}):([0-9]{2})))?)?)?)?";
+    var d = string.match(new RegExp(regexp));
+
+    var offset = 0;
+    var date = new Date(d[1], 0, 1);
+
+    if (d[3]) { date.setMonth(d[3] - 1); }
+    if (d[5]) { date.setDate(d[5]); }
+    if (d[7]) { date.setHours(d[7]); }
+    if (d[8]) { date.setMinutes(d[8]); }
+    if (d[10]) { date.setSeconds(d[10]); }
+    if (d[12]) { date.setMilliseconds(Number("0." + d[12]) * 1000); }
+    if (d[14]) {
+        offset = (Number(d[16]) * 60) + Number(d[17]);
+        offset *= ((d[15] == '-') ? 1 : -1);
+    }
+
+    offset -= date.getTimezoneOffset();
+    time = (Number(date) + (offset * 60 * 1000));
+    this.setTime(Number(time));
+}
+
+// Ajax call using the OpenLayers library
 // url: The URL of the data source
 // params: The parameters to append to the URL
 // onsuccess: A function that will be called with the original request object
@@ -107,7 +133,7 @@ window.onload = function()
         autoLoad.dataset = null;
         autoLoad.variable = null;
         autoLoad.zValue = null;
-        autoLoad.tValue = null;
+        autoLoad.isoTValue = null;
         autoLoad.bbox = null;
         autoLoad.scaleMin = null;
         autoLoad.scaleMax = null;
@@ -125,7 +151,7 @@ window.onload = function()
                 } else if (key == 'elevation') {
                     autoLoad.zValue = keyAndVal[1];
                 } else if (key == 'time') {
-                    autoLoad.tValue = keyAndVal[1];
+                    autoLoad.isoTValue = keyAndVal[1];
                 } else if (key == 'bbox') {
                     autoLoad.bbox = keyAndVal[1];
                 } else if (key == 'scale') {
@@ -135,16 +161,6 @@ window.onload = function()
                     // we must adapt the site for this brand (e.g. by showing only
                     // certain datasets)
                     filter = keyAndVal[1];
-                    if (filter == 'MERSEA' || filter == 'ECOOP') {
-                        // If we're viewing through the MERSEA or ECOOP page, the logo
-                        // is displayed in the header and footer so we blank it
-                        // out here.
-                        $('jcommlogo').src = 'images/blank.png';
-                        $('jcommlogo').alt = '';
-                        $('jcommlogo').width = 133;
-                        $('jcommlogo').height = 30;
-                        $('jcommlink').href = '';
-                    }
                 }
             }
         }
@@ -245,20 +261,18 @@ function loadDatasets(dsDivId, filter)
 {
     downloadUrl('wms', 'REQUEST=GetMetadata&item=datasets&filter=' + filter,
         function(req) {
-            // We get back a JSON object containing dataset IDs and titles
-            var datasets = req.responseText.evalJSON();
+            // We get back a JSON array containing dataset IDs and titles
+            var datasets = req.responseText.evalJSON().datasets;
             // We need to build up the HTML nested DIVs in preparation for creating
             // the Accordion control
             var s = '';
-            for (var dsId in datasets) {
-                // Prototype seems to add an extend() function to every object,
-                // which we can't seem to delete.  Grr.
-                if (typeof datasets[dsId] != 'function') {
-                    s += '<div id="' + dsId + 'Div">';
-                    s += '<div id="' + dsId + '">' + datasets[dsId] + '</div>';
-                    s += '<div id="' + dsId + 'Content">Variables will appear here</div>';
-                    s += '</div>';
-                }
+            for (var i = 0; i < datasets.length; i++) {
+                var id = datasets[i].id;
+                var title = datasets[i].title;
+                s += '<div id="' + id + 'Div">';
+                s += '<div id="' + id + '">' + title + '</div>';
+                s += '<div id="' + id + 'Content">Variables will appear here</div>';
+                s += '</div>';
             }
             $(dsDivId).innerHTML = s;
             // Now we can create the accordion control
@@ -298,19 +312,17 @@ function datasetSelected(expandedTab)
     // returns a table of variable names in HTML format
     downloadUrl('wms', 'REQUEST=GetMetadata&item=variables&dataset=' + datasetId,
         function(req) {
-            var variables = req.responseText.evalJSON();
+            var variables = req.responseText.evalJSON().variables;
             // Build up the HTML table of variable names and links
             var s = '<table cellspacing="0">';
             var numVars = 0;
-            for (var varId in variables) {
-                // Prototype seems to add an extend() function to every object,
-                // which we can't seem to delete.  Grr.
-                if (typeof variables[varId] != 'function') {
-                    s += '<tr><td><a href="#" onclick="variableSelected(\'' + varId + '\')">';
-                    s += variables[varId];
-                    s += '</a></td></tr>';
-                    numVars++;
-                }
+            for (var i = 0; i < variables.length; i++) {
+                var id = variables[i].id;
+                var title = variables[i].title;
+                s += '<tr><td><a href="#" onclick="variableSelected(\'' + id + '\')">';
+                s += title;
+                s += '</a></td></tr>';
+                numVars++;
             }
             s += '</table>';
             
@@ -335,8 +347,19 @@ function variableSelected(varId)
     layerName = datasetId + '/' + variableId;
     newVariable = true;
     resetAnimation();
+            
+    // See if we're auto-loading a certain time value
+    if (autoLoad != null && autoLoad.isoTValue != null) {
+        isoTValue = autoLoad.isoTValue;
+    } else if (isoTValue == null ) {
+        // Set to the present time if we don't already have a time selected
+        isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
+    }
+    // We pass the currently-selected time to the server so that the server can
+    // work out which date on the time axis is closest to this time.  Then we
+    // can update the calendar
     downloadUrl('wms', 'REQUEST=GetMetadata&item=variableDetails&dataset=' + datasetId +
-        '&variable=' + variableId,
+        '&variable=' + variableId + '&time=' + isoTValue,
         function(req) {
             var varDetails = req.responseText.evalJSON();
             $('datasetName').innerHTML = prettyDsName;
@@ -405,13 +428,6 @@ function variableSelected(varId)
                 bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
                 '));\">Fit data to window</a>';
             
-            // See if we're auto-loading a certain time value
-            if (autoLoad != null && autoLoad.tValue != null) {
-                tValue = autoLoad.tValue; // TODO: get a Date object
-            } else {
-                tValue = new Date();
-            }
-            
             // Now set up the calendar control
             if (varDetails.datesWithData == null) {
                 // There is no calendar data.  Just update the map
@@ -438,21 +454,18 @@ function variableSelected(varId)
                 // the years for which we have data, finding the min and max
                 var minYear = 100000000;
                 var maxYear = -100000000;
-                var yearDiff = 1000000000;
-                var closestYear;
                 for (var year in datesWithData) {
                     if (typeof datesWithData[year] != 'function') { // avoid built-in functions
                         if (year < minYear) minYear = year;
                         if (year > maxYear) maxYear = year;
-                        if (year - tValue.getYear() < yearDiff) closestYear = year;
                     }
                 }
-                // Look for the closest month to the required t value
-                var closestMonth;
-                //if 
                 calendar.setRange(minYear, maxYear);
-                calendar.setDate(tValue);
-                // TODO: set the date of the calendar to the closest date to tValue
+                // Get the time on the t axis that is nearest to the currently-selected
+                // time, as calculated on the server
+                var nearestTime = new Date();
+                nearestTime.setISO8601(varDetails.nearestTimeIso);
+                calendar.setDate(nearestTime);
                 calendar.refresh();
                 calendar.show();
                 // Load the timesteps for this date
@@ -471,7 +484,7 @@ function dateSelected(cal)
 }
 
 // Updates the time selector control.  Finds all the timesteps that occur on
-// the same day as the currently-selected date.   Called from the calendar
+// the same day as the currently-selected date.  Called from the calendar
 // control when the user selects a new date
 function loadTimesteps()
 {
@@ -483,7 +496,7 @@ function loadTimesteps()
     downloadUrl('wms', 'REQUEST=GetMetadata&item=timesteps&dataset=' +  datasetId + 
         '&variable=' + variableId + '&day=' + isoDate,
         function(req) {
-            // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", no date information)
+            // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
             var times = req.responseText.evalJSON().timesteps;
             // Build the select box
             var s = '<select id="tValues" onchange="javascript:updateMap()">';
@@ -498,10 +511,10 @@ function loadTimesteps()
             $('utc').style.visibility = 'visible';
 
             // If we're autoloading, set the right time in the selection box
-            if (autoLoad != null && autoLoad.tValue != null) {
+            if (autoLoad != null && autoLoad.isoTValue != null) {
                 var timeSelect = $('tValues');
                 for (var i = 0; i < timeSelect.options.length; i++) {
-                    if (timeSelect.options[i].value == autoLoad.tValue) {
+                    if (timeSelect.options[i].value == autoLoad.isoTValue) {
                         timeSelect.selectedIndex = i;
                         break;
                     }
@@ -529,7 +542,7 @@ function autoScale()
 {
     var dataBounds = bbox;
     if ($('tValues')) {
-        tValue = $('tValues').value;
+        isoTValue = $('tValues').value;
     }
     if (newVariable) {
         newVariable = false; // This will be set true when we click on a different variable name
@@ -541,7 +554,7 @@ function autoScale()
     // covering the BBOX and finds the min and max values
     downloadUrl('wms', 'REQUEST=GetMetadata&item=minmax&layers=' +
         layerName + '&BBOX=' + dataBounds + '&WIDTH=50&HEIGHT=50'
-        + '&CRS=CRS:84&ELEVATION=' + getZValue() + '&TIME=' + tValue,
+        + '&CRS=CRS:84&ELEVATION=' + getZValue() + '&TIME=' + isoTValue,
         function(req) {
             var minmax = req.responseText.evalJSON();
             // set the size of the panel to match the number of variables
@@ -608,8 +621,7 @@ function setLastAnimationFrame()
 }
 function createAnimation()
 {
-    if (!timeSeriesSelected())
-    {
+    if (!timeSeriesSelected()) {
         alert("Must select a first and last frame for the animation");
         return;
     }
@@ -674,7 +686,7 @@ function updateMap()
     $('scaleTwoThirds').innerHTML = toNSigFigs(scaleTwoThirds, 4);
     
     if ($('tValues')) {
-        tValue = $('tValues').value;
+        isoTValue = $('tValues').value;
     }
     
     var opacity = $('opacityValue').value;
@@ -704,7 +716,7 @@ function updateMap()
             baseURL + '/wms', {
             layers: layerName,
             elevation: getZValue(),
-            time: tValue,
+            time: isoTValue,
             transparent: 'true',
             // TODO: provide option to choose STYLE on web interface.
             styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity},
@@ -715,7 +727,7 @@ function updateMap()
         essc_wms.mergeNewParams({
             layers: layerName,
             elevation: getZValue(),
-            time: tValue,
+            time: isoTValue,
             styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity}
         );
     }
@@ -723,7 +735,7 @@ function updateMap()
     $('featureInfo').innerHTML = "Click on the map to get more information";
     $('featureInfo').style.visibility = 'visible';
     
-    var imageURL = essc_wms.getURL(getBounds(bbox));
+    var imageURL = essc_wms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
     $('testImage').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>';
     setGEarthURL();
     setPermalinkURL();
@@ -749,7 +761,7 @@ function setPermalinkURL()
             '?dataset=' + layerName.split('/')[0] +
             '&variable=' + layerName.split('/')[1] +
             '&elevation=' + getZValue() +
-            '&time=' + tValue +
+            '&time=' + isoTValue +
             '&scale=' + scaleMinVal + ',' + scaleMaxVal +
             '&bbox=' + map.getExtent().toBBOX();
         $('permalink').innerHTML = '<a target="_blank" href="' + url +

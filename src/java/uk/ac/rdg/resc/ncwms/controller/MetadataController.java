@@ -172,9 +172,54 @@ public class MetadataController
         HttpServletResponse response) throws Exception
     {
         Layer layer = this.getLayer(request);
+        String targetDateIso = request.getParameter("time");
+        if (targetDateIso == null)
+        {
+            throw new WmsException("Must provide a value for the time parameter");
+        }
+        long targetTimeMs = WmsUtils.iso8601ToDate(targetDateIso).getTime();
+        
+        Map<Integer, Map<Integer, List<Integer>>> datesWithData =
+            new HashMap<Integer, Map<Integer, List<Integer>>>();
+        long nearestTimeMs = 0;
+        
+        // Takes an array of time values for a layer and turns it into a Map of
+        // year numbers to month numbers to day numbers, for use in
+        // showVariableDetails.jsp.  This is used to provide a list of days for
+        // which we have data.  Also calculates the nearest value on the time axis
+        // to the time we're currently displaying on the web interface.
+        for (long ms : layer.getTvalues())
+        {
+            if (Math.abs(ms - targetTimeMs) < Math.abs(nearestTimeMs - targetTimeMs))
+            {
+                nearestTimeMs = ms;
+            }
+            Calendar cal = getCalendar(ms);
+            int year = cal.get(Calendar.YEAR);
+            Map<Integer, List<Integer>> months = datesWithData.get(year);
+            if (months == null)
+            {
+                months = new HashMap<Integer, List<Integer>>();
+                datesWithData.put(year, months);
+            }
+            int month = cal.get(Calendar.MONTH); // zero-based
+            List<Integer> days = months.get(month);
+            if (days == null)
+            {
+                days = new ArrayList<Integer>();
+                months.put(month, days);
+            }
+            int day = cal.get(Calendar.DAY_OF_MONTH); // one-based
+            if (!days.contains(day))
+            {
+                days.add(day);
+            }
+        }
+        
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("layer", layer);
-        models.put("datesWithData", getDatesWithData(layer.getTvalues()));
+        models.put("datesWithData", datesWithData);
+        models.put("nearestTimeIso", WmsUtils.millisecondsToISO8601(nearestTimeMs));
         return new ModelAndView("showVariableDetails", models);
     }
     
@@ -198,43 +243,6 @@ public class MetadataController
                 + " in the dataset " + ds.getId());
         }
         return layer;
-    }
-    
-    /**
-     * Takes an array of time values for a layer and turns it into a Map of
-     * year numbers to month numbers to day numbers, for use in
-     * showVariableDetails.jsp.  This is used to provide a list of days for
-     * which we have data.  TODO: move this to Layer(Impl)?
-     * @param array of time values in milliseconds since the epoch
-     */
-    public static Map<Integer, Map<Integer, List<Integer>>> getDatesWithData(long[] dates)
-    {
-        Map<Integer, Map<Integer, List<Integer>>> datesWithData =
-            new HashMap<Integer, Map<Integer, List<Integer>>>();
-        for (long ms : dates)
-        {
-            Calendar cal = getCalendar(ms);
-            int year = cal.get(Calendar.YEAR);
-            Map<Integer, List<Integer>> months = datesWithData.get(year);
-            if (months == null)
-            {
-                months = new HashMap<Integer, List<Integer>>();
-                datesWithData.put(year, months);
-            }
-            int month = cal.get(Calendar.MONTH); // zero-based
-            List<Integer> days = months.get(month);
-            if (days == null)
-            {
-                days = new ArrayList<Integer>();
-                months.put(month, days);
-            }
-            int day = cal.get(Calendar.DAY_OF_MONTH); // one-based
-            if (!days.contains(day))
-            {
-                days.add(day);
-            }
-        }
-        return datesWithData;
     }
     
     /**

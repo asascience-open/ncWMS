@@ -1,6 +1,5 @@
 <%@page contentType="application/json"%>
 <%@page pageEncoding="UTF-8"%>
-<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="http://www.atg.com/taglibs/json" prefix="json"%>
 <%-- 
      Displays the datasets that the user has chosen to see as JSON, ready to be
@@ -10,10 +9,14 @@
      Data (models) passed in to this page:
          datasets = List of Datasets to display
          
-     returns a a JSON associative array, in which the keys are dataset ids, values are titles
+     returns a a JSON array of simple dataset objects, keyed by their unique ids,
+     containing the dataset title
 --%>
 <json:object>
-    <c:forEach var="dataset" items="${datasets}">
-        <json:property name="${dataset.id}" value="${dataset.title}"/>
-    </c:forEach>
+    <json:array name="datasets" items="${datasets}" var="dataset">
+        <json:object>
+            <json:property name="id" value="${dataset.id}"/>
+            <json:property name="title" value="${dataset.title}"/>
+        </json:object>
+    </json:array>
 </json:object>
