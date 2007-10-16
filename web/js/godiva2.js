@@ -626,10 +626,6 @@ function createAnimation()
         return;
     }
     
-    //essc_wms.mergeNewParams({time: $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML,
-    //    format: 'image/gif'});
-    //return;
-    
     // Get a URL for a WMS request that covers the current map extent
     var urlEls = essc_wms.getURL(map.getExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
@@ -728,8 +724,8 @@ function updateMap()
             layers: layerName,
             elevation: getZValue(),
             time: isoTValue,
-            styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity}
-        );
+            styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
+        });
     }
     
     $('featureInfo').innerHTML = "Click on the map to get more information";

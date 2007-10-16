@@ -68,6 +68,7 @@ div.calendar { position: relative; }
   width: 2em;
   color: #456;
   text-align: right;
+  font-weight: bold; /* Added by Jon Blower to make active days stand out */
   padding: 2px 4px 2px 2px;
 }
 .calendar tbody .day.othermonth {
@@ -120,7 +121,10 @@ div.calendar { position: relative; }
   color: #00f;
 }
 
-.calendar tbody .disabled { color: #999; }
+.calendar tbody .disabled { 
+  color: #999;
+  font-weight: normal; /* Added by Jon Blower to contrast disabled days with active days */
+}
 
 .calendar tbody .emptycell { /* Empty cells (the best is to hide them) */
   visibility: hidden;
