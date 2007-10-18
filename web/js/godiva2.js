@@ -17,7 +17,11 @@ var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
-var server = null; // Server object that's dealing with the currently-visible layer
+
+var servers = null; // Servers providing layers to this site.  Will be set in onload()
+var activeServer; // The server that is serving the currently-selected layer
+
+var tree = null; // The tree control in the left-hand panel
 
 // Called when the page has loaded
 window.onload = function()
@@ -121,22 +125,65 @@ window.onload = function()
         }
     }
     
-    var servers = [
-        new Server(''), // The default server (the one hosting this Godiva2 site)
-        new Server('http://127.0.0.1:8084/ncWMS/wms') // A remote server
+    servers = [
+        new Server(''), // The server hosting this Godiva2 site
+        new Server('http://lovejoy.nerc-essc.ac.uk:9080/ncWMS/wms') // A remote server
     ];
+    
+    setupTreeControl();
     
     // Load the menus for each server
     for (var i = 0; i < servers.length; i++) {
-        alert('getting layers for ' + servers[i].url);
         // TODO Check version of server: can we handle this?
         // The getLayerHierarchy() function is asynchronous.  Once we have received
         // the result from the server we shall pass it to the makeLayerMenu() function.
         servers[i].getLayerHierarchy({
-            callback : makeLayerMenu,
+            callback : makeLayerMenu, // Takes two arguments: the returned layers and the server object
             filter : '' // Not filtered for now
         });
     }
+}
+
+function setupTreeControl()
+{
+    tree = new YAHOO.widget.TreeView('layerSelector');
+    // Add an event callback that gets fired when a tree node is clicked
+    tree.subscribe('labelClick', function(node) {
+        if (typeof node.data.id != 'undefined') {
+            // Set the currently-active server
+            activeServer = node.data.server;
+            // We're only interested if this is a displayable layer, i.e. it has an id.
+            
+            // Update the breadcrumb trail
+            var s = node.data.label;
+            var theNode = node;
+            while(theNode.parent != tree.getRoot()) {
+                theNode = theNode.parent;
+                s = theNode.data.label + ' &gt; ' + s;
+            }
+            $('layerPath').innerHTML = s;
+            
+            // Store the layer name for later use
+            layerName = node.data.id;
+            
+            // See if we're auto-loading a certain time value
+            if (autoLoad != null && autoLoad.isoTValue != null) {
+                isoTValue = autoLoad.isoTValue;
+            } else if (isoTValue == null ) {
+                // Set to the present time if we don't already have a time selected
+                isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
+            }
+            
+            // Get the details of this layer from the server, calling layerSelected()
+            // when we have the result
+            var layerDetails = activeServer.getLayerDetails({
+                callback: layerSelected,
+                layerName: node.data.id,
+                time: isoTValue
+            });
+        }
+    });
+    tree.draw();
 }
 
 // Function that is used by the calendar to see whether a date should be disabled
@@ -166,7 +213,7 @@ function getFeatureInfo(e)
     if (essc_wms != null)
     {
         $('featureInfo').innerHTML = "Getting feature info...";
-        featureInfoUrl = essc_wms.getFullRequestString({
+        var params = {
             REQUEST: "GetFeatureInfo",
             BBOX: essc_wms.map.getExtent().toBBOX(),
             I: e.xy.x,
@@ -175,7 +222,15 @@ function getFeatureInfo(e)
             QUERY_LAYERS: essc_wms.params.LAYERS,
             WIDTH: essc_wms.map.size.w,
             HEIGHT: essc_wms.map.size.h
-            });
+        };
+        if (activeServer.url != '') {
+            // This is the signal to the server to load the data from elsewhere
+            params.url = activeServer.url;
+        }
+        featureInfoUrl = essc_wms.getFullRequestString(
+            params,
+            'wms' // We must always load from the home server
+        );
         OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
         Event.stop(e);
     }
@@ -226,64 +281,31 @@ function popUp(url, width, height)
 }
 
 // Populates the left-hand menu with a hierarchy of layers
-function makeLayerMenu(layerHierarchy, theServer)
+function makeLayerMenu(layerHierarchy, server)
 {
-    alert('Called makeLayerMenu ' + theServer.url);
-    var tree = new YAHOO.widget.TreeView("layerSelector");
     // Add root node for this server
-    var serverRoot = new YAHOO.widget.TextNode({label: layerHierarchy.title}, tree.getRoot(), true);
-    serverRoot.multiExpand = false;
-    // Add layers recursively.  The server object will be attached to each node
-    addNodes(serverRoot, layerHierarchy.layers);
-    // Add an event callback that gets fired when a tree node is clicked
-    tree.subscribe('labelClick', function(node) {
-        if (typeof node.data.id != 'undefined') {
-            // Set the currently-active server
-            server = theServer;
-            // We're only interested if this is a displayable layer, i.e. it has an id.
-            
-            // Update the breadcrumb trail
-            var s = node.data.label;
-            var theNode = node;
-            while(theNode.parent != tree.getRoot()) {
-                theNode = theNode.parent;
-                s = theNode.data.label + ' &gt; ' + s;
-            }
-            $('layerPath').innerHTML = s;
-            
-            // Store the layer name for later use
-            layerName = node.data.id;
-            
-            // See if we're auto-loading a certain time value
-            if (autoLoad != null && autoLoad.isoTValue != null) {
-                isoTValue = autoLoad.isoTValue;
-            } else if (isoTValue == null ) {
-                // Set to the present time if we don't already have a time selected
-                isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
-            }
-            
-            // Get the details of this layer from the server, calling layerSelected()
-            // when we have the result
-            var layerDetails = server.getLayerDetails({
-                callback: layerSelected,
-                layerName: node.data.id,
-                time: isoTValue
-            });
-        }
-    });
+    var layerRootNode = new YAHOO.widget.TextNode(
+        {label: layerHierarchy.title},
+        tree.getRoot(),
+        servers.length == 1 // Only show expanded if there's only one server
+    );
+    layerRootNode.multiExpand = false;
+    // Add layers recursively.
+    addNodes(layerRootNode, server, layerHierarchy.layers);
     tree.draw();
 }
 
 // Recursive method to add nodes to the layer selector tree control
-function addNodes(parentNode, layerArray)
+function addNodes(parentNode, server, layerArray)
 {
     for (var i = 0; i < layerArray.length; i++) {
         var layer = layerArray[i];
+        layer.server = server;
         // The treeview control uses the layer.label string for display
         var newNode = new YAHOO.widget.TextNode(layer, parentNode, false);
         if (typeof layer.children != 'undefined') {
             newNode.multiExpand = false;
-            addNodes(newNode, layer.children);
+            addNodes(newNode, server, layer.children);
         }
     }
 }
@@ -348,7 +370,7 @@ function layerSelected(layerDetails)
     }
     
     // Only show the scale bar if the data are coming from an ncWMS server
-    var scaleVisibility = server.type == 'ncWMS' ? 'visible' : 'hidden';
+    var scaleVisibility = activeServer.type == 'ncWMS' ? 'visible' : 'hidden';
     // TODO: could put these in a container and make all (in)visible at the same time
     $('scaleBar').style.visibility = scaleVisibility;
     $('scaleMin').style.visibility = scaleVisibility;
@@ -426,7 +448,7 @@ function loadTimesteps()
     $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
 
     // Get the timesteps for this day
-    server.getTimesteps({
+    activeServer.getTimesteps({
         callback: updateTimesteps,
         layerName: layerName,
         day: makeIsoDate(calendar.date)
@@ -500,7 +522,7 @@ function autoScale()
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
     }
-    server.getMinMax({
+    activeServer.getMinMax({
         callback: gotMinMax,
         layerName: layerName,
         bbox: dataBounds,
@@ -656,12 +678,11 @@ function updateMap()
     // TODO use a more informative title
     // Buffer is set to 1 to avoid loading a large halo of tiles outside the
     // current viewport
-    var baseURL = window.location.href.split("/").slice(0,-1).join("/");
     if (essc_wms == null) {
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
-            baseURL + '/wms', {
+            activeServer.url == '' ? 'wms' : activeServer.url, {
             layers: layerName,
             elevation: getZValue(),
             time: isoTValue,
@@ -672,6 +693,7 @@ function updateMap()
         );
         map.addLayers([essc_wms]);
     } else {
+        essc_wms.url = activeServer.url == '' ? 'wms' : activeServer.url;
         essc_wms.mergeNewParams({
             layers: layerName,
             elevation: getZValue(),

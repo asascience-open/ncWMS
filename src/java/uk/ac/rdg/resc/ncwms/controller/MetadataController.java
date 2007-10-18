@@ -79,8 +79,8 @@ public class MetadataController
             String url = request.getParameter("url");
             if (url != null && !url.trim().equals(""))
             {
-                this.delegateRequest(url, request, response);
-                return null; // delegateRequest writes directly to the response object
+                proxyRequest(url, request, response);
+                return null; // proxyRequest writes directly to the response object
             }
             String item = request.getParameter("item");
             if (item == null)
@@ -111,15 +111,20 @@ public class MetadataController
         catch(Exception e)
         {
             // Wrap all exceptions in a MetadataException.  These will be automatically
-            // displayed via displayMetadataException, in JSON format
+            // displayed via displayMetadataException.jsp, in JSON format
             throw new MetadataException(e);
         }
     }
     
     /**
-     * Gets the requested metadata from a third-party layer provider
+     * Forwards the request to a third party.  In this case this server is acting
+     * as a proxy.
+     * @param url The URL to the third party server (e.g. "http://myhost.com/ncWMS/wms")
+     * @param request Http request object.  All query string parameters (except "&url=")
+     * will be copied from this request object to the request to the third party server.
+     * @param response Http response object
      */
-    private void delegateRequest(String url, HttpServletRequest request,
+    static void proxyRequest(String url, HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         // The commented-out code below will only be relevant for third-party
@@ -148,21 +153,29 @@ public class MetadataController
                 fullURL.append(urlParamName + "=" + request.getParameter(urlParamName));
             }
         }
-        // TODO: better error handling
-        URLConnection conn = new URL(fullURL.toString()).openConnection();
-        // Set header information (TODO: do all headers)
-        response.setContentType(conn.getContentType());
-        response.setContentLength(conn.getContentLength());
-        InputStream in = conn.getInputStream();
-        OutputStream out = response.getOutputStream();
-        byte[] buf = new byte[8192];
-        int len;
-        while ((len = in.read(buf)) >= 0)
+        InputStream in = null;
+        OutputStream out = null;
+        try
         {
-            out.write(buf, 0, len);
+            // TODO: better error handling
+            URLConnection conn = new URL(fullURL.toString()).openConnection();
+            // Set header information (TODO: do all headers)
+            response.setContentType(conn.getContentType());
+            response.setContentLength(conn.getContentLength());
+            in = conn.getInputStream();
+            out = response.getOutputStream();
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) >= 0)
+            {
+                out.write(buf, 0, len);
+            }
         }
-        in.close(); // TODO: do the thing with try-finally
-        out.close();
+        finally
+        {
+            if (in != null) in.close();
+            if (out != null) out.close();
+        }
     }
     
     /**

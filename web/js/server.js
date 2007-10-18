@@ -36,14 +36,10 @@ function iso8601ToDate(string)
     return ret;
 }
 
-// TODO: write a function to get the list of layer providers from the server.
-// This will include the "host" ncWMS server as well as any cascaded ncWMS or WMS
-// providers that are known to the server.
-
-
 /**
  * We use the Prototype library to define this class
  */
+// TODO: why doesn't IE pick this up????
 var Server = Class.create();
 Server.prototype = {
     
@@ -58,9 +54,8 @@ Server.prototype = {
         // this script.  Therefore we need to call the hosting server, passing
         // the url of the data/metadata server as an argument.
         // var serverDetails = makeAjaxRequest();
-        // TODO: need to get all of these from the server
-        this.type = 'ncWMS';
-        //this.title = 'ESSC ncWMS server';
+        this.type = 'ncWMS'; // TODO: allow to be passed in on arguments when
+                             // server supports plain WMS
         //this.version = 'foo'; // TODO
     },
     
@@ -116,14 +111,14 @@ Server.prototype = {
      * @param filter Optional filter string to allow selective display of layers
      */
     getLayerHierarchy: function(params) {
+        var that = this; // Because "this" isn't available in the onSuccess callback
         this.makeAjaxRequest({
             urlparams: {
                 item: 'layers',
                 filter: typeof params.filter == 'undefined' ? '' : params.filter
             },
-            onSuccess: function(layerHierarchy) {
-                alert('this.url=' + this.url);
-                params.callback(layerHierarchy, this);
+            onSuccess: function(layers) { 
+                params.callback(layers, that);
             }
         });
     },

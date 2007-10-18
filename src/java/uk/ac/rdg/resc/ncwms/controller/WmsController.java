@@ -121,7 +121,7 @@ public class WmsController extends AbstractController
             }
             else if (request.equals("GetFeatureInfo"))
             {
-                return getFeatureInfo(params, httpServletResponse);
+                return getFeatureInfo(params, httpServletRequest, httpServletResponse);
             }
             else if (request.equals("GetMetadata"))
             {
@@ -315,9 +315,19 @@ public class WmsController extends AbstractController
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    public ModelAndView getFeatureInfo(RequestParams params, HttpServletResponse response)
+    public ModelAndView getFeatureInfo(RequestParams params,
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse)
         throws WmsException, Exception
     {
+        // Look to see if we're requesting data from a remote server
+        String url = params.getString("url");
+        if (url != null && !url.trim().equals(""))
+        {
+            MetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
+            return null;
+        }
+        
         GetFeatureInfoRequest request = new GetFeatureInfoRequest(params);
         GetFeatureInfoDataRequest dataRequest = request.getDataRequest();
         
@@ -408,8 +418,8 @@ public class WmsController extends AbstractController
             String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
             JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                 "Date / time", yLabel, xydataset, false, false, false);
-            response.setContentType("image/png");
-            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
+            httpServletResponse.setContentType("image/png");
+            ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(), chart, 400, 300);
             return null;
         }
     }
