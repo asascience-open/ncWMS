@@ -17,37 +17,7 @@ var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
-var server = null; // Server object (see server.js) for getting information from the server
-
-// Converts ISO8601 string to Date object
-// From http://delete.me.uk/2005/03/iso8601.html, copied 16th October 2007
-function iso8601ToDate(string)
-{
-    var regexp = "([0-9]{4})(-([0-9]{2})(-([0-9]{2})" +
-        "(T([0-9]{2}):([0-9]{2})(:([0-9]{2})(\.([0-9]+))?)?" +
-        "(Z|(([-+])([0-9]{2}):([0-9]{2})))?)?)?)?";
-    var d = string.match(new RegExp(regexp));
-
-    var offset = 0;
-    var date = new Date(d[1], 0, 1);
-
-    if (d[3]) { date.setMonth(d[3] - 1); }
-    if (d[5]) { date.setDate(d[5]); }
-    if (d[7]) { date.setHours(d[7]); }
-    if (d[8]) { date.setMinutes(d[8]); }
-    if (d[10]) { date.setSeconds(d[10]); }
-    if (d[12]) { date.setMilliseconds(Number("0." + d[12]) * 1000); }
-    if (d[14]) {
-        offset = (Number(d[16]) * 60) + Number(d[17]);
-        offset *= ((d[15] == '-') ? 1 : -1);
-    }
-
-    offset -= date.getTimezoneOffset();
-    var time = (Number(date) + (offset * 60 * 1000));
-    var ret = new Date();
-    ret.setTime(Number(time));
-    return ret;
-}
+var server = null; // Server object that's dealing with the currently-visible layer
 
 // Called when the page has loaded
 window.onload = function()
@@ -151,13 +121,22 @@ window.onload = function()
         }
     }
     
-    server = new Server('urlgoeshere');
-    // Check out version of server: can we handle this?
-    // The getLayerHierarchy() function is asynchronous.  Once we have received
-    // the result from the server we shall pass it to the makeLayerMenu() function.
-    // Construct the menu of layers from the layer hierarchy we've got from the server
-    var layerHierarchy = server.getLayerHierarchy(makeLayerMenu); // Not filtered for now
-    // Construct the menu of layers from the layer hierarchy we've got from the server
+    var servers = [
+        new Server(''), // The default server (the one hosting this Godiva2 site)
+        new Server('http://127.0.0.1:8084/ncWMS/wms') // A remote server
+    ];
+    
+    // Load the menus for each server
+    for (var i = 0; i < servers.length; i++) {
+        alert('getting layers for ' + servers[i].url);
+        // TODO Check version of server: can we handle this?
+        // The getLayerHierarchy() function is asynchronous.  Once we have received
+        // the result from the server we shall pass it to the makeLayerMenu() function.
+        servers[i].getLayerHierarchy({
+            callback : makeLayerMenu,
+            filter : '' // Not filtered for now
+        });
+    }
 }
 
 // Function that is used by the calendar to see whether a date should be disabled
@@ -247,18 +226,20 @@ function popUp(url, width, height)
 }
 
 // Populates the left-hand menu with a hierarchy of layers
-function makeLayerMenu(layerHierarchy)
+function makeLayerMenu(layerHierarchy, theServer)
 {
+    alert('Called makeLayerMenu ' + theServer.url);
     var tree = new YAHOO.widget.TreeView("layerSelector");
     // Add root node for this server
-    // TODO: add root for every server we can access
-    var serverRoot = new YAHOO.widget.TextNode({label: server.title}, tree.getRoot(), true);
+    var serverRoot = new YAHOO.widget.TextNode({label: layerHierarchy.title}, tree.getRoot(), true);
     serverRoot.multiExpand = false;
-    // Add nodes recursively
+    // Add layers recursively.  The server object will be attached to each node
     addNodes(serverRoot, layerHierarchy.layers);
     // Add an event callback that gets fired when a tree node is clicked
     tree.subscribe('labelClick', function(node) {
         if (typeof node.data.id != 'undefined') {
+            // Set the currently-active server
+            server = theServer;
             // We're only interested if this is a displayable layer, i.e. it has an id.
             
             // Update the breadcrumb trail
@@ -283,7 +264,11 @@ function makeLayerMenu(layerHierarchy)
             
             // Get the details of this layer from the server, calling layerSelected()
             // when we have the result
-            var layerDetails = server.getLayerDetails(layerSelected, node.data.id, isoTValue);
+            var layerDetails = server.getLayerDetails({
+                callback: layerSelected,
+                layerName: node.data.id,
+                time: isoTValue
+            });
         }
     });
     tree.draw();
@@ -296,7 +281,7 @@ function addNodes(parentNode, layerArray)
         var layer = layerArray[i];
         // The treeview control uses the layer.label string for display
         var newNode = new YAHOO.widget.TextNode(layer, parentNode, false);
-        if (layer.children != null) {
+        if (typeof layer.children != 'undefined') {
             newNode.multiExpand = false;
             addNodes(newNode, layer.children);
         }
@@ -416,8 +401,7 @@ function layerSelected(layerDetails)
         calendar.setRange(minYear, maxYear);
         // Get the time on the t axis that is nearest to the currently-selected
         // time, as calculated on the server
-        var nearestTime = iso8601ToDate(layerDetails.nearestTimeIso);
-        calendar.setDate(nearestTime);
+        calendar.setDate(layerDetails.nearestTime);
         calendar.refresh();
         calendar.show();
         // Load the timesteps for this date
@@ -442,7 +426,11 @@ function loadTimesteps()
     $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
 
     // Get the timesteps for this day
-    server.getTimesteps(updateTimesteps, layerName, makeIsoDate(calendar.date));
+    server.getTimesteps({
+        callback: updateTimesteps,
+        layerName: layerName,
+        day: makeIsoDate(calendar.date)
+    });
 }
 
 // Gets an ISO Date ("yyyy-mm-dd") for the given Javascript date object.
@@ -512,7 +500,13 @@ function autoScale()
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
     }
-    server.getMinMax(gotMinMax, layerName, dataBounds, getZValue(), isoTValue);
+    server.getMinMax({
+        callback: gotMinMax,
+        layerName: layerName,
+        bbox: dataBounds,
+        elevation: getZValue(),
+        time: isoTValue
+    });
 }
 
 // This function is called when we have received the min and max values from the server

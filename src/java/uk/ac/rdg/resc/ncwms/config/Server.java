@@ -43,38 +43,22 @@ import org.simpleframework.xml.Root;
 public class Server
 {
     @Element(name="title")
-    private String title; // Title for this ncWMS
+    private String title = "My ncWMS server"; // Title for this ncWMS
     @Element(name="allowFeatureInfo", required=false)
-    private boolean allowFeatureInfo; // True if we allow the GetFeatureInfo operation globally
+    private boolean allowFeatureInfo = true; // True if we allow the GetFeatureInfo operation globally
     @Element(name="maxImageWidth", required=false)
-    private int maxImageWidth;
+    private int maxImageWidth = 1024;
     @Element(name="maxImageHeight", required=false)
-    private int maxImageHeight;
+    private int maxImageHeight = 1024;
     @Element(name="abstract", required=false)
-    private String abstr; // "Abstract" is a reserved word
+    private String abstr = " "; // "abstract" is a reserved word
     @Element(name="keywords", required=false)
-    private String keywords; // Comma-separated list of keywords
+    private String keywords = " "; // Comma-separated list of keywords
     @Element(name="url", required=false)
-    private String url;
+    private String url = " ";
     @Element(name="adminpassword")
-    private String adminPassword;
+    private String adminPassword = "ncWMS";
     
-    /**
-     * Creates a new instance of Server
-     */
-    public Server()
-    {
-        // Simple XML complains if tags are empty, hence we add a space
-        this.title = "My ncWMS server";
-        this.allowFeatureInfo = true;
-        this.maxImageWidth = 1024;
-        this.maxImageHeight = 1024;
-        this.adminPassword = "ncWMS";
-        this.abstr = " ";
-        this.url = " ";
-        this.keywords = " ";
-    }
-
     public String getTitle()
     {
         return title;

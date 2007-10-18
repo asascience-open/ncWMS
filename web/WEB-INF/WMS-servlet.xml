@@ -172,6 +172,7 @@
         <property name="exceptionMappings">
             <props>
                 <prop key="uk.ac.rdg.resc.ncwms.exceptions.WmsException">displayWmsException</prop>
+                <prop key="uk.ac.rdg.resc.ncwms.exceptions.MetadataException">displayMetadataException</prop>
             </props>
         </property>
         <!-- If an unexpected error occurs (i.e. one that doesn't get expressed as

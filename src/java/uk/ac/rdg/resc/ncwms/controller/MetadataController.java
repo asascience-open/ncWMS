@@ -28,6 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -39,7 +43,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
+import uk.ac.rdg.resc.ncwms.config.ThirdPartyLayerProvider;
+import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
@@ -50,6 +55,8 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * Godiva2 site.  Eventually Godiva2 will be changed to accept standard
  * metadata (i.e. fragments of GetCapabilities)... maybe.
  *
+ * @todo Output exceptions in JSON format for display on web interface?
+ *
  * @author Jon Blower
  * $Revision$
  * $Date$
@@ -57,40 +64,105 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class MetadataController
 {
-    
     // These objects will be injected by Spring
     private Config config;
     private Factory<AbstractGrid> gridFactory;
     private MetadataStore metadataStore;
     
     public ModelAndView handleRequest(HttpServletRequest request,
+        HttpServletResponse response) throws MetadataException
+    {
+        try
+        {
+            // Check for a "url" parameter, which means that we're delegating to
+            // a third-party layer server (TODO)
+            String url = request.getParameter("url");
+            if (url != null && !url.trim().equals(""))
+            {
+                this.delegateRequest(url, request, response);
+                return null; // delegateRequest writes directly to the response object
+            }
+            String item = request.getParameter("item");
+            if (item == null)
+            {
+                throw new Exception("Must provide an ITEM parameter");
+            }
+            else if (item.equals("layers"))
+            {
+                return this.showLayerHierarchy(request, response);
+            }
+            else if (item.equals("layerDetails"))
+            {
+                return this.showLayerDetails(request, response);
+            }
+            else if (item.equals("timesteps"))
+            {
+                return this.showTimesteps(request, response);
+            }
+            else if (item.equals("minmax"))
+            {
+                return this.showMinMax(request, response);
+            }
+            else
+            {
+                throw new Exception("Invalid value for ITEM parameter");
+            }
+        }
+        catch(Exception e)
+        {
+            // Wrap all exceptions in a MetadataException.  These will be automatically
+            // displayed via displayMetadataException, in JSON format
+            throw new MetadataException(e);
+        }
+    }
+    
+    /**
+     * Gets the requested metadata from a third-party layer provider
+     */
+    private void delegateRequest(String url, HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        String item = request.getParameter("item");
-        if (item == null)
+        // The commented-out code below will only be relevant for third-party
+        // plain WMSs.
+        /*ThirdPartyLayerProvider layerProvider =
+            this.config.getThirdPartyLayerProviders().get(url);
+        if (layerProvider == null)
         {
-            throw new WmsException("Must provide an ITEM parameter");
+            throw new Exception("Layer provider at URL " + url + " not registered");
         }
-        else if (item.equals("layers"))
+        if (layerProvider.getType() != ThirdPartyLayerProvider.Type.NCWMS)
         {
-            return this.showLayerHierarchy(request, response);
-        }
-        else if (item.equals("layerDetails"))
+            throw new Exception("Can only handle ncWMS third-party providers");
+        }*/
+        // Download the data from the remote URL
+        // TODO: is there a proxy class we can invoke here?
+        StringBuffer fullURL = new StringBuffer(url);
+        boolean firstTime = true;
+        for (Object urlParamNameObj : request.getParameterMap().keySet())
         {
-            return this.showLayerDetails(request, response);
+            fullURL.append(firstTime ? "?" : "&");
+            firstTime = false;
+            String urlParamName = (String)urlParamNameObj;
+            if (!urlParamName.equalsIgnoreCase("url"))
+            {
+                fullURL.append(urlParamName + "=" + request.getParameter(urlParamName));
+            }
         }
-        else if (item.equals("timesteps"))
+        // TODO: better error handling
+        URLConnection conn = new URL(fullURL.toString()).openConnection();
+        // Set header information (TODO: do all headers)
+        response.setContentType(conn.getContentType());
+        response.setContentLength(conn.getContentLength());
+        InputStream in = conn.getInputStream();
+        OutputStream out = response.getOutputStream();
+        byte[] buf = new byte[8192];
+        int len;
+        while ((len = in.read(buf)) >= 0)
         {
-            return this.showTimesteps(request, response);
+            out.write(buf, 0, len);
         }
-        else if (item.equals("minmax"))
-        {
-            return this.showMinMax(request, response);
-        }
-        else
-        {
-            throw new WmsException("Invalid value for ITEM parameter");
-        }
+        in.close(); // TODO: do the thing with try-finally
+        out.close();
     }
     
     /**
@@ -98,11 +170,15 @@ public class MetadataController
      * Filtering is currently done by matching the first part of the dataset
      * id (e.g. "MERSEA_BALTIC").
      */
-    public ModelAndView showLayerHierarchy(HttpServletRequest request,
+    private ModelAndView showLayerHierarchy(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         // There could be more than one filter
-        String[] filters = request.getParameter("filter").split(",");
+        String[] filters = {""};
+        if (request.getParameter("filter") != null)
+        {
+            filters = request.getParameter("filter").split(",");
+        }
         // Find the list of displayable datasets that match any of the
         // provided filters
         List<Dataset> displayables = new ArrayList<Dataset>();
@@ -127,21 +203,24 @@ public class MetadataController
                 }
             }
         }
-        return new ModelAndView("showLayerHierarchy", "datasets", displayables);
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("datasets", displayables);
+        models.put("serverInfo", this.config.getServer());
+        return new ModelAndView("showLayerHierarchy", models);
     }
     
     /**
      * Shows an JSON document containing the details of the given variable (units,
      * zvalues, tvalues etc).  See showLayerDetails.jsp.
      */
-    public ModelAndView showLayerDetails(HttpServletRequest request,
+    private ModelAndView showLayerDetails(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Layer layer = this.getLayer(request);
         String targetDateIso = request.getParameter("time");
         if (targetDateIso == null || targetDateIso.trim().equals(""))
         {
-            throw new WmsException("Must provide a value for the time parameter");
+            throw new Exception("Must provide a value for the time parameter");
         }
         long targetTimeMs = WmsUtils.iso8601ToDate(targetDateIso).getTime();
         
@@ -161,7 +240,7 @@ public class MetadataController
             {
                 nearestTimeMs = ms;
             }
-            Calendar cal = getCalendar(ms);
+            Calendar cal = getGMTCalendar(ms);
             int year = cal.get(Calendar.YEAR);
             Map<Integer, List<Integer>> months = datesWithData.get(year);
             if (months == null)
@@ -212,9 +291,9 @@ public class MetadataController
     
     /**
      * @return a new Calendar object, set to the given time (in milliseconds
-     * since the epoch).
+     * since the epoch), using the GMT timezone.
      */
-    public static Calendar getCalendar(long millisecondsSinceEpoch)
+    private static Calendar getGMTCalendar(long millisecondsSinceEpoch)
     {
         Date date = new Date(millisecondsSinceEpoch);
         Calendar cal = Calendar.getInstance();
@@ -228,14 +307,14 @@ public class MetadataController
      * Finds all the timesteps that occur on the given date, which will be provided
      * in the form "2007-10-18".
      */
-    public ModelAndView showTimesteps(HttpServletRequest request,
+    private ModelAndView showTimesteps(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Layer layer = getLayer(request);
         String dayStr = request.getParameter("day");
         if (dayStr == null)
         {
-            throw new WmsException("Must provide a value for the day parameter");
+            throw new Exception("Must provide a value for the day parameter");
         }
         Date date = WmsUtils.iso8601ToDate(dayStr);
         if (!layer.isTaxisPresent()) return null; // return no data if no time axis present
@@ -261,8 +340,8 @@ public class MetadataController
      */
     private static boolean onSameDay(long s1, long s2)
     {
-        Calendar cal1 = getCalendar(s1);
-        Calendar cal2 = getCalendar(s2);
+        Calendar cal1 = getGMTCalendar(s1);
+        Calendar cal2 = getGMTCalendar(s2);
         // Set hours, minutes, seconds and milliseconds to zero for both
         // calendars
         cal1.set(Calendar.HOUR_OF_DAY, 0);
@@ -281,7 +360,7 @@ public class MetadataController
      * Shows an XML document containing the minimum and maximum values for the
      * tile given in the parameters.
      */
-    public ModelAndView showMinMax(HttpServletRequest request,
+    private ModelAndView showMinMax(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         RequestParams params = new RequestParams(request.getParameterMap());

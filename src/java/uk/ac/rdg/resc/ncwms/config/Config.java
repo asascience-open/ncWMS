@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -64,9 +65,6 @@ public class Config implements ApplicationContextAware
 {
     private static final Logger logger = Logger.getLogger(Config.class);
     
-    // When we've created a Config object, this field remembers it
-    private static Config storedConfig;
-    
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
     // presumably because the definition doesn't clarify what sort of List should
@@ -87,6 +85,13 @@ public class Config implements ApplicationContextAware
     @Element(name="server")
     private Server server = new Server();
     
+    // These are third-party providers of WMS layers.  These layers do not
+    // appear in the Capabilities document, but are available to the Godiva2
+    // interactive website.
+    @ElementList(name="thirdpartylayerproviders", type=ThirdPartyLayerProvider.class, required=false)
+    private ArrayList<ThirdPartyLayerProvider> thirdPartyProviders =
+        new ArrayList<ThirdPartyLayerProvider>();
+    
     // Time of the last update to this configuration or any of the contained
     // metadata, in milliseconds since the epoch
     private long lastUpdateTime = new Date().getTime(); 
@@ -99,20 +104,17 @@ public class Config implements ApplicationContextAware
      * This contains the map of dataset IDs to Dataset objects
      */
     private Map<String, Dataset> datasets = new HashMap<String, Dataset>();
+    /**
+     * This contains the map of URLs to ThirdPartyLayerProvider objects
+     */
+    private Map<String, ThirdPartyLayerProvider> thirdPartyLayerProviders 
+        = new HashMap<String, ThirdPartyLayerProvider>();
     
     /**
      * Private constructor.  This prevents other classes from creating
      * new Config objects directly.
      */
     private Config() {}
-    
-    /**
-     * Gets an already-created config object
-     */
-    public static Config getConfig()
-    {
-        return storedConfig;
-    }
     
     /**
      * Reads configuration information from the file location given by the
@@ -171,7 +173,6 @@ public class Config implements ApplicationContextAware
         // The config object is needed by the metadata store when setting
         // properties of the returned Layer objects.
         metadataStore.setConfig(config);
-        storedConfig = config;
         return config;
     }
     
@@ -194,13 +195,13 @@ public class Config implements ApplicationContextAware
     
     /**
      * Checks that the data we have read are valid.  Checks that there are no
-     * duplicate dataset IDs.
+     * duplicate dataset IDs or duplicate URLs for third-party layer providers.
      */
     @Validate
-    public void checkDuplicateDatasetIds() throws PersistenceException
+    public void validate() throws PersistenceException
     {
         List<String> dsIds = new ArrayList<String>();
-        for (Dataset ds : datasetList)
+        for (Dataset ds : this.datasetList)
         {
             String dsId = ds.getId();
             if (dsIds.contains(dsId))
@@ -209,7 +210,7 @@ public class Config implements ApplicationContextAware
             }
             dsIds.add(dsId);
         }
-        for (Dataset ds : threddsDatasets)
+        for (Dataset ds : this.threddsDatasets)
         {
             String dsId = ds.getId();
             if (dsIds.contains(dsId))
@@ -217,13 +218,25 @@ public class Config implements ApplicationContextAware
                 throw new PersistenceException("Duplicate dataset id %s", dsId);
             }
             dsIds.add(dsId);
+        }
+        
+        // Check that URLs of third-party layer providers are unique
+        List<String> thirdPartyUrls = new ArrayList<String>();
+        for (ThirdPartyLayerProvider provider : this.thirdPartyProviders)
+        {
+            String url = provider.getUrl();
+            if (thirdPartyUrls.contains(url))
+            {
+                throw new PersistenceException("Duplicate third party layer provider URL %s", url);
+            }
+            thirdPartyUrls.add(url);
         }
     }
     
     /**
      * Called when we have checked that the configuration is valid.  Populates
-     * the datasets hashmap and loads the datasets from the THREDDS catalog.
-     * Creates the AdminUser object.
+     * the datasets hashmap, loads the datasets from the THREDDS catalog and 
+     * populates the hashmap of third-party layer providers.
      */
     @Commit
     public void build()
@@ -236,6 +249,10 @@ public class Config implements ApplicationContextAware
             this.datasets.put(ds.getId(), ds);
         }
         this.loadThreddsCatalog();
+        for (ThirdPartyLayerProvider provider : this.thirdPartyProviders)
+        {
+            this.thirdPartyLayerProviders.put(provider.getUrl(), provider);
+        }
     }
     
     public void setLastUpdateTime(Date date)
@@ -362,6 +379,14 @@ public class Config implements ApplicationContextAware
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
         this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
+    }
+    
+    /**
+     * Gets the map of URLs to ThirdPartyLayerProvider objects.
+     */
+    public Map<String, ThirdPartyLayerProvider> getThirdPartyLayerProviders()
+    {
+        return this.thirdPartyLayerProviders;
     }
 
     /**
