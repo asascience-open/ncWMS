@@ -18,13 +18,16 @@ var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
-var servers = [
-        new Server(''), // The server hosting this Godiva2 site
-        new Server('http://127.0.0.1:8084/ncWMS/wms') // A remote server
-    ];; // Servers providing layers to this site.  Will be set in onload()
-var activeServer; // The server that is serving the currently-selected layer
+var activeServer; // The server (url) that is serving the currently-selected layer (see dataSources.js)
 
+var menu = null; // Can be set to a manually-created menu hierarchy
 var tree = null; // The tree control in the left-hand panel
+
+// Returns true if we are using a manually-specified menu system
+function usingManualMenu()
+{
+    return typeof menu != 'undefined' && menu != null;
+}
 
 // Called when the page has loaded
 window.onload = function()
@@ -123,37 +126,48 @@ window.onload = function()
                     // we must adapt the site for this brand (e.g. by showing only
                     // certain datasets)
                     filter = keyAndVal[1];
+                    if (filter == 'MERSEA') {
+                        menu = merseaMenu; // See dataSources.js
+                    }
                 }
             }
         }
     }
-    
     setupTreeControl();
-    
-    // Load the menus for each server
-    for (var i = 0; i < servers.length; i++) {
-        // TODO Check version of server: can we handle this?
-        // The getLayerHierarchy() function is asynchronous.  Once we have received
-        // the result from the server we shall pass it to the makeLayerMenu() function.
-        servers[i].getLayerHierarchy({
-            callback : makeLayerMenu, // Takes two arguments: the returned layers and the server object
-            filter : '' // Not filtered for now
-        });
-    }
 }
 
 function setupTreeControl()
 {
     tree = new YAHOO.widget.TreeView('layerSelector');
     
-    // Add root node for each server
-    for (var i = 0; i < servers.length; i++) {
-        var layerRootNode = new YAHOO.widget.TextNode(
-            {label: "Loading ...", server: servers[i]},
-            tree.getRoot(),
-            i == 0 // Only show the first node expanded
-        );
-        layerRootNode.multiExpand = false;
+    if (usingManualMenu()) {
+        // We'll create the menu based on the manually-set hierarchy
+        // The server object is already in the layer object so we pass null here
+        addNodes(tree.getRoot(), null, menu);
+    } else {
+        // We're populating the menus automatically based on the hierarchy
+        // returned by the server
+        // The servers can be specified in dataSources.js but if not, we'll just
+        // use the default server
+        if (typeof servers == 'undefined' || servers == null) {
+            servers = [''];
+        }
+        
+        // Add a root node in the tree for each server
+        for (var i = 0; i < servers.length; i++) {
+            var layerRootNode = new YAHOO.widget.TextNode(
+                {label: "Loading ...", server: servers[i]},
+                tree.getRoot(),
+                servers.length == 1 // Only show expanded if this is the only server
+            );
+            layerRootNode.multiExpand = false;
+            // The getLayerHierarchy() function is asynchronous.  Once we have received
+            // the result from the server we shall pass it to the makeLayerMenu() function.
+            getLayerHierarchy(servers[i], {
+                callback : makeLayerMenu, // Takes two arguments: the returned layers and the server object
+                filter : '' // Not filtered for now
+            });
+        }
     }
         
     // Add an event callback that gets fired when a tree node is clicked
@@ -185,7 +199,7 @@ function setupTreeControl()
             
             // Get the details of this layer from the server, calling layerSelected()
             // when we have the result
-            var layerDetails = activeServer.getLayerDetails({
+            var layerDetails = getLayerDetails(activeServer, {
                 callback: layerSelected,
                 layerName: node.data.id,
                 time: isoTValue
@@ -232,9 +246,9 @@ function getFeatureInfo(e)
             WIDTH: essc_wms.map.size.w,
             HEIGHT: essc_wms.map.size.h
         };
-        if (activeServer.url != '') {
+        if (activeServer != '') {
             // This is the signal to the server to load the data from elsewhere
-            params.url = activeServer.url;
+            params.url = activeServer;
         }
         featureInfoUrl = essc_wms.getFullRequestString(
             params,
@@ -293,20 +307,13 @@ function popUp(url, width, height)
 function makeLayerMenu(layerHierarchy, server)
 {
     // Find the root node for this server
-    var node = null;
-    var children = tree.getRoot().children;
-    for (var i = 0; i < children.length; i++) {
-        if (children[i].data.server === server) {
-            children[i].data.label = layerHierarchy.title;
-            // TODO: how get the new title to appear on the interface?
-            node = children[i];
-            break;
-        }
-    }
+    var node = tree.getNodeByProperty('server', server);
     if (node == null) {
         alert("Internal error: can't find server node");
         return;
     }
+    node.data.label = layerHierarchy.title;
+    node.label = layerHierarchy.title;
     // Add layers recursively.
     addNodes(node, server, layerHierarchy.layers);
     tree.draw();
@@ -317,7 +324,12 @@ function addNodes(parentNode, server, layerArray)
 {
     for (var i = 0; i < layerArray.length; i++) {
         var layer = layerArray[i];
-        layer.server = server;
+        if (server != null) {
+            // If we're adding nodes from a manually-specified hierarchy
+            // (set in the "menu" variable) then server will be null because
+            // the server has already been set on the layer object.
+            layer.server = server;
+        }
         // The treeview control uses the layer.label string for display
         var newNode = new YAHOO.widget.TextNode(layer, parentNode, false);
         if (typeof layer.children != 'undefined') {
@@ -335,8 +347,14 @@ function layerSelected(layerDetails)
     newVariable = true;
     resetAnimation();
     
-    // TODO: units are ncWMS-specific
-    $('units').innerHTML = '<b>Units: </b>' + layerDetails.units;
+    // Units are ncWMS-specific
+    var isNcWMS = false;
+    if (typeof layerDetails.units != 'undefined') {
+        $('units').innerHTML = '<b>Units: </b>' + layerDetails.units;
+        isNcWMS = true;
+    } else {
+        $('units').innerHTML = '';
+    }
 
     // clear the list of z values
     $('zValues').options.length = 0; 
@@ -387,7 +405,7 @@ function layerSelected(layerDetails)
     }
     
     // Only show the scale bar if the data are coming from an ncWMS server
-    var scaleVisibility = activeServer.type == 'ncWMS' ? 'visible' : 'hidden';
+    var scaleVisibility = isNcWMS ? 'visible' : 'hidden';
     // TODO: could put these in a container and make all (in)visible at the same time
     $('scaleBar').style.visibility = scaleVisibility;
     $('scaleMin').style.visibility = scaleVisibility;
@@ -465,7 +483,7 @@ function loadTimesteps()
     $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
 
     // Get the timesteps for this day
-    activeServer.getTimesteps({
+    getTimesteps(activeServer, {
         callback: updateTimesteps,
         layerName: layerName,
         day: makeIsoDate(calendar.date)
@@ -539,7 +557,7 @@ function autoScale()
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
     }
-    activeServer.getMinMax({
+    getMinMax(activeServer, {
         callback: gotMinMax,
         layerName: layerName,
         bbox: dataBounds,
@@ -699,7 +717,7 @@ function updateMap()
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
-            activeServer.url == '' ? 'wms' : activeServer.url, {
+            activeServer == '' ? 'wms' : activeServer, {
             layers: layerName,
             elevation: getZValue(),
             time: isoTValue,
@@ -710,7 +728,7 @@ function updateMap()
         );
         map.addLayers([essc_wms]);
     } else {
-        essc_wms.url = activeServer.url == '' ? 'wms' : activeServer.url;
+        essc_wms.url = activeServer == '' ? 'wms' : activeServer;
         essc_wms.mergeNewParams({
             layers: layerName,
             elevation: getZValue(),
