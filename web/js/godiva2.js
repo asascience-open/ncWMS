@@ -18,7 +18,10 @@ var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
-var servers = null; // Servers providing layers to this site.  Will be set in onload()
+var servers = [
+        new Server(''), // The server hosting this Godiva2 site
+        new Server('http://127.0.0.1:8084/ncWMS/wms') // A remote server
+    ];; // Servers providing layers to this site.  Will be set in onload()
 var activeServer; // The server that is serving the currently-selected layer
 
 var tree = null; // The tree control in the left-hand panel
@@ -125,11 +128,6 @@ window.onload = function()
         }
     }
     
-    servers = [
-        new Server(''), // The server hosting this Godiva2 site
-        new Server('http://lovejoy.nerc-essc.ac.uk:9080/ncWMS/wms') // A remote server
-    ];
-    
     setupTreeControl();
     
     // Load the menus for each server
@@ -147,6 +145,17 @@ window.onload = function()
 function setupTreeControl()
 {
     tree = new YAHOO.widget.TreeView('layerSelector');
+    
+    // Add root node for each server
+    for (var i = 0; i < servers.length; i++) {
+        var layerRootNode = new YAHOO.widget.TextNode(
+            {label: "Loading...", server: servers[i]},
+            tree.getRoot(),
+            i == 0 // Only show the first node expanded
+        );
+        layerRootNode.multiExpand = false;
+    }
+        
     // Add an event callback that gets fired when a tree node is clicked
     tree.subscribe('labelClick', function(node) {
         if (typeof node.data.id != 'undefined') {
@@ -283,15 +292,24 @@ function popUp(url, width, height)
 // Populates the left-hand menu with a hierarchy of layers
 function makeLayerMenu(layerHierarchy, server)
 {
-    // Add root node for this server
-    var layerRootNode = new YAHOO.widget.TextNode(
-        {label: layerHierarchy.title},
-        tree.getRoot(),
-        servers.length == 1 // Only show expanded if there's only one server
-    );
-    layerRootNode.multiExpand = false;
+    // Find the root node for this server
+    var node = null;
+    var children = tree.getRoot().children;
+    for (var i = 0; i < children.length; i++) {
+        if (children[i].data.server === server) {
+            alert("found serve");
+            children[i].data.label = layerHierarchy.title;
+            node = children[i];
+            break;
+        }
+    }
+    if (node == null) {
+        alert("Internal error: can't find server node");
+        return;
+    }
+    tree.getRoot().refresh();
     // Add layers recursively.
-    addNodes(layerRootNode, server, layerHierarchy.layers);
+    addNodes(node, server, layerHierarchy.layers);
     tree.draw();
 }
 

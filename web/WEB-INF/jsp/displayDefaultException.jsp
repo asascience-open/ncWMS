@@ -1,5 +1,10 @@
 <%@include file="xml_header.jsp"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%
+response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
+response.setHeader("Pragma","no-cache"); //HTTP 1.0
+response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
+%>
 <%-- Displays an unexpected exception (i.e. not a WmsException) --%>
 <ServiceExceptionReport version="1.3.0"
                         xmlns="http://www.opengis.net/ogc"

@@ -40,7 +40,7 @@ function iso8601ToDate(string)
  * We use the Prototype library to define this class
  */
 // TODO: why doesn't IE pick this up????
-var Server = Class.create();
+Server = Class.create();
 Server.prototype = {
     
     /**
@@ -72,7 +72,7 @@ Server.prototype = {
     makeAjaxRequest: function(params) {
         if (typeof params.onServerError == 'undefined') {
             params.onServerError = function(exception) {
-                alert("Server exception class: " + exception.class + 
+                alert("Server exception class: " + exception.className + 
                     ", Message: " + exception.message);
             }
         }
