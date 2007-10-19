@@ -149,7 +149,7 @@ function setupTreeControl()
     // Add root node for each server
     for (var i = 0; i < servers.length; i++) {
         var layerRootNode = new YAHOO.widget.TextNode(
-            {label: "Loading...", server: servers[i]},
+            {label: "Loading ...", server: servers[i]},
             tree.getRoot(),
             i == 0 // Only show the first node expanded
         );
@@ -297,8 +297,8 @@ function makeLayerMenu(layerHierarchy, server)
     var children = tree.getRoot().children;
     for (var i = 0; i < children.length; i++) {
         if (children[i].data.server === server) {
-            alert("found serve");
             children[i].data.label = layerHierarchy.title;
+            // TODO: how get the new title to appear on the interface?
             node = children[i];
             break;
         }
@@ -307,7 +307,6 @@ function makeLayerMenu(layerHierarchy, server)
         alert("Internal error: can't find server node");
         return;
     }
-    tree.getRoot().refresh();
     // Add layers recursively.
     addNodes(node, server, layerHierarchy.layers);
     tree.draw();
