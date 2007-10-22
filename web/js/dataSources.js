@@ -1,8 +1,6 @@
 // Use this file to define the data sources for the Godiva2 site.
 // If this file is not included or blank then defaults will be used
 
-alert('Loading dataSources.js');
-
 // These are the servers that will provide layers to this site
 var homeServer = ''; // The server hosting this Godiva2 site
 var esscServer = 'http://lovejoy.nerc-essc.ac.uk:9080/ncWMS/wms'; // A remote server
