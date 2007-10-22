@@ -2,9 +2,8 @@
 // be loaded if someone loads up the godiva2 site with "filter=MERSEA".
 
 // These are the servers that will provide layers to this site
-var homeServer = ''; // The server hosting this Godiva2 site
-var esscServer = 'http://lovejoy.nerc-essc.ac.uk:9080/ncWMS/wms'; // A remote server
-var servers = [homeServer, esscServer];
+var esscServer = 'http://lovejoy.nerc-essc.ac.uk:9080/ncWMS/wms';
+var servers = [esscServer];
 
 // This object allows for the manual setup of the structure of the left-hand menu,
 // so that layers can be added in an arbitrary hierarchy.  Remember a node with

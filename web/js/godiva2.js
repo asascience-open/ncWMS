@@ -18,6 +18,8 @@ var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
+var servers = ['']; // Means that data will only be loaded from this server,
+                    // unless changed later (e.g. by loading in external javascript)
 var activeServer; // The server (url) that is serving the currently-selected layer (see dataSources.js)
 
 var menu = null; // Can be set to a manually-created menu hierarchy
@@ -127,12 +129,12 @@ window.onload = function()
                     // certain datasets)
                     filter = keyAndVal[1];
                     if (filter == 'MERSEA') {
-                        //alert("merseaMenu = " + merseaMenu);
+                        // Load the MERSEA menu structure from merseaMenu.js
                         var e = document.createElement("script");
                         e.src = "js/merseaMenu.js";
                         e.type="text/javascript";
                         e.onload = function() {
-                            menu = merseaMenu; // See dataSources.js
+                            //menu = merseaMenu; // See merseaMenu.js
                             setupTreeControl();
                         }
                         document.getElementsByTagName("head")[0].appendChild(e);
