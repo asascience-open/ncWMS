@@ -129,7 +129,7 @@ window.onload = function()
                     if (filter == 'MERSEA') {
                         //alert("merseaMenu = " + merseaMenu);
                         var e = document.createElement("script");
-                        e.src = "js/dataSources.js";
+                        e.src = "js/merseaMenu.js";
                         e.type="text/javascript";
                         e.onload = function() {
                             menu = merseaMenu; // See dataSources.js

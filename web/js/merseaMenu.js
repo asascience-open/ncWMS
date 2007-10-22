@@ -1,5 +1,5 @@
-// Use this file to define the data sources for the Godiva2 site.
-// If this file is not included or blank then defaults will be used
+// This file defines the menu structure for the MERSEA DQV site.  This file will
+// be loaded if someone loads up the godiva2 site with "filter=MERSEA".
 
 // These are the servers that will provide layers to this site
 var homeServer = ''; // The server hosting this Godiva2 site
