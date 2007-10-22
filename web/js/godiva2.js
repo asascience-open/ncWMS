@@ -127,7 +127,13 @@ window.onload = function()
                     // certain datasets)
                     filter = keyAndVal[1];
                     if (filter == 'MERSEA') {
-                        menu = merseaMenu; // See dataSources.js
+                       //alert("merseaMenu = " + merseaMenu);
+                       /*var e = document.createElement("script");
+                       e.src = "js/dataSources.js";
+                       e.type="text/javascript";
+                       document.getElementsByTagName("head")[0].appendChild(e);
+                       alert("loaded. merseaMenu = " + merseaMenu);*/
+                       menu = merseaMenu; // See dataSources.js
                     }
                 }
             }
