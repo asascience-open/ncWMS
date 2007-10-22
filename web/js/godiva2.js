@@ -134,7 +134,18 @@ window.onload = function()
                         e.src = "js/merseaMenu.js";
                         e.type="text/javascript";
                         e.onload = function() {
-                            //menu = merseaMenu; // See merseaMenu.js
+                            menu = merseaMenu; // See merseaMenu.js
+                            setupTreeControl();
+                        }
+                        document.getElementsByTagName("head")[0].appendChild(e);
+                    } else if (filter == 'ECOOP') {
+                        // TODO: refactor this!
+                        // Load the ECOOP menu structure from ecoopMenu.js
+                        var e = document.createElement("script");
+                        e.src = "js/ecoopMenu.js";
+                        e.type="text/javascript";
+                        e.onload = function() {
+                            menu = ecoopMenu; // See ecoopMenu.js
                             setupTreeControl();
                         }
                         document.getElementsByTagName("head")[0].appendChild(e);
