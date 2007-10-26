@@ -179,47 +179,32 @@ public class MetadataController
     }
     
     /**
-     * Shows the hierarchy of layers available from this server, optionally filtered.
-     * Filtering is currently done by matching the first part of the dataset
-     * id (e.g. "MERSEA_BALTIC").
+     * Shows the hierarchy of layers available from this server, or a pre-set
+     * hierarchy.
      */
     private ModelAndView showLayerHierarchy(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        // There could be more than one filter
-        String[] filters = {""};
-        if (request.getParameter("filter") != null)
+        // Look to see if we're requesting a pre-set menu hierarchy
+        String menu = request.getParameter("menu");
+        if (menu == null || menu.trim().equalsIgnoreCase(""))
         {
-            filters = request.getParameter("filter").split(",");
-        }
-        // Find the list of displayable datasets that match any of the
-        // provided filters
-        List<Dataset> displayables = new ArrayList<Dataset>();
-        for (Dataset ds : this.config.getDatasets().values())
-        {
-            if (ds.isReady()) // Check that the dataset is loaded properly
+            // We're loading all layers from this server from datasets that are ready
+            List<Dataset> displayables = new ArrayList<Dataset>();
+            for (Dataset ds : this.config.getDatasets().values())
             {
-                if (filters == null)
-                {
-                    displayables.add(ds);
-                }
-                else
-                {
-                    for (String filter : filters)
-                    {
-                        if (ds.getId().startsWith(filter))
-                        {
-                            displayables.add(ds);
-                            break;
-                        }
-                    }
-                }
+                if (ds.isReady()) displayables.add(ds);
             }
+            Map<String, Object> models = new HashMap<String, Object>();
+            models.put("datasets", displayables);
+            models.put("serverInfo", this.config.getServer());
+            return new ModelAndView("showLayerHierarchy", models);
         }
-        Map<String, Object> models = new HashMap<String, Object>();
-        models.put("datasets", displayables);
-        models.put("serverInfo", this.config.getServer());
-        return new ModelAndView("showLayerHierarchy", models);
+        else
+        {
+            // We're using a pre-set hierarchy.
+            return new ModelAndView(menu.toLowerCase() + "Menu");
+        }
     }
     
     /**

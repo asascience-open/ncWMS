@@ -22,14 +22,7 @@ var servers = ['']; // Means that data will only be loaded from this server,
                     // unless changed later (e.g. by loading in external javascript)
 var activeServer; // The server (url) that is serving the currently-selected layer (see dataSources.js)
 
-var menu = null; // Can be set to a manually-created menu hierarchy
 var tree = null; // The tree control in the left-hand panel
-
-// Returns true if we are using a manually-specified menu system
-function usingManualMenu()
-{
-    return typeof menu != 'undefined' && menu != null;
-}
 
 // Called when the page has loaded
 window.onload = function()
@@ -93,7 +86,7 @@ window.onload = function()
     // Add a listener for GetFeatureInfo
     map.events.register('click', map, getFeatureInfo);
     
-    var filter = '';
+    var menu = ''; // This will be set if we're requesting a specific menu
     // see if we are recreating a view from a permalink
     if (window.location.search != '') {
         autoLoad = new Object();
@@ -124,51 +117,23 @@ window.onload = function()
                 } else if (key == 'scale') {
                     autoLoad.scaleMin = keyAndVal[1].split(',')[0];
                     autoLoad.scaleMax = keyAndVal[1].split(',')[1];
-                } else if (key == 'filter') {
+                } else if (key == 'menu') {
                     // we must adapt the site for this brand (e.g. by showing only
                     // certain datasets)
-                    filter = keyAndVal[1];
-                    if (filter == 'MERSEA') {
-                        // Load the MERSEA menu structure from merseaMenu.js
-                        var e = document.createElement("script");
-                        e.src = "js/merseaMenu.js";
-                        e.type="text/javascript";
-                        e.onload = function() {
-                            menu = merseaMenu; // See merseaMenu.js
-                            setupTreeControl();
-                        }
-                        document.getElementsByTagName("head")[0].appendChild(e);
-                    } else if (filter == 'ECOOP') {
-                        // TODO: refactor this!
-                        // Load the ECOOP menu structure from ecoopMenu.js
-                        var e = document.createElement("script");
-                        e.src = "js/ecoopMenu.js";
-                        e.type="text/javascript";
-                        e.onload = function() {
-                            menu = ecoopMenu; // See ecoopMenu.js
-                            setupTreeControl();
-                        }
-                        document.getElementsByTagName("head")[0].appendChild(e);
-                    }
+                    menu = keyAndVal[1];
                 }
             }
         }
     }
-    if (filter == '') {
-        // We haven't loaded the menu from elsewhere
-        setupTreeControl();
-    }
+    // We haven't loaded the menu from elsewhere
+    setupTreeControl(menu);
 }
 
-function setupTreeControl()
+function setupTreeControl(menu)
 {
     tree = new YAHOO.widget.TreeView('layerSelector');
     
-    if (usingManualMenu()) {
-        // We'll create the menu based on the manually-set hierarchy
-        // The server object is already in the layer object so we pass null here
-        addNodes(tree.getRoot(), null, menu);
-    } else {
+    if (menu == '') {
         // We're populating the menus automatically based on the hierarchy
         // returned by the server
         // The servers can be specified in dataSources.js but if not, we'll just
@@ -188,10 +153,18 @@ function setupTreeControl()
             // The getLayerHierarchy() function is asynchronous.  Once we have received
             // the result from the server we shall pass it to the makeLayerMenu() function.
             getLayerHierarchy(servers[i], {
-                callback : makeLayerMenu, // Takes two arguments: the returned layers and the server object
-                filter : '' // Not filtered for now
+                callback : makeLayerMenu // Takes two arguments: the returned layers and the server object
             });
         }
+    } else {
+        // We're requesting a specific menu hierarchy
+        getLayerHierarchy('', { // We are loading from the host server
+            callback: function(layerHierarchy, url) {
+                addNodes(tree.getRoot(), null, layerHierarchy.layers);
+                tree.draw();
+            },
+            menu: menu
+        });
     }
         
     // Add an event callback that gets fired when a tree node is clicked
@@ -321,8 +294,8 @@ function gotFeatureInfo(response)
 
 function popUp(url, width, height)
 {
-    day = new Date();
-    id = day.getTime();
+    var day = new Date();
+    var id = day.getTime();
     window.open(url, id, 'toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=1,width='
         + width + ',height=' + height + ',left = 300,top = 300');
 }

@@ -35,7 +35,7 @@ function iso8601ToDate(string)
 }
     
 /**
- * 'Private' function for making an Ajax request to the server.  This will
+ * Function for making an Ajax request to the server.  This will
  * simply throw an alert if the XMLHttpRequest call fails.
  * @param url URL to the third-party server or '' to read data from the "home" server
  * @param Object containing parameters, which must include:
@@ -83,13 +83,14 @@ function makeAjaxRequest(url, params) {
 /**
  * Gets the skeleton hierarchy of layers that are offered by this server
  * @param params Object containing a callback that will be called when the result
- * is returned from the server and an optional filter.
+ * is returned from the server and an optional menu argument that can be used to
+ * load a specific menu structure.
  */
 function getLayerHierarchy(url, params) {
     makeAjaxRequest(url, {
         urlparams: {
             item: 'layers',
-            filter: typeof params.filter == 'undefined' ? '' : params.filter
+            menu: typeof params.menu == 'undefined' ? '' : params.menu
         },
         onSuccess: function(layers) { 
             params.callback(layers, url);
