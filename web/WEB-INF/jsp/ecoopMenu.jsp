@@ -192,11 +192,6 @@ layers: [
                         "id" : "ECOOP_ROMS_TEST/latent",
                         "label" : "Net Latent Heat Flux",
                         "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/latent",
-                        "label" : "Net Latent Heat Flux",
-                        "server" : "${esscServer}"
                     }
                 ]
             }
