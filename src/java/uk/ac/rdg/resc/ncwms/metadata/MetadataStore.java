@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import uk.ac.rdg.resc.ncwms.config.Config;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -60,7 +61,7 @@ public abstract class MetadataStore
     /**
      * Subclasses can override this method to provide initialization code, which
      * is called after injection of all fields by Spring (i.e. the context object
-     * will be set before calling this method
+     * will be set before calling this method).
      * This default method does nothing.
      */
     public void init() throws Exception {}
@@ -131,6 +132,21 @@ public abstract class MetadataStore
      * implementing classes should log the error and return null.
      */
     public abstract Date getLastUpdateTime(String datasetId);
+    
+    /**
+     * Sets the Dataset property on the given layer.  Checks for Vector
+     * layers, setting the dataset property on the component layers too.
+     */
+    protected static void addDatasetProperty(Layer layer, Dataset ds)
+    {
+        ((LayerImpl)layer).setDataset(ds);
+        if (layer instanceof VectorLayer)
+        {
+            VectorLayer vecLayer = (VectorLayer)layer;
+            ((LayerImpl)vecLayer.getEastwardComponent()).setDataset(ds);
+            ((LayerImpl)vecLayer.getNorthwardComponent()).setDataset(ds);
+        }
+    }
     
     /**
      * Called by Spring to clean up this store. Subclasses should override if
