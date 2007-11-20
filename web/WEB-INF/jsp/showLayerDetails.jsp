@@ -10,7 +10,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 %>
 <%--
      Displays the details of a variable as a JSON object
-     See MetadataController.showVariableDetails().
+     See MetadataController.showLayerDetails().
      
      Data (models) passed in to this page:
          layer = Layer object

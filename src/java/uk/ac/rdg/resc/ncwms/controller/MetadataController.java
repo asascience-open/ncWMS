@@ -264,7 +264,7 @@ public class MetadataController
         models.put("layer", layer);
         models.put("datesWithData", datesWithData);
         models.put("nearestTimeIso", WmsUtils.millisecondsToISO8601(nearestTimeMs));
-        return new ModelAndView("showVariableDetails", models);
+        return new ModelAndView("showLayerDetails", models);
     }
     
     /**
