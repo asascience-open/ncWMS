@@ -42,7 +42,7 @@ public abstract class AbstractGrid
 {
     protected int width;    // Width of the grid in pixels
     protected int height;   // Height of the grid in pixels
-    protected float[] bbox; // Array of four floats representing the bounding box
+    protected double[] bbox; // Array of four floats representing the bounding box
 
     public int getWidth()
     {
@@ -64,12 +64,12 @@ public abstract class AbstractGrid
         this.height = height;
     }
 
-    public float[] getBbox()
+    public double[] getBbox()
     {
         return bbox;
     }
 
-    public void setBbox(float[] bbox)
+    public void setBbox(double[] bbox)
     {
         this.bbox = bbox;
     }
@@ -77,11 +77,11 @@ public abstract class AbstractGrid
     /**
      * @return the longitude of the given point on the grid
      */
-    public abstract float getLongitude(int i, int j);
+    public abstract double getLongitude(int i, int j);
     
     /**
      * @return the latitude of the given point on the grid
      */
-    public abstract float getLatitude(int i, int j);
+    public abstract double getLatitude(int i, int j);
     
 }

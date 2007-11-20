@@ -54,7 +54,7 @@ public abstract class PicMaker
     
     protected List<String> tValues; // List of time values, one for each frame
     protected String zValue;
-    protected float[] bbox;
+    protected double[] bbox;
     protected BufferedImage legend; // If we need a legend, it will be stored here 
     
     public Layer getLayer()
@@ -108,12 +108,12 @@ public abstract class PicMaker
         this.zValue = zValue;
     }
 
-    public float[] getBbox()
+    public double[] getBbox()
     {
         return bbox;
     }
 
-    public void setBbox(float[] bbox)
+    public void setBbox(double[] bbox)
     {
         this.bbox = bbox;
     }

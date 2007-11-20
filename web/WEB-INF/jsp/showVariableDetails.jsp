@@ -23,6 +23,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <json:object>
     <json:property name="units" value="${layer.units}"/>
     <json:array name="bbox" items="${layer.bbox}"/>
+    <json:array name="scaleRange" items="${layer.scaleRange}"/>
     <c:if test="${layer.zaxisPresent}">
         <json:object name="zaxis">
             <json:property name="units" value="${layer.zunits}"/>

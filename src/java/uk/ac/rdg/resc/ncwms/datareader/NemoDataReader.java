@@ -78,7 +78,7 @@ public class NemoDataReader extends DefaultDataReader
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        int tIndex, int zIndex, double[] latValues, double[] lonValues)
         throws Exception
     {
         logger.debug("Reading data from {}", filename);
@@ -118,6 +118,9 @@ public class NemoDataReader extends DefaultDataReader
                 addOffset = var.findAttribute("add_offset").getNumericValue().floatValue();
             }
             float missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
+            // TODO: should check these values exist
+            double validMin = var.findAttribute("valid_min").getNumericValue().doubleValue();
+            double validMax = var.findAttribute("valid_max").getNumericValue().doubleValue();
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
 
             int yAxisIndex = 1;
@@ -169,7 +172,7 @@ public class NemoDataReader extends DefaultDataReader
                         if (val != missingValue)
                         {
                             float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= layer.getValidMin() && realVal <= layer.getValidMax())
+                            if (realVal >= validMin && realVal <= validMax)
                             {
                                 picData[p] = realVal;
                             }
@@ -262,9 +265,6 @@ public class NemoDataReader extends DefaultDataReader
                         layer.setZvalues(zVals);
                         layer.setZunits(zUnits);
                     }
-                    // TODO: should check these values exist
-                    layer.setValidMin(var.findAttribute("valid_min").getNumericValue().doubleValue());
-                    layer.setValidMax(var.findAttribute("valid_max").getNumericValue().doubleValue());
                     
                     // Create the coordinate axes
                     if (nc.findGlobalAttributeIgnoreCase("resolution") == null)

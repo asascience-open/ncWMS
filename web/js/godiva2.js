@@ -408,6 +408,11 @@ function layerSelected(layerDetails)
     $('scaleMin').style.visibility = scaleVisibility;
     $('scaleMax').style.visibility = scaleVisibility;
     $('autoScale').style.visibility = scaleVisibility;
+    // Set the scale value
+    scaleMinVal = layerDetails.scaleRange[0];
+    scaleMaxVal = layerDetails.scaleRange[1];
+    $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
+    $('scaleMax').value = toNSigFigs(scaleMaxVal, 4);
     
     if (!isIE) {
         // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
@@ -427,7 +432,7 @@ function layerSelected(layerDetails)
         $('date').innerHTML = '';
         $('time').innerHTML = '';
         $('utc').style.visibility = 'hidden';
-        autoScale(); // this also updates the map
+        updateMap();
     } else {
         datesWithData = layerDetails.datesWithData; // Tells the calendar which dates to disable
         if (calendar == null) {
@@ -500,7 +505,7 @@ function makeIsoDate(date)
     return prefix + date.print('%Y-%m-%d'); // Date only (no time) in ISO format
 }
 
-// Called when we have received the timestepss from the server
+// Called when we have received the timesteps from the server
 function updateTimesteps(times)
 {
     // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
@@ -532,8 +537,6 @@ function updateTimesteps(times)
         $('scaleMin').value = autoLoad.scaleMin;
         $('scaleMax').value = autoLoad.scaleMax;
         validateScale(); // this calls updateMap()
-    } else if (newVariable) {
-        autoScale(); // Scales the map automatically and updates it
     } else {
         updateMap(); // Update the map without changing the scale
     }

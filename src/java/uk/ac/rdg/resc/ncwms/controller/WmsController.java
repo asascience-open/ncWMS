@@ -356,8 +356,8 @@ public class WmsController extends AbstractController
         // Get the grid onto which the data is being projected
         AbstractGrid grid = getGrid(dataRequest, this.gridFactory);
         // Get the lat and lon of the point of interest
-        float lon = grid.getLongitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
-        float lat = grid.getLatitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
+        double lon = grid.getLongitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
+        double lat = grid.getLatitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
         
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
@@ -376,7 +376,7 @@ public class WmsController extends AbstractController
             AbstractGrid singlePointGrid = new PlateCarreeGrid();
             singlePointGrid.setWidth(1);
             singlePointGrid.setHeight(1);
-            singlePointGrid.setBbox(new float[]{lon, lat, lon, lat});
+            singlePointGrid.setBbox(new double[]{lon, lat, lon, lat});
             
             if (layer instanceof VectorLayer)
             {

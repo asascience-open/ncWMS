@@ -83,7 +83,7 @@ public class DefaultDataReader extends DataReader
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        int tIndex, int zIndex, double[] latValues, double[] lonValues)
         throws Exception
     {
         NetcdfDataset nc = null;
@@ -294,9 +294,6 @@ public class DefaultDataReader extends DataReader
                     maxLon = 180.0;
                 }
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
-                
-                layer.setValidMin(gg.getVariable().getValidMin());
-                layer.setValidMax(gg.getVariable().getValidMax());
 
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);

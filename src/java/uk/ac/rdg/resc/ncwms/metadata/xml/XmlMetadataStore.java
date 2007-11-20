@@ -169,8 +169,8 @@ public class XmlMetadataStore  extends MetadataStore  {
         layer.setTitle(myVariable.getName());
         layer.setAbstract(myVariable.getName());
         layer.setUnits(myVariable.getUnits());
-        layer.setValidMin(new Double(myVariable.getValidMin()).doubleValue());
-        layer.setValidMax(new Double(myVariable.getValidMax()).doubleValue());
+        //layer.setValidMin(new Double(myVariable.getValidMin()).doubleValue());
+        //layer.setValidMax(new Double(myVariable.getValidMax()).doubleValue());
         
         
         //obtain grid for this variable
@@ -271,8 +271,8 @@ public class XmlMetadataStore  extends MetadataStore  {
             layer.setAbstract(myVariable.get(i).getName());
             layer.setUnits(myVariable.get(i).getUnits());
             
-            layer.setValidMin(new Double(myVariable.get(i).getValidMin()).doubleValue());
-            layer.setValidMax(new Double(myVariable.get(i).getValidMax()).doubleValue());
+            //layer.setValidMin(new Double(myVariable.get(i).getValidMin()).doubleValue());
+            //layer.setValidMax(new Double(myVariable.get(i).getValidMax()).doubleValue());
             
             //obtain grid for this variable
             Grid myGrid = getGrid(myDataset,gridName);

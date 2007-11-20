@@ -44,12 +44,12 @@ public class PlateCarreeGrid extends RectangularLatLonGrid
     /**
      * @return a new array of points along the longitude axis
      */
-    public float[] getLonArray()
+    public double[] getLonArray()
     {
-        float minLon = this.bbox[0];
-        float maxLon = this.bbox[2];
-        float dx = (maxLon - minLon) / this.width;
-        float[] lonArray = new float[this.width];
+        double minLon = this.bbox[0];
+        double maxLon = this.bbox[2];
+        double dx = (maxLon - minLon) / this.width;
+        double[] lonArray = new double[this.width];
         for (int i = 0; i < lonArray.length; i++)
         {
             lonArray[i] = minLon + (i + 0.5f) * dx;
@@ -60,12 +60,12 @@ public class PlateCarreeGrid extends RectangularLatLonGrid
     /**
      * @return a new array of points along the latitude axis
      */
-    public float[] getLatArray()
+    public double[] getLatArray()
     {
-        float minLat = this.bbox[1];
-        float maxLat = this.bbox[3];
-        float dy = (maxLat - minLat) / this.height;
-        float[] latArray = new float[this.height];
+        double minLat = this.bbox[1];
+        double maxLat = this.bbox[3];
+        double dy = (maxLat - minLat) / this.height;
+        double[] latArray = new double[this.height];
         for (int i = 0; i < latArray.length; i++)
         {
             // The latitude axis is flipped

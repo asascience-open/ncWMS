@@ -37,6 +37,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.controller.MetadataController;
+import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -111,31 +114,32 @@ public abstract class DataReader
      * @throws Exception if an error occurs
      */
     public abstract float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        int tIndex, int zIndex, double[] latValues, double[] lonValues)
         throws Exception;
     
     /**
      * Reads and returns the metadata for all the layers (i.e. variables) in the dataset
      * at the given location, which may be a glob aggregation (e.g. "/path/to/*.nc").
-     * @param location Full path to the dataset, may be a glob aggregation
+     * Also sets the Dataset property of each layer
+     * @param ds Object describing the Dataset to which the layer belongs
      * @return Map of layer IDs mapped to {@link Layer} objects
-     * @throws IOException if there was an error reading from the data source
+     * @throws Exception if there was an error reading from the data source
      */
-    public Map<String, Layer> getAllLayers(String location)
-        throws IOException
+    public Map<String, Layer> getAllLayers(Dataset ds)
+        throws Exception
     {
         // A list of names of files resulting from glob expansion
         List<String> filenames = new ArrayList<String>();
-        if (isOpendapLocation(location))
+        if (isOpendapLocation(ds.getLocation()))
         {
             // We don't do the glob expansion
-            filenames.add(location);
+            filenames.add(ds.getLocation());
         }
         else
         {
             // The location might be a glob expression, in which case the last part
             // of the location path will be the filter expression
-            File locFile = new File(location);
+            File locFile = new File(ds.getLocation());
             FilenameFilter filter = new GlobFilenameFilter(locFile.getName());
             File parentFile = locFile.getParentFile();
             if (parentFile == null)
@@ -150,7 +154,7 @@ public abstract class DataReader
             File[] files = parentFile.listFiles(filter);
             if (files == null || files.length == 0)
             {
-                throw new IOException(location + " does not match any files");
+                throw new IOException(ds.getLocation() + " does not match any files");
             }
             // Add all the matching filenamse
             for (File f : files)
@@ -183,6 +187,38 @@ public abstract class DataReader
                     }
                 }
             }
+        }
+        // Now set the scale range for each variable by reading a 100x100
+        // chunk of data and finding the min and max values of this chunk.
+        PlateCarreeGrid grid = new PlateCarreeGrid();
+        grid.setHeight(100);
+        grid.setWidth(100);
+        for (Layer layer : aggLayers.values())
+        {
+            grid.setBbox(layer.getBbox());
+            LayerImpl layerImpl = (LayerImpl)layer;
+            layerImpl.setDataset(ds);
+            // Read from the first t and z indices
+            int tIndex = layer.isTaxisPresent() ? 0 : -1;
+            int zIndex = layer.isZaxisPresent() ? 0 : -1;
+            float[] minMax = MetadataController.findMinMax(layer, tIndex, zIndex, grid);
+            if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+            {
+                // Just guess at a scale
+                layerImpl.setScaleMin(-50.0);
+                layerImpl.setScaleMin(50.0);
+            }
+            else
+            {
+                // Set the scale range of the layer, factoring in a 10% expansion
+                // to deal with the fact that the sample data we read might
+                // not be representative
+                float diff = minMax[1] - minMax[0];
+                layerImpl.setScaleMin(minMax[0] - 0.05 * diff);
+                layerImpl.setScaleMax(minMax[1] + 0.05 * diff);
+            }
+            logger.debug("Set scale range for {} to {}, {}", new Object[]{
+                layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
         }
         return aggLayers;
     }

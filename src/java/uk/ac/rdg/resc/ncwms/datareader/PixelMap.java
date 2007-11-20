@@ -71,7 +71,7 @@ public class PixelMap
      * Generates a PixelMap for the given Layer for the given arrays of latitude
      * and longitude values in the destination picture
      */
-    public PixelMap(Layer layer, float[] latValues, float[] lonValues)
+    public PixelMap(Layer layer, double[] latValues, double[] lonValues)
     {
         long start = System.currentTimeMillis();
         
@@ -93,9 +93,9 @@ public class PixelMap
             {
                 xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
             }
-            for (float lat : latValues)
+            for (double lat : latValues)
             {
-                if (lat >= -90.0f && lat <= 90.0f)
+                if (lat >= -90.0 && lat <= 90.0)
                 {
                     int yIndex = yAxis.getIndex(new LatLonPointImpl(lat, 0.0));
                     for (int xIndex : xIndices)
@@ -110,11 +110,11 @@ public class PixelMap
         {
             logger.debug("Using generic method for complex axes");
             // We use a generic, but slower, algorithm
-            for (float lat : latValues)
+            for (double lat : latValues)
             {
                 if (lat >= -90.0f && lat <= 90.0f)
                 {
-                    for (float lon : lonValues)
+                    for (double lon : lonValues)
                     {
                         LatLonPoint latLon = new LatLonPointImpl(lat, lon);
                         // Translate lat-lon to projection coordinates

@@ -381,9 +381,27 @@ public class MetadataController
         // Get the information about the requested timestep (taking the first only)
         int tIndex = WmsController.getTIndices(dataRequest.getTimeString(), layer).get(0);
         
+        // Now read the data and calculate the minimum and maximum values
+        float[] minMax = findMinMax(layer, tIndex, zIndex, grid);
+        
+        return new ModelAndView("showMinMax", "minMax", minMax);
+    }
+    
+    /**
+     * Finds the minimum and maximum values of data in the given arrays.
+     * @param layer the Layer from which to read data
+     * @param tIndex the time index, or -1 if there is no time axis
+     * @param zIndex the z index, or -1 if there is to vertical axis
+     * @param grid The grid onto which the data is to be read
+     * @return Array of two floats: [min, max]
+     * @throws Exception if there was an error reading the data
+     */
+    public static float[] findMinMax(Layer layer, int tIndex, int zIndex, AbstractGrid grid)
+        throws Exception
+    {
         // Now read the data
         List<float[]> picData = WmsController.readData(layer, tIndex, zIndex, grid);
-
+        
         // Now find the minimum and maximum values: for a vector this is the magnitude
         boolean allFillValue = true;
         float min = Float.MAX_VALUE;
@@ -403,7 +421,7 @@ public class MetadataController
                 if (val > max) max = val;
             }
         }
-        return new ModelAndView("showMinMax", "minMax", new float[]{min, max});
+        return new float[]{min, max};
     }
     
     /**

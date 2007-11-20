@@ -100,8 +100,6 @@ public class NSIDCSnowWaterDataReader extends DataReader
         layer.setId("swe");
         layer.setTitle("snow_water_equivalent");
         layer.setUnits("mm");
-        layer.setValidMin(0.0);
-        layer.setValidMax(10000.0); // TODO: is this OK?
         layer.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
         
         try
@@ -147,7 +145,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        int tIndex, int zIndex, double[] latValues, double[] lonValues)
         throws Exception
     {
         // Find the file containing the data

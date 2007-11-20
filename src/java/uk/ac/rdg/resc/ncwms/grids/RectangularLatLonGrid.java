@@ -42,19 +42,19 @@ public abstract class RectangularLatLonGrid extends AbstractGrid
     /**
      * @return array of points along the latitude axis
      */
-    public abstract float[] getLatArray();
+    public abstract double[] getLatArray();
     
     /**
      * @return array of points along the longitude axis
      */
-    public abstract float[] getLonArray();
+    public abstract double[] getLonArray();
 
-    public float getLongitude(int i, int j)
+    public double getLongitude(int i, int j)
     {
         return this.getLonArray()[i];
     }
 
-    public float getLatitude(int i, int j)
+    public double getLatitude(int i, int j)
     {
         return this.getLatArray()[j];
     }

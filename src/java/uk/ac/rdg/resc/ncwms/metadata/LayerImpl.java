@@ -65,8 +65,8 @@ public class LayerImpl implements Layer
     protected double[] zValues;
     protected boolean zPositive;
     protected double[] bbox; // Bounding box : minx, miny, maxx, maxy
-    protected double validMin;
-    protected double validMax;
+    protected double scaleMin;
+    protected double scaleMax;
     protected EnhancedCoordAxis xaxis;
     protected EnhancedCoordAxis yaxis;
     protected transient Dataset dataset; // Not stored in the metadata database
@@ -186,24 +186,29 @@ public class LayerImpl implements Layer
         this.id = id;
     }
 
-    public double getValidMin()
+    public double getScaleMin()
     {
-        return validMin;
+        return scaleMin;
     }
 
-    public void setValidMin(double validMin)
+    public void setScaleMin(double scaleMin)
     {
-        this.validMin = validMin;
+        this.scaleMin = scaleMin;
     }
 
-    public double getValidMax()
+    public double getScaleMax()
     {
-        return validMax;
+        return scaleMax;
     }
 
-    public void setValidMax(double validMax)
+    public void setScaleMax(double scaleMax)
     {
-        this.validMax = validMax;
+        this.scaleMax = scaleMax;
+    }
+    
+    public double[] getScaleRange()
+    {
+        return new double[]{this.scaleMin, this.scaleMax};
     }
 
     public String getUnits()

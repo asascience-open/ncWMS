@@ -46,7 +46,7 @@ class GetMapDataRequest
 {
     protected String[] layers;
     private String crs;
-    private float[] bbox;
+    private double[] bbox;
     private int width;
     private int height;
     private String timeString;
@@ -80,12 +80,12 @@ class GetMapDataRequest
         {
             throw new WmsException("Invalid bounding box format: need four elements");
         }
-        this.bbox = new float[4];
+        this.bbox = new double[4];
         try
         {
             for (int i = 0; i < bbox.length; i++)
             {
-                this.bbox[i] = Float.parseFloat(bboxEls[i]);
+                this.bbox[i] = Double.parseDouble(bboxEls[i]);
             }
         }
         catch(NumberFormatException nfe)
@@ -112,7 +112,7 @@ class GetMapDataRequest
         return crs;
     }
 
-    public float[] getBbox()
+    public double[] getBbox()
     {
         return bbox;
     }

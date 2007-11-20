@@ -83,7 +83,7 @@ public class USGSDataReader extends DefaultDataReader
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, float[] latValues, float[] lonValues)
+        int tIndex, int zIndex, double[] latValues, double[] lonValues)
         throws Exception
     {
         NetcdfDataset nc = null;
@@ -125,7 +125,9 @@ public class USGSDataReader extends DefaultDataReader
             if (var.findAttribute("missing_value") != null)
             {
                 missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
-            }
+            }// TODO: should check these values exist
+            double validMin = var.findAttribute("valid_min").getNumericValue().doubleValue();
+            double validMax = var.findAttribute("valid_max").getNumericValue().doubleValue();
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
             
             int yAxisIndex = 1;
@@ -179,7 +181,7 @@ public class USGSDataReader extends DefaultDataReader
                         if (val != missingValue)
                         {
                             float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= layer.getValidMin() && realVal <= layer.getValidMax())
+                            if (realVal >= validMin && realVal <= validMax)
                             {
                                 picData[p] = realVal;
                             }
@@ -271,9 +273,6 @@ public class USGSDataReader extends DefaultDataReader
                     maxLon = 180.0;
                 }
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
-                
-                layer.setValidMin(gg.getVariable().getValidMin());
-                layer.setValidMax(gg.getVariable().getValidMax());
                 
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);

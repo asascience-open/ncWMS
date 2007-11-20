@@ -147,16 +147,10 @@ public class MetadataLoader
             logger.debug("Getting data reader of type {}", ds.getDataReaderClass());
             DataReader dr = DataReader.getDataReader(ds.getDataReaderClass(), ds.getLocation());
             // Read the metadata
-            Map<String, Layer> layers = dr.getAllLayers(ds.getLocation());
+            Map<String, Layer> layers = dr.getAllLayers(ds);
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(layers);
-            // Set the Dataset property for all layers
-            for (Layer layer : layers.values())
-            {
-                // Must convert to mutable layer before altering
-                ((LayerImpl)layer).setDataset(ds);
-            }
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);

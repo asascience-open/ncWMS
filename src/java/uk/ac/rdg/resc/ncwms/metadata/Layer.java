@@ -146,9 +146,25 @@ public interface Layer
 
     String getUnits();
 
-    double getValidMax();
+    /**
+     * @return the max value of the suggested scale range.  Note that this is not the
+     * same as a "valid_max" for the dataset.  This is simply a hint to visualization
+     * tools.
+     */
+    double getScaleMax();
 
-    double getValidMin();
+    /**
+     * @return the min value of the suggested scale range.  Note that this is not the
+     * same as a "valid_min" for the dataset.  This is simply a hint to visualization
+     * tools.
+     */
+    double getScaleMin();
+    
+    /**
+     * @return array of two doubles, representing the min and max of the scale range
+     * (i.e. new double[]{getScaleMin(), getScaleMax()})
+     */
+    double[] getScaleRange();
 
     EnhancedCoordAxis getXaxis();
 

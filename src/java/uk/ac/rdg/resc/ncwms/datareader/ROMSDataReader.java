@@ -124,9 +124,6 @@ public class ROMSDataReader extends USGSDataReader
                 }
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
-                layer.setValidMin(gg.getVariable().getValidMin());
-                layer.setValidMax(gg.getVariable().getValidMax());
-                
                 // Now add the timestep information to the VM object
                 Date[] tVals = this.getTimesteps(nc, gg);
                 for (int i = 0; i < tVals.length; i++)
