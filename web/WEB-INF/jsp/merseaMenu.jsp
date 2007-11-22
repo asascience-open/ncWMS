@@ -6,8 +6,8 @@ response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0
 response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 %>
-<%-- This file defines the menu structure for the ECOOP site.  This file will
-     be loaded if someone loads up the godiva2 site with "menu=ECOOP"
+<%-- This file defines the menu structure for the MERSEA site.  This file will
+     be loaded if someone loads up the godiva2 site with "menu=MERSEA"
      TODO: create complete catalogue from http://www.mersea.eu.org/html/information/catalog/products/catalog.html
      Or look at MIV v2??--%>
 <c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>

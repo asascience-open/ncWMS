@@ -196,14 +196,16 @@ public class MetadataController
                 if (ds.isReady()) displayables.add(ds);
             }
             Map<String, Object> models = new HashMap<String, Object>();
-            models.put("datasets", displayables);
             models.put("serverInfo", this.config.getServer());
+            models.put("datasets", displayables);
             return new ModelAndView("showLayerHierarchy", models);
         }
         else
         {
-            // We're using a pre-set hierarchy.
-            return new ModelAndView(menu.toLowerCase() + "Menu");
+            // We're using a pre-set hierarchy.  We pass in the Hash of 
+            // dataset ids to Dataset objects
+            return new ModelAndView(menu.toLowerCase() + "Menu", "datasets",
+                this.config.getDatasets());
         }
     }
     
