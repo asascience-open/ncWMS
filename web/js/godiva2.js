@@ -160,7 +160,7 @@ function setupTreeControl(menu)
         // We're requesting a specific menu hierarchy
         getLayerHierarchy('', { // We are loading from the host server
             callback: function(layerHierarchy, url) {
-                addNodes(tree.getRoot(), null, layerHierarchy.layers);
+                addNodes(tree.getRoot(), null, layerHierarchy.children);
                 tree.draw();
             },
             menu: menu

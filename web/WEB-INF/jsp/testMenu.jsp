@@ -15,23 +15,13 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      datasets = Map<String, Dataset>: all the datasets in this server
      --%>
 <c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
-<menu:menu>
-    <menu:dataset dataset="${datasets.OSTA}"/>
-    <menu:layer/>
-    <menu:layer/>
-</menu:menu>
-<%--{
-    layers : [
-    {
-        "label" : "Global TEP",
-        "children" : [
-            {
-                "label" : "Global 1/4 deg PSY3V2",
-                "children" : [
-                    <menu:layer server="${esscServer}"/>
-                ]
-            }
-        ]
-    }
-    ]
-}--%>
+<menu:folder label="mylabel">
+    <menu:folder label="wally">
+        <menu:dataset dataset="${datasets.NCOF_POLCOMS}"/>
+    </menu:folder>
+    <menu:dataset dataset="${datasets.OSTIA}"/>
+    <menu:folder label="individual layers">
+        <menu:layer id="OSTIA/analysed_sst" label="OSTIA SST"/>
+        <menu:layer id="NCOF_POLCOMS/POT" label="POLCOMS SST"/>
+    </menu:folder>
+</menu:folder>
