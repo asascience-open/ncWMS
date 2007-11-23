@@ -105,7 +105,7 @@ public class MetadataLoader
      */
     private void reloadMetadata(final Dataset ds)
     {
-        new Thread()
+        new Thread("load-dataset-" + ds.getId())
         {
             public void run()
             {
@@ -161,6 +161,7 @@ public class MetadataLoader
         }
         catch(Exception e)
         {
+            logger.error("Got an exception!");
             ds.setState(State.ERROR);
             // Reduce logging volume by only logging the error if it's a new
             // type of exception.

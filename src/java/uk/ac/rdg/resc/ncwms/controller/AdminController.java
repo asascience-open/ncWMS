@@ -140,7 +140,8 @@ public class AdminController extends MultiActionController
                     ds.setDataReaderClass(newDataReaderClass);
                     ds.setDisabled(request.getParameter("dataset." + ds.getId() + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
-
+                    ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
+                    
                     if (request.getParameter("dataset." + ds.getId() + ".refresh") != null)
                     {
                         refreshDataset = true;

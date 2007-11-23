@@ -42,8 +42,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.config.ThirdPartyLayerProvider;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;

@@ -235,7 +235,7 @@ public class DefaultDataReader extends DataReader
      */
     protected List<Layer> getLayers(String filename) throws IOException
     {
-        logger.debug("Reading metadata for file {}", filename);
+        logger.debug("Getting layers in file {}", filename);
         List<Layer> layers = new ArrayList<Layer>();
         
         NetcdfDataset nc = null;
@@ -308,11 +308,14 @@ public class DefaultDataReader extends DataReader
         }
         finally
         {
+            logger.debug("In finally clause");
             if (nc != null)
             {
                 try
                 {
+                    logger.debug("Closing NetCDF file");
                     nc.close();
+                    logger.debug("NetCDF file closed");
                 }
                 catch (IOException ex)
                 {
@@ -320,6 +323,7 @@ public class DefaultDataReader extends DataReader
                 }
             }
         }
+        logger.debug("Found {} layers in {}", layers.size(), filename);
         return layers;
     }
     

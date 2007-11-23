@@ -13,167 +13,30 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
 <menu:folder label="ECOOP data visualization">
     <menu:folder label="UK Met Office">
-        <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
-    </menu:folder>
-    <menu:folder label="Plymouth Marine Laboratory">
-        <menu:folder label="Ecosystem Variables">
+        <menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
+        <menu:folder label="POLCOMS MRCS (Biological)">
+            <%-- We have to add these layers manually because they are coming from a remote server --%>
             <menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
             <menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/no3" label="Nitrate Concentration" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/o2o" label="Dissolved Oxygen Concentration" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/chl" label="Chlorophyll a" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/vis01" label="Visibility in water column" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/p3c" label="Picoplankton biomass" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/zoop" label="Zooplankton biomass" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/p4c" label="Dinoflagellate biomass" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/p2c" label="Flagellate biomass" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         </menu:folder>
     </menu:folder>
+    <menu:folder label="University of Cyprus">
+        <menu:dataset dataset="${datasets.ECOOP_CYCO}"/>
+    </menu:folder>
+    <menu:folder label="Marine Institute, Ireland">
+        <menu:dataset dataset="${datasets.ECOOP_ROMS_TEST}"/>
+    </menu:folder>
+    <menu:folder label="DMI, Denmark">
+        <menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
+        <menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
+    </menu:folder>
 </menu:folder>
-<%--{
-layers: [
-    {
-    {
-        "label" : "Plymouth Marine Laboratory",
-        "children" : [
-            {
-                "label" : "Ecosystem Variables",
-                "children" : [
-                    {
-                        "id" : "ECOVARSALL/po4",
-                        "label" : "Phosphate Concentration",
-                        "server" : "${pmlServer}"
-                    },
-                    {
-                        "id" : "ECOVARSALL/si",
-                        "label" : "Silicate Concentration",
-                        "server" : "${pmlServer}"
-                    },
-                    {
-                        "id" : "ECOVARSALL/no3",
-                        "label" : "Nitrate Concentration",
-                        "server" : "${pmlServer}"
-                    },
-                    {
-                        "id" : "ECOVARSALL/o2o",
-                        "label" : "Dissolved Oxygen Concentration",
-                        "server" : "${pmlServer}"
-                    },
-                    {
-                        "id" : "ECOVARSALL/p3c",
-                        "label" : "Picoplankton biomass",
-                        "server" : "${pmlServer}"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "label" : "University of Cyprus",
-        "children" : [
-            {
-                "label" : "Eastern Mediterranean",
-                "children" : [
-                    {
-                        "id" : "ECOOP_CYCO/HF",
-                        "label" : "Surface Downward Heat Flux In Air",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/surface_downward_stress",
-                        "label" : "Surface Downward Stress",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/h",
-                        "label" : "Sea Floor Depth Below Sea Level",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/eta",
-                        "label" : "Sea Surface Height",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/EMP",
-                        "label" : "Water Flux Into Ocean",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/Ty",
-                        "label" : "Surface Downward Northward Stress",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/temp",
-                        "label" : "Sea Water Potential Temperature",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/v",
-                        "label" : "Northward Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/Tx",
-                        "label" : "Surface Downward Eastward Stress",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/sea_water_velocity",
-                        "label" : "Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/SW",
-                        "label" : "Surface Net Downward Shortwave Flux",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/u",
-                        "label" : "Eastward Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_CYCO/sal",
-                        "label" : "Sea Water Salinity",
-                        "server" : "${esscServer}"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "label" : "Marine Institute, Ireland",
-        "children" : [
-            {
-                "label" : "NE Atlantic ROMS",
-                "children" : [
-                    {
-                        "id" : "ECOOP_ROMS_TEST/sensible",
-                        "label" : "Net Sensible Heat Flux",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/salt",
-                        "label" : "Salinity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/lwrad",
-                        "label" : "Net Longwave Radiation Flux",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/temp",
-                        "label" : "Potential Temperature",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/evaporation",
-                        "label" : "Evaporation Rate",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "ECOOP_ROMS_TEST/latent",
-                        "label" : "Net Latent Heat Flux",
-                        "server" : "${esscServer}"
-                    }
-                ]
-            }
-        ]
-    }
-]
-}--%>

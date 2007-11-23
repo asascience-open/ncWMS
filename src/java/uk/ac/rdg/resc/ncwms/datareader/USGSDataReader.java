@@ -126,8 +126,13 @@ public class USGSDataReader extends DefaultDataReader
             {
                 missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
             }// TODO: should check these values exist
-            double validMin = var.findAttribute("valid_min").getNumericValue().doubleValue();
-            double validMax = var.findAttribute("valid_max").getNumericValue().doubleValue();
+            double validMin = Double.NaN;
+            double validMax = Double.NaN;
+            if (var.findAttribute("valid_min") != null && var.findAttribute("valid_max") != null)
+            {
+                validMin = var.findAttribute("valid_min").getNumericValue().doubleValue();
+                validMax = var.findAttribute("valid_max").getNumericValue().doubleValue();
+            }
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
             
             int yAxisIndex = 1;
@@ -181,7 +186,8 @@ public class USGSDataReader extends DefaultDataReader
                         if (val != missingValue)
                         {
                             float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= validMin && realVal <= validMax)
+                            if (Double.isNaN(validMin) || Double.isNaN(validMax) ||
+                                (realVal >= validMin && realVal <= validMax))
                             {
                                 picData[p] = realVal;
                             }
