@@ -319,6 +319,13 @@ public class Config implements ApplicationContextAware
         this.datasets.remove(ds.getId());
     }
     
+    public synchronized void changeDatasetId(String oldId, String newId)
+    {
+        Dataset ds = this.datasets.remove(oldId);
+        ds.setId(newId);
+        this.datasets.put(ds.getId(), ds);
+    }
+    
     /**
      * Used by Dataset to provide a method to get variables
      */

@@ -87,9 +87,9 @@ public class MetadataController
             {
                 throw new Exception("Must provide an ITEM parameter");
             }
-            else if (item.equals("layers"))
+            else if (item.equals("menu"))
             {
-                return this.showLayerHierarchy(request, response);
+                return this.showMenu(request, response);
             }
             else if (item.equals("layerDetails"))
             {
@@ -182,31 +182,19 @@ public class MetadataController
      * Shows the hierarchy of layers available from this server, or a pre-set
      * hierarchy.
      */
-    private ModelAndView showLayerHierarchy(HttpServletRequest request,
+    private ModelAndView showMenu(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        // Look to see if we're requesting a pre-set menu hierarchy
-        String menu = request.getParameter("menu");
-        if (menu == null || menu.trim().equalsIgnoreCase(""))
+        String menu = "default";
+        String menuFromRequest = request.getParameter("menu");
+        if (menuFromRequest != null && !menuFromRequest.trim().equals(""))
         {
-            // We're loading all layers from this server from datasets that are ready
-            List<Dataset> displayables = new ArrayList<Dataset>();
-            for (Dataset ds : this.config.getDatasets().values())
-            {
-                if (ds.isReady()) displayables.add(ds);
-            }
-            Map<String, Object> models = new HashMap<String, Object>();
-            models.put("serverInfo", this.config.getServer());
-            models.put("datasets", displayables);
-            return new ModelAndView("showLayerHierarchy", models);
+            menu = menuFromRequest.toLowerCase();
         }
-        else
-        {
-            // We're using a pre-set hierarchy.  We pass in the Hash of 
-            // dataset ids to Dataset objects
-            return new ModelAndView(menu.toLowerCase() + "Menu", "datasets",
-                this.config.getDatasets());
-        }
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("serverTitle", this.config.getServer().getTitle());
+        models.put("datasets", this.config.getDatasets());
+        return new ModelAndView(menu + "Menu", models);
     }
     
     /**

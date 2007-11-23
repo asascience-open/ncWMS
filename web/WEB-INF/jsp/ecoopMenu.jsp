@@ -1,6 +1,7 @@
 <%@page contentType="text/plain"%>
 <%@page pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0
@@ -10,43 +11,20 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      be loaded if someone loads up the godiva2 site with "menu=ECOOP" --%>
 <c:set var="pmlServer" value="http://ncof.pml.ac.uk/ncWMS/wms"/>
 <c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
-{
+<menu:folder label="ECOOP data visualization">
+    <menu:folder label="UK Met Office">
+        <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
+    </menu:folder>
+    <menu:folder label="Plymouth Marine Laboratory">
+        <menu:folder label="Ecosystem Variables">
+            <menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
+            <menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
+        </menu:folder>
+    </menu:folder>
+</menu:folder>
+<%--{
 layers: [
     {
-        "label" : "UK Met Office",
-        "children" : [
-            {
-                "label" : "POLCOMS MRCS",
-                "children" : [
-                    {
-                        "id" : "NCOF_MRCS/POT",
-                        "label" : "Sea Water Potential Temperature",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "NCOF_MRCS/SALTY",
-                        "label" : "Sea Water Salinity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "NCOF_MRCS/sea_water_velocity",
-                        "label" : "Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "NCOF_MRCS/VOGRD",
-                        "label" : "Northward Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    },
-                    {
-                        "id" : "NCOF_MRCS/UOGRD",
-                        "label" : "Eastward Sea Water Velocity",
-                        "server" : "${esscServer}"
-                    }
-                ]
-            }
-        ]
-    },
     {
         "label" : "Plymouth Marine Laboratory",
         "children" : [
@@ -198,4 +176,4 @@ layers: [
         ]
     }
 ]
-}
+}--%>

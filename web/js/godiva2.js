@@ -13,13 +13,14 @@ var isIE;
 var scaleMinVal;
 var scaleMaxVal;
 var newVariable = true;  // This will be true when we have chosen a new variable
+var gotScaleRange = false;
 var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
-var servers = ['']; // Means that data will only be loaded from this server,
-                    // unless changed later (e.g. by loading in external javascript)
+var servers = ['']; // URLs to the servers from which we will display layers
+                    // An empty string means the server that is serving this page.
 var activeServer; // The server (url) that is serving the currently-selected layer (see dataSources.js)
 
 var tree = null; // The tree control in the left-hand panel
@@ -133,37 +134,32 @@ function setupTreeControl(menu)
 {
     tree = new YAHOO.widget.TreeView('layerSelector');
     
-    if (menu == '') {
-        // We're populating the menus automatically based on the hierarchy
-        // returned by the server
-        // The servers can be specified in dataSources.js but if not, we'll just
-        // use the default server
-        if (typeof servers == 'undefined' || servers == null) {
-            servers = [''];
-        }
-        
-        // Add a root node in the tree for each server
-        for (var i = 0; i < servers.length; i++) {
-            var layerRootNode = new YAHOO.widget.TextNode(
-                {label: "Loading ...", server: servers[i]},
-                tree.getRoot(),
-                servers.length == 1 // Only show expanded if this is the only server
-            );
-            layerRootNode.multiExpand = false;
-            // The getLayerHierarchy() function is asynchronous.  Once we have received
-            // the result from the server we shall pass it to the makeLayerMenu() function.
-            getLayerHierarchy(servers[i], {
-                callback : makeLayerMenu // Takes two arguments: the returned layers and the server object
-            });
-        }
-    } else {
-        // We're requesting a specific menu hierarchy
-        getLayerHierarchy('', { // We are loading from the host server
-            callback: function(layerHierarchy, url) {
-                addNodes(tree.getRoot(), null, layerHierarchy.children);
+    // The servers can be specified using the global "servers" array above
+    // but if not, we'll just use the default server
+    if (typeof servers == 'undefined' || servers == null) {
+        servers = [''];
+    }
+
+    // Add a root node in the tree for each server.  If the user has supplied
+    // a "menu" option then this will be sent to all the servers.
+    for (var i = 0; i < servers.length; i++) {
+        var layerRootNode = new YAHOO.widget.TextNode(
+            {label: "Loading ...", server: servers[i]},
+            tree.getRoot(),
+            servers.length == 1 // Only show expanded if this is the only server
+        );
+        layerRootNode.multiExpand = false;
+        // The getMenu() function is asynchronous.  Once we have received
+        // the result from the server we shall pass it to the makeLayerMenu() function.
+        getMenu(layerRootNode, {
+            menu: menu,
+            callback : function(node, layers) {
+                node.data.label = layers.label;
+                node.label = layers.label;
+                // Add layers recursively.
+                addNodes(node, layers.children);
                 tree.draw();
-            },
-            menu: menu
+            }
         });
     }
         
@@ -204,6 +200,29 @@ function setupTreeControl(menu)
         }
     });
     tree.draw();
+}
+
+// Recursive method to add nodes to the layer selector tree control
+function addNodes(parentNode, layerArray)
+{
+    for (var i = 0; i < layerArray.length; i++) {
+        var layer = layerArray[i];
+        if (layer.server == null) {
+            // If the layer does not specify a server explicitly, use the URL of
+            // the server that provided this layer
+            layer.server = parentNode.data.server;
+        }
+        // The treeview control uses the layer.label string for display
+        var newNode = new YAHOO.widget.TextNode(
+            {label: layer.label, id: layer.id, server: layer.server},
+            parentNode,
+            false
+        );
+        if (typeof layer.children != 'undefined') {
+            newNode.multiExpand = false;
+            addNodes(newNode, layer.children);
+        }
+    }
 }
 
 // Function that is used by the calendar to see whether a date should be disabled
@@ -300,48 +319,12 @@ function popUp(url, width, height)
         + width + ',height=' + height + ',left = 300,top = 300');
 }
 
-// Populates the left-hand menu with a hierarchy of layers
-function makeLayerMenu(layerHierarchy, server)
-{
-    // Find the root node for this server
-    var node = tree.getNodeByProperty('server', server);
-    if (node == null) {
-        alert("Internal error: can't find server node");
-        return;
-    }
-    node.data.label = layerHierarchy.title;
-    node.label = layerHierarchy.title;
-    // Add layers recursively.
-    addNodes(node, server, layerHierarchy.layers);
-    tree.draw();
-}
-
-// Recursive method to add nodes to the layer selector tree control
-function addNodes(parentNode, server, layerArray)
-{
-    for (var i = 0; i < layerArray.length; i++) {
-        var layer = layerArray[i];
-        if (server != null) {
-            // If we're adding nodes from a manually-specified hierarchy
-            // (set in the "menu" variable) then server will be null because
-            // the server has already been set on the layer object.
-            layer.server = server;
-        }
-        // The treeview control uses the layer.label string for display
-        var newNode = new YAHOO.widget.TextNode(layer, parentNode, false);
-        if (typeof layer.children != 'undefined') {
-            newNode.multiExpand = false;
-            addNodes(newNode, server, layer.children);
-        }
-    }
-}
-
 // Called when the user clicks on the name of a displayable layer in the left-hand menu
 // Gets the details (units, grid etc) of the given layer. 
 function layerSelected(layerDetails)
 {
-    // TODO: what do we do with these two?
     newVariable = true;
+    gotScaleRange = false;
     resetAnimation();
     
     // Units are ncWMS-specific
@@ -408,11 +391,15 @@ function layerSelected(layerDetails)
     $('scaleMin').style.visibility = scaleVisibility;
     $('scaleMax').style.visibility = scaleVisibility;
     $('autoScale').style.visibility = scaleVisibility;
-    // Set the scale value
-    scaleMinVal = layerDetails.scaleRange[0];
-    scaleMaxVal = layerDetails.scaleRange[1];
-    $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
-    $('scaleMax').value = toNSigFigs(scaleMaxVal, 4);
+    
+    // Set the scale value if this is present in the metadata
+    if (typeof layerDetails.scaleRange != 'undefined') {
+        scaleMinVal = layerDetails.scaleRange[0];
+        scaleMaxVal = layerDetails.scaleRange[1];
+        $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
+        $('scaleMax').value = toNSigFigs(scaleMaxVal, 4);
+        gotScaleRange = true;
+    }
     
     if (!isIE) {
         // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
@@ -496,7 +483,7 @@ function loadTimesteps()
 // Does not contain the time.
 function makeIsoDate(date)
 {
-    // Watch out for low-numbered years when calculating the ISO string
+    // Watch out for low-numbered years when generating the ISO string
     var prefix = '';
     var year = date.getFullYear();
     if (year < 10) prefix = '000';
@@ -537,6 +524,8 @@ function updateTimesteps(times)
         $('scaleMin').value = autoLoad.scaleMin;
         $('scaleMax').value = autoLoad.scaleMax;
         validateScale(); // this calls updateMap()
+    } else if (!gotScaleRange) {
+        autoScale(); // We didn't get a scale range from the layerDetails
     } else {
         updateMap(); // Update the map without changing the scale
     }
@@ -553,6 +542,7 @@ function autoScale()
     }
     if (newVariable) {
         newVariable = false; // This will be set true when we click on a different variable name
+        gotScaleRange = true;
     } else {
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();

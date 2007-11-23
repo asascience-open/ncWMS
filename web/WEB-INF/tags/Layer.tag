@@ -7,5 +7,7 @@
 <json:object>
     <json:property name="id" value="${id}"/>
     <json:property name="label" value="${label}"/>
-    <json:property name="server" value="${server}"/>
+    <c:if test="${not empty server}">
+        <json:property name="server" value="${server}"/>
+    </c:if>
 </json:object>

@@ -29,7 +29,9 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
@@ -37,7 +39,6 @@ import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Contact;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.config.Server;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
 
@@ -111,6 +112,8 @@ public class AdminController extends MultiActionController
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.
             List<Dataset> datasetsToRemove = new ArrayList<Dataset>();
+            // Keeps track of dataset IDs that have been changed
+            Map<String, String> changedIds = new HashMap<String, String>();
             for (Dataset ds : this.config.getDatasets().values())
             {
                 boolean refreshDataset = false;
@@ -137,11 +140,18 @@ public class AdminController extends MultiActionController
                     ds.setDataReaderClass(newDataReaderClass);
                     ds.setDisabled(request.getParameter("dataset." + ds.getId() + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
-                    ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
-                    ds.setId(request.getParameter("dataset." + ds.getId() + ".id"));
+
                     if (request.getParameter("dataset." + ds.getId() + ".refresh") != null)
                     {
                         refreshDataset = true;
+                    }
+                    
+                    // Check to see if we have updated the ID
+                    String newId = request.getParameter("dataset." + ds.getId() + ".id").trim();
+                    if (!newId.equals(ds.getId()))
+                    {
+                        changedIds.put(ds.getId(), newId);
+                        // The ID will be changed later
                     }
                 }
                 if (refreshDataset)
@@ -154,7 +164,13 @@ public class AdminController extends MultiActionController
             {
                 config.removeDataset(ds);
             }
-            // Now look for the new datasets. This logic means that we don't have
+            // Now we change the ids of the relevant datasets
+            for (String oldId : changedIds.keySet())
+            {
+                config.changeDatasetId(oldId, changedIds.get(oldId));
+            }
+            
+            // Now look for the new datasets. The logic below means that we don't have
             // to know in advance how many new datasets the user has created (or
             // how many spaces were available in admin_index.jsp)
             int i = 0;

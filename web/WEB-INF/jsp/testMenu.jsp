@@ -1,6 +1,5 @@
 <%@page contentType="text/plain"%>
 <%@page pageEncoding="UTF-8"%>
-<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
@@ -14,7 +13,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      
      datasets = Map<String, Dataset>: all the datasets in this server
      --%>
-<c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
 <menu:folder label="mylabel">
     <menu:folder label="wally">
         <menu:dataset dataset="${datasets.NCOF_POLCOMS}"/>

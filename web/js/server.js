@@ -82,18 +82,19 @@ function makeAjaxRequest(url, params) {
 
 /**
  * Gets the skeleton hierarchy of layers that are offered by this server
+ * @param node Root node to which this hierarchy will be added
  * @param params Object containing a callback that will be called when the result
  * is returned from the server and an optional menu argument that can be used to
  * load a specific menu structure.
  */
-function getLayerHierarchy(url, params) {
-    makeAjaxRequest(url, {
+function getMenu(node, params) {
+    makeAjaxRequest(node.data.server, {
         urlparams: {
-            item: 'layers',
+            item: 'menu',
             menu: typeof params.menu == 'undefined' ? '' : params.menu
         },
         onSuccess: function(layers) { 
-            params.callback(layers, url);
+            params.callback(node, layers);
         }
     });
 }
