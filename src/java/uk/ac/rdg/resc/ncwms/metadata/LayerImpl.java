@@ -550,6 +550,8 @@ public class LayerImpl implements Layer
         else
         {
             // There is no time axis
+            // TODO: this fails if there is a layer in the dataset which 
+            // has no time axis but the dataset is still a glob aggregation
             filename = this.dataset.getLocation();
             tIndexInFile = tIndex;
         }

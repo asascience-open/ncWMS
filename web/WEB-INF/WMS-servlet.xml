@@ -17,7 +17,7 @@
     <!-- An object that stores the context of the ncWMS application.  This contains
          the location of the application's working directory, which defaults to
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
-         workingDirectory property.  It also creates and contains the config object.-->
+         workingDirectory property. -->
     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
         <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
     </bean>
