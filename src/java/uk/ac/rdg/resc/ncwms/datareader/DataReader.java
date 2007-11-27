@@ -126,7 +126,7 @@ public abstract class DataReader
      * @throws Exception if there was an error reading from the data source
      */
     public Map<String, Layer> getAllLayers(Dataset ds)
-        throws Exception
+        throws IOException
     {
         // A list of names of files resulting from glob expansion
         List<String> filenames = new ArrayList<String>();
@@ -193,32 +193,49 @@ public abstract class DataReader
         PlateCarreeGrid grid = new PlateCarreeGrid();
         grid.setHeight(100);
         grid.setWidth(100);
+        // If we get an error reading from the layer then we'll remove the layer
+        // from the list
+        List<Layer> layersToRemove = new ArrayList<Layer>();
         for (Layer layer : aggLayers.values())
         {
-            grid.setBbox(layer.getBbox());
-            LayerImpl layerImpl = (LayerImpl)layer;
-            layerImpl.setDataset(ds);
-            // Read from the first t and z indices
-            int tIndex = layer.isTaxisPresent() ? 0 : -1;
-            int zIndex = layer.isZaxisPresent() ? 0 : -1;
-            float[] minMax = MetadataController.findMinMax(layer, tIndex, zIndex, grid);
-            if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+            try
             {
-                // Just guess at a scale
-                layerImpl.setScaleMin(-50.0);
-                layerImpl.setScaleMin(50.0);
+                grid.setBbox(layer.getBbox());
+                LayerImpl layerImpl = (LayerImpl)layer;
+                layerImpl.setDataset(ds);
+                // Read from the first t and z indices
+                int tIndex = layer.isTaxisPresent() ? 0 : -1;
+                int zIndex = layer.isZaxisPresent() ? 0 : -1;
+                float[] minMax = MetadataController.findMinMax(layer, tIndex, zIndex, grid);
+                if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+                {
+                    // Just guess at a scale
+                    layerImpl.setScaleMin(-50.0);
+                    layerImpl.setScaleMin(50.0);
+                }
+                else
+                {
+                    // Set the scale range of the layer, factoring in a 10% expansion
+                    // to deal with the fact that the sample data we read might
+                    // not be representative
+                    float diff = minMax[1] - minMax[0];
+                    layerImpl.setScaleMin(minMax[0] - 0.05 * diff);
+                    layerImpl.setScaleMax(minMax[1] + 0.05 * diff);
+                }
+                logger.debug("Set scale range for {} to {}, {}", new Object[]{
+                    layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
             }
-            else
+            catch(Exception e)
             {
-                // Set the scale range of the layer, factoring in a 10% expansion
-                // to deal with the fact that the sample data we read might
-                // not be representative
-                float diff = minMax[1] - minMax[0];
-                layerImpl.setScaleMin(minMax[0] - 0.05 * diff);
-                layerImpl.setScaleMax(minMax[1] + 0.05 * diff);
+                logger.warn("Error reading from layer " + layer.getId() + 
+                    " in dataset " + ds.getId(), e);
+                layersToRemove.add(layer);
             }
-            logger.debug("Set scale range for {} to {}, {}", new Object[]{
-                layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
+        }
+        // Now remove the layers with errors
+        for (Layer layer : layersToRemove)
+        {
+            aggLayers.remove(layer.getId());
         }
         return aggLayers;
     }
