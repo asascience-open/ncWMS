@@ -78,12 +78,12 @@ public abstract class AbstractStyle
     {
         return this.name;
     }
-
+    
     public int getPicWidth()
     {
         return picWidth;
     }
-
+    
     /**
      * @param picWidth The width of the picture in pixels
      */
@@ -91,12 +91,12 @@ public abstract class AbstractStyle
     {
         this.picWidth = picWidth;
     }
-
+    
     public int getPicHeight()
     {
         return picHeight;
     }
-
+    
     /**
      * @param picHeight The height of the picture in pixels
      */
@@ -104,12 +104,12 @@ public abstract class AbstractStyle
     {
         this.picHeight = picHeight;
     }
-
+    
     public boolean isTransparent()
     {
         return transparent;
     }
-
+    
     /**
      * @param transparent True if the background (missing data) pixels will be transparent
      */
@@ -117,12 +117,12 @@ public abstract class AbstractStyle
     {
         this.transparent = transparent;
     }
-
+    
     public int getBgColor()
     {
         return bgColor;
     }
-
+    
     /**
      * @param bgColor Colour of background pixels if not transparent
      */
@@ -137,17 +137,16 @@ public abstract class AbstractStyle
      * @param values The value(s) for the attribute
      * @throws StyleNotDefinedException if there is an error with the attribute
      */
-    public abstract void setAttribute(String attName, String[] values) 
+    public abstract void setAttribute(String attName, String[] values)
         throws StyleNotDefinedException;
     
     /**
-     * Adds a frame of data to this Style.  If the data cannot yet be rendered 
+     * Adds a frame of data to this Style.  If the data cannot yet be rendered
      * into a BufferedImage, the data and label are stored.
      */
     public void addFrame(List<float[]> data, String label)
     {
         logger.debug("Adding frame with label {}", label);
-        this.processData(data);
         if (this.isAutoScale())
         {
             logger.debug("Auto-scaling, so caching frame");
@@ -162,27 +161,18 @@ public abstract class AbstractStyle
         else
         {
             logger.debug("Scale is set, so rendering image");
-            this.createImage(data, label);
+            this.renderedFrames.add(this.createImage(data, label));
         }
     }
     
     /**
-     * Processes the data (e.g. calculates magnitude of vector components).
-     * Does so in-place.  This implementation does nothing: subclasses
-     * can override.
-     */
-    protected void processData(List<float[]> data)
-    {
-    }
-    
-    /**
-     * Creates a single image in this style and adds to the internal store
-     * of BufferedImages.  This is only called when the scale information has been
+     * Creates a single image in this style and returns it as a
+     * BufferedImage.  This is only called when the scale information has been
      * set, so all info should be present for creating the image.
      * @param data The data to be rendered into an image.
      * @param label Label to add to the image (ignored if null or the empty string)
      */
-    protected abstract void createImage(List<float[]> data, String label);
+    protected abstract BufferedImage createImage(List<float[]> data, String label);
     
     /**
      * @return true if this image is to be auto-scaled (meaning we have to collect
@@ -197,9 +187,9 @@ public abstract class AbstractStyle
     protected abstract void adjustScaleForFrame(List<float[]> data);
     
     /**
-     * Creates and returns a BufferedImage representing the legend for this 
+     * Creates and returns a BufferedImage representing the legend for this
      * Style instance.  Sets the colour scale if we need to.
-     * @param layer The Layer object for which this legend is being 
+     * @param layer The Layer object for which this legend is being
      * created (needed for title and units strings)
      * @todo Allow setting of width and height of legend
      */
@@ -210,15 +200,15 @@ public abstract class AbstractStyle
     }
     
     /**
-     * Creates and returns a BufferedImage representing the legend for this 
+     * Creates and returns a BufferedImage representing the legend for this
      * Style instance.  The colour scale will already have been set before this
      * is called.
-     * @param layer The Layer object for which this legend is being 
+     * @param layer The Layer object for which this legend is being
      * created (needed for title and units strings)
      * @todo Allow setting of width and height of legend
      */
     protected abstract BufferedImage createLegend(Layer layer);
-
+    
     /**
      * Gets the frames as BufferedImages, ready to be turned into a picture or
      * animation.  This is called just before the picture is due to be created,
@@ -237,7 +227,7 @@ public abstract class AbstractStyle
             for (int i = 0; i < this.frameData.size(); i++)
             {
                 logger.debug("    ... rendering frame {}", i);
-                this.createImage(this.frameData.get(i), this.labels.get(i));
+                this.renderedFrames.add(this.createImage(this.frameData.get(i), this.labels.get(i)));
             }
         }
         return this.renderedFrames;

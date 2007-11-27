@@ -43,10 +43,9 @@ public class StyleNotDefinedException extends WmsException
     /**
      * Creates a new instance of StyleNotDefinedException
      */
-    public StyleNotDefinedException(String styleName)
+    public StyleNotDefinedException(String message)
     {
-        super("The selected layer does not support the " + styleName + " style",
-            "StyleNotDefined");
+        super(message);
     }
     
 }

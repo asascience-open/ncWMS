@@ -147,29 +147,37 @@ public class BoxFillStyle extends AbstractStyle
     }
     
     /**
-     * Calculates the magnitude of the data in-place, replacing data.get(0) with the
-     * magnitude of the data.
+     * If the input data are the two components of a vector, this
+     * calculates the magnitude of these components and returns
+     * the array of magnitudes as a new array.  If the input data
+     * contains one array only, this array is simply returned.
      */
-    public void processData(List<float[]> data)
+    private static float[] getMagnitude(List<float[]> data)
     {
         logger.debug("Calculating the magnitude of {} components", data.size());
+        float[] firstComponent = data.get(0);
         if (data.size() == 1)
         {
-            return;
+            return firstComponent;
         }
-        float[] firstComponent = data.get(0);
-        for (int i = 0; i < firstComponent.length; i++)
+        float[] magnitudes = new float[firstComponent.length];
+        for (int i = 0; i < magnitudes.length; i++)
         {
-            if (!Float.isNaN(firstComponent[i]))
+            if (Float.isNaN(firstComponent[i]))
+            {
+                magnitudes[i] = Float.NaN;
+            }
+            else
             {
                 double sumsq = firstComponent[i] * firstComponent[i];
                 for (int j = 1; j < data.size(); j++)
                 {
                     sumsq += data.get(j)[i] * data.get(j)[i];
                 }
-                firstComponent[i] = (float)Math.sqrt(sumsq);
+                magnitudes[i] = (float)Math.sqrt(sumsq);
             }
         }
+        return magnitudes;
     }
     
     /**
@@ -177,15 +185,16 @@ public class BoxFillStyle extends AbstractStyle
      * Adds the label if one has been set.  The scale must be set before
      * calling this method.
      */
-    public void createImage(List<float[]> data, String label)
+    protected BufferedImage createImage(List<float[]> data, String label)
     {
         // Create the pixel array for the frame
         byte[] pixels = new byte[this.picWidth * this.picHeight];
-        // We only use the first of the data arrays: this is a Style for scalars
-        float[] firstArray = data.get(0);
+        // We get the magnitude of the input data (takes care of the case
+        // in which the data are two components of a vector)
+        float[] magnitudes = getMagnitude(data);
         for (int i = 0; i < pixels.length; i++)
         {
-            pixels[i] = getColourIndex(firstArray[i]);
+            pixels[i] = getColourIndex(magnitudes[i]);
         }
         
         // Create the Image
@@ -206,7 +215,7 @@ public class BoxFillStyle extends AbstractStyle
             gfx.drawString(label, 10, image.getHeight() - 5);
         }
         
-        this.renderedFrames.add(image);
+        return image;
     }
     
     /**
@@ -342,7 +351,7 @@ public class BoxFillStyle extends AbstractStyle
      * @param layer The Layer object for which this legend is being 
      * created (needed for title and units strings)
      */
-    public BufferedImage createLegend(Layer layer)
+    protected BufferedImage createLegend(Layer layer)
     {
         BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();

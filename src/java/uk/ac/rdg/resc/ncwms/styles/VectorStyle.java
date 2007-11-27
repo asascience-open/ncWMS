@@ -46,7 +46,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
  * $Date$
  * $Log$
  */
-public class VectorStyle extends AbstractStyle
+public class VectorStyle extends BoxFillStyle
 {
     private static final Logger logger = Logger.getLogger(VectorStyle.class);
     
@@ -56,81 +56,46 @@ public class VectorStyle extends AbstractStyle
     public static final String[] KEYS = new String[]{"vector"};
     
     /**
-     * The maximum length of arrows in pixels
+     * The length of arrows in pixels
      */
-    private static final int MAX_ARROW_LENGTH = 20;
-    
-    private float unitsPerPixel; // The scale of the arrows
+    private float arrowLength = 10.0f;
     
     /**
      * Creates a new instance of VectorStyle
      */
     public VectorStyle()
     {
-        super(KEYS[0]);
-        this.unitsPerPixel = 0.0f;
+        super();
+        this.name = KEYS[0];
     }
 
     public void setAttribute(String attName, String[] values) throws StyleNotDefinedException
     {
-        if (attName.trim().equalsIgnoreCase("upp"))
+        if (attName.trim().equalsIgnoreCase("arrowLength"))
         {
             if (values.length != 1)
             {
-                throw new StyleNotDefinedException("Format error for \"upp\" attribute of "
+                throw new StyleNotDefinedException("Format error for \"arrowLength\" attribute of "
                     + this.name + " style");
             }
             try
             {
-                this.unitsPerPixel = Float.parseFloat(values[0]);
+                this.arrowLength = Float.parseFloat(values[0]);
             }
             catch (NumberFormatException nfe)
             {
-                throw new StyleNotDefinedException("Format error for \"upp\" attribute of "
+                throw new StyleNotDefinedException("Format error for \"arrowLength\" attribute of "
                     + this.name + " style");
             }
         }
         else
         {
-            throw new StyleNotDefinedException("Attribute " + attName + 
-                " is not supported by the " + this.name + " style");
+            // Give the BoxFillStyle class a chance to handle this attribute
+            super.setAttribute(attName, values);
         }
     }
 
-    protected BufferedImage createLegend(Layer layer)
-    {
-        return null; // TODO:
-    }
-
-    protected void adjustScaleForFrame(List<float[]> data)
-    {
-        if (data.size() != 2)
-        {
-            // Shouldn't happen: defensive programming
-            throw new IllegalStateException("A vector style is only appropriate "
-                + "for fields with two components");
-        }
-        float[] comp1 = data.get(0);
-        float[] comp2 = data.get(1);
-        // Find the longest arrow in the units of the data
-        double longest = -1.0;        
-        for (int i = 0; i < this.picWidth; i += MAX_ARROW_LENGTH)
-        {
-            for (int j = 0; j < this.picHeight; j += MAX_ARROW_LENGTH)
-            {
-                int di = j * this.picWidth + i;
-                if (!Float.isNaN(comp1[di]) && !Float.isNaN(comp2[di]))
-                {
-                    double len = Math.sqrt(comp1[di] * comp1[di] + comp2[di] * comp2[di]);
-                    if (len > longest) longest = len;
-                }
-            }
-        }
-        logger.debug("longest arrow = {}", longest);
-        if (longest >= 0.0) this.unitsPerPixel = (float)longest / MAX_ARROW_LENGTH;
-    }
-
-    protected void createImage(List<float[]> data, String label)
+    protected BufferedImage createImage(List<float[]> data, String label)
     {
         if (data.size() != 2)
         {
@@ -139,48 +104,44 @@ public class VectorStyle extends AbstractStyle
                 + "for fields with two components");
         }
         
-        // TODO: IE can't display these image types - use indexed color model
-        // Also doesn't work with GifMaker!!
-        BufferedImage image = new BufferedImage(this.picWidth, this.picHeight,
-            BufferedImage.TYPE_INT_ARGB);
+        // We're going to create a boxfill image to use as a background
+        BufferedImage image = super.createImage(data, label);
         
         Graphics2D g = image.createGraphics();
         // TODO: control the colour of the arrows with an attribute
-        g.setColor(Color.RED);
+        // Must be part of the colour palette (here we use the colour
+        // for out-of-range values
+        g.setColor(Color.BLACK);
         
-        logger.debug("Drawing vectors, unitsPerPixel = {}", this.unitsPerPixel);
+        logger.debug("Drawing vectors, length = {} pixels", this.arrowLength);
         float[] comp1 = data.get(0);
         float[] comp2 = data.get(1);
-        for (int i = 0; i < this.picWidth; i += MAX_ARROW_LENGTH)
+        for (int i = 0; i < this.picWidth; i += Math.ceil(this.arrowLength * 1.2))
         {
-            for (int j = 0; j < this.picHeight; j += MAX_ARROW_LENGTH)
+            for (int j = 0; j < this.picHeight; j += Math.ceil(this.arrowLength * 1.2))
             {
                 int dataIndex = j * this.picWidth + i;
                 if (!Float.isNaN(comp1[dataIndex]) && !Float.isNaN(comp2[dataIndex]))
                 {
+                    double angle = Math.atan2(comp2[dataIndex], comp1[dataIndex]);
                     // Calculate the end point of the arrow
-                    float iEnd = i + comp1[dataIndex] / this.unitsPerPixel;
-                    float jEnd = j + comp2[dataIndex] / this.unitsPerPixel;
+                    double iEnd = i + this.arrowLength * Math.cos(angle);
+                    // Screen coordinates go down, but north is up, hence the minus sign
+                    double jEnd = j - this.arrowLength * Math.sin(angle);
                     //logger.debug("i={}, j={}, dataIndex={}, east={}, north={}",
                     //    new Object[]{i, j, dataIndex, data[0][dataIndex], data[1][dataIndex]});
                     // Draw a dot representing the data location
                     g.fillOval(i - 2, j - 2, 4, 4);
                     // Draw a line representing the vector direction and magnitude
-                    g.setStroke(new BasicStroke(2));
-                    g.drawLine(i, j, Math.round(iEnd), Math.round(jEnd));
+                    g.setStroke(new BasicStroke(1));
+                    g.drawLine(i, j, (int)Math.round(iEnd), (int)Math.round(jEnd));
                     // Draw the arrow on the canvas
-                    //drawArrow(g, i, j, Math.round(iEnd), Math.round(jEnd), 2);
+                    //drawArrow(g, i, j, (int)Math.round(iEnd), (int)Math.round(jEnd), 2);
                 }
             }
         }
         
-        this.renderedFrames.add(image);
-    }
-
-    protected boolean isAutoScale()
-    {
-        // return true if the scale has not been set
-        return this.unitsPerPixel == 0.0f;
+        return image;
     }
     
     // http://forum.java.sun.com/thread.jspa?threadID=378460&tstart=135
