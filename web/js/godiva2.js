@@ -396,7 +396,7 @@ function layerSelected(layerDetails)
     // Set the scale value if this is present in the metadata
     if (typeof layerDetails.scaleRange != 'undefined' &&
             layerDetails.scaleRange.length > 1 &&
-            layerDetails.scaleRange[0] != layerDetails.scaleRange[1]) { // FUDGE! Server will return identical values if scale range hasn't been set
+            layerDetails.scaleRange[0] != layerDetails.scaleRange[1]) {
         scaleMinVal = layerDetails.scaleRange[0];
         scaleMaxVal = layerDetails.scaleRange[1];
         $('scaleMin').value = toNSigFigs(scaleMinVal, 4);

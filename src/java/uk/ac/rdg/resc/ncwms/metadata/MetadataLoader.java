@@ -28,8 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,7 +40,9 @@ import ucar.nc2.dataset.NetcdfDatasetCache;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
+import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
 
 /**
  * Class that handles the periodic reloading of metadata (manages calls to
@@ -150,7 +154,9 @@ public class MetadataLoader
             Map<String, Layer> layers = dr.getAllLayers(ds);
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
-            findVectorQuantities(layers);
+            findVectorQuantities(ds, layers);
+            // Find the min and max of each layer
+            findMinMax(ds, layers);
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
@@ -180,7 +186,7 @@ public class MetadataLoader
      * in-place.
      * @todo Only works for northward/eastward and x/y components so far
      */
-    private static void findVectorQuantities(Map<String, Layer> layers)
+    private static void findVectorQuantities(Dataset ds, Map<String, Layer> layers)
     {
         // This hashtable will store pairs of components in eastward-northward
         // order, keyed by the standard name for the vector quantity
@@ -261,12 +267,73 @@ public class MetadataLoader
             Layer[] comps = components.get(key);
             if (comps[0] != null && comps[1] != null)
             {
+                ((LayerImpl)comps[0]).setDataset(ds);
+                ((LayerImpl)comps[1]).setDataset(ds);
                 // We've found both components.  Create a new Layer object
                 LayerImpl vec = new VectorLayerImpl(key, comps[0], comps[1]);
                 // Use the title as the unique ID for this variable
                 vec.setId(key);
                 layers.put(key, vec);
             }
+        }
+    }
+    
+    /**
+     * Finds (estimates) a minimum and maximum value for each layer, for the
+     * benefit of visualization tools (sets scaleRange on each layer).  If there
+     * is an error reading the min-max from a layer, the layer will be removed
+     * from the Map of layers: this is a side-effect of this function.
+     */
+    private static void findMinMax(Dataset ds, Map<String, Layer> layers)
+    {
+        // Set the scale range for each variable by reading a 100x100
+        // chunk of data and finding the min and max values of this chunk.
+        PlateCarreeGrid grid = new PlateCarreeGrid();
+        grid.setHeight(100);
+        grid.setWidth(100);
+        // If we get an error reading from the layer then we'll remove the layer
+        // from the list
+        List<Layer> layersToRemove = new ArrayList<Layer>();
+        for (Layer layer : layers.values())
+        {
+            try
+            {
+                grid.setBbox(layer.getBbox());
+                LayerImpl layerImpl = (LayerImpl)layer;
+                layerImpl.setDataset(ds);
+                // Read from the first t and z indices
+                int tIndex = layer.isTaxisPresent() ? 0 : -1;
+                int zIndex = layer.isZaxisPresent() ? 0 : -1;
+                float[] minMax = MetadataController.findMinMax(layer, tIndex, zIndex, grid);
+                if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+                {
+                    // Just guess at a scale
+                    layerImpl.setScaleMin(-50.0);
+                    layerImpl.setScaleMin(50.0);
+                }
+                else
+                {
+                    // Set the scale range of the layer, factoring in a 10% expansion
+                    // to deal with the fact that the sample data we read might
+                    // not be representative
+                    float diff = minMax[1] - minMax[0];
+                    layerImpl.setScaleMin(minMax[0] - 0.05 * diff);
+                    layerImpl.setScaleMax(minMax[1] + 0.05 * diff);
+                }
+                logger.debug("Set scale range for {} to {}, {}", new Object[]{
+                    layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
+            }
+            catch(Exception e)
+            {
+                logger.warn("Error reading from layer " + layer.getId() + 
+                    " in dataset " + ds.getId(), e);
+                layersToRemove.add(layer);
+            }
+        }
+        // Now remove the layers with errors
+        for (Layer layer : layersToRemove)
+        {
+            layers.remove(layer.getId());
         }
     }
     
