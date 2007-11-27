@@ -18,6 +18,7 @@ var essc_wms = null; // The WMS layer for the ocean data
 var autoLoad = null; // Will contain data for auto-loading data from a permalink
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
+var animation_layer = null; // We'll use this to contain the animation layer
 
 var servers = ['']; // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
@@ -628,9 +629,11 @@ function createAnimation()
     }
     
     // Get a URL for a WMS request that covers the current map extent
-    var urlEls = essc_wms.getURL(map.getExtent()).split('&');
+    var urlEls = essc_wms.getURL(getMapExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
     // width and height of the viewport, otherwise it takes too long
+    var width = $('map').clientWidth / 2;
+    var height = $('map').clientHeight / 2;
     var newURL = urlEls[0];
     for (var i = 1; i < urlEls.length; i++) {
         if (urlEls[i].startsWith('TIME=')) {
@@ -638,9 +641,9 @@ function createAnimation()
         } else if (urlEls[i].startsWith('FORMAT')) {
             newURL += '&FORMAT=image/gif';
         } else if (urlEls[i].startsWith('WIDTH')) {
-            newURL += '&WIDTH=' + $('map').clientWidth / 2;
+            newURL += '&WIDTH=' + width;
         } else if (urlEls[i].startsWith('HEIGHT')) {
-            newURL += '&HEIGHT=' + $('map').clientHeight / 2;
+            newURL += '&HEIGHT=' + height;
         } else if (!urlEls[i].startsWith('OPACITY')) {
             // We remove the OPACITY ARGUMENT as GIFs do not support partial transparency
             newURL += '&' + urlEls[i];
@@ -651,22 +654,46 @@ function createAnimation()
     $('hideAnimation').style.visibility = 'visible';
     // We show the "please wait" image then immediately load the animation
     $('loadingAnimationDiv').style.visibility = 'visible'; // This will be hidden by animationLoaded()
+    
+    // When the mapOverlay has been loaded we call animationLoaded() and place the image correctly
+    // on the map
     $('mapOverlay').src = newURL;
-    $('mapOverlay').width = $('map').clientWidth;
-    $('mapOverlay').height = $('map').clientHeight;
+    $('mapOverlay').width = width;
+    $('mapOverlay').height = height;
+}
+// Gets the current map extent, checking for out-of-range latitude values
+function getMapExtent()
+{
+    var bounds = map.getExtent();
+    // This assumes a lat-lon projection!
+    if (bounds.top > 90.0) bounds.top = 90.0;
+    if (bounds.bottom < -90.0) bounds.bottom = -90.0;
+    return bounds;
 }
 function animationLoaded()
 {
     $('loadingAnimationDiv').style.visibility = 'hidden';
-    $('mapOverlayDiv').style.visibility = 'visible';
+    //$('mapOverlayDiv').style.visibility = 'visible';
     if (essc_wms != null) {
         essc_wms.setVisibility(false);
     }
+    // Load the image into a new layer on the map
+    animation_layer = new OpenLayers.Layer.Image(
+        "ncWMS animation", // Name for the layer
+        $('mapOverlay').src, // URL to the image
+        getMapExtent(), // Image bounds
+        new OpenLayers.Size($('mapOverlay').width, $('mapOverlay').height), // Size of image
+        {isBaseLayer : false} // Other options
+    );
+    map.addLayers([animation_layer]);
 }
 function hideAnimation()
 {
     if (essc_wms != null) {
         essc_wms.setVisibility(true);
+    }
+    if (animation_layer != null) {
+        map.removeLayer(animation_layer);
     }
     $('featureInfo').style.visibility = 'visible';
     $('autoZoom').style.visibility = 'visible';
@@ -708,7 +735,7 @@ function updateMap()
     if (essc_wms == null) {
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
-        essc_wms = new OpenLayers.Layer.WMS1_3("ESSC WMS",
+        essc_wms = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeServer == '' ? 'wms' : activeServer, {
             layers: layerName,
             elevation: getZValue(),

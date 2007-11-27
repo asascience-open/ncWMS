@@ -6,7 +6,7 @@
         <title>GODIVA2 Data Access and Analysis demo page</title>
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
         
-        <script type="text/javascript" src="js/OpenLayers-2.3.js"></script>
+        <script type="text/javascript" src="js/OpenLayers-2.5.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <!-- Comment out the line below to stop using Google Maps -->
         <!--<script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg"></script>-->
@@ -63,7 +63,7 @@
         
         <div id="imagePanel" class="imagePanel">
             <div id="autoZoom" class="aboveMap"></div>
-            <div id="hideAnimation" class="aboveMap"><a href="#" onclick="javascript:hideAnimation()">Unlock map (hides animation)</a></div>
+            <div id="hideAnimation" class="aboveMap"><a href="#" onclick="javascript:hideAnimation()">Stop animation</a></div>
             <div id="map" class="map"></div>
             <!-- This holds the "loading animation..." image -->
             <div class="map" id="loadingAnimationDiv"><img id="loadingAnimation" src="images/loading_animation.png" alt="loading animation"/></div>
@@ -92,11 +92,11 @@
     </div>
 
     <!-- Google Analytics tracking code -->
-    <!--<script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
+    <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
     <script type="text/javascript">
         _uacct = "UA-1662265-1";
         urchinTracker();
-    </script>-->
+    </script>
     
     </body>
 </html>
