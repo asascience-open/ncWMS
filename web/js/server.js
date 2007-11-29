@@ -120,6 +120,8 @@ function getLayerDetails(url, params) {
             if (typeof layerDetails.nearestTimeIso != 'undefined') {
                 layerDetails.nearestTime = iso8601ToDate(layerDetails.nearestTimeIso);
             }
+            layerDetails.server = url;
+            layerDetails.id = params.layerName;
             params.callback(layerDetails);
         }
     });

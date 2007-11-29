@@ -153,11 +153,11 @@ function setupTreeControl(menu)
         // the result from the server we shall pass it to the makeLayerMenu() function.
         getMenu(layerRootNode, {
             menu: menu,
-            callback : function(node, layers) {
-                node.data.label = layers.label;
-                node.label = layers.label;
+            callback : function(layerRootNode, layers) {
+                layerRootNode.data.label = layers.label;
+                layerRootNode.label = layers.label;
                 // Add layers recursively.
-                addNodes(node, layers.children);
+                addNodes(layerRootNode, layers.children);
                 tree.draw();
             }
         });
@@ -165,11 +165,8 @@ function setupTreeControl(menu)
         
     // Add an event callback that gets fired when a tree node is clicked
     tree.subscribe('labelClick', function(node) {
+        // We're only interested if this is a displayable layer, i.e. it has an id.
         if (typeof node.data.id != 'undefined') {
-            // Set the currently-active layer
-            activeLayer = node.data;
-            // We're only interested if this is a displayable layer, i.e. it has an id.
-            
             // Update the breadcrumb trail
             var s = node.data.label;
             var theNode = node;
@@ -189,9 +186,9 @@ function setupTreeControl(menu)
             
             // Get the details of this layer from the server, calling layerSelected()
             // when we have the result
-            var layerDetails = getLayerDetails(activeLayer.server, {
+            var layerDetails = getLayerDetails(node.data.server, {
                 callback: layerSelected,
-                layerName: activeLayer.id,
+                layerName: node.data.id,
                 time: isoTValue
             });
         }
@@ -244,6 +241,7 @@ function isDateDisabled(date, year, month, day)
 }
 
 // Event handler for when a user clicks on a map
+// TODO: how can we detect whether the click is off the map (i.e. |lat| > 90)?
 function getFeatureInfo(e)
 {
     if (essc_wms != null)
@@ -320,6 +318,7 @@ function popUp(url, width, height)
 // Gets the details (units, grid etc) of the given layer. 
 function layerSelected(layerDetails)
 {
+    activeLayer = layerDetails;
     newVariable = true;
     gotScaleRange = false;
     resetAnimation();
@@ -720,41 +719,34 @@ function updateMap()
     autoLoad = null;
     
     // Get the default style for this layer.  There is some defensive programming here to 
-    // take old servers into account
-    alert(activeLayer.supportedStyles);
+    // take old servers into account that don't advertise the supported styles
     var style = typeof activeLayer.supportedStyles == 'undefined' ? 'boxfill' : activeLayer.supportedStyles[0];
 
     // Notify the OpenLayers widget
-    // SCALE=minval,maxval is a non-standard extension to WMS, describing how
-    // the map is to be coloured.
-    // OPACITY=[0,100] is another non-standard extension to WMS, giving the opacity
-    // of the data pixels
+    // Note the non-standard way of constructing the STYLES string
     // TODO get the map projection from the base layer
     // TODO use a more informative title
     // Buffer is set to 1 to avoid loading a large halo of tiles outside the
     // current viewport
+    var params = {
+        layers: activeLayer.id,
+        elevation: getZValue(),
+        time: isoTValue,
+        transparent: 'true',
+        styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
+    };
     if (essc_wms == null) {
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ncWMS",
-            activeLayer.server == '' ? 'wms' : activeLayer.server, {
-            layers: activeLayer.id,
-            elevation: getZValue(),
-            time: isoTValue,
-            transparent: 'true',
-            // TODO: provide option to choose STYLE on web interface.
-            styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity},
-            {buffer: 1, ratio: 1.5}
+            activeLayer.server == '' ? 'wms' : activeLayer.server, 
+            params,
+            {buffer: 1}
         );
         map.addLayers([essc_wms]);
     } else {
         essc_wms.url = activeLayer.server == '' ? 'wms' : activeLayer.server;
-        essc_wms.mergeNewParams({
-            layers: activeLayer.id,
-            elevation: getZValue(),
-            time: isoTValue,
-            styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
-        });
+        essc_wms.mergeNewParams(params);
     }
     
     $('featureInfo').innerHTML = "Click on the map to get more information";
