@@ -13,15 +13,20 @@ var scaleMinVal;
 var scaleMaxVal;
 var newVariable = true;  // This will be true when we have chosen a new variable
 var gotScaleRange = false;
-var essc_wms = null; // The WMS layer for the ocean data
-var autoLoad = null; // Will contain data for auto-loading data from a permalink
+var autoLoad = new Object(); // Will contain data for auto-loading data from a permalink
+var menu = ''; // The menu that is being displayed (e.g. "mersea", "ecoop")
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
-var animation_layer = null; // We'll use this to contain the animation layer
+
+var essc_wms = null;
+var animation_layer = null;
+//var ncwms_layer_gridded = null; // The tiled WMS layer which will be used for scalar fields
+//var ncwms_layer_singletile = null; // The single-tiled WMS layer which will be used for vector fields
+//var ncwms_layer_animation = null; // We'll use this to contain animations
 
 var servers = ['']; // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
-var activeLayer = null; // The currently-selected layer
+var activeLayer = null; // The currently-selected layer metadata
 
 var tree = null; // The tree control in the left-hand panel
 
@@ -87,28 +92,31 @@ window.onload = function()
     // Add a listener for GetFeatureInfo
     map.events.register('click', map, getFeatureInfo);
     
-    var menu = ''; // This will be set if we're requesting a specific menu
-    // see if we are recreating a view from a permalink
-    if (window.location.search != '') {
-        autoLoad = new Object();
-        autoLoad.dataset = null;
-        autoLoad.variable = null;
-        autoLoad.zValue = null;
-        autoLoad.isoTValue = null;
-        autoLoad.bbox = null;
-        autoLoad.scaleMin = null;
-        autoLoad.scaleMax = null;
-        // strip off the leading question mark
-        var queryString = window.location.search.split('?')[1];
+    // Set up the autoload object
+    // Note that we must get the query string from the top-level frame
+    // strip off the leading question mark
+    populateAutoLoad(window.location);
+    if (window.top.location != window.location) {
+        // We're in an iframe so we must also use the query string from the top frame
+        populateAutoLoad(window.top.location);
+    }
+    
+    // Set up the left-hand menu
+    setupTreeControl(menu);
+}
+
+// Populates the autoLoad object from the given window location object
+function populateAutoLoad(windowLocation)
+{
+    var queryString = windowLocation.search.split('?')[1];
+    if (queryString != null) {
         var kvps = queryString.split('&');
         for (var i = 0; i < kvps.length; i++) {
             keyAndVal = kvps[i].split('=');
             if (keyAndVal.length > 1) {
                 var key = keyAndVal[0].toLowerCase();
-                if (key == 'dataset') {
-                    autoLoad.dataset = keyAndVal[1];
-                } else if (key == 'variable') {
-                    autoLoad.variable = keyAndVal[1];
+                if (key == 'layer') {
+                    autoLoad.layer = keyAndVal[1];
                 } else if (key == 'elevation') {
                     autoLoad.zValue = keyAndVal[1];
                 } else if (key == 'time') {
@@ -126,13 +134,13 @@ window.onload = function()
             }
         }
     }
-    // We haven't loaded the menu from elsewhere
-    setupTreeControl(menu);
 }
 
 function setupTreeControl(menu)
 {
     tree = new YAHOO.widget.TreeView('layerSelector');
+    // Add an event callback that gets fired when a tree node is clicked
+    tree.subscribe('labelClick', treeNodeClicked);
     
     // The servers can be specified using the global "servers" array above
     // but if not, we'll just use the default server
@@ -159,41 +167,53 @@ function setupTreeControl(menu)
                 // Add layers recursively.
                 addNodes(layerRootNode, layers.children);
                 tree.draw();
+                
+                // Now look to see if we are auto-loading a certain layer
+                if (typeof autoLoad.layer != 'undefined') {
+                    var node = tree.getNodeByProperty('id', autoLoad.layer);
+                    if (node == null) {
+                        alert("Layer " + autoLoad.layer + " not found");
+                    } else {
+                        if (node.parent != null) node.parent.expand();
+                        treeNodeClicked(node); // act as if we have clicked this node
+                    }
+                }
             }
         });
     }
-        
-    // Add an event callback that gets fired when a tree node is clicked
-    tree.subscribe('labelClick', function(node) {
-        // We're only interested if this is a displayable layer, i.e. it has an id.
-        if (typeof node.data.id != 'undefined') {
-            // Update the breadcrumb trail
-            var s = node.data.label;
-            var theNode = node;
-            while(theNode.parent != tree.getRoot()) {
-                theNode = theNode.parent;
-                s = theNode.data.label + ' &gt; ' + s;
-            }
-            $('layerPath').innerHTML = s;
-            
-            // See if we're auto-loading a certain time value
-            if (autoLoad != null && autoLoad.isoTValue != null) {
-                isoTValue = autoLoad.isoTValue;
-            } else if (isoTValue == null ) {
-                // Set to the present time if we don't already have a time selected
-                isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
-            }
-            
-            // Get the details of this layer from the server, calling layerSelected()
-            // when we have the result
-            var layerDetails = getLayerDetails(node.data.server, {
-                callback: layerSelected,
-                layerName: node.data.id,
-                time: isoTValue
-            });
+}
+
+// Called when a node in the tree has been clicked
+function treeNodeClicked(node)
+{
+    // We're only interested if this is a displayable layer, i.e. it has an id.
+    if (typeof node.data.id != 'undefined') {
+        // Update the breadcrumb trail
+        var s = node.data.label;
+        var theNode = node;
+        while(theNode.parent != tree.getRoot()) {
+            theNode = theNode.parent;
+            s = theNode.data.label + ' &gt; ' + s;
         }
-    });
-    tree.draw();
+        $('layerPath').innerHTML = s;
+
+        // See if we're auto-loading a certain time value
+        if (typeof autoLoad.isoTValue != 'undefined') {
+            isoTValue = autoLoad.isoTValue;
+        }
+        if (isoTValue == null ) {
+            // Set to the present time if we don't already have a time selected
+            isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
+        }
+
+        // Get the details of this layer from the server, calling layerSelected()
+        // when we have the result
+        var layerDetails = getLayerDetails(node.data.server, {
+            callback: layerSelected,
+            layerName: node.data.id,
+            time: isoTValue
+        });
+    }
 }
 
 // Recursive method to add nodes to the layer selector tree control
@@ -343,11 +363,9 @@ function layerSelected(layerDetails)
     $('zValues').options.length = 0; 
 
     // Set the range selector objects
-    if (autoLoad == null || autoLoad.zValue == null) {
-        var zValue = getZValue();
-    } else {
-        var zValue = parseFloat(autoLoad.zValue);
-    }
+    var zValue = typeof autoLoad.zValue == 'undefined'
+        ? getZValue()
+        : parseFloat(autoLoad.zValue);
 
     var zAxis = layerDetails.zaxis;
     if (zAxis == null) {
@@ -374,9 +392,9 @@ function layerSelected(layerDetails)
             var diff;
             // This is nasty: improve!
             if (zPositive) {
-                diff = Math.abs(parseFloat(zValues) - zValue);
+                diff = Math.abs(parseFloat(zValues[j]) - zValue);
             } else {
-                diff = Math.abs(parseFloat(zValues) + zValue);
+                diff = Math.abs(parseFloat(zValues[j]) + zValue);
             }
             if (diff < zDiff) {
                 zDiff = diff;
@@ -525,7 +543,7 @@ function updateTimesteps(times)
     }
     $('setFrames').style.visibility = 'visible';
 
-    if (autoLoad != null && autoLoad.scaleMin != null && autoLoad.scaleMax != null) {
+    if (typeof autoLoad.scaleMin != 'undefined' && typeof autoLoad.scaleMax != 'undefined') {
         $('scaleMin').value = autoLoad.scaleMin;
         $('scaleMax').value = autoLoad.scaleMax;
         validateScale(); // this calls updateMap()
@@ -634,8 +652,8 @@ function createAnimation()
     var urlEls = essc_wms.getURL(getMapExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
     // width and height of the viewport, otherwise it takes too long
-    var width = $('map').clientWidth / 2;
-    var height = $('map').clientHeight / 2;
+    var width = $('map').clientWidth;// / 2;
+    var height = $('map').clientHeight;// / 2;
     var newURL = urlEls[0];
     for (var i = 1; i < urlEls.length; i++) {
         if (urlEls[i].startsWith('TIME=')) {
@@ -704,7 +722,7 @@ function hideAnimation()
 }
 
 function updateMap()
-{    
+{
     // Update the intermediate scale markers
     var scaleOneThird = parseFloat(scaleMinVal) + ((scaleMaxVal - scaleMinVal) / 3);
     var scaleTwoThirds = parseFloat(scaleMinVal) + (2 * (scaleMaxVal - scaleMinVal) / 3);
@@ -718,12 +736,12 @@ function updateMap()
     var opacity = $('opacityValue').value;
     
     // Set the map bounds automatically
-    if (autoLoad != null && autoLoad.bbox != null) {
+    if (typeof autoLoad.bbox != 'undefined') {
         map.zoomToExtent(getBounds(autoLoad.bbox));
     }
     
     // Make sure the autoLoad object is cleared
-    autoLoad = null;
+    autoLoad = new Object();
     
     // Get the default style for this layer.  There is some defensive programming here to 
     // take old servers into account that don't advertise the supported styles
@@ -779,11 +797,13 @@ function getZValue()
 function setPermalinkURL()
 {
     if (activeLayer != null) {
-        var url = window.location.protocol + '//' +
-            window.location.host +
-            window.location.pathname +
-            '?dataset=' + activeLayer.id.split('/')[0] +
-            '&variable=' + activeLayer.id.split('/')[1] +
+        // Note that we must use window.top to get the containing page, in case
+        // the Godiva2 page is embedded in an iframe
+        // Watch out for trailing hashes, which screw the permalink up
+        var url = window.top.location.toString().replace('#', '');
+        url +=
+            '?menu=' + menu +
+            '&layer=' + activeLayer.id +
             '&elevation=' + getZValue() +
             '&time=' + isoTValue +
             '&scale=' + scaleMinVal + ',' + scaleMaxVal +
@@ -815,6 +835,10 @@ function setGEarthURL()
                 // the edge of the image: i.e. find the intersection of the layer BBOX
                 // and the viewport BBOX
                 gEarthURL += '&BBOX=' + getIntersectionBBOX();
+            } else if (urlEls[i].startsWith('WIDTH')) {
+                gEarthURL += '&WIDTH=' + map.size.w;
+            } else if (urlEls[i].startsWith('HEIGHT')) {
+                gEarthURL += '&HEIGHT=' + map.size.h;
             } else if (!urlEls[i].startsWith('OPACITY')) {
                 // We remove the OPACITY argument as Google Earth allows opacity
                 // to be controlled in the client
