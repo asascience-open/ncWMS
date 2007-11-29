@@ -244,29 +244,36 @@ function isDateDisabled(date, year, month, day)
 // TODO: how can we detect whether the click is off the map (i.e. |lat| > 90)?
 function getFeatureInfo(e)
 {
-    if (essc_wms != null)
+    // Check we haven't clicked off-map
+    var lonLat = map.getLonLatFromPixel(e.xy);
+    if (essc_wms != null && Math.abs(lonLat.lat) <= 90)
     {
-        $('featureInfo').innerHTML = "Getting feature info...";
-        var params = {
-            REQUEST: "GetFeatureInfo",
-            BBOX: essc_wms.map.getExtent().toBBOX(),
-            I: e.xy.x,
-            J: e.xy.y,
-            INFO_FORMAT: 'text/xml',
-            QUERY_LAYERS: essc_wms.params.LAYERS,
-            WIDTH: essc_wms.map.size.w,
-            HEIGHT: essc_wms.map.size.h
-        };
-        if (activeLayer.server != '') {
-            // This is the signal to the server to load the data from elsewhere
-            params.url = activeLayer.server;
+        // See if the click was within range of the currently-visible layer
+        var layerBounds = new OpenLayers.Bounds(activeLayer.bbox[0],
+            activeLayer.bbox[1], activeLayer.bbox[2], activeLayer.bbox[3]);
+        if (layerBounds.contains(lonLat.lon, lonLat.lat)) {
+            $('featureInfo').innerHTML = "Getting feature info...";
+            var params = {
+                REQUEST: "GetFeatureInfo",
+                BBOX: map.getExtent().toBBOX(),
+                I: e.xy.x,
+                J: e.xy.y,
+                INFO_FORMAT: 'text/xml',
+                QUERY_LAYERS: essc_wms.params.LAYERS,
+                WIDTH: map.size.w,
+                HEIGHT: map.size.h
+            };
+            if (activeLayer.server != '') {
+                // This is the signal to the server to load the data from elsewhere
+                params.url = activeLayer.server;
+            }
+            featureInfoUrl = essc_wms.getFullRequestString(
+                params,
+                'wms' // We must always load from the home server
+            );
+            OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
+            Event.stop(e);
         }
-        featureInfoUrl = essc_wms.getFullRequestString(
-            params,
-            'wms' // We must always load from the home server
-        );
-        OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
-        Event.stop(e);
     }
 }
 
