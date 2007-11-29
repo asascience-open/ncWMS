@@ -778,7 +778,7 @@ function updateMap()
     $('featureInfo').style.visibility = 'visible';
     
     var imageURL = essc_wms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
-    $('testImage').innerHTML = '<a href=\'' + imageURL + '\'>link to test image</a>';
+    $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">link to test image</a>';
     setGEarthURL();
     setPermalinkURL();
 }
