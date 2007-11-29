@@ -3,7 +3,6 @@
 //
 
 var map = null;
-var layerName = ''; // The unique name of the currently-displayed WMS layer
 var zPositive = false; // Will be true if the selected z axis is positive
 var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
@@ -22,7 +21,7 @@ var animation_layer = null; // We'll use this to contain the animation layer
 
 var servers = ['']; // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
-var activeServer; // The server (url) that is serving the currently-selected layer (see dataSources.js)
+var activeLayer = null; // The currently-selected layer
 
 var tree = null; // The tree control in the left-hand panel
 
@@ -167,8 +166,8 @@ function setupTreeControl(menu)
     // Add an event callback that gets fired when a tree node is clicked
     tree.subscribe('labelClick', function(node) {
         if (typeof node.data.id != 'undefined') {
-            // Set the currently-active server
-            activeServer = node.data.server;
+            // Set the currently-active layer
+            activeLayer = node.data;
             // We're only interested if this is a displayable layer, i.e. it has an id.
             
             // Update the breadcrumb trail
@@ -180,9 +179,6 @@ function setupTreeControl(menu)
             }
             $('layerPath').innerHTML = s;
             
-            // Store the layer name for later use
-            layerName = node.data.id;
-            
             // See if we're auto-loading a certain time value
             if (autoLoad != null && autoLoad.isoTValue != null) {
                 isoTValue = autoLoad.isoTValue;
@@ -193,9 +189,9 @@ function setupTreeControl(menu)
             
             // Get the details of this layer from the server, calling layerSelected()
             // when we have the result
-            var layerDetails = getLayerDetails(activeServer, {
+            var layerDetails = getLayerDetails(activeLayer.server, {
                 callback: layerSelected,
-                layerName: node.data.id,
+                layerName: activeLayer.id,
                 time: isoTValue
             });
         }
@@ -263,9 +259,9 @@ function getFeatureInfo(e)
             WIDTH: essc_wms.map.size.w,
             HEIGHT: essc_wms.map.size.h
         };
-        if (activeServer != '') {
+        if (activeLayer.server != '') {
             // This is the signal to the server to load the data from elsewhere
-            params.url = activeServer;
+            params.url = activeLayer.server;
         }
         featureInfoUrl = essc_wms.getFullRequestString(
             params,
@@ -475,9 +471,9 @@ function loadTimesteps()
     $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
 
     // Get the timesteps for this day
-    getTimesteps(activeServer, {
+    getTimesteps(activeLayer.server, {
         callback: updateTimesteps,
-        layerName: layerName,
+        layerName: activeLayer.id,
         day: makeIsoDate(calendar.date)
     });
 }
@@ -550,9 +546,9 @@ function autoScale()
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
     }
-    getMinMax(activeServer, {
+    getMinMax(activeLayer.server, {
         callback: gotMinMax,
-        layerName: layerName,
+        layerName: activeLayer.id,
         bbox: dataBounds,
         elevation: getZValue(),
         time: isoTValue
@@ -722,6 +718,11 @@ function updateMap()
     
     // Make sure the autoLoad object is cleared
     autoLoad = null;
+    
+    // Get the default style for this layer.  There is some defensive programming here to 
+    // take old servers into account
+    alert(activeLayer.supportedStyles);
+    var style = typeof activeLayer.supportedStyles == 'undefined' ? 'boxfill' : activeLayer.supportedStyles[0];
 
     // Notify the OpenLayers widget
     // SCALE=minval,maxval is a non-standard extension to WMS, describing how
@@ -736,23 +737,23 @@ function updateMap()
         // If this were an Untiled layer we could control the ratio of image
         // size to viewport size with "{buffer: 1, ratio: 1.5}"
         essc_wms = new OpenLayers.Layer.WMS1_3("ncWMS",
-            activeServer == '' ? 'wms' : activeServer, {
-            layers: layerName,
+            activeLayer.server == '' ? 'wms' : activeLayer.server, {
+            layers: activeLayer.id,
             elevation: getZValue(),
             time: isoTValue,
             transparent: 'true',
             // TODO: provide option to choose STYLE on web interface.
-            styles: 'vector;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity},
+            styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity},
             {buffer: 1, ratio: 1.5}
         );
         map.addLayers([essc_wms]);
     } else {
-        essc_wms.url = activeServer == '' ? 'wms' : activeServer;
+        essc_wms.url = activeLayer.server == '' ? 'wms' : activeLayer.server;
         essc_wms.mergeNewParams({
-            layers: layerName,
+            layers: activeLayer.id,
             elevation: getZValue(),
             time: isoTValue,
-            styles: 'boxfill;scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
+            styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
         });
     }
     
@@ -778,12 +779,12 @@ function getZValue()
 // Sets the permalink
 function setPermalinkURL()
 {
-    if (layerName != '') {
+    if (activeLayer != null) {
         var url = window.location.protocol + '//' +
             window.location.host +
             window.location.pathname +
-            '?dataset=' + layerName.split('/')[0] +
-            '&variable=' + layerName.split('/')[1] +
+            '?dataset=' + activeLayer.id.split('/')[0] +
+            '&variable=' + activeLayer.id.split('/')[1] +
             '&elevation=' + getZValue() +
             '&time=' + isoTValue +
             '&scale=' + scaleMinVal + ',' + scaleMaxVal +
