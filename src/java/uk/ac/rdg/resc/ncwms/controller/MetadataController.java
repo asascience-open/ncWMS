@@ -44,6 +44,7 @@ import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -66,6 +67,7 @@ public class MetadataController
     private Config config;
     private Factory<AbstractGrid> gridFactory;
     private MetadataStore metadataStore;
+    private UsageLogger usageLogger;
     
     public ModelAndView handleRequest(HttpServletRequest request,
         HttpServletResponse response) throws MetadataException
@@ -87,19 +89,19 @@ public class MetadataController
             }
             else if (item.equals("menu"))
             {
-                return this.showMenu(request, response);
+                return this.showMenu(request);
             }
             else if (item.equals("layerDetails"))
             {
-                return this.showLayerDetails(request, response);
+                return this.showLayerDetails(request);
             }
             else if (item.equals("timesteps"))
             {
-                return this.showTimesteps(request, response);
+                return this.showTimesteps(request);
             }
             else if (item.equals("minmax"))
             {
-                return this.showMinMax(request, response);
+                return this.showMinMax(request);
             }
             else
             {
@@ -180,8 +182,7 @@ public class MetadataController
      * Shows the hierarchy of layers available from this server, or a pre-set
      * hierarchy.
      */
-    private ModelAndView showMenu(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
+    private ModelAndView showMenu(HttpServletRequest request) throws Exception
     {
         String menu = "default";
         String menuFromRequest = request.getParameter("menu");
@@ -199,8 +200,8 @@ public class MetadataController
      * Shows an JSON document containing the details of the given variable (units,
      * zvalues, tvalues etc).  See showLayerDetails.jsp.
      */
-    private ModelAndView showLayerDetails(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
+    private ModelAndView showLayerDetails(HttpServletRequest request)
+        throws Exception
     {
         Layer layer = this.getLayer(request);
         String targetDateIso = request.getParameter("time");
@@ -293,8 +294,8 @@ public class MetadataController
      * Finds all the timesteps that occur on the given date, which will be provided
      * in the form "2007-10-18".
      */
-    private ModelAndView showTimesteps(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
+    private ModelAndView showTimesteps(HttpServletRequest request)
+        throws Exception
     {
         Layer layer = getLayer(request);
         String dayStr = request.getParameter("day");
@@ -346,8 +347,8 @@ public class MetadataController
      * Shows an XML document containing the minimum and maximum values for the
      * tile given in the parameters.
      */
-    private ModelAndView showMinMax(HttpServletRequest request,
-        HttpServletResponse response) throws Exception
+    private ModelAndView showMinMax(HttpServletRequest request)
+        throws Exception
     {
         RequestParams params = new RequestParams(request.getParameterMap());
         // We only need the bit of the GetMap request that pertains to data extraction
@@ -434,6 +435,14 @@ public class MetadataController
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
+    }
+    
+    /**
+     * Called by Spring to inject the usage logger
+     */
+    public void setUsageLogger(UsageLogger usageLogger)
+    {
+        this.usageLogger = usageLogger;
     }
     
 }

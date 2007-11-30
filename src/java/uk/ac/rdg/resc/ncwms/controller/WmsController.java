@@ -58,10 +58,12 @@ import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
 import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
 import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -93,6 +95,7 @@ public class WmsController extends AbstractController
     private Factory<PicMaker> picMakerFactory;
     private Factory<AbstractStyle> styleFactory;
     private Factory<AbstractGrid> gridFactory;
+    private UsageLogger usageLogger;
     private MetadataController metadataController;
     
     /**
@@ -101,23 +104,26 @@ public class WmsController extends AbstractController
     protected ModelAndView handleRequestInternal(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) throws Exception
     {
+        UsageLogEntry usageLogEntry = new UsageLogEntry();
+        usageLogEntry.setHttpServletRequest(httpServletRequest);
         try
         {
             // Create an object that allows request parameters to be retrieved in
             // a way that is not sensitive to the case of the parameter NAMES
             // (but is sensitive to the case of the parameter VALUES).
             RequestParams params = new RequestParams(httpServletRequest.getParameterMap());
-
+            
             // Check the REQUEST parameter to see if we're producing a capabilities
             // document, a map or a FeatureInfo
             String request = params.getMandatoryString("request");
+            usageLogEntry.setWmsOperation(request);
             if (request.equals("GetCapabilities"))
             {
-                return getCapabilities(httpServletRequest, params);
+                return getCapabilities(params, httpServletRequest);
             }
             else if (request.equals("GetMap"))
             {
-                return getMap(params, httpServletResponse);
+                return getMap(params, httpServletResponse, usageLogEntry);
             }
             else if (request.equals("GetFeatureInfo"))
             {
@@ -139,22 +145,29 @@ public class WmsController extends AbstractController
         catch(WmsException wmse)
         {
             // We don't log these errors
+            usageLogEntry.setException(wmse);
             throw wmse;
         }
         catch(Exception e)
         {
             logger.error(e.getMessage(), e);
+            usageLogEntry.setException(e);
             throw e;
+        }
+        finally
+        {
+            // Log this request to the usage log
+            this.usageLogger.logUsage(usageLogEntry);
         }
     }
     
     /**
-     * Executes the GetCapabilities operation, returning a ModelAndView for 
+     * Executes the GetCapabilities operation, returning a ModelAndView for
      * display of the information.
      * @todo allow the display of certain layers, or groups of layers.
      */
-    private ModelAndView getCapabilities(HttpServletRequest httpServletRequest,
-        RequestParams params) throws WmsException
+    private ModelAndView getCapabilities(RequestParams params,
+        HttpServletRequest httpServletRequest) throws WmsException
     {
         // Check the SERVICE parameter
         String service = params.getMandatoryString("service");
@@ -180,7 +193,7 @@ public class WmsController extends AbstractController
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
-            FEATURE_INFO_XML_FORMAT});
+        FEATURE_INFO_XML_FORMAT});
         if (version == null || version.equals("1.3.0"))
         {
             return new ModelAndView("capabilities_xml", models);
@@ -201,7 +214,7 @@ public class WmsController extends AbstractController
      * document that the client will see (based on the version negotiation defined
      * in the WMS spec
      */
-    //private static WmsVersion 
+    //private static WmsVersion
     
     /**
      * Executes the GetMap operation
@@ -209,20 +222,23 @@ public class WmsController extends AbstractController
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    public ModelAndView getMap(RequestParams params, HttpServletResponse response)
+    private ModelAndView getMap(RequestParams params, 
+        HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
         throws WmsException, Exception
     {
+        // Parse the URL parameters
         GetMapRequest getMapRequest = new GetMapRequest(params);
-        
+        // TODO: send to the usage log entry
+
         // Get the PicMaker that corresponds with this MIME type
         String mimeType = getMapRequest.getStyleRequest().getImageFormat();
         PicMaker picMaker = this.picMakerFactory.createObject(mimeType);
         if (picMaker == null)
         {
-            throw new InvalidFormatException("The image format " + mimeType + 
+            throw new InvalidFormatException("The image format " + mimeType +
                 " is not supported by this server");
         }
-        
+
         String[] layers = getMapRequest.getDataRequest().getLayers();
         if (layers.length > LAYER_LIMIT)
         {
@@ -231,21 +247,23 @@ public class WmsController extends AbstractController
         }
         // TODO: support more than one layer
         Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
-        
+        // TODO: send to the usage log
+
         // Get the grid onto which the data will be projected
         AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
             this.gridFactory);
-        
+
         AbstractStyle style = this.getStyle(getMapRequest, layer);
-        
+
         String zValue = getMapRequest.getDataRequest().getElevationString();
         int zIndex = getZIndex(zValue, layer); // -1 if no z axis present
-        
+
         // Cycle through all the provided timesteps, extracting data for each step
         // If there is no time axis getTimesteps will return a single value of null
         List<String> tValues = new ArrayList<String>();
         String timeString = getMapRequest.getDataRequest().getTimeString();
         List<Integer> tIndices = getTIndices(timeString, layer);
+        long beforeExtractData = System.currentTimeMillis();
         for (int tIndex : tIndices)
         {
             // tIndex == -1 if there is no t axis present
@@ -259,6 +277,8 @@ public class WmsController extends AbstractController
             tValues.add(tValue);
             style.addFrame(picData, tValue); // the tValue is the label for the image
         }
+        long timeToExtractData = System.currentTimeMillis() - beforeExtractData;
+        // TODO: send to the usage log
 
         // We write some of the request elements to the picMaker - this is
         // used to create labels and metadata, e.g. in KMZ.
@@ -268,21 +288,23 @@ public class WmsController extends AbstractController
         picMaker.setBbox(grid.getBbox());
         // Set the legend if we need one (required for KMZ files, for instance)
         if (picMaker.needsLegend()) picMaker.setLegend(style.getLegend(layer));
-        
+
         // Write the image to the client
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType(mimeType);
+        httpServletResponse.setStatus(HttpServletResponse.SC_OK);
+        httpServletResponse.setContentType(mimeType);
         // If this is a KMZ file give it a sensible filename
         if (picMaker instanceof KmzMaker)
         {
-            response.setHeader("Content-Disposition", "inline; filename=" +
+            httpServletResponse.setHeader("Content-Disposition", "inline; filename=" +
                 layer.getDataset().getId() + "_" + layer.getId() + ".kmz");
         }
+
+        System.out.println("About to write image");
 
         // Send the images to the picMaker and write to the output
         // TODO: for KMZ output, better to do this via a JSP page?
         picMaker.writeImage(style.getRenderedFrames(), mimeType,
-            response.getOutputStream());
+            httpServletResponse.getOutputStream());
 
         return null;
     }
@@ -315,7 +337,7 @@ public class WmsController extends AbstractController
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    public ModelAndView getFeatureInfo(RequestParams params,
+    private ModelAndView getFeatureInfo(RequestParams params,
         HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse)
         throws WmsException, Exception
@@ -412,7 +434,7 @@ public class WmsController extends AbstractController
             }
             TimeSeriesCollection xydataset = new TimeSeriesCollection();
             xydataset.addSeries(ts);
-
+            
             // Create a chart with no legend, tooltips or URLs
             String title = "Lon: " + lon + ", Lat: " + lat;
             String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
@@ -508,7 +530,7 @@ public class WmsController extends AbstractController
      * a valid floating-point number or if it is not a valid value for this axis.
      */
     static int getZIndex(String zValue, Layer layer)
-        throws InvalidDimensionValueException
+    throws InvalidDimensionValueException
     {
         // Get the z value.  The default value is the first value in the array
         // of z values
@@ -537,7 +559,7 @@ public class WmsController extends AbstractController
      * a List with a single value of -1.
      */
     static List<Integer> getTIndices(String timeString, Layer layer)
-        throws WmsException
+    throws WmsException
     {
         List<Integer> tIndices = new ArrayList<Integer>();
         if (layer.isTaxisPresent())
@@ -617,7 +639,7 @@ public class WmsController extends AbstractController
     {
         this.metadataController = metadataController;
     }
-
+    
     /**
      * Called by the Spring framework to inject the config object
      */
@@ -625,7 +647,15 @@ public class WmsController extends AbstractController
     {
         this.config = config;
     }
-
+    
+    /**
+     * Called by Spring to inject the usage logger
+     */
+    public void setUsageLogger(UsageLogger usageLogger)
+    {
+        this.usageLogger = usageLogger;
+    }
+    
     /**
      * Called by Spring to inject the metadata store
      */
@@ -677,7 +707,7 @@ class WmsVersion implements Comparable<WmsVersion>
                 " is not a valid WMS version number");
         }
     }
-
+    
     /**
      * Compares this WmsVersion with the specified Version for order.  Returns a
      * negative integer, zero, or a positive integer as this Version is less

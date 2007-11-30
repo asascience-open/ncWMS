@@ -89,6 +89,14 @@
         <property name="metadataStore"><ref local="metadataStore"/></property>
     </bean>
     
+    <!-- Object that handles logging of the usage of the ncWMS.
+         To switch off usage logging, use the DoNothingUsageLogger -->
+    <!--<bean id="usageLogger" class="uk.ac.rdg.resc.ncwms.log.DoNothingUsageLogger"/>-->
+    <bean id="usageLogger" class="uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger"
+            init-method="init" destroy-method="close">
+        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>        
+    </bean>
+    
     <!-- This Controller will handle all the requests to the WMS -->
     <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController">
         <property name="supportedMethods" value="GET"/>
@@ -98,6 +106,7 @@
         <property name="styleFactory"><ref local="styleFactory"/></property>
         <property name="gridFactory"><ref local="gridFactory"/></property>
         <property name="metadataController"><ref local="metadataController"/></property>
+        <property name="usageLogger"><ref local="usageLogger"/></property>
     </bean>
     
     <!-- This Controller will handle all requests for the non-standard
@@ -107,6 +116,7 @@
         <property name="config"><ref local="config"/></property>
         <property name="metadataStore"><ref local="metadataStore"/></property>
         <property name="gridFactory"><ref local="gridFactory"/></property>
+        <property name="usageLogger"><ref local="usageLogger"/></property>
     </bean>
     
     <!-- This Controller is used to display the front page of the server, which

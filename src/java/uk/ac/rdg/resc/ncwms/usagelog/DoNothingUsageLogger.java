@@ -26,54 +26,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.controller;
-
-import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+package uk.ac.rdg.resc.ncwms.usagelog;
 
 /**
- * Object representing a request to the GetFeatureInfo operation.  This simply parses
- * the request and only does very basic sanity checking on the parameters 
- * (e.g. checking for valid integers).
+ * A UsageLogger that does nothing.  Used if usage logging is not to be enabled.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class GetFeatureInfoRequest
+public class DoNothingUsageLogger implements UsageLogger
 {
-    private GetFeatureInfoDataRequest dataRequest;
-    private String outputFormat;
-    
-    /**
-     * Creates a new instance of GetMapRequest from the given RequestParams
-     * @throws WmsException if the request is invalid
-     */
-    public GetFeatureInfoRequest(RequestParams params) throws WmsException
-    {
-        String version = params.getMandatoryString("version");
-        if (!WmsUtils.SUPPORTED_VERSIONS.contains(version))
-        {
-            throw new WmsException("VERSION " + version + " not supported");
-        }
-        // TODO: deal with the EXCEPTIONS parameter
-        this.dataRequest = new GetFeatureInfoDataRequest(params, version);
-        this.outputFormat = params.getMandatoryString("info_format");
-    }
-
-    /**
-     * @return the portion of the GetMap request that pertains to the data
-     * extraction, i.e. independent of styling concerns
-     */
-    public GetFeatureInfoDataRequest getDataRequest()
-    {
-        return dataRequest;
-    }
-
-    public String getOutputFormat()
-    {
-        return outputFormat;
-    }
-    
+    public void logUsage(UsageLogEntry logEntry) {}
 }

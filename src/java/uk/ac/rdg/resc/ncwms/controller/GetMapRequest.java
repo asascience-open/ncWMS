@@ -41,7 +41,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * $Date$
  * $Log$
  */
-class GetMapRequest
+public class GetMapRequest
 {
     private GetMapDataRequest dataRequest;
     private GetMapStyleRequest styleRequest;
