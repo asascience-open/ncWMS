@@ -28,8 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.usagelog;
 
+import java.awt.Color;
 import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
+import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
+import uk.ac.rdg.resc.ncwms.controller.GetMapRequest;
+import uk.ac.rdg.resc.ncwms.controller.GetMapStyleRequest;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
@@ -53,23 +57,28 @@ public class UsageLogEntry
     private String httpMethod = null;
     private String exceptionClass = null; // Will be non-null if we are logging a failed operation
     private String exceptionMessage = null;
-    private String wmsOperation = null; 
+    private String wmsOperation = null;
     
+    // These fields pertain to data requests
+    private String crs = null;
+    private double[] bbox = null;
+    private String elevation = null;
+    private Integer width = null;
+    private Integer height = null;
     private Layer layer = null;
-    private long timeToExtractDataMs = -1;
-    private boolean usedCache = false;
+    private Long timeToExtractDataMs = null;
+    private Boolean usedCache = false;
     
-    public void setException(Exception ex)
-    {
-        this.exceptionClass = ex.getClass().getName();
-        this.exceptionMessage = ex.getMessage();
-    }
+    // These fields pertain to how data are rendered
+    private String outputFormat = null;
+    private Boolean transparent = null;
+    private String backgroundColor = null;
 
     /**
      * Sets the properties of this object that can be found from the
      * HTTP servlet request
      */
-    public void setHttpServletRequest(HttpServletRequest httpServletRequest)
+    public UsageLogEntry(HttpServletRequest httpServletRequest)
     {
         this.clientIpAddress = httpServletRequest.getRemoteAddr();
         this.clientHost = httpServletRequest.getRemoteHost();
@@ -79,9 +88,50 @@ public class UsageLogEntry
         this.httpMethod = httpServletRequest.getMethod();
     }
     
+    public void setException(Exception ex)
+    {
+        this.exceptionClass = ex.getClass().getName();
+        this.exceptionMessage = ex.getMessage();
+    }
+    
+    /**
+     * Sets the properties of this object that come from the URL parameters 
+     * of a GetMap request
+     */
+    public void setGetMapRequest(GetMapRequest getMapRequest)
+    {
+        GetMapDataRequest dr = getMapRequest.getDataRequest();
+        this.crs = dr.getCrs();
+        this.bbox = dr.getBbox();
+        this.elevation = dr.getElevationString();
+        this.width = dr.getWidth();
+        this.height = dr.getHeight();
+        // TODO: how deal with dr.getTimeString();?
+        // Maybe log the string and the number of frames requested
+        
+        GetMapStyleRequest sr = getMapRequest.getStyleRequest();
+        this.outputFormat = sr.getImageFormat();
+        this.transparent = sr.isTransparent();
+        Color bgColor = new Color(sr.getBackgroundColour());
+        this.backgroundColor = bgColor.getRed() + "," + bgColor.getGreen() + ","
+            + bgColor.getBlue();
+        // TODO: how deal with sr.getStyles();?
+        // Maybe just log the one style (we're only logging one layer after all)
+    }
+    
     public void setWmsOperation(String op)
     {
         this.wmsOperation = op;
+    }
+    
+    public void setLayer(Layer layer)
+    {
+        this.layer = layer;
+    }
+
+    public void setTimeToExtractDataMs(long timeToExtractDataMs)
+    {
+        this.timeToExtractDataMs = timeToExtractDataMs;
     }
 
     public Date getRequestTime()

@@ -42,7 +42,7 @@ import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
  * $Date$
  * $Log$
  */
-class GetMapDataRequest
+public class GetMapDataRequest
 {
     protected String[] layers;
     private String crs;

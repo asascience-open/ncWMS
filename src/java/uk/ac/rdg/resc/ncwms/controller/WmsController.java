@@ -104,8 +104,7 @@ public class WmsController extends AbstractController
     protected ModelAndView handleRequestInternal(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) throws Exception
     {
-        UsageLogEntry usageLogEntry = new UsageLogEntry();
-        usageLogEntry.setHttpServletRequest(httpServletRequest);
+        UsageLogEntry usageLogEntry = new UsageLogEntry(httpServletRequest);
         try
         {
             // Create an object that allows request parameters to be retrieved in
@@ -228,7 +227,7 @@ public class WmsController extends AbstractController
     {
         // Parse the URL parameters
         GetMapRequest getMapRequest = new GetMapRequest(params);
-        // TODO: send to the usage log entry
+        usageLogEntry.setGetMapRequest(getMapRequest);
 
         // Get the PicMaker that corresponds with this MIME type
         String mimeType = getMapRequest.getStyleRequest().getImageFormat();
@@ -247,7 +246,7 @@ public class WmsController extends AbstractController
         }
         // TODO: support more than one layer
         Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
-        // TODO: send to the usage log
+        usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
         AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
@@ -278,7 +277,7 @@ public class WmsController extends AbstractController
             style.addFrame(picData, tValue); // the tValue is the label for the image
         }
         long timeToExtractData = System.currentTimeMillis() - beforeExtractData;
-        // TODO: send to the usage log
+        usageLogEntry.setTimeToExtractDataMs(timeToExtractData);
 
         // We write some of the request elements to the picMaker - this is
         // used to create labels and metadata, e.g. in KMZ.
@@ -298,8 +297,6 @@ public class WmsController extends AbstractController
             httpServletResponse.setHeader("Content-Disposition", "inline; filename=" +
                 layer.getDataset().getId() + "_" + layer.getId() + ".kmz");
         }
-
-        System.out.println("About to write image");
 
         // Send the images to the picMaker and write to the output
         // TODO: for KMZ output, better to do this via a JSP page?
@@ -530,7 +527,7 @@ public class WmsController extends AbstractController
      * a valid floating-point number or if it is not a valid value for this axis.
      */
     static int getZIndex(String zValue, Layer layer)
-    throws InvalidDimensionValueException
+        throws InvalidDimensionValueException
     {
         // Get the z value.  The default value is the first value in the array
         // of z values
@@ -559,7 +556,7 @@ public class WmsController extends AbstractController
      * a List with a single value of -1.
      */
     static List<Integer> getTIndices(String timeString, Layer layer)
-    throws WmsException
+        throws WmsException
     {
         List<Integer> tIndices = new ArrayList<Integer>();
         if (layer.isTaxisPresent())
