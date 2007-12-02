@@ -118,7 +118,7 @@ public class WmsController extends AbstractController
             usageLogEntry.setWmsOperation(request);
             if (request.equals("GetCapabilities"))
             {
-                return getCapabilities(params, httpServletRequest);
+                return getCapabilities(params, httpServletRequest, usageLogEntry);
             }
             else if (request.equals("GetMap"))
             {
@@ -126,7 +126,8 @@ public class WmsController extends AbstractController
             }
             else if (request.equals("GetFeatureInfo"))
             {
-                return getFeatureInfo(params, httpServletRequest, httpServletResponse);
+                return getFeatureInfo(params, httpServletRequest, httpServletResponse,
+                    usageLogEntry);
             }
             else if (request.equals("GetMetadata"))
             {
@@ -134,7 +135,7 @@ public class WmsController extends AbstractController
                 // day be replaced by queries to Capabilities fragments, if possible.)
                 // Delegate to the MetadataController
                 return this.metadataController.handleRequest(httpServletRequest,
-                    httpServletResponse);
+                    httpServletResponse, usageLogEntry);
             }
             else
             {
@@ -166,7 +167,8 @@ public class WmsController extends AbstractController
      * @todo allow the display of certain layers, or groups of layers.
      */
     private ModelAndView getCapabilities(RequestParams params,
-        HttpServletRequest httpServletRequest) throws WmsException
+        HttpServletRequest httpServletRequest, UsageLogEntry usageLogEntry)
+        throws WmsException
     {
         // Check the SERVICE parameter
         String service = params.getMandatoryString("service");
@@ -177,9 +179,11 @@ public class WmsController extends AbstractController
         
         // Check the VERSION parameter
         String version = params.getString("version");
+        usageLogEntry.setWmsVersion(version);
         
         // Check the FORMAT parameter
         String format = params.getString("format");
+        usageLogEntry.setOutputFormat(format);
         // The WMS 1.3.0 spec says that we can respond with the default text/xml
         // format if the client has requested an unknown format.  Hence we do
         // nothing here.
@@ -192,7 +196,7 @@ public class WmsController extends AbstractController
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
-        FEATURE_INFO_XML_FORMAT});
+            FEATURE_INFO_XML_FORMAT});
         if (version == null || version.equals("1.3.0"))
         {
             return new ModelAndView("capabilities_xml", models);
@@ -225,6 +229,9 @@ public class WmsController extends AbstractController
         HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
         throws WmsException, Exception
     {
+        // I don't think VERSION is compulsory for GetMap
+        usageLogEntry.setWmsVersion(params.getString("VERSION"));
+        
         // Parse the URL parameters
         GetMapRequest getMapRequest = new GetMapRequest(params);
         usageLogEntry.setGetMapRequest(getMapRequest);
@@ -262,6 +269,7 @@ public class WmsController extends AbstractController
         List<String> tValues = new ArrayList<String>();
         String timeString = getMapRequest.getDataRequest().getTimeString();
         List<Integer> tIndices = getTIndices(timeString, layer);
+        usageLogEntry.setNumTimeSteps(tIndices.size());
         long beforeExtractData = System.currentTimeMillis();
         for (int tIndex : tIndices)
         {
@@ -336,7 +344,8 @@ public class WmsController extends AbstractController
      */
     private ModelAndView getFeatureInfo(RequestParams params,
         HttpServletRequest httpServletRequest,
-        HttpServletResponse httpServletResponse)
+        HttpServletResponse httpServletResponse,
+        UsageLogEntry usageLogEntry)
         throws WmsException, Exception
     {
         // Look to see if we're requesting data from a remote server
@@ -347,7 +356,11 @@ public class WmsController extends AbstractController
             return null;
         }
         
+        // I don't think VERSION is compulsory for GetFeatureInfo
+        usageLogEntry.setWmsVersion(params.getString("VERSION"));
+        
         GetFeatureInfoRequest request = new GetFeatureInfoRequest(params);
+        usageLogEntry.setGetFeatureInfoRequest(request);
         GetFeatureInfoDataRequest dataRequest = request.getDataRequest();
         
         // Check the feature count
@@ -367,6 +380,7 @@ public class WmsController extends AbstractController
         // Get the layer we're interested in
         String layerName = dataRequest.getLayers()[0];
         Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+        usageLogEntry.setLayer(layer);
         if (!layer.isQueryable())
         {
             throw new LayerNotQueryableException(layerName);
@@ -377,12 +391,14 @@ public class WmsController extends AbstractController
         // Get the lat and lon of the point of interest
         double lon = grid.getLongitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
         double lat = grid.getLatitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
+        usageLogEntry.setFeatureInfoLocation(lon, lat);
         
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
         
         // Get the information about the requested timesteps
         List<Integer> tIndices = getTIndices(dataRequest.getTimeString(), layer);
+        usageLogEntry.setNumTimeSteps(tIndices.size());
         
         // Now read the data, mapping date-times to data values
         // The map is sorted in order of ascending time

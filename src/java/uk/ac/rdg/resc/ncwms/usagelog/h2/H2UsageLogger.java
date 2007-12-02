@@ -123,18 +123,44 @@ public class H2UsageLogger implements UsageLogger
         long timeToProcessRequest =
             System.currentTimeMillis() - logEntry.getRequestTime().getTime();
         String insertCommand = "INSERT INTO usage_log(request_time, client_ip, " +
-            "client_hostname, client_referrer, client_user_agent, http_method, wms_operation) " +
-            "VALUES(?,?,?,?,?,?,?)";
+            "client_hostname, client_referrer, client_user_agent, http_method, wms_version," +
+            "wms_operation, num_timesteps) " +
+            "VALUES(?,?,?,?,?,?,?,?,?)";
         try
         {
             PreparedStatement ps = this.conn.prepareStatement(insertCommand);
-            ps.setDate(1, new java.sql.Date(logEntry.getRequestTime().getTime()));
-            ps.setString(2, logEntry.getClientIpAddress());
-            ps.setString(3, logEntry.getClientHost());
-            ps.setString(4, logEntry.getClientReferrer());
-            ps.setString(5, logEntry.getClientUserAgent());
-            ps.setString(6, logEntry.getHttpMethod());
-            ps.setString(7, logEntry.getWmsOperation());
+            ps.setObject(1, logEntry.getRequestTime());
+            ps.setObject(2, logEntry.getClientIpAddress());
+            ps.setObject(3, logEntry.getClientHost());
+            ps.setObject(4, logEntry.getClientReferrer());
+            ps.setObject(5, logEntry.getClientUserAgent());
+            ps.setObject(6, logEntry.getHttpMethod());
+            ps.setObject(7, logEntry.getWmsVersion());
+            ps.setObject(8, logEntry.getWmsOperation());
+            ps.setObject(9, logEntry.getNumTimeSteps()); // Use of setObject allows nullable
+            /*ps.setString(9, logEntry.getExceptionClass());
+            ps.setString(10, logEntry.getExceptionMessage());
+            
+            ps.setString(11, logEntry.getCrs());
+            ps.setString(12, logEntry.getBbox()); // TODO: four columns (unless we concatenate)
+            ps.setString(13, logEntry.getElevation());
+            ps.setString(14, logEntry.getTime());
+            ps.setString(16, logEntry.getWmsOperation());
+            ps.setString(17, logEntry.getWmsOperation());
+            ps.setString(18, logEntry.getWmsOperation());
+            ps.setString(19, logEntry.getWmsOperation());
+            ps.setString(20, logEntry.getWmsOperation());
+            ps.setString(21, logEntry.getWmsOperation());
+            ps.setString(22, logEntry.getWmsOperation());
+            ps.setString(23, logEntry.getWmsOperation());
+            ps.setString(24, logEntry.getWmsOperation());
+            ps.setString(25, logEntry.getWmsOperation());
+            ps.setString(26, logEntry.getWmsOperation());
+            ps.setString(27, logEntry.getWmsOperation());
+            ps.setString(28, logEntry.getWmsOperation());
+            ps.setString(29, logEntry.getWmsOperation());
+            ps.setString(30, logEntry.getWmsOperation());
+            ps.setString(31, logEntry.getWmsOperation());*/
             ps.executeUpdate();
         }
         catch(SQLException sqle)

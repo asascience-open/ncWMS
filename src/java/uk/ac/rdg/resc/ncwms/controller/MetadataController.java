@@ -47,6 +47,7 @@ import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -70,7 +71,8 @@ public class MetadataController
     private UsageLogger usageLogger;
     
     public ModelAndView handleRequest(HttpServletRequest request,
-        HttpServletResponse response) throws MetadataException
+        HttpServletResponse response, UsageLogEntry usageLogEntry)
+        throws MetadataException
     {
         try
         {
@@ -83,17 +85,18 @@ public class MetadataController
                 return null; // proxyRequest writes directly to the response object
             }
             String item = request.getParameter("item");
+            usageLogEntry.setWmsOperation("GetMetadata:" + item);
             if (item == null)
             {
                 throw new Exception("Must provide an ITEM parameter");
             }
             else if (item.equals("menu"))
             {
-                return this.showMenu(request);
+                return this.showMenu(request, usageLogEntry);
             }
             else if (item.equals("layerDetails"))
             {
-                return this.showLayerDetails(request);
+                return this.showLayerDetails(request, usageLogEntry);
             }
             else if (item.equals("timesteps"))
             {
@@ -182,7 +185,8 @@ public class MetadataController
      * Shows the hierarchy of layers available from this server, or a pre-set
      * hierarchy.
      */
-    private ModelAndView showMenu(HttpServletRequest request) throws Exception
+    private ModelAndView showMenu(HttpServletRequest request, UsageLogEntry usageLogEntry)
+        throws Exception
     {
         String menu = "default";
         String menuFromRequest = request.getParameter("menu");
@@ -190,6 +194,7 @@ public class MetadataController
         {
             menu = menuFromRequest.toLowerCase();
         }
+        usageLogEntry.setMenu(menu);
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("serverTitle", this.config.getServer().getTitle());
         models.put("datasets", this.config.getDatasets());
@@ -200,10 +205,11 @@ public class MetadataController
      * Shows an JSON document containing the details of the given variable (units,
      * zvalues, tvalues etc).  See showLayerDetails.jsp.
      */
-    private ModelAndView showLayerDetails(HttpServletRequest request)
-        throws Exception
+    private ModelAndView showLayerDetails(HttpServletRequest request,
+        UsageLogEntry usageLogEntry) throws Exception
     {
         Layer layer = this.getLayer(request);
+        usageLogEntry.setLayer(layer);
         String targetDateIso = request.getParameter("time");
         if (targetDateIso == null || targetDateIso.trim().equals(""))
         {

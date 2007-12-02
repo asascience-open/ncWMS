@@ -31,6 +31,8 @@ package uk.ac.rdg.resc.ncwms.usagelog;
 import java.awt.Color;
 import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
+import uk.ac.rdg.resc.ncwms.controller.GetFeatureInfoDataRequest;
+import uk.ac.rdg.resc.ncwms.controller.GetFeatureInfoRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapStyleRequest;
@@ -55,24 +57,39 @@ public class UsageLogEntry
     private String clientReferrer = null;
     private String clientUserAgent = null;
     private String httpMethod = null;
+    private String wmsVersion = null; // Won't appear in metadata logs
+    private String wmsOperation = null;
     private String exceptionClass = null; // Will be non-null if we are logging a failed operation
     private String exceptionMessage = null;
-    private String wmsOperation = null;
     
     // These fields pertain to data requests
     private String crs = null;
     private double[] bbox = null;
     private String elevation = null;
+    private String time = null; // The time string requested by the user
+    private Integer numTimeSteps = null; // The number of time steps requested
     private Integer width = null;
     private Integer height = null;
-    private Layer layer = null;
+    private String layer = null; // The layer as requested by the client
+    private String datasetId = null; // The id of the dataset from which the layer comes
+    private String variableId = null;
     private Long timeToExtractDataMs = null;
     private Boolean usedCache = false;
     
+    // These fields pertain to feature info requests
+    private Double featureInfoLon = null;
+    private Double featureInfoLat = null;
+    private Integer featureInfoPixelCol = null;
+    private Integer featureInfoPixelRow = null;
+    
     // These fields pertain to how data are rendered
+    private String style = null;
     private String outputFormat = null;
     private Boolean transparent = null;
     private String backgroundColor = null;
+
+    // These fields pertain to requests for metadata
+    private String menu;
 
     /**
      * Sets the properties of this object that can be found from the
@@ -100,23 +117,36 @@ public class UsageLogEntry
      */
     public void setGetMapRequest(GetMapRequest getMapRequest)
     {
-        GetMapDataRequest dr = getMapRequest.getDataRequest();
-        this.crs = dr.getCrs();
-        this.bbox = dr.getBbox();
-        this.elevation = dr.getElevationString();
-        this.width = dr.getWidth();
-        this.height = dr.getHeight();
-        // TODO: how deal with dr.getTimeString();?
-        // Maybe log the string and the number of frames requested
-        
+        this.setGetMapDataRequest(getMapRequest.getDataRequest());
         GetMapStyleRequest sr = getMapRequest.getStyleRequest();
         this.outputFormat = sr.getImageFormat();
         this.transparent = sr.isTransparent();
         Color bgColor = new Color(sr.getBackgroundColour());
         this.backgroundColor = bgColor.getRed() + "," + bgColor.getGreen() + ","
             + bgColor.getBlue();
-        // TODO: how deal with sr.getStyles();?
-        // Maybe just log the one style (we're only logging one layer after all)
+        // Just log the one style (we're only logging one layer after all)
+        this.style = sr.getStyles().length > 0 ? sr.getStyles()[0] : "";
+    }
+
+    public void setGetFeatureInfoRequest(GetFeatureInfoRequest request)
+    {
+        this.outputFormat = request.getOutputFormat();
+        // GetFeatureInfoDataRequest inherits from GetMapDataRequest
+        GetFeatureInfoDataRequest dr = request.getDataRequest();
+        this.setGetMapDataRequest(dr);
+        this.featureInfoPixelCol = dr.getPixelColumn();
+        this.featureInfoPixelRow = dr.getPixelRow();
+    }
+    
+    private void setGetMapDataRequest(GetMapDataRequest dr)
+    {
+        this.layer = dr.getLayers()[0];
+        this.crs = dr.getCrs();
+        this.bbox = dr.getBbox();
+        this.elevation = dr.getElevationString();
+        this.width = dr.getWidth();
+        this.height = dr.getHeight();
+        this.time = dr.getTimeString();
     }
     
     public void setWmsOperation(String op)
@@ -126,12 +156,39 @@ public class UsageLogEntry
     
     public void setLayer(Layer layer)
     {
-        this.layer = layer;
+        this.datasetId = layer.getDataset().getId();
+        this.variableId = layer.getId();
     }
 
     public void setTimeToExtractDataMs(long timeToExtractDataMs)
     {
         this.timeToExtractDataMs = timeToExtractDataMs;
+    }
+
+    public void setNumTimeSteps(Integer numTimeSteps)
+    {
+        this.numTimeSteps = numTimeSteps;
+    }
+
+    public void setWmsVersion(String wmsVersion)
+    {
+        this.wmsVersion = wmsVersion;
+    }
+
+    public void setOutputFormat(String outputFormat)
+    {
+        this.outputFormat = outputFormat;
+    }
+
+    public void setFeatureInfoLocation(double lon, double lat)
+    {
+        this.featureInfoLon = lon;
+        this.featureInfoLat = lat;
+    }
+
+    public void setMenu(String menu)
+    {
+        this.menu = menu;
     }
 
     public Date getRequestTime()
@@ -177,5 +234,115 @@ public class UsageLogEntry
     public String getWmsOperation()
     {
         return wmsOperation;
+    }
+
+    public String getWmsVersion()
+    {
+        return wmsVersion;
+    }
+
+    public String getCrs()
+    {
+        return crs;
+    }
+
+    public double[] getBbox()
+    {
+        return bbox;
+    }
+
+    public String getElevation()
+    {
+        return elevation;
+    }
+
+    public String getTime()
+    {
+        return time;
+    }
+
+    public Integer getNumTimeSteps()
+    {
+        return numTimeSteps;
+    }
+
+    public Integer getWidth()
+    {
+        return width;
+    }
+
+    public Integer getHeight()
+    {
+        return height;
+    }
+
+    public String getLayer()
+    {
+        return layer;
+    }
+
+    public String getDatasetId()
+    {
+        return datasetId;
+    }
+
+    public String getVariableId()
+    {
+        return variableId;
+    }
+
+    public Long getTimeToExtractDataMs()
+    {
+        return timeToExtractDataMs;
+    }
+
+    public Boolean getUsedCache()
+    {
+        return usedCache;
+    }
+
+    public Double getFeatureInfoLon()
+    {
+        return featureInfoLon;
+    }
+
+    public Double getFeatureInfoLat()
+    {
+        return featureInfoLat;
+    }
+
+    public Integer getFeatureInfoPixelCol()
+    {
+        return featureInfoPixelCol;
+    }
+
+    public Integer getFeatureInfoPixelRow()
+    {
+        return featureInfoPixelRow;
+    }
+
+    public String getStyle()
+    {
+        return style;
+    }
+
+    public String getOutputFormat()
+    {
+        return outputFormat;
+    }
+
+    public Boolean getTransparent()
+    {
+        return transparent;
+    }
+
+    public String getBackgroundColor()
+    {
+        return backgroundColor;
+    }
+
+    public String getMenu()
+    {
+        return menu;
     }
 }
