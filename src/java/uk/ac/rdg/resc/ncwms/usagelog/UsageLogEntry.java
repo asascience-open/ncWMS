@@ -66,7 +66,7 @@ public class UsageLogEntry
     private String crs = null;
     private double[] bbox = null;
     private String elevation = null;
-    private String time = null; // The time string requested by the user
+    private String timeStr = null; // The time string requested by the user
     private Integer numTimeSteps = null; // The number of time steps requested
     private Integer width = null;
     private Integer height = null;
@@ -89,8 +89,12 @@ public class UsageLogEntry
     private String backgroundColor = null;
 
     // These fields pertain to requests for metadata
-    private String menu;
-
+    private String menu = null;
+    
+    // This will be set if we have requested metadata or featureinfo from another server
+    // (i.e. this server is simply being used as a proxy)
+    private String remoteServerUrl = null;
+    
     /**
      * Sets the properties of this object that can be found from the
      * HTTP servlet request
@@ -146,7 +150,7 @@ public class UsageLogEntry
         this.elevation = dr.getElevationString();
         this.width = dr.getWidth();
         this.height = dr.getHeight();
-        this.time = dr.getTimeString();
+        this.timeStr = dr.getTimeString();
     }
     
     public void setWmsOperation(String op)
@@ -256,9 +260,12 @@ public class UsageLogEntry
         return elevation;
     }
 
-    public String getTime()
+    /**
+     * @return the value of the TIME parameter in the WMS request
+     */
+    public String getTimeString()
     {
-        return time;
+        return timeStr;
     }
 
     public Integer getNumTimeSteps()
@@ -344,5 +351,15 @@ public class UsageLogEntry
     public String getMenu()
     {
         return menu;
+    }
+
+    public String getRemoteServerUrl()
+    {
+        return remoteServerUrl;
+    }
+
+    public void setRemoteServerUrl(String remoteServerUrl)
+    {
+        this.remoteServerUrl = remoteServerUrl;
     }
 }

@@ -39,6 +39,7 @@ import java.sql.SQLException;
 import org.apache.log4j.Logger;
 import org.h2.tools.RunScript;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
+import uk.ac.rdg.resc.ncwms.config.ThirdPartyLayerProvider;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -59,6 +60,16 @@ public class H2UsageLogger implements UsageLogger
      * The log4j logging system
      */
     private static final Logger logger = Logger.getLogger(H2UsageLogger.class);
+    
+    private static final String INSERT_COMMAND = "INSERT INTO usage_log(request_time, client_ip, " +
+            "client_hostname, client_referrer, client_user_agent, http_method, wms_version," +
+            "wms_operation, exception_class, exception_message, crs, " + 
+            "bbox_minx, bbox_miny, bbox_maxx, bbox_maxy, elevation, time_str, " +
+            "num_timesteps, image_width, image_height, layer, dataset_id, " +
+            "variable_id, time_to_extract_data_ms, used_cache, feature_info_lon, " +
+            "feature_info_lat, feature_info_col, feature_info_row, style_str, " +
+            "output_format, transparent, background_color, menu, remote_server_url) " +
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     
     private Connection conn;
     
@@ -119,16 +130,14 @@ public class H2UsageLogger implements UsageLogger
      */
     public void logUsage(UsageLogEntry logEntry)
     {
+        long startLog = System.currentTimeMillis();
         // Calculate the time to process the request
         long timeToProcessRequest =
-            System.currentTimeMillis() - logEntry.getRequestTime().getTime();
-        String insertCommand = "INSERT INTO usage_log(request_time, client_ip, " +
-            "client_hostname, client_referrer, client_user_agent, http_method, wms_version," +
-            "wms_operation, num_timesteps) " +
-            "VALUES(?,?,?,?,?,?,?,?,?)";
+            startLog - logEntry.getRequestTime().getTime();
         try
         {
-            PreparedStatement ps = this.conn.prepareStatement(insertCommand);
+            // Use of setObject allows entries to be null
+            PreparedStatement ps = this.conn.prepareStatement(INSERT_COMMAND);
             ps.setObject(1, logEntry.getRequestTime());
             ps.setObject(2, logEntry.getClientIpAddress());
             ps.setObject(3, logEntry.getClientHost());
@@ -137,35 +146,43 @@ public class H2UsageLogger implements UsageLogger
             ps.setObject(6, logEntry.getHttpMethod());
             ps.setObject(7, logEntry.getWmsVersion());
             ps.setObject(8, logEntry.getWmsOperation());
-            ps.setObject(9, logEntry.getNumTimeSteps()); // Use of setObject allows nullable
-            /*ps.setString(9, logEntry.getExceptionClass());
+            ps.setString(9, logEntry.getExceptionClass());
             ps.setString(10, logEntry.getExceptionMessage());
-            
             ps.setString(11, logEntry.getCrs());
-            ps.setString(12, logEntry.getBbox()); // TODO: four columns (unless we concatenate)
-            ps.setString(13, logEntry.getElevation());
-            ps.setString(14, logEntry.getTime());
-            ps.setString(16, logEntry.getWmsOperation());
-            ps.setString(17, logEntry.getWmsOperation());
-            ps.setString(18, logEntry.getWmsOperation());
-            ps.setString(19, logEntry.getWmsOperation());
-            ps.setString(20, logEntry.getWmsOperation());
-            ps.setString(21, logEntry.getWmsOperation());
-            ps.setString(22, logEntry.getWmsOperation());
-            ps.setString(23, logEntry.getWmsOperation());
-            ps.setString(24, logEntry.getWmsOperation());
-            ps.setString(25, logEntry.getWmsOperation());
-            ps.setString(26, logEntry.getWmsOperation());
-            ps.setString(27, logEntry.getWmsOperation());
-            ps.setString(28, logEntry.getWmsOperation());
-            ps.setString(29, logEntry.getWmsOperation());
-            ps.setString(30, logEntry.getWmsOperation());
-            ps.setString(31, logEntry.getWmsOperation());*/
+            ps.setObject(12, logEntry.getBbox() == null ? null : logEntry.getBbox()[0]);
+            ps.setObject(13, logEntry.getBbox() == null ? null : logEntry.getBbox()[1]);
+            ps.setObject(14, logEntry.getBbox() == null ? null : logEntry.getBbox()[2]);
+            ps.setObject(15, logEntry.getBbox() == null ? null : logEntry.getBbox()[3]);
+            ps.setString(16, logEntry.getElevation());
+            ps.setString(17, logEntry.getTimeString());
+            ps.setObject(18, logEntry.getNumTimeSteps());
+            ps.setObject(19, logEntry.getWidth());
+            ps.setObject(20, logEntry.getHeight());
+            ps.setString(21, logEntry.getLayer());
+            ps.setString(22, logEntry.getDatasetId());
+            ps.setString(23, logEntry.getVariableId());
+            ps.setObject(24, logEntry.getTimeToExtractDataMs());
+            ps.setObject(25, logEntry.getUsedCache());
+            ps.setObject(26, logEntry.getFeatureInfoLon());
+            ps.setObject(27, logEntry.getFeatureInfoLat());
+            ps.setObject(28, logEntry.getFeatureInfoPixelCol());
+            ps.setObject(29, logEntry.getFeatureInfoPixelRow());
+            ps.setString(30, logEntry.getStyle());
+            ps.setString(31, logEntry.getOutputFormat());
+            ps.setObject(32, logEntry.getTransparent());
+            ps.setString(33, logEntry.getBackgroundColor());
+            ps.setString(34, logEntry.getMenu());
+            ps.setString(35, logEntry.getRemoteServerUrl());
             ps.executeUpdate();
         }
         catch(SQLException sqle)
         {
             logger.error("Error writing to usage log", sqle);
+        }
+        finally
+        {
+            logger.debug("Time to log: {} ms", (System.currentTimeMillis() - 
+                startLog));
         }
     }
     
@@ -174,13 +191,13 @@ public class H2UsageLogger implements UsageLogger
      */
     public void close()
     {
-        try
+        if (this.conn != null)
         {
-            this.conn.close();
-        }
-        catch(SQLException sqle)
-        {
-            logger.error("Error closing H2 Usage Logger", sqle);
+            try { this.conn.close(); }
+            catch(SQLException sqle)
+            {
+                logger.error("Error closing H2 Usage Logger", sqle);
+            }
         }
         logger.info("H2 Usage Logger closed");
     }

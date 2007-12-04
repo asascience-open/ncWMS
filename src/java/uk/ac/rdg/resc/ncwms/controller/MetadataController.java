@@ -81,6 +81,7 @@ public class MetadataController
             String url = request.getParameter("url");
             if (url != null && !url.trim().equals(""))
             {
+                usageLogEntry.setRemoteServerUrl(url);
                 proxyRequest(url, request, response);
                 return null; // proxyRequest writes directly to the response object
             }

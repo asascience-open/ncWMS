@@ -352,6 +352,7 @@ public class WmsController extends AbstractController
         String url = params.getString("url");
         if (url != null && !url.trim().equals(""))
         {
+            usageLogEntry.setRemoteServerUrl(url);
             MetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
             return null;
         }
