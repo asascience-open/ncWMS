@@ -31,15 +31,20 @@ package uk.ac.rdg.resc.ncwms.usagelog.h2;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import org.apache.log4j.Logger;
+import org.h2.tools.Csv;
 import org.h2.tools.RunScript;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
-import uk.ac.rdg.resc.ncwms.config.ThirdPartyLayerProvider;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -132,8 +137,7 @@ public class H2UsageLogger implements UsageLogger
     {
         long startLog = System.currentTimeMillis();
         // Calculate the time to process the request
-        long timeToProcessRequest =
-            startLog - logEntry.getRequestTime().getTime();
+        long timeToProcessRequest = startLog - logEntry.getRequestTime().getTime();
         try
         {
             // Use of setObject allows entries to be null
@@ -184,6 +188,17 @@ public class H2UsageLogger implements UsageLogger
             logger.debug("Time to log: {} ms", (System.currentTimeMillis() - 
                 startLog));
         }
+    }
+    
+    /**
+     * Writes the entire usage log to a CSV file on the given output stream
+     */
+    public void writeCsv(OutputStream out) throws Exception
+    {
+        Writer writer = new OutputStreamWriter(out);
+        Statement stmt = this.conn.createStatement();
+        ResultSet results = stmt.executeQuery("SELECT * from usage_log");
+        Csv.getInstance().write(writer, results);
     }
     
     /**

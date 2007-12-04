@@ -22,6 +22,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
     <h1>ncWMS Admin page</h1>
     
+    <p><a href="usage.jsp">Usage monitor</a></p>
     <p><a href="../">ncWMS Front page</a></p>
     <p><a href="../godiva2.html">Godiva2 interface</a></p>
     <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities">Capabilities document</a></p>

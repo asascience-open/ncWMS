@@ -135,6 +135,7 @@
         <property name="supportedMethods" value="GET,POST"/>
         <property name="config"><ref local="config"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
+        <property name="usageLogger"><ref local="usageLogger"/></property>
         <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
     </bean>
     <!-- This maps URL patterns to the methods of the admin controller -->
@@ -144,7 +145,9 @@
                 / = displayAdminPage
                 /index.jsp = displayAdminPage
                 /error.jsp = displayErrorPage
+                /usage.jsp = displayUsagePage
                 /updateConfig = updateConfig
+                /downloadUsageLog = downloadUsageLog
             </value>
         </property>
     </bean>

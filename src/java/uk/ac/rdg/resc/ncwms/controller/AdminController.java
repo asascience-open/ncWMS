@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import uk.ac.rdg.resc.ncwms.config.Config;
@@ -41,6 +42,8 @@ import uk.ac.rdg.resc.ncwms.config.Contact;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Server;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
+import uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger;
 
 /**
  * Displays the administrative pages of the ncWMS application (i.e. /admin/*)
@@ -55,6 +58,7 @@ public class AdminController extends MultiActionController
     // These will be injected by Spring
     private MetadataLoader metadataLoader;
     private Config config;
+    private UsageLogger usageLogger;
     
     /**
      * Displays the administrative web page
@@ -83,6 +87,33 @@ public class AdminController extends MultiActionController
             throw new Exception("There is no dataset with id " + datasetId);
         }
         return new ModelAndView("admin_error", "dataset", dataset);
+    }
+    
+    /**
+     * Displays the page showing usage statistics
+     */
+    public ModelAndView displayUsagePage(HttpServletRequest request,
+        HttpServletResponse response) throws Exception
+    {
+        return new ModelAndView("admin_usage");
+    }
+    
+    /**
+     * Converts the usage log into CSV format and sends it to the client
+     * for opening in Excel
+     */
+    public void downloadUsageLog(HttpServletRequest request,
+        HttpServletResponse response) throws Exception
+    {
+        if (!(this.usageLogger instanceof H2UsageLogger))
+        {
+            throw new Exception("Cannot download usage log: operation is not supported by the usage logger");
+        }
+        H2UsageLogger h2logger = (H2UsageLogger)this.usageLogger;
+        response.setContentType("application/excel");
+        response.setHeader("Content-Disposition",
+            "inline; filename=usageLog.csv");
+        h2logger.writeCsv(response.getOutputStream());
     }
     
     /**
@@ -233,6 +264,14 @@ public class AdminController extends MultiActionController
     public void setConfig(Config config)
     {
         this.config = config;
+    }
+    
+    /**
+     * Called by Spring to inject the usage logger
+     */
+    public void setUsageLogger(UsageLogger usageLogger)
+    {
+        this.usageLogger = usageLogger;
     }
     
 }

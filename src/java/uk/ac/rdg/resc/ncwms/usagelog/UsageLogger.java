@@ -32,6 +32,8 @@ package uk.ac.rdg.resc.ncwms.usagelog;
  * Interface describing a class that logs usage of the ncWMS server.  This
  * will log requests for images and metadata.  Note that all entries use the
  * same UsageLogEntry class.
+ * @todo: Do we really need this interface?  Can't we just use the H2 database
+ * for everything?
  *
  * @author Jon Blower
  * $Revision$
