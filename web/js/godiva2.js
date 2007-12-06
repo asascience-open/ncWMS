@@ -18,11 +18,13 @@ var menu = ''; // The menu that is being displayed (e.g. "mersea", "ecoop")
 var bbox = null; // The bounding box of the currently-displayed layer
 var featureInfoUrl = null; // The last-called URL for getFeatureInfo (following a click on the map)
 
-var essc_wms = null;
-var animation_layer = null;
-//var ncwms_layer_gridded = null; // The tiled WMS layer which will be used for scalar fields
-//var ncwms_layer_singletile = null; // The single-tiled WMS layer which will be used for vector fields
-//var ncwms_layer_animation = null; // We'll use this to contain animations
+var layerSwitcher = null;
+var ncwms = null; // Points to the currently-active layer that is coming from this ncWMS
+                  // Will point to either ncwms_tiled or ncwms_untiled.
+var ncwms_tiled = null; // We shall maintain two separate layers, one tiles (for scalar
+var ncwms_untiled = null; // quantities) and one untiled (for vector quantities)
+
+var animation_layer = null; // The layer that will be used to display animations
 
 var servers = ['']; // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
@@ -82,8 +84,9 @@ window.onload = function()
         var gmapLayer2 = new OpenLayers.Layer.Google("Google Maps (political)", {type: G_NORMAL_MAP});
         map.addLayers([gmapLayer, gmapLayer2]);
     }
-        
-    map.addControl(new OpenLayers.Control.LayerSwitcher());
+    
+    layerSwitcher = new OpenLayers.Control.LayerSwitcher()
+    map.addControl(layerSwitcher);
     //map.addControl(new OpenLayers.Control.MousePosition({prefix: 'Lon: ', separator: ' Lat:'}));
     map.zoomTo(1);
     
@@ -266,7 +269,7 @@ function getFeatureInfo(e)
 {
     // Check we haven't clicked off-map
     var lonLat = map.getLonLatFromPixel(e.xy);
-    if (essc_wms != null && Math.abs(lonLat.lat) <= 90)
+    if (ncwms != null && Math.abs(lonLat.lat) <= 90)
     {
         // See if the click was within range of the currently-visible layer
         var layerBounds = new OpenLayers.Bounds(activeLayer.bbox[0],
@@ -279,7 +282,7 @@ function getFeatureInfo(e)
                 I: e.xy.x,
                 J: e.xy.y,
                 INFO_FORMAT: 'text/xml',
-                QUERY_LAYERS: essc_wms.params.LAYERS,
+                QUERY_LAYERS: ncwms.params.LAYERS,
                 WIDTH: map.size.w,
                 HEIGHT: map.size.h
             };
@@ -287,7 +290,7 @@ function getFeatureInfo(e)
                 // This is the signal to the server to load the data from elsewhere
                 params.url = activeLayer.server;
             }
-            featureInfoUrl = essc_wms.getFullRequestString(
+            featureInfoUrl = ncwms.getFullRequestString(
                 params,
                 'wms' // We must always load from the home server
             );
@@ -649,7 +652,7 @@ function createAnimation()
     }
     
     // Get a URL for a WMS request that covers the current map extent
-    var urlEls = essc_wms.getURL(getMapExtent()).split('&');
+    var urlEls = ncwms.getURL(getMapExtent()).split('&');
     // Replace the parameters as needed.  We generate a map that is half the
     // width and height of the viewport, otherwise it takes too long
     var width = $('map').clientWidth;// / 2;
@@ -694,27 +697,20 @@ function animationLoaded()
 {
     $('loadingAnimationDiv').style.visibility = 'hidden';
     //$('mapOverlayDiv').style.visibility = 'visible';
-    if (essc_wms != null) {
-        essc_wms.setVisibility(false);
-    }
     // Load the image into a new layer on the map
     animation_layer = new OpenLayers.Layer.Image(
-        "ncWMS animation", // Name for the layer
+        "ncWMS", // Name for the layer
         $('mapOverlay').src, // URL to the image
         getMapExtent(), // Image bounds
         new OpenLayers.Size($('mapOverlay').width, $('mapOverlay').height), // Size of image
         {isBaseLayer : false} // Other options
     );
+    setVisibleLayer(true);
     map.addLayers([animation_layer]);
 }
 function hideAnimation()
 {
-    if (essc_wms != null) {
-        essc_wms.setVisibility(true);
-    }
-    if (animation_layer != null) {
-        map.removeLayer(animation_layer);
-    }
+    setVisibleLayer(false);
     $('featureInfo').style.visibility = 'visible';
     $('autoZoom').style.visibility = 'visible';
     $('hideAnimation').style.visibility = 'hidden';
@@ -760,27 +756,71 @@ function updateMap()
         transparent: 'true',
         styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
     };
-    if (essc_wms == null) {
-        // If this were an Untiled layer we could control the ratio of image
-        // size to viewport size with "{buffer: 1, ratio: 1.5}"
-        essc_wms = new OpenLayers.Layer.WMS1_3("ncWMS",
+    if (ncwms == null) {
+        ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
             {buffer: 1}
         );
-        map.addLayers([essc_wms]);
+        ncwms_untiled = new OpenLayers.Layer.WMS1_3("ncWMS",
+            activeLayer.server == '' ? 'wms' : activeLayer.server, 
+            params,
+            {buffer: 1, ratio: 1.5, singleTile: true}
+        );
+        setVisibleLayer(false);
+        map.addLayers([ncwms_tiled, ncwms_untiled]);
+        // Create a layer for coastlines
+        // TOOD: only works at low res (zoomed out)
+        //var coastline_wms = new OpenLayers.Layer.WMS( "Coastlines", 
+        //    "http://labs.metacarta.com/wms/vmap0?", {layers: 'coastline_01', transparent: 'true' } );
+        //map.addLayers([ncwms, coastline_wms]);
+        //map.addLayers([ncwms_tiled, ncwms_untiled]);
     } else {
-        essc_wms.url = activeLayer.server == '' ? 'wms' : activeLayer.server;
-        essc_wms.mergeNewParams(params);
+        setVisibleLayer(false);
+        ncwms.url = activeLayer.server == '' ? 'wms' : activeLayer.server;
+        ncwms.mergeNewParams(params);
     }
     
     $('featureInfo').innerHTML = "Click on the map to get more information";
     $('featureInfo').style.visibility = 'visible';
     
-    var imageURL = essc_wms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
+    var imageURL = ncwms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
     $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">link to test image</a>';
     setGEarthURL();
     setPermalinkURL();
+}
+
+// Decides whether to display the animation, or the tiled or untiled
+// version of the ncwms layer
+function setVisibleLayer(animation)
+{
+    // TODO: repeats code above
+    var style = typeof activeLayer.supportedStyles == 'undefined' ? 'boxfill' : activeLayer.supportedStyles[0];
+    if (animation) {
+        setLayerVisibility(animation_layer, true);
+        setLayerVisibility(ncwms_tiled, false);
+        setLayerVisibility(ncwms_untiled, false);
+    } else if (style == 'vector') {
+        setLayerVisibility(animation_layer, false);
+        setLayerVisibility(ncwms_tiled, false);
+        setLayerVisibility(ncwms_untiled, true);
+        ncwms = ncwms_untiled;
+    } else {
+        setLayerVisibility(animation_layer, false);
+        setLayerVisibility(ncwms_tiled, true);
+        setLayerVisibility(ncwms_untiled, false);
+        ncwms = ncwms_tiled;
+    }
+    layerSwitcher.layerStates = []; // forces redraw
+    layerSwitcher.redraw();
+}
+
+function setLayerVisibility(layer, visible)
+{
+    if (layer != null) {
+        layer.setVisibility(visible);
+        layer.displayInLayerSwitcher = visible;
+    }
 }
 
 // Gets the Z value set by the user
@@ -818,10 +858,10 @@ function setPermalinkURL()
 // Sets the URL for "Open in Google Earth" and the permalink
 function setGEarthURL()
 {
-    if (essc_wms != null) {
+    if (ncwms != null) {
         // Get a URL for a WMS request that covers the current map extent
         var mapBounds = map.getExtent();
-        var urlEls = essc_wms.getURL(mapBounds).split('&');
+        var urlEls = ncwms.getURL(mapBounds).split('&');
         var gEarthURL = urlEls[0];
         for (var i = 1; i < urlEls.length; i++) {
             if (urlEls[i].startsWith('FORMAT')) {

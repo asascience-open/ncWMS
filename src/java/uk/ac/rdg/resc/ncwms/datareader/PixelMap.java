@@ -104,6 +104,11 @@ public class PixelMap
                         pixelIndex++;
                     }
                 }
+                else
+                {
+                    // We still need to increment the pixel index array
+                    pixelIndex += xIndices.length;
+                }
             }
         }
         else
@@ -124,6 +129,11 @@ public class PixelMap
                         this.put(x, y, pixelIndex); // Ignores negative indices
                         pixelIndex++;
                     }
+                }
+                else
+                {
+                    // We still need to increment the pixel index array
+                    pixelIndex += lonValues.length;
                 }
             }
         }
