@@ -418,6 +418,7 @@ function layerSelected(layerDetails)
     
     // Set the scale value if this is present in the metadata
     if (typeof layerDetails.scaleRange != 'undefined' &&
+            layerDetails.scaleRange != null &&
             layerDetails.scaleRange.length > 1 &&
             layerDetails.scaleRange[0] != layerDetails.scaleRange[1]) {
         scaleMinVal = layerDetails.scaleRange[0];
