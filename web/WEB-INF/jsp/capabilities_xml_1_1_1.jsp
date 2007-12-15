@@ -14,7 +14,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
-<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://www.digitalearth.gov/wmt/xml/capabilities_1_1_1.dtd">
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd">
 <WMT_MS_Capabilities version="1.1.1"><%-- TODO: do UpdateSequence properly --%>
     <!-- Service Metadata -->
     <Service>
