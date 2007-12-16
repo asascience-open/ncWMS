@@ -88,7 +88,7 @@ public class ThreddsConfig
     /**
      * Converts datasets from the THREDDS catalog into ncWMS Dataset objects
      */
-    private static List<Dataset> convert(InvCatalogImpl catalog)
+    private static List<Dataset> convert(InvCatalogImpl catalog) throws IOException
     {
         List unconvertedDatasets = catalog.getDatasets();
         

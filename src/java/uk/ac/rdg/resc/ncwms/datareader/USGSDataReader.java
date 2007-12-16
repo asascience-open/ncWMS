@@ -34,22 +34,21 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import thredds.catalog.DataType;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
+import ucar.nc2.dt.GridCoordSystem;
+import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDatatype;
+import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -233,31 +232,30 @@ public class USGSDataReader extends DefaultDataReader
             // We use openDataset() rather than acquiring from cache
             // because we need to enhance the dataset
             nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = new GridDataset(nc);
-            for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);            
+            for (GridDatatype grid : gd.getGrids())
             {
-                GeoGrid gg = (GeoGrid)it.next();
-                if (!gg.getName().equals("temp") && !gg.getName().equals("shflux") &&
-                    !gg.getName().equals("ssflux") && !gg.getName().equals("latent") &&
-                    !gg.getName().equals("sensible") && !gg.getName().equals("lwrad") &&
-                    !gg.getName().equals("swrad") && !gg.getName().equals("zeta"))
+                if (!grid.getName().equals("temp") && !grid.getName().equals("shflux") &&
+                    !grid.getName().equals("ssflux") && !grid.getName().equals("latent") &&
+                    !grid.getName().equals("sensible") && !grid.getName().equals("lwrad") &&
+                    !grid.getName().equals("swrad") && !grid.getName().equals("zeta"))
                 {
                     // Only display temperature data for the moment
                     continue;
                 }
-                GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new Layer object for {}", gg.getName());
+                GridCoordSystem coordSys = grid.getCoordinateSystem();
+                logger.debug("Creating new Layer object for {}", grid.getName());
                 LayerImpl layer = new LayerImpl();
-                layer.setId(gg.getName());
-                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                layer.setAbstract(gg.getDescription());
-                layer.setUnits(gg.getUnitsString());
+                layer.setId(grid.getName());
+                layer.setTitle(getStandardName(grid.getVariable()));
+                layer.setAbstract(grid.getDescription());
+                layer.setUnits(grid.getUnitsString());
                 layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat"));
                 layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat"));
                 
-                if (coordSys.hasVerticalAxis())
+                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                if (zAxis != null)
                 {
-                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                     layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
                     layer.setZpositive(false);
@@ -281,7 +279,7 @@ public class USGSDataReader extends DefaultDataReader
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
                 // Now add the timestep information to the VM object
-                Date[] tVals = this.getTimesteps(nc, gg);
+                Date[] tVals = this.getTimesteps(nc, grid);
                 for (int i = 0; i < tVals.length; i++)
                 {
                     TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);

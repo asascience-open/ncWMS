@@ -32,20 +32,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.log4j.Logger;
+import thredds.catalog.DataType;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
+import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.nc2.dataset.EnhanceScaleMissingImpl;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasetCache;
 import ucar.nc2.dataset.VariableDS;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
+import ucar.nc2.dataset.VariableEnhanced;
+import ucar.nc2.dt.GridCoordSystem;
+import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDatatype;
+import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
@@ -114,14 +116,19 @@ public class DefaultDataReader extends DataReader
             nc = getDataset(filename);
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
-            GridDataset gd = new GridDataset(nc);
+            // Get a GridDataset object, since we know this is a grid
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
+            
             logger.debug("Getting GeoGrid with id {}", layer.getId());
-            GeoGrid gg = gd.findGridByName(layer.getId());
-            logger.debug("filename = {}, gg = {}", filename, gg.toString());
+            GridDatatype grid = gd.findGridDatatype(layer.getId());
+            logger.debug("filename = {}, gg = {}", filename, grid.toString());
             
             // Read the data from the dataset
             long before = System.currentTimeMillis();
-            this.populatePixelArray(picData, tRange, zRange, pixelMap, gg);
+            // Get an enhanced variable for doing the conversion of missing
+            // values
+            VariableDS enhanced = new VariableDS(null, nc.findVariable(layer.getId()), true);
+            this.populatePixelArray(picData, tRange, zRange, pixelMap, grid, enhanced);
             long after = System.currentTimeMillis();
             // Headings are written in NcwmsContext.init()
             if (pixelMap.getNumUniqueXYPairs() > 1)
@@ -168,10 +175,8 @@ public class DefaultDataReader extends DataReader
      * use alternative strategies, e.g. point-by-point or bounding box
      */
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GeoGrid gg) throws Exception
+        PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
     {
-        // Get an enhanced version of the variable for conversion of data
-        EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
         DataChunk dataChunk = null;
         // Cycle through the latitude values, extracting a scanline of
         // data each time from minX to maxX
@@ -184,16 +189,19 @@ public class DefaultDataReader extends DataReader
             Range xRange = new Range(xmin, xmax);
             // Read a chunk of data - values will not be unpacked or
             // checked for missing values yet
-            GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
-            dataChunk = new DataChunk(subset.readYXData(0,0).reduce());
-
+            GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+            // Read all of the x-y data in this subset
+            dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
+            
             // Now copy the scanline's data to the picture array
             for (int xIndex : pixelMap.getXIndices(yIndex))
             {
                 float val = dataChunk.getValue(xIndex - xmin);
+                if (picData.length == 100) logger.debug("val = {}", val);
                 // We unpack and check for missing values just for
                 // the points we need to display.
                 val = (float)enhanced.convertScaleOffsetMissing(val);
+                if (picData.length == 100) logger.debug("After enhance, val = {}", val);
                 // Now we set the value of all the image pixels associated with
                 // this data point.
                 for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
@@ -217,14 +225,6 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
-     * @return enhanced version of the given GeoGrid
-     */
-    protected static EnhanceScaleMissingImpl getEnhanced(GeoGrid gg)
-    {
-        return new EnhanceScaleMissingImpl((VariableDS)gg.getVariable());
-    }
-    
-    /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
@@ -244,23 +244,22 @@ public class DefaultDataReader extends DataReader
             // We use openDataset() rather than acquiring from cache
             // because we need to enhance the dataset
             nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = new GridDataset(nc);
-            for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);            
+            for (GridDatatype grid : gd.getGrids())
             {
-                GeoGrid gg = (GeoGrid)it.next();
-                GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new Layer object for {}", gg.getName());
+                GridCoordSystem coordSys = grid.getCoordinateSystem();
+                logger.debug("Creating new Layer object for {}", grid.getName());
                 LayerImpl layer = new LayerImpl();
-                layer.setId(gg.getName());
-                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                layer.setAbstract(gg.getDescription());
-                layer.setUnits(gg.getUnitsString());
+                layer.setId(grid.getName());
+                layer.setTitle(getStandardName(grid.getVariable()));
+                layer.setAbstract(grid.getDescription());
+                layer.setUnits(grid.getUnitsString());
                 layer.setXaxis(EnhancedCoordAxis.create(coordSys.getXHorizAxis()));
                 layer.setYaxis(EnhancedCoordAxis.create(coordSys.getYHorizAxis()));
-
-                if (coordSys.hasVerticalAxis())
+                
+                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                if (zAxis != null)
                 {
-                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                     layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
                     layer.setZpositive(coordSys.isZPositive());
@@ -296,7 +295,7 @@ public class DefaultDataReader extends DataReader
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
 
                 // Now add the timestep information to the VM object
-                Date[] tVals = this.getTimesteps(nc, gg);
+                Date[] tVals = this.getTimesteps(nc, grid);
                 for (int i = 0; i < tVals.length; i++)
                 {
                     TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);
@@ -334,13 +333,13 @@ public class DefaultDataReader extends DataReader
      * @return Array of {@link Date}s
      * @throws IOException if there was an error reading the timesteps data
      */
-    protected Date[] getTimesteps(NetcdfDataset nc, GeoGrid gg)
+    protected Date[] getTimesteps(NetcdfDataset nc, GridDatatype grid)
         throws IOException
     {
-        GridCoordSys coordSys = gg.getCoordinateSystem();
-        if (coordSys.isDate())
+        GridCoordSystem coordSys = grid.getCoordinateSystem();
+        if (coordSys.hasTimeAxis1D())
         {
-            return coordSys.getTimeDates();
+            return coordSys.getTimeAxis1D().getTimeDates();
         }
         else
         {
@@ -352,7 +351,7 @@ public class DefaultDataReader extends DataReader
      * @return the value of the standard_name attribute of the variable,
      * or the unique id if it does not exist
      */
-    protected static String getStandardName(Variable var)
+    protected static String getStandardName(VariableEnhanced var)
     {
         Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
         return (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))

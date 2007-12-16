@@ -29,10 +29,9 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import org.apache.log4j.Logger;
-import ucar.ma2.Array;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.EnhanceScaleMissingImpl;
-import ucar.nc2.dataset.grid.GeoGrid;
+import ucar.nc2.dataset.VariableEnhanced;
+import ucar.nc2.dt.GridDatatype;
 
 /**
  * A DataReader (not expected to be efficient) that reads each pixel individually
@@ -53,11 +52,9 @@ public class PixelByPixelDataReader extends DefaultDataReader
      * and is not expected to be efficient.
      */
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GeoGrid gg) throws Exception
+        PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
     {
         long start = System.currentTimeMillis();
-        // Get an enhanced version of the variable for dealing with missing values etc
-        EnhanceScaleMissingImpl enhanced = getEnhanced(gg);
 
         // Now create the picture from the data array
         for (int yIndex : pixelMap.getYIndices())
@@ -66,8 +63,9 @@ public class PixelByPixelDataReader extends DefaultDataReader
             for (int xIndex : pixelMap.getXIndices(yIndex))
             {
                 Range xRange = new Range(xIndex, xIndex);
-                GeoGrid subset = gg.subset(tRange, zRange, yRange, xRange);
-                DataChunk dataChunk = new DataChunk(subset.readYXData(0,0));
+                GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+                // Read all of the x-y data in this subset
+                DataChunk dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
                 float val = (float)enhanced.convertScaleOffsetMissing(dataChunk.getValue(0));
                 for (int pixelIndex : pixelMap.getPixelIndices(xIndex, yIndex))
                 {

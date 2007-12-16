@@ -15,10 +15,6 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="1">
-                    <file>${file.reference.netcdfUI-2.2.16.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="1">
                     <file>${file.reference.nlog4j-1.2.21.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
@@ -88,6 +84,10 @@
                 </library>
                 <library files="1">
                     <file>${file.reference.h2.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library files="1">
+                    <file>${file.reference.netcdfUI-2.2.22.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>

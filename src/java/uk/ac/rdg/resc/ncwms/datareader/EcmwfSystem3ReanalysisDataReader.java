@@ -36,7 +36,7 @@ import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
+import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.units.DateUnit;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -78,7 +78,7 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * @return Array of {@link Date}s
      * @throws IOException if there was an error reading the timesteps data
      */
-    protected Date[] getTimesteps(NetcdfDataset nc, GeoGrid gg)
+    protected Date[] getTimesteps(NetcdfDataset nc, GridDatatype grid)
         throws IOException
     {
         Variable timeVar = nc.findVariable("time");

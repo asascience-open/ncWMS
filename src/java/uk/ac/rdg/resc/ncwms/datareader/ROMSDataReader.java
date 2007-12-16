@@ -31,14 +31,15 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.log4j.Logger;
+import thredds.catalog.DataType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.grid.GeoGrid;
-import ucar.nc2.dataset.grid.GridCoordSys;
-import ucar.nc2.dataset.grid.GridDataset;
+import ucar.nc2.dt.GridCoordSystem;
+import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDatatype;
+import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
@@ -78,30 +79,29 @@ public class ROMSDataReader extends USGSDataReader
             // We use openDataset() rather than acquiring from cache
             // because we need to enhance the dataset
             nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = new GridDataset(nc);
-            for (Iterator it = gd.getGrids().iterator(); it.hasNext(); )
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);            
+            for (GridDatatype grid : gd.getGrids())
             {
-                GeoGrid gg = (GeoGrid)it.next();
-                if (!gg.getName().equals("temp") && !gg.getName().equals("salt")
-                && !gg.getName().equals("latent") && !gg.getName().equals("sensible")
-                && !gg.getName().equals("lwrad") && !gg.getName().equals("evaporation"))
+                if (!grid.getName().equals("temp") && !grid.getName().equals("salt")
+                    && !grid.getName().equals("latent") && !grid.getName().equals("sensible")
+                    && !grid.getName().equals("lwrad") && !grid.getName().equals("evaporation"))
                 {
                     // Only display a few datasets for the moment
                     continue;
                 }
-                GridCoordSys coordSys = gg.getCoordinateSystem();
-                logger.debug("Creating new Layer object for {}", gg.getName());
+                GridCoordSystem coordSys = grid.getCoordinateSystem();
+                logger.debug("Creating new Layer object for {}", grid.getName());
                 LayerImpl layer = new LayerImpl();
-                layer.setId(gg.getName());
-                layer.setTitle(getStandardName(gg.getVariable().getOriginalVariable()));
-                layer.setAbstract(gg.getDescription());
-                layer.setUnits(gg.getUnitsString());
+                layer.setId(grid.getName());
+                layer.setTitle(getStandardName(grid.getVariable()));
+                layer.setAbstract(grid.getDescription());
+                layer.setUnits(grid.getUnitsString());
                 layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
                 layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
                 
-                if (coordSys.hasVerticalAxis())
+                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                if (zAxis != null)
                 {
-                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                     layer.setZunits(zAxis.getUnitsString());
                     double[] zVals = zAxis.getCoordValues();
                     layer.setZpositive(false);
@@ -125,7 +125,7 @@ public class ROMSDataReader extends USGSDataReader
                 layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
                 
                 // Now add the timestep information to the VM object
-                Date[] tVals = this.getTimesteps(nc, gg);
+                Date[] tVals = this.getTimesteps(nc, grid);
                 for (int i = 0; i < tVals.length; i++)
                 {
                     TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);

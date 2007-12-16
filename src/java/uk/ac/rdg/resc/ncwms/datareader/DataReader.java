@@ -66,11 +66,12 @@ public abstract class DataReader
     /**
      * Gets a DataReader object.  <b>Only one</b> object of each class will be
      * created (hence methods have to be thread-safe).
-     *
+     * 
+     * 
      * @param className Name of the class to generate
      * @param location the location of the dataset: used to detect OPeNDAP URLs
      * @return a DataReader object of the given class, or {@link DefaultDataReader}
-     * or {@link OpendapDataReader} (depending on whether the location starts with
+     * or {@link BoundingBoxDataReader} (depending on whether the location starts with
      * "http://" or "dods://") if <code>className</code> is null or the empty string
      * @throws an Exception if the DataReader could not be created
      */
@@ -80,7 +81,7 @@ public abstract class DataReader
         String clazz = DefaultDataReader.class.getName();
         if (isOpendapLocation(location))
         {
-            clazz = OpendapDataReader.class.getName();
+            clazz = BoundingBoxDataReader.class.getName();
         }
         if (className != null && !className.trim().equals(""))
         {
