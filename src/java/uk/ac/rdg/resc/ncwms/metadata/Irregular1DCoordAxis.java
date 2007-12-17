@@ -29,8 +29,9 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Vector;
+import java.util.List;
 import org.apache.log4j.Logger;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -55,7 +56,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      * are latitude values outside the range -90:90 (possible for some model data).
      * These NaNs are not stored here.
      */
-    private Vector<AxisValue> axisVals;
+    private List<AxisValue> axisVals;
     
     /**
      * Simple class mapping axis values to indices.  Longitudes are always
@@ -90,7 +91,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         
         // Store the axis values and their indices
         double[] vals = axis1D.getCoordValues();
-        this.axisVals = new Vector<AxisValue>(vals.length);
+        this.axisVals = new ArrayList<AxisValue>(vals.length);
         for (int i = 0; i < vals.length; i++)
         {
             // Might be NaN for a lat axis outside range -90:90
@@ -109,12 +110,12 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         if (this.isLongitude)
         {
             logger.debug("Checking for longitude axis wrapping...");
-            double lastVal = this.axisVals.lastElement().value;
+            double lastVal = this.axisVals.get(this.axisVals.size() - 1).value;
             double dx = lastVal - this.axisVals.get(this.axisVals.size() - 2).value;
             // Calculate the position of the imaginary next value along the axis
             double nextVal = lastVal + dx;
             logger.debug("lastVal = {}, nextVal = {}", lastVal, nextVal);
-            AxisValue firstVal = this.axisVals.firstElement();
+            AxisValue firstVal = this.axisVals.get(0);
             
             Longitude firstValLon = new Longitude(firstVal.value);
             Longitude lastValLon = new Longitude(lastVal);
@@ -174,8 +175,8 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     {
         // Check that the point is within range
         // TODO: careful of longitude axis wrapping
-        if (target < this.axisVals.firstElement().value || 
-            target > this.axisVals.lastElement().value)
+        if (target < this.axisVals.get(0).value || 
+            target > this.axisVals.get(this.axisVals.size() - 1).value)
         {
             return -1;
         }
