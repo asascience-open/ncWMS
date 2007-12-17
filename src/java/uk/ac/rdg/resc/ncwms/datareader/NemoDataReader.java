@@ -1,4 +1,4 @@
-/*
+/*/*
  * Copyright (c) 2006 The University of Reading
  * All rights reserved.
  *
@@ -113,8 +113,18 @@ public class NemoDataReader extends DefaultDataReader
             }
             float missingValue = var.findAttribute("missing_value").getNumericValue().floatValue();
             // TODO: should check these values exist
+  
             double validMin = var.findAttribute("valid_min").getNumericValue().doubleValue();
             double validMax = var.findAttribute("valid_max").getNumericValue().doubleValue();
+           
+            logger.debug("Valid Min/Max :" + validMin + "::" +validMax);
+            
+            if (validMin > validMax)
+            {
+                 validMin = -1 * validMin;
+                 validMax = -1 * validMax;
+            }
+  
             logger.debug("Scale factor: {}, add offset: {}", scaleFactor, addOffset);
 
             int yAxisIndex = 1;
@@ -133,6 +143,7 @@ public class NemoDataReader extends DefaultDataReader
             ranges.add(new Range(0,0));
             ranges.add(new Range(0,0));
 
+            
             // Iterate through the scanlines, the order doesn't matter
             for (int yIndex : pixelMap.getYIndices())
             {
@@ -140,6 +151,8 @@ public class NemoDataReader extends DefaultDataReader
                 int xmin = pixelMap.getMinXIndexInRow(yIndex);
                 int xmax = pixelMap.getMaxXIndexInRow(yIndex);
                 Range xRange = new Range(xmin, xmax);
+                logger.debug("GetYIndices : " + yIndex +"::" +xmin + ":::" + xmax);
+                
                 ranges.set(xAxisIndex, xRange);
 
                 // Read the scanline from the disk, from the first to the last x index
@@ -305,3 +318,4 @@ public class NemoDataReader extends DefaultDataReader
         }
     }
 }
+

@@ -90,6 +90,10 @@
                     <file>${file.reference.netcdfUI-2.2.22.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
+                <library files="1">
+                    <file>${file.reference.opendap-2.1.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
             </web-module-libraries>
             <web-module-additional-libraries/>
             <source-roots>

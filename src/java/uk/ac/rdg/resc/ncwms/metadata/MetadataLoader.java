@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -42,6 +44,7 @@ import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
 import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
 
 /**
@@ -61,6 +64,7 @@ public class MetadataLoader
     
     private Config config; // Will be injected by Spring
     private MetadataStore metadataStore; // Ditto
+    private NcwmsCredentialsProvider credentialsProvider; // Ditto
     
     /**
      * Called by the Spring framework to initialize this object
@@ -150,6 +154,8 @@ public class MetadataLoader
             // Get a DataReader object of the correct type
             logger.debug("Getting data reader of type {}", ds.getDataReaderClass());
             DataReader dr = DataReader.getDataReader(ds.getDataReaderClass(), ds.getLocation());
+            // Look for OPeNDAP datasets and update the credentials provider accordingly
+            this.updateCredentialsProvider(ds);
             // Read the metadata
             Map<String, Layer> layers = dr.getAllLayers(ds);
             logger.debug("loaded layers");
@@ -338,6 +344,43 @@ public class MetadataLoader
     }
     
     /**
+     * If the given dataset is an OPeNDAP location, this looks for
+     * a username and password and, if it finds one, updates the 
+     * credentials provider
+     */
+    private void updateCredentialsProvider(Dataset ds)
+    {
+        logger.debug("Called updateCredentialsProvider, {}", ds.getLocation());
+        if (DataReader.isOpendapLocation(ds.getLocation()))
+        {
+            // Make sure the URL starts with "http://" or the 
+            // URL parsing might not work
+            // (TODO: register dods:// as a valid protocol?)
+            String newLoc = "http" + ds.getLocation().substring(4);
+            try
+            {
+                URL url = new URL(newLoc);
+                String userInfo = url.getUserInfo();
+                if (userInfo != null)
+                {
+                    this.credentialsProvider.addCredentials(
+                        url.getHost(),
+                        url.getPort() >= 0 ? url.getPort() : url.getDefaultPort(),
+                        userInfo);
+                }
+                // Change the location to "dods://..." so that the Java NetCDF
+                // library knows to use the OPeNDAP protocol rather than plain
+                // http
+                ds.setLocation("dods" + newLoc.substring(4));
+            }
+            catch(MalformedURLException mue)
+            {
+                logger.warn(newLoc + " is not a valid url");
+            }
+        }
+    }
+    
+    /**
      * Called by the Spring framework to clean up this object
      */
     public void close()
@@ -362,6 +405,11 @@ public class MetadataLoader
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
+    }
+
+    public void setCredentialsProvider(NcwmsCredentialsProvider credentialsProvider)
+    {
+        this.credentialsProvider = credentialsProvider;
     }
     
 }

@@ -30,7 +30,6 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import thredds.catalog.DataType;
@@ -38,10 +37,12 @@ import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -79,34 +80,22 @@ public class ROMSDataReader extends USGSDataReader
             // We use openDataset() rather than acquiring from cache
             // because we need to enhance the dataset
             nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);            
-            for (GridDatatype grid : gd.getGrids())
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
+            
+            // Search through all coordinate systems, creating appropriate metadata
+            // for each.  This allows metadata objects to be shared among Layer objects,
+            // saving memory.
+            for (Gridset gridset : gd.getGridsets())
             {
-                if (!grid.getName().equals("temp") && !grid.getName().equals("salt")
-                    && !grid.getName().equals("latent") && !grid.getName().equals("sensible")
-                    && !grid.getName().equals("lwrad") && !grid.getName().equals("evaporation"))
-                {
-                    // Only display a few datasets for the moment
-                    continue;
-                }
-                GridCoordSystem coordSys = grid.getCoordinateSystem();
-                logger.debug("Creating new Layer object for {}", grid.getName());
-                LayerImpl layer = new LayerImpl();
-                layer.setId(grid.getName());
-                layer.setTitle(getStandardName(grid.getVariable()));
-                layer.setAbstract(grid.getDescription());
-                layer.setUnits(grid.getUnitsString());
-                layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat"));
-                layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat"));
+                GridCoordSystem coordSys = gridset.getGeoCoordSystem();
+                
+                EnhancedCoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat");
+                EnhancedCoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat");
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                if (zAxis != null)
-                {
-                    layer.setZunits(zAxis.getUnitsString());
-                    double[] zVals = zAxis.getCoordValues();
-                    layer.setZpositive(false);
-                    layer.setZvalues(zVals);
-                }
+                
+                // Now compute TimestepInfo objects for this file
+                List<TimestepInfo> timesteps = getTimesteps(filename, coordSys);
                 
                 // Set the bounding box
                 // TODO: should take into account the cell bounds
@@ -122,17 +111,42 @@ public class ROMSDataReader extends USGSDataReader
                     minLon = -180.0;
                     maxLon = 180.0;
                 }
-                layer.setBbox(new double[]{minLon, minLat, maxLon, maxLat});
-                
-                // Now add the timestep information to the VM object
-                Date[] tVals = this.getTimesteps(nc, grid);
-                for (int i = 0; i < tVals.length; i++)
+                double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
+            
+                for (GridDatatype grid : gd.getGrids())
                 {
-                    TimestepInfo tInfo = new TimestepInfo(tVals[i], filename, i);
-                    layer.addTimestepInfo(tInfo);
+                    if (!grid.getName().equals("temp") && !grid.getName().equals("salt")
+                        && !grid.getName().equals("latent") && !grid.getName().equals("sensible")
+                        && !grid.getName().equals("lwrad") && !grid.getName().equals("evaporation"))
+                    {
+                        // Only display certain fields for the moment
+                        continue;
+                    }
+                    logger.debug("Creating new Layer object for {}", grid.getName());
+                    LayerImpl layer = new LayerImpl();
+                    layer.setId(grid.getName());
+                    layer.setTitle(getStandardName(grid.getVariable()));
+                    layer.setAbstract(grid.getDescription());
+                    layer.setUnits(grid.getUnitsString());
+                    layer.setXaxis(xAxis);
+                    layer.setYaxis(yAxis);
+
+                    if (zAxis != null)
+                    {
+                        layer.setZunits(zAxis.getUnitsString());
+                        layer.setZpositive(false);
+                        layer.setZvalues(zAxis.getCoordValues());
+                    }
+
+                    // Now add the timestep information to the Layer object
+                    for (TimestepInfo timestep : timesteps)
+                    {
+                        layer.addTimestepInfo(timestep);
+                    }
+                    
+                    // Add this to the Hashtable
+                    layers.add(layer);
                 }
-                // Add this to the List
-                layers.add(layer);
             }
         }
         finally

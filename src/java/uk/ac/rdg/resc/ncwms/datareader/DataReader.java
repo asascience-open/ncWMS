@@ -202,7 +202,7 @@ public abstract class DataReader
     protected abstract List<Layer> getLayers(String filename)
         throws IOException;
     
-    private static boolean isOpendapLocation(String location)
+    public static boolean isOpendapLocation(String location)
     {
         return location.startsWith("http://") || location.startsWith("dods://");
     }

@@ -82,11 +82,18 @@
         </property>
     </bean>
     
+    <!-- Object that handles the provision of authentication credentials
+         for OPeNDAP servers -->
+    <bean id="credentialsProvider"
+          class="uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider"
+          init-method="init"/>
+    
     <!-- Object that handles the periodic refreshing of metadata. -->
     <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.metadata.MetadataLoader"
             init-method="init" destroy-method="close">
         <property name="config"><ref local="config"/></property>
         <property name="metadataStore"><ref local="metadataStore"/></property>
+        <property name="credentialsProvider"><ref local="credentialsProvider"/></property>
     </bean>
     
     <!-- Object that handles logging of the usage of the ncWMS.
