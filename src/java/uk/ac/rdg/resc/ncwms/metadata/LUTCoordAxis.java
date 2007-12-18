@@ -61,6 +61,7 @@ public class LUTCoordAxis extends EnhancedCoordAxis
     private static final Hashtable<String, LUTCoordAxis> lutAxes =
         new Hashtable<String, LUTCoordAxis>();
     
+    private String filename;
     private short[] indices;
     private Regular1DCoordAxis xAxis, yAxis; // Used to convert from lat/lon to LUT index
     
@@ -115,8 +116,7 @@ public class LUTCoordAxis extends EnhancedCoordAxis
     /**
      * Creates an LUTCoordAxis
      * @param in InputStream from which to read the look-up table
-     * @param filename Name of file from which we are reading (for error
-     * reporting purposes)
+     * @param filename Name of file from which we are reading
      * @return a newly-created LUTCoordAxis
      */
     private static final LUTCoordAxis createAxis(InputStream in, String filename) throws IOException
@@ -196,7 +196,7 @@ public class LUTCoordAxis extends EnhancedCoordAxis
             logger.debug("Read {} items of lookup data from {}", i, filename);
             // Garbage-collect to try to free some memory
             System.gc();
-            return new LUTCoordAxis(indices, minLon, maxLon, minLat, maxLat,
+            return new LUTCoordAxis(filename, indices, minLon, maxLon, minLat, maxLat,
                 nlon, nlat);
         }
         catch(RuntimeException rte)
@@ -214,9 +214,10 @@ public class LUTCoordAxis extends EnhancedCoordAxis
         }
     }
     
-    private LUTCoordAxis(short[] indices, double minLon, double maxLon,
+    private LUTCoordAxis(String filename, short[] indices, double minLon, double maxLon,
         double minLat, double maxLat, int nlon, int nlat)
     {
+        this.filename = filename;
         this.indices = indices;
         double lonStride = (maxLon - minLon) / (nlon - 1);
         double latStride = (maxLat - minLat) / (nlat - 1);
@@ -236,6 +237,16 @@ public class LUTCoordAxis extends EnhancedCoordAxis
         {
             return -1;
         }
+    }
+    
+    public boolean equals(Object obj)
+    {
+        if (this == obj) return true;
+        if (!(obj instanceof LUTCoordAxis)) return false;
+        LUTCoordAxis otherAxis = (LUTCoordAxis)obj;
+        // Simply compare the filenames: if the axes use the same filename
+        // then they contain the same information
+        return this.filename.equals(otherAxis.filename);
     }
     
 }

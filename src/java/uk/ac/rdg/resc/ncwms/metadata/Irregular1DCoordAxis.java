@@ -80,6 +80,15 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         {
             return Double.compare(this.value, otherVal.value);
         }
+        
+        public boolean equals(Object obj)
+        {
+            if (this == obj) return true;
+            if (!(obj instanceof AxisValue)) return false;
+            AxisValue otherAxisVal = (AxisValue)obj;
+            return this.value == otherAxisVal.value &&
+                   this.index == otherAxisVal.index;
+        }
     }
     
     /**
@@ -198,6 +207,25 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         AxisValue highVal = this.axisVals.get(high);
         return (Math.abs(target - lowVal.value) < 
                 Math.abs(target - highVal.value)) ? lowVal.index : highVal.index;
+    }
+    
+    public boolean equals(Object obj)
+    {
+        if (this == obj) return true;
+        if (!(obj instanceof Irregular1DCoordAxis)) return false;
+        Irregular1DCoordAxis otherAxis = (Irregular1DCoordAxis)obj;
+        if (this.axisVals.size() != otherAxis.axisVals.size()) return false;
+        
+        // Now compare all the AxisValues individually
+        for (int i = 0; i < this.axisVals.size(); i++)
+        {
+            if (!this.axisVals.get(i).equals(otherAxis.axisVals.get(i)))
+            {
+                return false;
+            }
+        }
+        // If we've got this far the axes must be equivalent
+        return true;
     }
     
 }

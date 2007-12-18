@@ -29,8 +29,12 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
@@ -124,6 +128,142 @@ public abstract class MetadataStore
      */
     public abstract void setLayersInDataset(String datasetId, Map<String, Layer> layers)
         throws Exception;
+    
+    /**
+     * Finds the unique X coordinate axes and maps each one to a list of Layers
+     * that use the axis
+     */
+    protected static Map<EnhancedCoordAxis, List<Layer>> findUniqueXAxes(Collection<Layer> layers)
+    {
+        Map<EnhancedCoordAxis, List<Layer>> xAxes = new HashMap<EnhancedCoordAxis, List<Layer>>();
+        for (Layer layer : layers)
+        {
+            // See if we have an equivalent x axis already in the Map.  This will
+            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // this relies on the hashCode, which we have not implemented yet.
+            boolean found = false;
+            for (EnhancedCoordAxis axis : xAxes.keySet())
+            {
+                if (axis.equals(layer.getXaxis()))
+                {
+                    found = true;
+                    // Now add this layer to the list of layers that use this axis
+                    xAxes.get(axis).add(layer);
+                }
+            }
+            if (!found)
+            {
+                // We must create a new entry in the hashtable
+                List<Layer> layerList = new ArrayList<Layer>();
+                layerList.add(layer);
+                xAxes.put(layer.getXaxis(), layerList);
+            }
+        }
+        return xAxes;
+    }
+    
+    /**
+     * Finds the unique Y coordinate axes and maps each one to a list of Layers
+     * that use the axis
+     */
+    protected static Map<EnhancedCoordAxis, List<Layer>> findUniqueYAxes(Collection<Layer> layers)
+    {
+        Map<EnhancedCoordAxis, List<Layer>> yAxes = new HashMap<EnhancedCoordAxis, List<Layer>>();
+        for (Layer layer : layers)
+        {
+            // See if we have an equivalent x axis already in the Map.  This will
+            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // this relies on the hashCode, which we have not implemented yet.
+            boolean found = false;
+            for (EnhancedCoordAxis axis : yAxes.keySet())
+            {
+                if (axis.equals(layer.getYaxis()))
+                {
+                    found = true;
+                    // Now add this layer to the list of layers that use this axis
+                    yAxes.get(axis).add(layer);
+                }
+            }
+            if (!found)
+            {
+                // We must create a new entry in the hashtable
+                List<Layer> layerList = new ArrayList<Layer>();
+                layerList.add(layer);
+                yAxes.put(layer.getYaxis(), layerList);
+            }
+        }
+        return yAxes;
+    }
+    
+    /**
+     * Finds unique arrays of z values and maps each one to a list of Layers
+     * that use the axis
+     */
+    protected static Map<double[], List<Layer>> findUniqueZAxes(Collection<Layer> layers)
+    {
+        Map<double[], List<Layer>> zAxes = new HashMap<double[], List<Layer>>();
+        for (Layer layer : layers)
+        {
+            // See if we have an equivalent x axis already in the Map.  This will
+            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // this relies on the hashCode, which we have not implemented yet.
+            boolean found = false;
+            for (double[] zValues : zAxes.keySet())
+            {
+                if (Arrays.equals(layer.getZvalues(), zValues))
+                {
+                    found = true;
+                    // Now add this layer to the list of layers that use this axis
+                    zAxes.get(zValues).add(layer);
+                }
+            }
+            if (!found)
+            {
+                // We must create a new entry in the hashtable
+                List<Layer> layerList = new ArrayList<Layer>();
+                layerList.add(layer);
+                zAxes.put(layer.getZvalues(), layerList);
+            }
+        }
+        return zAxes;
+    }
+    
+    /**
+     * Finds unique Lists of TimestepInfo objects and maps each one to a list of Layers
+     * that use the axis
+     */
+    protected static Map<List<TimestepInfo>, List<Layer>> findUniqueTAxes(Collection<Layer> layers)
+    {
+        Map<List<TimestepInfo>, List<Layer>> tAxes = new HashMap<List<TimestepInfo>, List<Layer>>();
+        for (Layer layer : layers)
+        {
+            // See if we have an equivalent x axis already in the Map.  This will
+            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // this relies on the hashCode, which we have not implemented yet.
+            boolean found = false;
+            for (List<TimestepInfo> tAxis : tAxes.keySet())
+            {
+                if (tAxis.equals(layer.getTimesteps()))
+                {
+                    found = true;
+                    // Now add this layer to the list of layers that use this axis
+                    tAxes.get(tAxis).add(layer);
+                }
+            }
+            if (!found)
+            {
+                // We must create a new entry in the hashtable
+                List<Layer> layerList = new ArrayList<Layer>();
+                layerList.add(layer);
+                tAxes.put(layer.getTimesteps(), layerList);
+            }
+        }
+        return tAxes;
+    }
     
     /**
      * @return the time of the last update of the dataset with the given id,

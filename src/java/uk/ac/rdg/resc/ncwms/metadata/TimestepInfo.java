@@ -93,4 +93,14 @@ public class TimestepInfo implements Comparable<TimestepInfo>
     {
         return this.timestep.compareTo(otherInfo.timestep);
     }
+    
+    public boolean equals(Object obj)
+    {
+        if (this == obj) return true;
+        if (!(obj instanceof TimestepInfo)) return false;
+        TimestepInfo otherTstep = (TimestepInfo)obj;
+        return this.timestep.equals(otherTstep.timestep) &&
+               this.indexInFile == otherTstep.indexInFile &&
+               this.filename.equals(otherTstep.filename);
+    }
 }

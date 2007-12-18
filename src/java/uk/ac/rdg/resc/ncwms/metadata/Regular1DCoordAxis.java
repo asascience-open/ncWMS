@@ -150,6 +150,17 @@ public class Regular1DCoordAxis extends OneDCoordAxis
             logger.debug("returning {}", index);
             return index;
         }
+    }
+    
+    public boolean equals(Object obj)
+    {
+        if (this == obj) return true;
+        if (!(obj instanceof Regular1DCoordAxis)) return false;
+        Regular1DCoordAxis otherAxis = (Regular1DCoordAxis)obj;
         
+        return this.start == otherAxis.start &&
+               this.stride == otherAxis.stride &&
+               this.getCount() == otherAxis.getCount() &&
+               this.isLongitude == otherAxis.isLongitude;
     }
 }
