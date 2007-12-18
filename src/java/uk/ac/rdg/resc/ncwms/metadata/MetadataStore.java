@@ -172,9 +172,9 @@ public abstract class MetadataStore
         Map<EnhancedCoordAxis, List<Layer>> yAxes = new HashMap<EnhancedCoordAxis, List<Layer>>();
         for (Layer layer : layers)
         {
-            // See if we have an equivalent x axis already in the Map.  This will
+            // See if we have an equivalent y axis already in the Map.  This will
             // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
-            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // we can use the method yAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
             for (EnhancedCoordAxis axis : yAxes.keySet())
@@ -206,9 +206,9 @@ public abstract class MetadataStore
         Map<double[], List<Layer>> zAxes = new HashMap<double[], List<Layer>>();
         for (Layer layer : layers)
         {
-            // See if we have an equivalent x axis already in the Map.  This will
+            // See if we have an equivalent z axis already in the Map.  This will
             // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
-            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // we can use the method zAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
             for (double[] zValues : zAxes.keySet())
@@ -240,9 +240,9 @@ public abstract class MetadataStore
         Map<List<TimestepInfo>, List<Layer>> tAxes = new HashMap<List<TimestepInfo>, List<Layer>>();
         for (Layer layer : layers)
         {
-            // See if we have an equivalent x axis already in the Map.  This will
+            // See if we have an equivalent t axis already in the Map.  This will
             // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
-            // we can use the method xAxes.containsKey() here, but I'm not sure: I think
+            // we can use the method tAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
             for (List<TimestepInfo> tAxis : tAxes.keySet())
