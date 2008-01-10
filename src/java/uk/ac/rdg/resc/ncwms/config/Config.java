@@ -30,11 +30,11 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
@@ -85,13 +85,6 @@ public class Config implements ApplicationContextAware
     @Element(name="server")
     private Server server = new Server();
     
-    // These are third-party providers of WMS layers.  These layers do not
-    // appear in the Capabilities document, but are available to the Godiva2
-    // interactive website.
-    @ElementList(name="thirdpartylayerproviders", type=ThirdPartyLayerProvider.class, required=false)
-    private ArrayList<ThirdPartyLayerProvider> thirdPartyProviders =
-        new ArrayList<ThirdPartyLayerProvider>();
-    
     // Time of the last update to this configuration or any of the contained
     // metadata, in milliseconds since the epoch
     private long lastUpdateTime = new Date().getTime(); 
@@ -101,14 +94,10 @@ public class Config implements ApplicationContextAware
     private MetadataStore metadataStore; // Gives access to metadata
     
     /**
-     * This contains the map of dataset IDs to Dataset objects
+     * This contains the map of dataset IDs to Dataset objects.  We use a 
+     * ListOrderedMap so that the order of datasets in the Map is preserved.
      */
-    private Map<String, Dataset> datasets = new HashMap<String, Dataset>();
-    /**
-     * This contains the map of URLs to ThirdPartyLayerProvider objects
-     */
-    private Map<String, ThirdPartyLayerProvider> thirdPartyLayerProviders 
-        = new HashMap<String, ThirdPartyLayerProvider>();
+    private Map<String, Dataset> datasets = new ListOrderedMap<String, Dataset>();
     
     /**
      * Private constructor.  This prevents other classes from creating
@@ -219,18 +208,6 @@ public class Config implements ApplicationContextAware
             }
             dsIds.add(dsId);
         }
-        
-        // Check that URLs of third-party layer providers are unique
-        List<String> thirdPartyUrls = new ArrayList<String>();
-        for (ThirdPartyLayerProvider provider : this.thirdPartyProviders)
-        {
-            String url = provider.getUrl();
-            if (thirdPartyUrls.contains(url))
-            {
-                throw new PersistenceException("Duplicate third party layer provider URL %s", url);
-            }
-            thirdPartyUrls.add(url);
-        }
     }
     
     /**
@@ -249,10 +226,6 @@ public class Config implements ApplicationContextAware
             this.datasets.put(ds.getId(), ds);
         }
         this.loadThreddsCatalog();
-        for (ThirdPartyLayerProvider provider : this.thirdPartyProviders)
-        {
-            this.thirdPartyLayerProviders.put(provider.getUrl(), provider);
-        }
     }
     
     public void setLastUpdateTime(Date date)
@@ -386,14 +359,6 @@ public class Config implements ApplicationContextAware
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
         this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
-    }
-    
-    /**
-     * Gets the map of URLs to ThirdPartyLayerProvider objects.
-     */
-    public Map<String, ThirdPartyLayerProvider> getThirdPartyLayerProviders()
-    {
-        return this.thirdPartyLayerProviders;
     }
 
     /**

@@ -154,7 +154,7 @@ class RequestParams
         return parsePositiveInt(paramName, value);
     }
     
-    private int parsePositiveInt(String paramName, String value) throws WmsException
+    private static int parsePositiveInt(String paramName, String value) throws WmsException
     {
         try
         {
