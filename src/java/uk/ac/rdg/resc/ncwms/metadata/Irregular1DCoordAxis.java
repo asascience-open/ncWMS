@@ -105,8 +105,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      */
     public Irregular1DCoordAxis(double[] coordValues, AxisType axisType, HorizontalProjection proj)
     {
-        this.size = coordValues.length;
-        this.axisType = axisType;
+        super(axisType, coordValues.length);
         this.proj = proj;
         
         // Store the axis values and their indices

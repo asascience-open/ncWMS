@@ -49,6 +49,7 @@ import ucar.unidata.geoloc.ProjectionImpl;
 @Persistent
 public abstract class CoordAxis
 {
+    protected AxisType axisType;
     
     /**
      * Method for creating an CoordAxis.
@@ -70,6 +71,11 @@ public abstract class CoordAxis
             throw new IllegalArgumentException("Cannot yet deal with coordinate" +
                 " axes of >1 dimension");
         }
+    }
+    
+    protected CoordAxis(AxisType type)
+    {
+        this.axisType = type;
     }
     
     /**

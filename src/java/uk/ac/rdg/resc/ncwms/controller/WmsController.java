@@ -191,6 +191,7 @@ public class WmsController extends AbstractController
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.config);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
+        // TODO: show a subset of only the CRS codes that we are likely to use?
         models.put("supportedCrsCodes", TargetGrid.getSupportedCrsCodes());
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);

@@ -69,10 +69,9 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     public Regular1DCoordAxis(double start, double stride, int count, AxisType axisType,
         HorizontalProjection proj)
     {
+        super(axisType, count);
         this.start = start;
         this.stride = stride;
-        this.size = count;
-        this.axisType = axisType;
         this.proj = proj;
         
         this.maxValue = this.start + this.stride * (this.size - 1);

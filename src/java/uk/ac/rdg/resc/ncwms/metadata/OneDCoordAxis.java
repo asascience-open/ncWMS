@@ -51,7 +51,6 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 public abstract class OneDCoordAxis extends CoordAxis
 {
     protected HorizontalProjection proj = null; // null Signifies the lat-lon projection
-    protected AxisType axisType;
     protected int size; // Number of points on this axis
     
     /**
@@ -85,6 +84,12 @@ public abstract class OneDCoordAxis extends CoordAxis
         {
             throw new IllegalArgumentException("Illegal axis type " + axisType);
         }
+    }
+    
+    protected OneDCoordAxis(AxisType type, int size)
+    {
+        super(type);
+        this.size = size;
     }
 
     public final int getIndex(LatLonPoint point)
