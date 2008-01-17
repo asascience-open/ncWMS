@@ -42,7 +42,7 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -89,8 +89,8 @@ public class ROMSDataReader extends USGSDataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                EnhancedCoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat");
-                EnhancedCoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat");
+                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat");
+                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat");
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 

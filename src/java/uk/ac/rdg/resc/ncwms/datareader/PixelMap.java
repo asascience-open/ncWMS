@@ -35,12 +35,10 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
-import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
  * Class that maps x and y indices in source data arrays to pixel indices in
@@ -68,25 +66,27 @@ public class PixelMap
     private int numUniqueXYPairs = 0;
     
     /**
-     * Generates a PixelMap for the given Layer for the given arrays of latitude
-     * and longitude values in the destination picture
+     * Generates a PixelMap for the given Layer.  Data read from the Layer will
+     * be projected onto the given TargetGrid
+     * @throws Exception if the necessary transformations could not be performed
      */
-    public PixelMap(Layer layer, double[] latValues, double[] lonValues)
+    public PixelMap(Layer layer, TargetGrid grid) throws Exception
     {
         long start = System.currentTimeMillis();
         
-        EnhancedCoordAxis xAxis = layer.getXaxis();
-        EnhancedCoordAxis yAxis = layer.getYaxis();
+        CoordAxis xAxis = layer.getXaxis();
+        CoordAxis yAxis = layer.getYaxis();
         
         // Cycle through each pixel in the picture and work out which
         // x and y index in the source data it corresponds to
         int pixelIndex = 0;
         
-        // We can gain efficiency if both coordinate axes are 1D by minimizing
-        // the number of calls to axis.getIndex().
-        if (xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
+        // We can gain efficiency if the target grid is a lat-lon grid and
+        // the data exist on a lat-long grid by minimizing the number of
+        // calls to axis.getIndex().
+        if (false && xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
         {
-            logger.debug("Using optimized method for 1-D axes");
+            /*logger.debug("Using optimized method for 1-D axes");
             // Calculate the indices along the x axis.
             int[] xIndices = new int[lonValues.length];
             for (int i = 0; i < xIndices.length; i++)
@@ -109,31 +109,27 @@ public class PixelMap
                     // We still need to increment the pixel index array
                     pixelIndex += xIndices.length;
                 }
-            }
+            }*/
         }
         else
         {
-            logger.debug("Using generic method for complex axes");
-            // We use a generic, but slower, algorithm
-            for (double lat : latValues)
+            logger.debug("Using generic (but slower) method");
+            for (double y : grid.getYAxisValues())
             {
-                if (lat >= -90.0f && lat <= 90.0f)
+                for (double x : grid.getXAxisValues())
                 {
-                    for (double lon : lonValues)
+                    // TODO: the transformer can transform many points at once.
+                    // Doing so might be more efficient than this method.
+                    LatLonPoint latLon = grid.transformToLatLon(x, y);
+                    if (latLon.getLatitude() >= -90.0f && latLon.getLatitude() <= 90.0f)
                     {
-                        LatLonPoint latLon = new LatLonPointImpl(lat, lon);
-                        // Translate lat-lon to projection coordinates
-                        int x = xAxis.getIndex(latLon);
-                        int y = yAxis.getIndex(latLon);
+                        // Translate lat-lon to grid point indices
+                        int i = xAxis.getIndex(latLon);
+                        int j = yAxis.getIndex(latLon);
                         //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
-                        this.put(x, y, pixelIndex); // Ignores negative indices
-                        pixelIndex++;
+                        this.put(i, j, pixelIndex); // Ignores negative indices
                     }
-                }
-                else
-                {
-                    // We still need to increment the pixel index array
-                    pixelIndex += lonValues.length;
+                    pixelIndex++;
                 }
             }
         }

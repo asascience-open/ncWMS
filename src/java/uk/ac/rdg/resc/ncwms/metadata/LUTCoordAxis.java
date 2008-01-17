@@ -40,6 +40,7 @@ import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.apache.log4j.Logger;
+import ucar.nc2.dataset.AxisType;
 import ucar.unidata.geoloc.LatLonPoint;
 
 /**
@@ -51,7 +52,7 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Log$
  */
 @Persistent
-public class LUTCoordAxis extends EnhancedCoordAxis
+public class LUTCoordAxis extends CoordAxis
 {
     private static final Logger logger = Logger.getLogger(LUTCoordAxis.class);
     
@@ -221,17 +222,17 @@ public class LUTCoordAxis extends EnhancedCoordAxis
         this.indices = indices;
         double lonStride = (maxLon - minLon) / (nlon - 1);
         double latStride = (maxLat - minLat) / (nlat - 1);
-        this.xAxis = new Regular1DCoordAxis(minLon, lonStride, nlon, true);
-        this.yAxis = new Regular1DCoordAxis(minLat, latStride, nlat, false);
+        this.xAxis = new Regular1DCoordAxis(minLon, lonStride, nlon, AxisType.Lon);
+        this.yAxis = new Regular1DCoordAxis(minLat, latStride, nlat, AxisType.Lat);
     }
     
     public int getIndex(LatLonPoint point)
     {
-        int xi = this.xAxis.getIndex(point);
-        int yi = this.yAxis.getIndex(point);
+        int xi = this.xAxis.getIndex(point.getLongitude());
+        int yi = this.yAxis.getIndex(point.getLatitude());
         if (xi >= 0 && yi >= 0)
         {
-            return this.indices[yi * this.xAxis.getCount() + xi];
+            return this.indices[yi * this.xAxis.getSize() + xi];
         }
         else
         {

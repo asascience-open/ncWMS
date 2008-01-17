@@ -29,7 +29,7 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 
 /**
  * Contains the parts of the GetMap request that pertain to data extraction,
@@ -45,7 +45,7 @@ import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
 public class GetMapDataRequest
 {
     protected String[] layers;
-    private String crs;
+    private String crsCode;
     private double[] bbox;
     private int width;
     private int height;
@@ -73,7 +73,7 @@ public class GetMapDataRequest
     protected void init(RequestParams params, String version) throws WmsException
     {
         // WMS1.3.0 uses "CRS", 1.1.1 uses "SRS".  This is a bit of a kludge
-        this.crs = params.getMandatoryString(version.equals("1.3.0") ? "crs" : "srs");
+        this.crsCode = params.getMandatoryString(version.equals("1.3.0") ? "crs" : "srs");
         String[] bboxEls = params.getMandatoryString("bbox").split(",");
         // Check the validity of the bounding box
         if (bboxEls.length != 4)
@@ -107,9 +107,9 @@ public class GetMapDataRequest
         return layers;
     }
 
-    public String getCrs()
+    public String getCrsCode()
     {
-        return crs;
+        return crsCode;
     }
 
     public double[] getBbox()

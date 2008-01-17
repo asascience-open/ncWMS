@@ -36,10 +36,8 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
-import uk.ac.rdg.resc.ncwms.grids.RectangularLatLonGrid;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -67,8 +65,8 @@ public class LayerImpl implements Layer
     protected double[] bbox; // Bounding box : minx, miny, maxx, maxy
     protected double scaleMin;
     protected double scaleMax;
-    protected EnhancedCoordAxis xaxis;
-    protected EnhancedCoordAxis yaxis;
+    protected CoordAxis xaxis;
+    protected CoordAxis yaxis;
     protected transient Dataset dataset; // Not stored in the metadata database
     // Sorted in ascending order of time
     protected List<TimestepInfo> timesteps;
@@ -221,22 +219,22 @@ public class LayerImpl implements Layer
         this.units = units;
     }
 
-    public EnhancedCoordAxis getXaxis()
+    public CoordAxis getXaxis()
     {
         return xaxis;
     }
 
-    public void setXaxis(EnhancedCoordAxis xaxis)
+    public void setXaxis(CoordAxis xaxis)
     {
         this.xaxis = xaxis;
     }
 
-    public EnhancedCoordAxis getYaxis()
+    public CoordAxis getYaxis()
     {
         return yaxis;
     }
 
-    public void setYaxis(EnhancedCoordAxis yaxis)
+    public void setYaxis(CoordAxis yaxis)
     {
         this.yaxis = yaxis;
     }
@@ -518,19 +516,10 @@ public class LayerImpl implements Layer
      * Reads a layer of data from this variable (which must be a scalar or a
      * single component of a vector).  Missing values will be represented by
      * Float.NaN.
-     * Currently only works for RectangularLatLonGrids.
      */
-    public float[] read(int tIndex, int zIndex, AbstractGrid grid)
+    public float[] read(int tIndex, int zIndex, TargetGrid grid)
         throws Exception
     {
-        // Check that we can handle this type of grid
-        if (!(grid instanceof RectangularLatLonGrid))
-        {
-            // TODO: support non-rectangular grids for images
-            throw new Exception("Grid is not rectangular");
-        }
-        RectangularLatLonGrid rectGrid = (RectangularLatLonGrid)grid;
-        
         // Get a DataReader object for reading the data
         String dataReaderClass = this.dataset.getDataReaderClass();
         String location = this.dataset.getLocation();
@@ -555,8 +544,7 @@ public class LayerImpl implements Layer
             filename = this.dataset.getLocation();
             tIndexInFile = tIndex;
         }
-        return dr.read(filename, this, tIndexInFile, zIndex, rectGrid.getLatArray(),
-            rectGrid.getLonArray());
+        return dr.read(filename, this, tIndexInFile, zIndex, grid);
     }
     
     /**

@@ -38,6 +38,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -108,12 +109,11 @@ public abstract class DataReader
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param latValues Array of latitude values
-     * @param lonValues Array of longitude values
+     * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
     public abstract float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, double[] latValues, double[] lonValues)
+        int tIndex, int zIndex, TargetGrid grid)
         throws Exception;
     
     /**

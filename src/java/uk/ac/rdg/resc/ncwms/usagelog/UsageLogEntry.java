@@ -145,7 +145,7 @@ public class UsageLogEntry
     private void setGetMapDataRequest(GetMapDataRequest dr)
     {
         this.layer = dr.getLayers()[0];
-        this.crs = dr.getCrs();
+        this.crs = dr.getCrsCode();
         this.bbox = dr.getBbox();
         this.elevation = dr.getElevationString();
         this.width = dr.getWidth();

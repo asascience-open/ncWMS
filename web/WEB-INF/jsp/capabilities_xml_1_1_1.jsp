@@ -10,6 +10,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      Data (models) passed in to this page:
          config     = Configuration of this server (uk.ac.rdg.resc.ncwms.config.Config)
          wmsBaseUrl = Base URL of this server (java.lang.String)
+         supportedCrsCodes = List of Strings of supported Coordinate Reference System codes
          supportedImageFormats = Set of Strings representing MIME types of supported image formats
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
@@ -96,7 +97,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         
         <Layer>
             <Title>${config.server.title}</Title>
-            <SRS>EPSG:4326</SRS> <!-- all layers are available in at least this SRS.  TODO: get properly -->
+            <c:forEach var="crsCode" items="${supportedCrsCodes}">
+            <SRS>${crsCode}</SRS>
+            </c:forEach>
             <c:forEach var="dataset" items="${config.datasets}">
             <c:if test="${dataset.value.ready}">
             <Layer>

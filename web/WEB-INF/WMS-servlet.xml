@@ -69,19 +69,6 @@
         </property>
     </bean>
     
-    <!-- An object that is used to create Grids -->
-    <bean id="gridFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
-        <!-- This constructor argument is the name of the superclass of all grids -->
-        <constructor-arg value="uk.ac.rdg.resc.ncwms.grids.AbstractGrid"/>
-        <!-- This list defines the classes that will be used to handle
-             different styles of images -->
-        <property name="classes">
-            <list>
-                <value>uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid</value>
-            </list>
-        </property>
-    </bean>
-    
     <!-- Object that handles the provision of authentication credentials
          for OPeNDAP servers -->
     <bean id="credentialsProvider"
@@ -111,7 +98,6 @@
         <property name="metadataStore"><ref local="metadataStore"/></property>
         <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
         <property name="styleFactory"><ref local="styleFactory"/></property>
-        <property name="gridFactory"><ref local="gridFactory"/></property>
         <property name="metadataController"><ref local="metadataController"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
     </bean>
@@ -122,7 +108,6 @@
     <bean id="metadataController" class="uk.ac.rdg.resc.ncwms.controller.MetadataController">
         <property name="config"><ref local="config"/></property>
         <property name="metadataStore"><ref local="metadataStore"/></property>
-        <property name="gridFactory"><ref local="gridFactory"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
     </bean>
     

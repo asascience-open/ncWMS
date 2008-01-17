@@ -133,17 +133,17 @@ public abstract class MetadataStore
      * Finds the unique X coordinate axes and maps each one to a list of Layers
      * that use the axis
      */
-    protected static Map<EnhancedCoordAxis, List<Layer>> findUniqueXAxes(Collection<Layer> layers)
+    protected static Map<CoordAxis, List<Layer>> findUniqueXAxes(Collection<Layer> layers)
     {
-        Map<EnhancedCoordAxis, List<Layer>> xAxes = new HashMap<EnhancedCoordAxis, List<Layer>>();
+        Map<CoordAxis, List<Layer>> xAxes = new HashMap<CoordAxis, List<Layer>>();
         for (Layer layer : layers)
         {
             // See if we have an equivalent x axis already in the Map.  This will
-            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // call the equals() methods on the CoordAxis objects.  Perhaps
             // we can use the method xAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
-            for (EnhancedCoordAxis axis : xAxes.keySet())
+            for (CoordAxis axis : xAxes.keySet())
             {
                 if (axis.equals(layer.getXaxis()))
                 {
@@ -167,17 +167,17 @@ public abstract class MetadataStore
      * Finds the unique Y coordinate axes and maps each one to a list of Layers
      * that use the axis
      */
-    protected static Map<EnhancedCoordAxis, List<Layer>> findUniqueYAxes(Collection<Layer> layers)
+    protected static Map<CoordAxis, List<Layer>> findUniqueYAxes(Collection<Layer> layers)
     {
-        Map<EnhancedCoordAxis, List<Layer>> yAxes = new HashMap<EnhancedCoordAxis, List<Layer>>();
+        Map<CoordAxis, List<Layer>> yAxes = new HashMap<CoordAxis, List<Layer>>();
         for (Layer layer : layers)
         {
             // See if we have an equivalent y axis already in the Map.  This will
-            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // call the equals() methods on the CoordAxis objects.  Perhaps
             // we can use the method yAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
-            for (EnhancedCoordAxis axis : yAxes.keySet())
+            for (CoordAxis axis : yAxes.keySet())
             {
                 if (axis.equals(layer.getYaxis()))
                 {
@@ -207,7 +207,7 @@ public abstract class MetadataStore
         for (Layer layer : layers)
         {
             // See if we have an equivalent z axis already in the Map.  This will
-            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // call the equals() methods on the CoordAxis objects.  Perhaps
             // we can use the method zAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;
@@ -241,7 +241,7 @@ public abstract class MetadataStore
         for (Layer layer : layers)
         {
             // See if we have an equivalent t axis already in the Map.  This will
-            // call the equals() methods on the EnhancedCoordAxis objects.  Perhaps
+            // call the equals() methods on the CoordAxis objects.  Perhaps
             // we can use the method tAxes.containsKey() here, but I'm not sure: I think
             // this relies on the hashCode, which we have not implemented yet.
             boolean found = false;

@@ -31,9 +31,16 @@ package uk.ac.rdg.resc.ncwms.metadata;
 import com.sleepycat.persist.model.Persistent;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionImpl;
+import ucar.unidata.geoloc.ProjectionPoint;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
- * A one-dimensional coordinate axis
+ * Enhances a {@link CoordinateAxis1D} by providing an efficient means of finding
+ * the index for a given value.  The implementation of CoordinateAxis1D.findCoordElement()
+ * in the current version of the Java NetCDF libraries (2.2.22) is inefficient and
+ * profiling reveals that it is a major bottleneck in data extraction.
  *
  * @author Jon Blower
  * $Revision$
@@ -41,43 +48,108 @@ import ucar.nc2.dataset.CoordinateAxis1D;
  * $Log$
  */
 @Persistent
-public abstract class OneDCoordAxis extends EnhancedCoordAxis
+public abstract class OneDCoordAxis extends CoordAxis
 {
-    
-    private int count; // The number of points along the axis
-    
-    protected boolean isLongitude; // True if this is a longitude axis
+    protected HorizontalProjection proj = null; // null Signifies the lat-lon projection
+    protected AxisType axisType;
+    protected int size; // Number of points on this axis
     
     /**
-     * Creates a new instance of OneDCoordAxis
+     * Static factory convenience method for creating a 1-D coordinate axis
+     * from classes that are returned from the Java NetCDF libraries.
      * @param axis1D A {@link CoordinateAxis1D}
+     * @param proj The projection used by this coordinate system
+     * @throws IllegalArgumentException if the given axis is not of type latitude,
+     * longitude, GeoX or GeoY.
      */
-    protected OneDCoordAxis(CoordinateAxis1D axis1D)
+    public static OneDCoordAxis create(CoordinateAxis1D axis1D, ProjectionImpl proj)
     {
-        this((int)axis1D.getSize(), (axis1D.getAxisType() == AxisType.Lon));
+        AxisType axisType = axis1D.getAxisType();
+        if (axisType == AxisType.Lon || axisType == AxisType.Lat ||
+            axisType == AxisType.GeoX || axisType == AxisType.GeoY)
+        {
+            OneDCoordAxis theAxis = null;
+            HorizontalProjection theProj = proj.isLatLon() ? null : HorizontalProjection.create(proj);
+            if (axis1D.isRegular())
+            {
+                theAxis = new Regular1DCoordAxis(axis1D.getStart(),
+                    axis1D.getIncrement(), (int)axis1D.getSize(), axisType, theProj);
+            }
+            else
+            {
+                theAxis = new Irregular1DCoordAxis(axis1D.getCoordValues(), axisType, theProj);
+            }
+            return theAxis;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Illegal axis type " + axisType);
+        }
     }
-    
-    /**
-     * Creates a new instance of OneDCoordAxis
-     * @param count the number of points on this axis
-     * @param isLongitude true if this is a longitude axis
-     */
-    protected OneDCoordAxis(int count, boolean isLongitude)
-    {
-        this.count = count;
-        this.isLongitude = isLongitude;
-    }
-    
-    /**
-     * Default constructor (used by Berkeley DB).  This can still be protected
-     * and apparently the Berkeley DB will get around this (we don't need public
-     * setters for the fields for the same reason).
-     */
-    protected OneDCoordAxis() {}
 
-    public int getCount()
+    public final int getIndex(LatLonPoint point)
     {
-        return count;
+        if (this.axisType == AxisType.Lon)
+        {
+            return this.getIndex(point.getLongitude());
+        }
+        else if (this.axisType == AxisType.Lat)
+        {
+            if (point.getLatitude() >= -90.0 && point.getLatitude() <= 90.0)
+            {
+                return this.getIndex(point.getLatitude());
+            }
+            else
+            {
+                return -1;
+            }
+        }
+        else if (this.proj != null)
+        {
+            // This axis comes from a projected coordinate system
+            ProjectionPoint projPoint = this.proj.latLonToProj(point);
+            if (this.axisType == AxisType.GeoX)
+            {
+                return this.getIndex(projPoint.getX());
+            }
+            else if (this.axisType == AxisType.GeoY)
+            {
+                return this.getIndex(projPoint.getY());
+            }
+            else
+            {
+                throw new IllegalStateException("Unknown axis type " + this.axisType);
+            }
+        }
+        else
+        {
+            throw new IllegalStateException("Axis is not latitude or " +
+                "longitude but there is no projection");
+        }
     }
     
+    /**
+     * Given a value along this coordinate axis, this method returns the nearest
+     * index to this point, or -1 if the value is out of range for this axis.
+     * This default method simply uses the CoordinateAxis1D.findCoordElement() method,
+     * but this method can be overridden with more efficient algorithms if necessary.
+     * @param coordValue The coordinate value (may be a latitude or longitude value,
+     * or it may be a value in a projected coordinate system).
+     * @return the index corresponding with this value, or -1 if the value is
+     * out of range for this axis.
+     */
+    public abstract int getIndex(double coordValue);
+
+    public int getSize()
+    {
+        return size;
+    }
+    
+    /**
+     * @return true if this is a longitude axis (but false if this is a GeoX axis)
+     */
+    public boolean isLongitude()
+    {
+        return this.axisType == AxisType.Lon;
+    }
 }

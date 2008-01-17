@@ -26,37 +26,44 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.grids;
+package uk.ac.rdg.resc.ncwms.metadata.projection;
+
+import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionImpl;
+import ucar.unidata.geoloc.ProjectionPoint;
 
 /**
- * A Grid that consists of orthogonal latitude and longitude axes.
+ * Interface describing a horizontal projection from lat-lon to projection
+ * coordinates.  This is independent of any particular implementation, even 
+ * though we use simple classes from the NetCDF Java libraries.
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public abstract class RectangularLatLonGrid extends AbstractGrid
+public abstract class HorizontalProjection
 {
-    
     /**
-     * @return array of points along the latitude axis
+     * Convenience static factory method to create a HorizontalProjection
+     * from a ProjectionImpl object that is obtained from the Java NetCDF
+     * library.
      */
-    public abstract double[] getLatArray();
-    
-    /**
-     * @return array of points along the longitude axis
-     */
-    public abstract double[] getLonArray();
-
-    public double getLongitude(int i, int j)
+    public static HorizontalProjection create(final ProjectionImpl proj)
     {
-        return this.getLonArray()[i];
-    }
-
-    public double getLatitude(int i, int j)
-    {
-        return this.getLatArray()[j];
+        return new HorizontalProjection()
+        {
+            public ProjectionPoint latLonToProj(LatLonPoint point)
+            {
+                return proj.latLonToProj(point);
+            }
+        };
     }
     
+    /**
+     * Converts a latitude-longitude point to projection coordinates.
+     * This is used by OneDCoordAxis.getIndex() to find the projection
+     * coordinates before finding axis indices.
+     */
+    public abstract ProjectionPoint latLonToProj(LatLonPoint point);
 }

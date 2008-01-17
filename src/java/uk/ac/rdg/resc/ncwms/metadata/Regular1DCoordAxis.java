@@ -30,12 +30,16 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.nc2.dataset.AxisType;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * A regular, one-dimensional coordinate axis, whose values obey the rule
  * val(i) = start + stride * i, i.e. i = (val - start) / stride;
+ *
+ * @todo This class doesn't know anything about projections - is that OK from
+ * the point of view of metadata storage?
  *
  * @author Jon Blower
  * $Revision$
@@ -53,44 +57,32 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     private boolean wraps; // True if this is a longitude axis that wraps the globe
     
     /**
-     * Creates a new instance of Regular1DCoordAxis
-     * @param axis1D A regular {@link CoordinateAxis1D} - we have already
-     * checked that axis1d.isRegular() == true
+     * Creates a Regular1DCoordAxis that is part of a lat-lon coordinate system
      */
-    public Regular1DCoordAxis(CoordinateAxis1D axis1D)
+    public Regular1DCoordAxis(double start, double stride, int count, AxisType axisType)
     {
-        super(axis1D);
-        this.init(axis1D.getStart(), axis1D.getIncrement());
+        this(start, stride, count, axisType, null);
     }
-    
     /**
-     * Creates a Regular1DCoordAxis "from scratch"
+     * Creates a Regular1DCoordAxis
      */
-    public Regular1DCoordAxis(double start, double stride, int count, boolean isLongitude)
-    {
-        super(count, isLongitude);
-        this.init(start, stride);
-    }
-    
-    /**
-     * Default constructor (used by Berkeley DB).  This can still be private
-     * and apparently the Berkeley DB will get around this (we don't need public
-     * setters for the fields for the same reason).
-     */
-    private Regular1DCoordAxis() {}
-    
-    private void init(double start, double stride)
+    public Regular1DCoordAxis(double start, double stride, int count, AxisType axisType,
+        HorizontalProjection proj)
     {
         this.start = start;
         this.stride = stride;
-        this.maxValue = this.start + this.stride * (this.getCount() - 1);
+        this.size = count;
+        this.axisType = axisType;
+        this.proj = proj;
+        
+        this.maxValue = this.start + this.stride * (this.size - 1);
         this.wraps = false;
-        if (this.isLongitude)
+        if (this.isLongitude())
         {
             Longitude st = new Longitude(this.start);
-            Longitude mid = new Longitude(this.start + this.stride * this.getCount() / 2);
+            Longitude mid = new Longitude(this.start + this.stride * this.size / 2);
             // Find the longitude of the point that is just off the end of the axis
-            Longitude end = new Longitude(this.start + this.stride * this.getCount());
+            Longitude end = new Longitude(this.start + this.stride * this.size);
             logger.debug("Longitudes: st = {}, mid = {}, end = {}",
                 new Object[]{st.getValue(), mid.getValue(), end.getValue()});
             // In some cases the end point might be past the original start point
@@ -99,8 +91,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
                 this.wraps = true;
             }
         }
-        logger.debug("Created regular {} axis, wraps = {}",
-            (this.isLongitude ? "longitude" : "latitude"), this.wraps);
+        logger.debug("Created regular {} axis, wraps = {}", this.axisType, this.wraps);
     }
     
     /**
@@ -111,12 +102,12 @@ public class Regular1DCoordAxis extends OneDCoordAxis
      * @return the index that is nearest to this point, or -1 if the point is
      * out of range for the axis
      */
-    public int getIndex(LatLonPoint point)
+    public int getIndex(double coordValue)
     {
-        if (this.isLongitude)
+        if (this.isLongitude())
         {
-            logger.debug("Finding value for longitude {}", point.getLongitude());
-            Longitude lon = new Longitude(point.getLongitude());
+            logger.debug("Finding value for longitude {}", coordValue);
+            Longitude lon = new Longitude(coordValue);
             if (this.wraps || lon.isBetween(this.start, this.maxValue))
             {
                 Longitude startLon = new Longitude(this.start);
@@ -124,7 +115,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
                 double exactNumSteps = distance / this.stride;
                 // This axis might wrap, so we make sure that the returned index
                 // is within range
-                int index = ((int)Math.round(exactNumSteps)) % this.getCount(); 
+                int index = ((int)Math.round(exactNumSteps)) % this.size; 
                 logger.debug("returning {}", index);
                 return index;              
             }
@@ -136,13 +127,13 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         }
         else
         {
-            logger.debug("Finding value for latitude {}", point.getLatitude());
+            logger.debug("Finding value for {}, {}", this.axisType, coordValue);
             // this is a latitude axis
-            double distance = point.getLatitude() - this.start;
+            double distance = coordValue - this.start;
             double exactNumSteps = distance / this.stride;
             int index = (int)Math.round(exactNumSteps);
-            logger.debug("index = {}, count = {}", index, this.getCount());
-            if (index < 0 || index >= this.getCount())
+            logger.debug("index = {}, count = {}", index, this.size);
+            if (index < 0 || index >= this.size)
             {
                 logger.debug("returning -1");
                 return -1;
@@ -160,7 +151,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         
         return this.start == otherAxis.start &&
                this.stride == otherAxis.stride &&
-               this.getCount() == otherAxis.getCount() &&
-               this.isLongitude == otherAxis.isLongitude;
+               this.size == otherAxis.size &&
+               this.axisType == otherAxis.axisType;
     }
 }

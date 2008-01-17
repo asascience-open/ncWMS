@@ -31,10 +31,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.log4j.Logger;
 import thredds.catalog.DataType;
 import ucar.ma2.Array;
@@ -49,7 +46,8 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -78,12 +76,10 @@ public class USGSDataReader extends DefaultDataReader
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param latValues Array of latitude values
-     * @param lonValues Array of longitude values
+     * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, double[] latValues, double[] lonValues)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, TargetGrid grid)
         throws Exception
     {
         NetcdfDataset nc = null;
@@ -99,11 +95,11 @@ public class USGSDataReader extends DefaultDataReader
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
-            float[] picData = new float[lonValues.length * latValues.length];
+            float[] picData = new float[grid.getSize()];
             Arrays.fill(picData, Float.NaN);
             
             // Maps x and y indices to pixel indices
-            PixelMap pixelMap = new PixelMap(layer, latValues, lonValues);
+            PixelMap pixelMap = new PixelMap(layer, grid);
             if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
             
@@ -242,8 +238,8 @@ public class USGSDataReader extends DefaultDataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                EnhancedCoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat");
-                EnhancedCoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat");
+                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat");
+                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat");
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 

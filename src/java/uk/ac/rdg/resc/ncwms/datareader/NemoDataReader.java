@@ -39,6 +39,7 @@ import ucar.ma2.Range;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -67,12 +68,10 @@ public class NemoDataReader extends DefaultDataReader
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param latValues Array of latitude values
-     * @param lonValues Array of longitude values
+     * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, double[] latValues, double[] lonValues)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, TargetGrid grid)
         throws Exception
     {
         logger.debug("Reading data from {}", filename);
@@ -89,11 +88,11 @@ public class NemoDataReader extends DefaultDataReader
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
-            float[] picData = new float[lonValues.length * latValues.length];
+            float[] picData = new float[grid.getSize()];
             Arrays.fill(picData, Float.NaN);
             
             // Maps x and y indices to pixel indices
-            PixelMap pixelMap = new PixelMap(layer, latValues, lonValues);
+            PixelMap pixelMap = new PixelMap(layer, grid);
             if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
 

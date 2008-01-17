@@ -28,12 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import java.util.List;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
-
 /**
  * A displayable Layer that is made up of two vector components (e.g. northward
  * and eastward velocities).

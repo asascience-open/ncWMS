@@ -46,9 +46,9 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
+import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
@@ -57,7 +57,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
 import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
-import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
@@ -94,7 +93,6 @@ public class WmsController extends AbstractController
     private MetadataStore metadataStore;
     private Factory<PicMaker> picMakerFactory;
     private Factory<AbstractStyle> styleFactory;
-    private Factory<AbstractGrid> gridFactory;
     private UsageLogger usageLogger;
     private MetadataController metadataController;
     
@@ -193,6 +191,7 @@ public class WmsController extends AbstractController
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.config);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
+        models.put("supportedCrsCodes", TargetGrid.getSupportedCrsCodes());
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
@@ -245,7 +244,8 @@ public class WmsController extends AbstractController
                 " is not supported by this server");
         }
 
-        String[] layers = getMapRequest.getDataRequest().getLayers();
+        GetMapDataRequest dr = getMapRequest.getDataRequest();
+        String[] layers = dr.getLayers();
         if (layers.length > LAYER_LIMIT)
         {
             throw new WmsException("You may only request a maximum of " +
@@ -256,12 +256,11 @@ public class WmsController extends AbstractController
         usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
-        AbstractGrid grid = getGrid(getMapRequest.getDataRequest(),
-            this.gridFactory);
+        TargetGrid grid = new TargetGrid(dr);
 
         AbstractStyle style = this.getStyle(getMapRequest, layer);
 
-        String zValue = getMapRequest.getDataRequest().getElevationString();
+        String zValue = dr.getElevationString();
         int zIndex = getZIndex(zValue, layer); // -1 if no z axis present
 
         // Cycle through all the provided timesteps, extracting data for each step
@@ -320,7 +319,7 @@ public class WmsController extends AbstractController
      * elements if the variable is a vector
      */
     static List<float[]> readData(Layer layer, int tIndex, int zIndex,
-        AbstractGrid grid) throws Exception
+        TargetGrid grid) throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
         if (layer instanceof VectorLayer)
@@ -388,11 +387,12 @@ public class WmsController extends AbstractController
         }
         
         // Get the grid onto which the data is being projected
-        AbstractGrid grid = getGrid(dataRequest, this.gridFactory);
-        // Get the lat and lon of the point of interest
-        double lon = grid.getLongitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
-        double lat = grid.getLatitude(dataRequest.getPixelColumn(), dataRequest.getPixelRow());
-        usageLogEntry.setFeatureInfoLocation(lon, lat);
+        TargetGrid grid = new TargetGrid(dataRequest);
+        // Get the x and y values of the point of interest
+        double x = grid.getXAxisValues()[dataRequest.getPixelColumn()];
+        double y = grid.getYAxisValues()[dataRequest.getPixelRow()];
+        LatLonPoint latLon = grid.transformToLatLon(x, y);
+        usageLogEntry.setFeatureInfoLocation(latLon.getLongitude(), latLon.getLatitude());
         
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
@@ -408,32 +408,31 @@ public class WmsController extends AbstractController
         {
             Date date = tIndex < 0 ? null : layer.getTimesteps().get(tIndex).getDate();
             
-            // Create a trivial Grid for reading a single point of data
-            AbstractGrid singlePointGrid = new PlateCarreeGrid();
-            singlePointGrid.setWidth(1);
-            singlePointGrid.setHeight(1);
-            singlePointGrid.setBbox(new double[]{lon, lat, lon, lat});
+            // Create a trivial Grid for reading a single point of data.
+            // We use the same coordinate reference system as the original request
+            TargetGrid singlePointGrid = new TargetGrid(dataRequest.getCrsCode(),
+                1, 1, new double[]{x, y, x, y});
             
+            float val;
             if (layer instanceof VectorLayer)
             {
                 VectorLayer vecLayer = (VectorLayer)layer;
-                float x = vecLayer.getEastwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
-                float y = vecLayer.getNorthwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
-                float val = (float)Math.sqrt(x * x + y * y);
-                featureData.put(date, Float.isNaN(val) ? null : val);
+                float xval = vecLayer.getEastwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
+                float yval = vecLayer.getNorthwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
+                val = (float)Math.sqrt(xval * xval + yval * yval);
             }
             else
             {
-                float val = layer.read(tIndex, zIndex, singlePointGrid)[0];
-                featureData.put(date, Float.isNaN(val) ? null : val);
+                val = layer.read(tIndex, zIndex, singlePointGrid)[0];
             }
+            featureData.put(date, Float.isNaN(val) ? null : val);
         }
         
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT))
         {
             Map<String, Object> models = new HashMap<String, Object>();
-            models.put("longitude", lon);
-            models.put("latitude", lat);
+            models.put("longitude", latLon.getLongitude());
+            models.put("latitude", latLon.getLatitude());
             models.put("data", featureData);
             return new ModelAndView("showFeatureInfo_xml", models);
         }
@@ -450,7 +449,7 @@ public class WmsController extends AbstractController
             xydataset.addSeries(ts);
             
             // Create a chart with no legend, tooltips or URLs
-            String title = "Lon: " + lon + ", Lat: " + lat;
+            String title = "Lon: " + latLon.getLongitude() + ", Lat: " + latLon.getLatitude();
             String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
             JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                 "Date / time", yLabel, xydataset, false, false, false);
@@ -511,28 +510,6 @@ public class WmsController extends AbstractController
         style.setPicWidth(getMapRequest.getDataRequest().getWidth());
         style.setPicHeight(getMapRequest.getDataRequest().getHeight());
         return style;
-    }
-    
-    /**
-     * Gets the grid for the image from the request parameters
-     * @throws InvalidCrsException if the provided CRS code is not supported
-     * @throws Exception if there was an unexpected internal error
-     */
-    static AbstractGrid getGrid(GetMapDataRequest dataRequest,
-        Factory<AbstractGrid> gridFactory)
-        throws InvalidCrsException, Exception
-    {
-        // Set up the grid onto which the data will be projected
-        String crsCode = dataRequest.getCrs();
-        AbstractGrid grid = gridFactory.createObject(crsCode);
-        if (grid == null)
-        {
-            throw new InvalidCrsException(crsCode);
-        }
-        grid.setWidth(dataRequest.getWidth());
-        grid.setHeight(dataRequest.getHeight());
-        grid.setBbox(dataRequest.getBbox());
-        return grid;
     }
     
     /**
@@ -636,14 +613,6 @@ public class WmsController extends AbstractController
     public void setStyleFactory(Factory<AbstractStyle> styleFactory)
     {
         this.styleFactory = styleFactory;
-    }
-    
-    /**
-     * Called by Spring to inject the gridFactory object
-     */
-    public void setGridFactory(Factory<AbstractGrid> gridFactory)
-    {
-        this.gridFactory = gridFactory;
     }
     
     /**

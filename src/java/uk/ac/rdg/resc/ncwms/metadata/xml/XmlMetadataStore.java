@@ -18,6 +18,7 @@ import org.simpleframework.xml.load.Persister;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import org.apache.log4j.Logger;
+import ucar.nc2.dataset.AxisType;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
@@ -191,14 +192,14 @@ public class XmlMetadataStore  extends MetadataStore  {
             if (axis.getType().equalsIgnoreCase("y")) {
                 
                 RegularAxis regularaxis = getRegularAxis(myDataset, axis.getName());
-                Regular1DCoordAxis myY1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),false);
+                Regular1DCoordAxis myY1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),AxisType.Lat);
                 layer.setYaxis(myY1Daxis);
                 
             }
             
             if (axis.getType().equalsIgnoreCase("x")) {
                 RegularAxis regularaxis = getRegularAxis(myDataset, axis.getName());
-                Regular1DCoordAxis myX1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),true);
+                Regular1DCoordAxis myX1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),AxisType.Lon);
                 layer.setXaxis(myX1Daxis);
             }
             
@@ -292,13 +293,13 @@ public class XmlMetadataStore  extends MetadataStore  {
                 if (axis.getType().equalsIgnoreCase("y")) {
                     
                     RegularAxis regularaxis = getRegularAxis(myDataset, axis.getName());
-                    Regular1DCoordAxis myY1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),false);
+                    Regular1DCoordAxis myY1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),AxisType.Lat);
                     layer.setYaxis(myY1Daxis);
                 }
                 
                 if (axis.getType().equalsIgnoreCase("x")) {
                     RegularAxis regularaxis = getRegularAxis(myDataset, axis.getName());
-                    Regular1DCoordAxis myX1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),true);
+                    Regular1DCoordAxis myX1Daxis = new Regular1DCoordAxis(new Double(regularaxis.getStart()).doubleValue(),new Double(regularaxis.getStride()).doubleValue(),new Integer(regularaxis.getCount()).intValue(),AxisType.Lon);
                     layer.setXaxis(myX1Daxis);
                 }
                 

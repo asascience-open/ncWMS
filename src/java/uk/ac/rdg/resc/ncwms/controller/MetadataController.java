@@ -43,7 +43,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
@@ -66,7 +66,7 @@ public class MetadataController
 {
     // These objects will be injected by Spring
     private Config config;
-    private Factory<AbstractGrid> gridFactory;
+    private Factory<TargetGrid> gridFactory;
     private MetadataStore metadataStore;
     private UsageLogger usageLogger;
     
@@ -369,7 +369,7 @@ public class MetadataController
         Layer layer = this.metadataStore.getLayerByUniqueName(dataRequest.getLayers()[0]);
         
         // Get the grid onto which the data is being projected
-        AbstractGrid grid = WmsController.getGrid(dataRequest, this.gridFactory);
+        TargetGrid grid = new TargetGrid(dataRequest);
         
         // Get the index along the z axis
         int zIndex = WmsController.getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
@@ -392,7 +392,7 @@ public class MetadataController
      * @return Array of two floats: [min, max]
      * @throws Exception if there was an error reading the data
      */
-    public static float[] findMinMax(Layer layer, int tIndex, int zIndex, AbstractGrid grid)
+    public static float[] findMinMax(Layer layer, int tIndex, int zIndex, TargetGrid grid)
         throws Exception
     {
         // Now read the data
@@ -423,7 +423,7 @@ public class MetadataController
     /**
      * Called by Spring to inject the gridFactory object
      */
-    public void setGridFactory(Factory<AbstractGrid> gridFactory)
+    public void setGridFactory(Factory<TargetGrid> gridFactory)
     {
         this.gridFactory = gridFactory;
     }

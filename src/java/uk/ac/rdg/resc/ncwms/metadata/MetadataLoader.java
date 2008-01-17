@@ -45,11 +45,11 @@ import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
-import uk.ac.rdg.resc.ncwms.grids.PlateCarreeGrid;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 
 /**
  * Class that handles the periodic reloading of metadata (manages calls to
- * Dataset.loadMetadata()).  Initialized by the Spring framework.
+ * DataReader.getAllLayers()).  Initialized by the Spring framework.
  *
  * @author Jon Blower
  * $Revision$
@@ -161,8 +161,10 @@ public class MetadataLoader
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);
+            logger.debug("found vector quantities");
             // Find the min and max of each layer
             findMinMax(ds, layers);
+            logger.debug("found min-max range for each layer");
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
@@ -292,11 +294,6 @@ public class MetadataLoader
      */
     private static void findMinMax(Dataset ds, Map<String, Layer> layers)
     {
-        // Set the scale range for each variable by reading a 100x100
-        // chunk of data and finding the min and max values of this chunk.
-        PlateCarreeGrid grid = new PlateCarreeGrid();
-        grid.setHeight(100);
-        grid.setWidth(100);
         // If we get an error reading from the layer then we'll remove the layer
         // from the list
         List<Layer> layersToRemove = new ArrayList<Layer>();
@@ -304,7 +301,9 @@ public class MetadataLoader
         {
             try
             {
-                grid.setBbox(layer.getBbox());
+                // Set the scale range for each variable by reading a 100x100
+                // chunk of data and finding the min and max values of this chunk.
+                TargetGrid grid = new TargetGrid("CRS:84", 100, 100, layer.getBbox());
                 LayerImpl layerImpl = (LayerImpl)layer;
                 layerImpl.setDataset(ds);
                 // Read from the first t and z indices

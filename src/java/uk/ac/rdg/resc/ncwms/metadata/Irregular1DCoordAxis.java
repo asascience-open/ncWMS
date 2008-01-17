@@ -33,8 +33,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.nc2.dataset.AxisType;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * A one-dimensional coordinate axis, whose values are not equally spaced.
@@ -59,8 +60,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     private List<AxisValue> axisVals;
     
     /**
-     * Simple class mapping axis values to indices.  Longitudes are always
-     * stored in range 0->360
+     * Simple class mapping axis values to indices.
      */
     private static final class AxisValue implements Comparable<AxisValue>
     {
@@ -92,31 +92,43 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     }
     
     /**
+     * Creates a new instance of Irregular1DCoordAxis as part of a lat-lon
+     * coordinate system
+     */
+    public Irregular1DCoordAxis(double[] coordValues, AxisType axisType)
+    {
+        this(coordValues, axisType, null);
+    }
+    
+    /**
      * Creates a new instance of Irregular1DCoordAxis
      */
-    public Irregular1DCoordAxis(CoordinateAxis1D axis1D)
+    public Irregular1DCoordAxis(double[] coordValues, AxisType axisType, HorizontalProjection proj)
     {
-        super(axis1D);
+        this.size = coordValues.length;
+        this.axisType = axisType;
+        this.proj = proj;
         
         // Store the axis values and their indices
-        double[] vals = axis1D.getCoordValues();
-        this.axisVals = new ArrayList<AxisValue>(vals.length);
-        for (int i = 0; i < vals.length; i++)
+        this.axisVals = new ArrayList<AxisValue>(coordValues.length);
+        for (int i = 0; i < coordValues.length; i++)
         {
             // Might be NaN for a lat axis outside range -90:90
             // (this is less silly than it sounds for model data, which might
             // have latitude values outside this range due to construction of the
-            // numerical grid)
-            if (!Double.isNaN(vals[i])) 
+            // numerical grid.  The Java NetCDF libraries then seem to convert
+            // these values to NaNs.
+            if (!Double.isNaN(coordValues[i])) 
             {
-                this.axisVals.add(new AxisValue(vals[i], i));
+                this.axisVals.add(new AxisValue(coordValues[i], i));
             }
         }
         // Now sort the axis values in ascending order
+        // TODO: is this always OK?
         Collections.sort(this.axisVals);
         
         // Check for wrapping in the longitude direction
-        if (this.isLongitude)
+        if (this.isLongitude())
         {
             logger.debug("Checking for longitude axis wrapping...");
             double lastVal = this.axisVals.get(this.axisVals.size() - 1).value;
@@ -144,8 +156,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
             }
         }
         
-        logger.debug("Created irregular {} axis",
-            (this.isLongitude ? "longitude" : "latitude"));
+        logger.debug("Created irregular {} axis", this.axisType);
     }
     
     /**
@@ -156,17 +167,16 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      * @return the index that is nearest to this point, or -1 if the point is
      * out of range for the axis
      */
-    public int getIndex(LatLonPoint point)
+    public int getIndex(double coordValue)
     {
-        double target = this.isLongitude ? point.getLongitude() : point.getLatitude();
-        logger.debug("Finding index for {} {} ...", this.isLongitude ? "lon" : "lat", target);
-        int index = this.findNearest(target);
-        if (index < 0 && this.isLongitude && target < 0)
+        logger.debug("Finding index for {} {} ...", this.axisType, coordValue);
+        int index = this.findNearest(coordValue);
+        if (index < 0 && this.isLongitude() && coordValue < 0)
         {
             // We haven't found the point but this could be because this is a
             // longitude axis between 0 and 360 degrees and we're looking for
             // a point at, say, -90 degrees.  Try again.
-            index = this.findNearest(target + 360);
+            index = this.findNearest(coordValue + 360);
         }
         logger.debug("   ...index= {}", index);
         return index;
@@ -215,6 +225,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         if (!(obj instanceof Irregular1DCoordAxis)) return false;
         Irregular1DCoordAxis otherAxis = (Irregular1DCoordAxis)obj;
         if (this.axisVals.size() != otherAxis.axisVals.size()) return false;
+        if (this.axisType != otherAxis.axisType) return false;
         
         // Now compare all the AxisValues individually
         for (int i = 0; i < this.axisVals.size(); i++)

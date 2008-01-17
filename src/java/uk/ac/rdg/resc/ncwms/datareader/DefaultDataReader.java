@@ -51,7 +51,8 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -81,13 +82,11 @@ public class DefaultDataReader extends DataReader
      * @param layer {@link Layer} object representing the variable to read
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param latValues Array of latitude values
-     * @param lonValues Array of longitude values
+     * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, double[] latValues, double[] lonValues)
-        throws Exception
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex,
+        TargetGrid grid) throws Exception
     {
         NetcdfDataset nc = null;
         try
@@ -103,11 +102,11 @@ public class DefaultDataReader extends DataReader
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
-            float[] picData = new float[lonValues.length * latValues.length];
+            float[] picData = new float[grid.getSize()];
             // Use NaNs to represent missing data
             Arrays.fill(picData, Float.NaN);
             
-            PixelMap pixelMap = new PixelMap(layer, latValues, lonValues);
+            PixelMap pixelMap = new PixelMap(layer, grid);
             if (pixelMap.isEmpty()) return picData;
             
             long readMetadata = System.currentTimeMillis();
@@ -121,15 +120,15 @@ public class DefaultDataReader extends DataReader
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
             
             logger.debug("Getting GeoGrid with id {}", layer.getId());
-            GridDatatype grid = gd.findGridDatatype(layer.getId());
-            logger.debug("filename = {}, gg = {}", filename, grid.toString());
+            GridDatatype gridData = gd.findGridDatatype(layer.getId());
+            logger.debug("filename = {}, gg = {}", filename, gridData.toString());
             
             // Read the data from the dataset
             long before = System.currentTimeMillis();
             // Get an enhanced variable for doing the conversion of missing
             // values
             VariableDS enhanced = new VariableDS(null, nc.findVariable(layer.getId()), true);
-            this.populatePixelArray(picData, tRange, zRange, pixelMap, grid, enhanced);
+            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, enhanced);
             long after = System.currentTimeMillis();
             // Headings are written in NcwmsContext.init()
             if (pixelMap.getNumUniqueXYPairs() > 1)
@@ -140,7 +139,7 @@ public class DefaultDataReader extends DataReader
                     layer.getDataset().getId() + "," +
                     layer.getId() + "," +
                     this.getClass().getSimpleName() + "," +
-                    (latValues.length * lonValues.length) + "," +
+                    grid.getSize() + "," +
                     pixelMap.getNumUniqueXYPairs() + "," +
                     pixelMap.getSumRowLengths() + "," +
                     pixelMap.getBoundingBoxSize() + "," +
@@ -253,8 +252,10 @@ public class DefaultDataReader extends DataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                EnhancedCoordAxis xAxis = EnhancedCoordAxis.create(coordSys.getXHorizAxis());
-                EnhancedCoordAxis yAxis = EnhancedCoordAxis.create(coordSys.getYHorizAxis());
+                CoordAxis xAxis = CoordAxis.create(coordSys.getXHorizAxis(),
+                    coordSys.getProjection());
+                CoordAxis yAxis = CoordAxis.create(coordSys.getYHorizAxis(),
+                    coordSys.getProjection());
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 double[] zValues = null;

@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.security;
 
+import java.io.Serializable;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.userdetails.UserDetails;
 import org.acegisecurity.userdetails.UserDetailsService;
@@ -45,9 +46,8 @@ import org.springframework.dao.DataAccessException;
  * $Date$
  * $Log$
  */
-public class Users implements UserDetailsService
+public class Users implements UserDetailsService, Serializable
 {
-    
     private AdminUser adminUser = new AdminUser();
     
     /**

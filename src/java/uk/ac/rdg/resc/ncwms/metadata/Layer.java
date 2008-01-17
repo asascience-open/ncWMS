@@ -30,9 +30,9 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.List;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.metadata.EnhancedCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.grids.AbstractGrid;
+import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 
 /**
  * Interface describing the methods that must be implemented by a  displayable
@@ -166,9 +166,9 @@ public interface Layer
      */
     double[] getScaleRange();
 
-    EnhancedCoordAxis getXaxis();
+    CoordAxis getXaxis();
 
-    EnhancedCoordAxis getYaxis();
+    CoordAxis getYaxis();
 
     String getZunits();
 
@@ -197,7 +197,7 @@ public interface Layer
      * single component of a vector).  Missing values will be represented by
      * Float.NaN.
      */
-    float[] read(int tIndex, int zIndex, AbstractGrid grid) throws Exception;
+    float[] read(int tIndex, int zIndex, TargetGrid grid) throws Exception;
     
     /**
      * @return true if this Layer can be rendered in the style with the 

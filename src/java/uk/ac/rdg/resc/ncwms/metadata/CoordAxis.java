@@ -29,14 +29,17 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
+import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionImpl;
 
 /**
- * Enhances a {@link CoordinateAxis} by providing an efficient means of finding
- * the index for a given value and by providing a correct method for calculating
- * the horizontal bounding box in lat-lon space.
+ * A CoordAxis converts lat-lon points to an integer index in the data
+ * structure.  Implementations should ensure that the getIndex() method
+ * is as efficient as possible as this will be called very many times
+ * during the generation of an image.
  *
  * @author Jon Blower
  * $Revision$
@@ -44,30 +47,23 @@ import ucar.unidata.geoloc.LatLonPoint;
  * $Log$
  */
 @Persistent
-public abstract class EnhancedCoordAxis
+public abstract class CoordAxis
 {
     
     /**
-     * Method for creating an EnhancedCoordAxis.
+     * Method for creating an CoordAxis.
+     * 
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
      * latitude or longitude axis
-     * @return an EnhancedCoordAxis
+     * @return an CoordAxis
      * @throws IllegalArgumentException if the provided axis cannot be turned into
-     * an EnhancedCoordAxis
+     * an CoordAxis
      */
-    public static EnhancedCoordAxis create(CoordinateAxis axis)
+    public static CoordAxis create(CoordinateAxis axis, ProjectionImpl proj)
     {
         if (axis instanceof CoordinateAxis1D)
         {
-            CoordinateAxis1D axis1D = (CoordinateAxis1D)axis;
-            if (axis1D.isRegular())
-            {
-                return new Regular1DCoordAxis(axis1D);
-            }
-            else
-            {
-                return new Irregular1DCoordAxis(axis1D);
-            }
+            return OneDCoordAxis.create((CoordinateAxis1D)axis, proj);
         }
         else
         {
