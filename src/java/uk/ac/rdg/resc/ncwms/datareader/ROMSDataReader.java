@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 import thredds.catalog.DataType;
+import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
@@ -89,8 +90,8 @@ public class ROMSDataReader extends USGSDataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat");
-                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat");
+                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat", AxisType.GeoX);
+                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat", AxisType.GeoY);
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 

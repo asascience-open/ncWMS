@@ -37,6 +37,7 @@ import thredds.catalog.DataType;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
+import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
@@ -46,7 +47,6 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
@@ -238,8 +238,8 @@ public class USGSDataReader extends DefaultDataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat");
-                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat");
+                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat", AxisType.GeoX);
+                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat", AxisType.GeoY);
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 

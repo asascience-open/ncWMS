@@ -92,21 +92,11 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     }
     
     /**
-     * Creates a new instance of Irregular1DCoordAxis as part of a lat-lon
-     * coordinate system
+     * Creates a new instance of Irregular1DCoordAxis
      */
     public Irregular1DCoordAxis(double[] coordValues, AxisType axisType)
     {
-        this(coordValues, axisType, null);
-    }
-    
-    /**
-     * Creates a new instance of Irregular1DCoordAxis
-     */
-    public Irregular1DCoordAxis(double[] coordValues, AxisType axisType, HorizontalProjection proj)
-    {
         super(axisType, coordValues.length);
-        this.proj = proj;
         
         // Store the axis values and their indices
         this.axisVals = new ArrayList<AxisValue>(coordValues.length);
@@ -155,7 +145,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
             }
         }
         
-        logger.debug("Created irregular {} axis", this.axisType);
+        logger.debug("Created irregular {} axis", this.getAxisType());
     }
     
     /**
@@ -168,7 +158,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
      */
     public int getIndex(double coordValue)
     {
-        logger.debug("Finding index for {} {} ...", this.axisType, coordValue);
+        logger.debug("Finding index for {} {} ...", this.getAxisType(), coordValue);
         int index = this.findNearest(coordValue);
         if (index < 0 && this.isLongitude() && coordValue < 0)
         {
@@ -224,7 +214,7 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         if (!(obj instanceof Irregular1DCoordAxis)) return false;
         Irregular1DCoordAxis otherAxis = (Irregular1DCoordAxis)obj;
         if (this.axisVals.size() != otherAxis.axisVals.size()) return false;
-        if (this.axisType != otherAxis.axisType) return false;
+        if (this.getAxisType() != otherAxis.getAxisType()) return false;
         
         // Now compare all the AxisValues individually
         for (int i = 0; i < this.axisVals.size(); i++)

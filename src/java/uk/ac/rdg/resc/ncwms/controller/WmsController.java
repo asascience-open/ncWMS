@@ -192,7 +192,7 @@ public class WmsController extends AbstractController
         models.put("config", this.config);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         // TODO: show a subset of only the CRS codes that we are likely to use?
-        models.put("supportedCrsCodes", TargetGrid.getSupportedCrsCodes());
+        models.put("supportedCrsCodes", TargetGrid.SUPPORTED_CRS_CODES);
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,

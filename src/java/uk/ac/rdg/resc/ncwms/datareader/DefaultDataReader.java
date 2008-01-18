@@ -56,6 +56,7 @@ import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * Default data reading class for CF-compliant NetCDF datasets.
@@ -252,10 +253,9 @@ public class DefaultDataReader extends DataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                CoordAxis xAxis = CoordAxis.create(coordSys.getXHorizAxis(),
-                    coordSys.getProjection());
-                CoordAxis yAxis = CoordAxis.create(coordSys.getYHorizAxis(),
-                    coordSys.getProjection());
+                CoordAxis xAxis = CoordAxis.create(coordSys.getXHorizAxis());
+                CoordAxis yAxis = CoordAxis.create(coordSys.getYHorizAxis());
+                HorizontalProjection proj = HorizontalProjection.create(coordSys.getProjection());
                 
                 CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                 double[] zValues = null;
@@ -303,6 +303,7 @@ public class DefaultDataReader extends DataReader
                     layer.setUnits(grid.getUnitsString());
                     layer.setXaxis(xAxis);
                     layer.setYaxis(yAxis);
+                    layer.setHorizontalProjection(proj);
                     layer.setBbox(bbox);
                     
                     if (zAxis != null)

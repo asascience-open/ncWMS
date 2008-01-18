@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006 The University of Reading
+ * Copyright (c) 2007 The University of Reading
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,57 +28,39 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import ucar.nc2.dataset.AxisType;
-import ucar.nc2.dataset.CoordinateAxis;
-import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.unidata.geoloc.ProjectionPoint;
 
 /**
- * A CoordAxis converts lat-lon points to an integer index in the data
- * structure.  Implementations should ensure that the getIndex() method
- * is as efficient as possible as this will be called very many times
- * during the generation of an image.
+ * A Two-dimensional coordinate axis
  *
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-@Persistent
-public abstract class CoordAxis
+public abstract class TwoDCoordAxis extends CoordAxis
 {
-    private AxisType axisType;
+    
+    /** Creates a new instance of TwoDCoordAxis */
+    public TwoDCoordAxis(AxisType type)
+    {
+        super(type);
+    }
     
     /**
-     * Method for creating an CoordAxis.
-     * 
-     * @param axis The {@link CoordinateAxis} to wrap, which must be a 
-     * latitude or longitude axis
-     * @return an CoordAxis
-     * @throws IllegalArgumentException if the provided axis cannot be turned into
-     * an CoordAxis
+     * Gets the index on this axis of the given point, expressed in the coordinate
+     * system of the layer's horizontal projection (may equate to lon and lat).
      */
-    public static CoordAxis create(CoordinateAxis axis)
+    public int getIndex(ProjectionPoint point)
     {
-        if (axis instanceof CoordinateAxis1D)
-        {
-            return OneDCoordAxis.create((CoordinateAxis1D)axis);
-        }
-        else
-        {
-            throw new IllegalArgumentException("Cannot yet deal with coordinate" +
-                " axes of >1 dimension");
-        }
+        return this.getIndex(point.getX(), point.getY());
     }
     
-    protected CoordAxis(AxisType type)
-    {
-        this.axisType = type;
-    }    
-
-    public AxisType getAxisType()
-    {
-        return axisType;
-    }
+    /**
+     * Gets the index on this axis of the given point, expressed in the coordinate
+     * system of the layer's horizontal projection (may equate to lon and lat).
+     */
+    public abstract int getIndex(double x, double y);
     
 }

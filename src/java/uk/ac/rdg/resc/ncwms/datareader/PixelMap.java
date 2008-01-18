@@ -35,10 +35,12 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.TwoDCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * Class that maps x and y indices in source data arrays to pixel indices in
@@ -74,6 +76,7 @@ public class PixelMap
     {
         long start = System.currentTimeMillis();
         
+        HorizontalProjection dataProj = layer.getHorizontalProjection();
         CoordAxis xAxis = layer.getXaxis();
         CoordAxis yAxis = layer.getYaxis();
         
@@ -84,20 +87,23 @@ public class PixelMap
         // We can gain efficiency if the target grid is a lat-lon grid and
         // the data exist on a lat-long grid by minimizing the number of
         // calls to axis.getIndex().
-        if (false && xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
+        if (dataProj.isLatLon() && grid.isLatLon())
         {
-            /*logger.debug("Using optimized method for 1-D axes");
+            logger.debug("Using optimized method for lat-lon coordinates");
+            // These class casts should always be valid
+            OneDCoordAxis xAxis1D = (OneDCoordAxis)xAxis;
+            OneDCoordAxis yAxis1D = (OneDCoordAxis)yAxis;
             // Calculate the indices along the x axis.
-            int[] xIndices = new int[lonValues.length];
-            for (int i = 0; i < xIndices.length; i++)
+            int[] xIndices = new int[grid.getXAxisValues().length];
+            for (int i = 0; i < grid.getXAxisValues().length; i++)
             {
-                xIndices[i] = xAxis.getIndex(new LatLonPointImpl(0.0, lonValues[i]));
+                xIndices[i] = xAxis1D.getIndex(grid.getXAxisValues()[i]);
             }
-            for (double lat : latValues)
+            for (double lat : grid.getYAxisValues())
             {
                 if (lat >= -90.0 && lat <= 90.0)
                 {
-                    int yIndex = yAxis.getIndex(new LatLonPointImpl(lat, 0.0));
+                    int yIndex = yAxis1D.getIndex(lat);
                     for (int xIndex : xIndices)
                     {
                         this.put(xIndex, yIndex, pixelIndex);
@@ -109,7 +115,7 @@ public class PixelMap
                     // We still need to increment the pixel index array
                     pixelIndex += xIndices.length;
                 }
-            }*/
+            }
         }
         else
         {
@@ -118,15 +124,35 @@ public class PixelMap
             {
                 for (double x : grid.getXAxisValues())
                 {
+                    // Translate this point in the target grid to lat-lon
                     // TODO: the transformer can transform many points at once.
                     // Doing so might be more efficient than this method.
                     LatLonPoint latLon = grid.transformToLatLon(x, y);
-                    if (latLon.getLatitude() >= -90.0f && latLon.getLatitude() <= 90.0f)
+                    // Translate this lat-lon point to a point in the data's projection coordinates
+                    ProjectionPoint projPoint = dataProj.latLonToProj(latLon);
+                    if (grid.isPointValidForCrs(projPoint))
                     {
-                        // Translate lat-lon to grid point indices
-                        int i = xAxis.getIndex(latLon);
-                        int j = yAxis.getIndex(latLon);
-                        //logger.debug("Lon: {}, Lat: {}, x: {}, y: {}", new Object[]{lon, lat, xCoord, yCoord});
+                        // Translate the projection point to grid point indices i, j
+                        int i, j;
+                        if (xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
+                        {
+                            OneDCoordAxis xAxis1D = (OneDCoordAxis)xAxis;
+                            OneDCoordAxis yAxis1D = (OneDCoordAxis)yAxis;
+                            i = xAxis1D.getIndex(projPoint.getX());
+                            j = yAxis1D.getIndex(projPoint.getY());
+                        }
+                        else if (xAxis instanceof TwoDCoordAxis && yAxis instanceof TwoDCoordAxis)
+                        {
+                            TwoDCoordAxis xAxis2D = (TwoDCoordAxis)xAxis;
+                            TwoDCoordAxis yAxis2D = (TwoDCoordAxis)yAxis;
+                            i = xAxis2D.getIndex(projPoint);
+                            j = yAxis2D.getIndex(projPoint);
+                        }
+                        else
+                        {
+                            // Shouldn't happen'
+                            throw new IllegalStateException("x and y axes are of different types!");
+                        }
                         this.put(i, j, pixelIndex); // Ignores negative indices
                     }
                     pixelIndex++;

@@ -30,9 +30,9 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.List;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * Interface describing the methods that must be implemented by a  displayable
@@ -170,6 +170,11 @@ public interface Layer
 
     CoordAxis getYaxis();
 
+    /**
+     * @return the projection for the data, as stored in the source files.
+     */
+    HorizontalProjection getHorizontalProjection();
+    
     String getZunits();
 
     double[] getZvalues();

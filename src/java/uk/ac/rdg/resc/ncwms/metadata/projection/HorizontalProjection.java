@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.metadata.projection;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionImpl;
 import ucar.unidata.geoloc.ProjectionPoint;
+import ucar.unidata.geoloc.ProjectionPointImpl;
 
 /**
  * Interface describing a horizontal projection from lat-lon to projection
@@ -45,6 +46,22 @@ import ucar.unidata.geoloc.ProjectionPoint;
 public abstract class HorizontalProjection
 {
     /**
+     * Singleton object representing the longitude-latitude projection
+     */
+    public static HorizontalProjection LON_LAT_PROJECTION = new HorizontalProjection()
+        {
+            public ProjectionPoint latLonToProj(LatLonPoint point)
+            {
+                return new ProjectionPointImpl(point.getLongitude(), point.getLatitude());
+            }
+            
+            public boolean isLatLon()
+            {
+                return true;
+            }
+        };
+    
+    /**
      * Convenience static factory method to create a HorizontalProjection
      * from a ProjectionImpl object that is obtained from the Java NetCDF
      * library.
@@ -57,13 +74,23 @@ public abstract class HorizontalProjection
             {
                 return proj.latLonToProj(point);
             }
+            
+            public boolean isLatLon()
+            {
+                return proj.isLatLon();
+            }
         };
     }
     
     /**
      * Converts a latitude-longitude point to projection coordinates.
-     * This is used by OneDCoordAxis.getIndex() to find the projection
+     * This is used by PixelMap to find the projection
      * coordinates before finding axis indices.
      */
     public abstract ProjectionPoint latLonToProj(LatLonPoint point);
+    
+    /**
+     * @return true if this is the lat-lon projection
+     */
+    public abstract boolean isLatLon();
 }

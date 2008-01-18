@@ -31,10 +31,6 @@ package uk.ac.rdg.resc.ncwms.metadata;
 import com.sleepycat.persist.model.Persistent;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.ProjectionImpl;
-import ucar.unidata.geoloc.ProjectionPoint;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * Enhances a {@link CoordinateAxis1D} by providing an efficient means of finding
@@ -50,7 +46,6 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 @Persistent
 public abstract class OneDCoordAxis extends CoordAxis
 {
-    protected HorizontalProjection proj = null; // null Signifies the lat-lon projection
     protected int size; // Number of points on this axis
     
     /**
@@ -61,22 +56,21 @@ public abstract class OneDCoordAxis extends CoordAxis
      * @throws IllegalArgumentException if the given axis is not of type latitude,
      * longitude, GeoX or GeoY.
      */
-    public static OneDCoordAxis create(CoordinateAxis1D axis1D, ProjectionImpl proj)
+    public static OneDCoordAxis create(CoordinateAxis1D axis1D)
     {
         AxisType axisType = axis1D.getAxisType();
         if (axisType == AxisType.Lon || axisType == AxisType.Lat ||
             axisType == AxisType.GeoX || axisType == AxisType.GeoY)
         {
             OneDCoordAxis theAxis = null;
-            HorizontalProjection theProj = proj.isLatLon() ? null : HorizontalProjection.create(proj);
             if (axis1D.isRegular())
             {
                 theAxis = new Regular1DCoordAxis(axis1D.getStart(),
-                    axis1D.getIncrement(), (int)axis1D.getSize(), axisType, theProj);
+                    axis1D.getIncrement(), (int)axis1D.getSize(), axisType);
             }
             else
             {
-                theAxis = new Irregular1DCoordAxis(axis1D.getCoordValues(), axisType, theProj);
+                theAxis = new Irregular1DCoordAxis(axis1D.getCoordValues(), axisType);
             }
             return theAxis;
         }
@@ -90,47 +84,6 @@ public abstract class OneDCoordAxis extends CoordAxis
     {
         super(type);
         this.size = size;
-    }
-
-    public final int getIndex(LatLonPoint point)
-    {
-        if (this.axisType == AxisType.Lon)
-        {
-            return this.getIndex(point.getLongitude());
-        }
-        else if (this.axisType == AxisType.Lat)
-        {
-            if (point.getLatitude() >= -90.0 && point.getLatitude() <= 90.0)
-            {
-                return this.getIndex(point.getLatitude());
-            }
-            else
-            {
-                return -1;
-            }
-        }
-        else if (this.proj != null)
-        {
-            // This axis comes from a projected coordinate system
-            ProjectionPoint projPoint = this.proj.latLonToProj(point);
-            if (this.axisType == AxisType.GeoX)
-            {
-                return this.getIndex(projPoint.getX());
-            }
-            else if (this.axisType == AxisType.GeoY)
-            {
-                return this.getIndex(projPoint.getY());
-            }
-            else
-            {
-                throw new IllegalStateException("Unknown axis type " + this.axisType);
-            }
-        }
-        else
-        {
-            throw new IllegalStateException("Axis is not latitude or " +
-                "longitude but there is no projection");
-        }
     }
     
     /**
@@ -155,6 +108,6 @@ public abstract class OneDCoordAxis extends CoordAxis
      */
     public boolean isLongitude()
     {
-        return this.axisType == AxisType.Lon;
+        return this.getAxisType() == AxisType.Lon;
     }
 }

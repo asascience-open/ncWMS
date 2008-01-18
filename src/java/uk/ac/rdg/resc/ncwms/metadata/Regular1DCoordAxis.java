@@ -57,22 +57,13 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     private boolean wraps; // True if this is a longitude axis that wraps the globe
     
     /**
-     * Creates a Regular1DCoordAxis that is part of a lat-lon coordinate system
+     * Creates a Regular1DCoordAxis 
      */
     public Regular1DCoordAxis(double start, double stride, int count, AxisType axisType)
-    {
-        this(start, stride, count, axisType, null);
-    }
-    /**
-     * Creates a Regular1DCoordAxis
-     */
-    public Regular1DCoordAxis(double start, double stride, int count, AxisType axisType,
-        HorizontalProjection proj)
     {
         super(axisType, count);
         this.start = start;
         this.stride = stride;
-        this.proj = proj;
         
         this.maxValue = this.start + this.stride * (this.size - 1);
         this.wraps = false;
@@ -90,7 +81,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
                 this.wraps = true;
             }
         }
-        logger.debug("Created regular {} axis, wraps = {}", this.axisType, this.wraps);
+        logger.debug("Created regular {} axis, wraps = {}", this.getAxisType(), this.wraps);
     }
     
     /**
@@ -126,7 +117,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         }
         else
         {
-            logger.debug("Finding value for {}, {}", this.axisType, coordValue);
+            logger.debug("Finding value for {}, {}", this.getAxisType(), coordValue);
             // this is a latitude axis
             double distance = coordValue - this.start;
             double exactNumSteps = distance / this.stride;
@@ -151,6 +142,6 @@ public class Regular1DCoordAxis extends OneDCoordAxis
         return this.start == otherAxis.start &&
                this.stride == otherAxis.stride &&
                this.size == otherAxis.size &&
-               this.axisType == otherAxis.axisType;
+               this.getAxisType() == otherAxis.getAxisType();
     }
 }

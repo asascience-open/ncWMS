@@ -34,6 +34,7 @@ import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import ucar.nc2.Variable;
+import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
@@ -111,8 +112,8 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                         layer.setZunits(zUnits);
                     }
                     
-                    layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat"));
-                    layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat"));
+                    layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat", AxisType.GeoX));
+                    layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat", AxisType.GeoY));
                     
                     // Set the time axis
                     for (int i = 0; i < ftVals.length; i++)

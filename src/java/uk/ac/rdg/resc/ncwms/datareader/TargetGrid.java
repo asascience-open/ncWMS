@@ -35,10 +35,12 @@ import org.geotools.referencing.CRS;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.cs.CoordinateSystemAxis;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
+import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 
@@ -54,8 +56,8 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 public class TargetGrid
 {
     private static final Logger logger = Logger.getLogger(TargetGrid.class);
-    private static final CoordinateReferenceSystem PLATE_CARREE_CRS;
-    private static List<String> SUPPORTED_CRS_CODES;
+    public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
+    public static final List<String> SUPPORTED_CRS_CODES;
     
     private int width;    // Width of the grid in pixels
     private int height;   // Height of the grid in pixels
@@ -96,15 +98,6 @@ public class TargetGrid
         {
             throw new ExceptionInInitializerError("Can't find CRS:84");
         }
-    }
-    
-    /**
-     * @return a List of codes for coordinate reference systems that are
-     * supported by this class.
-     */
-    public static List<String> getSupportedCrsCodes()
-    {
-        return SUPPORTED_CRS_CODES;
     }
     
     /**
@@ -156,9 +149,6 @@ public class TargetGrid
         this.width = width;
         this.height = height;
         this.bbox = bbox;
-        
-        // TODO: check bounding box values against CRS extremes?
-        // Or have a pair of methods isInXRange(), isInYRange()?
         
         // Now calculate the values along the x and y axes of this grid
         double dx = (this.bbox[2] - this.bbox[0]) / this.width;
@@ -213,6 +203,33 @@ public class TargetGrid
     public CoordinateReferenceSystem getCoordinateReferenceSystem()
     {
         return this.crs;
+    }
+    
+    /**
+     * @return true if the given projection point is valid for this CRS.
+     * Delegates to this.isPointValidForCrs(point.getX(), point.getY())
+     */
+    public boolean isPointValidForCrs(ProjectionPoint point)
+    {
+        return this.isPointValidForCrs(point.getX(), point.getY());
+    }
+    
+    /**
+     * @return true if the given coordinate pair is valid for this CRS
+     */
+    public boolean isPointValidForCrs(double x, double y)
+    {
+        CoordinateSystemAxis xAxis = this.crs.getCoordinateSystem().getAxis(0);
+        CoordinateSystemAxis yAxis = this.crs.getCoordinateSystem().getAxis(1);
+        if (x < xAxis.getMinimumValue() || x > xAxis.getMaximumValue() ||
+            y < yAxis.getMinimumValue() || y > yAxis.getMaximumValue())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 
     public int getSize()

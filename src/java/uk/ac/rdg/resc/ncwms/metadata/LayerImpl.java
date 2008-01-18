@@ -38,6 +38,7 @@ import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -67,6 +68,7 @@ public class LayerImpl implements Layer
     protected double scaleMax;
     protected CoordAxis xaxis;
     protected CoordAxis yaxis;
+    private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
     protected transient Dataset dataset; // Not stored in the metadata database
     // Sorted in ascending order of time
     protected List<TimestepInfo> timesteps;
@@ -553,6 +555,20 @@ public class LayerImpl implements Layer
     public List<TimestepInfo> getTimesteps()
     {
         return timesteps;
+    }
+
+    /**
+     * @return the projection for the data, as stored in the source files.  Defaults
+     * to the lon-lat projection unless explicitly set.
+     */
+    public HorizontalProjection getHorizontalProjection()
+    {
+        return this.horizProj;
+    }
+
+    public void setHorizontalProjection(HorizontalProjection horizProj)
+    {
+        this.horizProj = horizProj;
     }
     
 }
