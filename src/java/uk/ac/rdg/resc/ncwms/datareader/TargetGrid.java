@@ -206,15 +206,6 @@ public class TargetGrid
     }
     
     /**
-     * @return true if the given projection point is valid for this CRS.
-     * Delegates to this.isPointValidForCrs(point.getX(), point.getY())
-     */
-    public boolean isPointValidForCrs(ProjectionPoint point)
-    {
-        return this.isPointValidForCrs(point.getX(), point.getY());
-    }
-    
-    /**
      * @return true if the given coordinate pair is valid for this CRS
      */
     public boolean isPointValidForCrs(double x, double y)

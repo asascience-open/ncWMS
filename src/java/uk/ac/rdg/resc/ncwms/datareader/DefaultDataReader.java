@@ -285,10 +285,17 @@ public class DefaultDataReader extends DataReader
                 double maxLon = upperRight.getLongitude();
                 double minLat = lowerLeft.getLatitude();
                 double maxLat = upperRight.getLatitude();
-                if (latLonRect.crossDateline())
+                // Correct the bounding box in case of mistakes or in case it 
+                // crosses the date line
+                if (latLonRect.crossDateline() || minLon >= maxLon)
                 {
                     minLon = -180.0;
                     maxLon = 180.0;
+                }
+                if (minLat >= maxLat)
+                {
+                    minLat = -90.0;
+                    maxLat = 90.0;
                 }
                 double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
                 

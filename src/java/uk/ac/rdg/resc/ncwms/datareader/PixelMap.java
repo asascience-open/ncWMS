@@ -124,14 +124,15 @@ public class PixelMap
             {
                 for (double x : grid.getXAxisValues())
                 {
-                    // Translate this point in the target grid to lat-lon
-                    // TODO: the transformer can transform many points at once.
-                    // Doing so might be more efficient than this method.
-                    LatLonPoint latLon = grid.transformToLatLon(x, y);
-                    // Translate this lat-lon point to a point in the data's projection coordinates
-                    ProjectionPoint projPoint = dataProj.latLonToProj(latLon);
-                    if (grid.isPointValidForCrs(projPoint))
+                    // Check that this point is valid in the target CRS
+                    if (grid.isPointValidForCrs(x, y))
                     {
+                        // Translate this point in the target grid to lat-lon
+                        // TODO: the transformer can transform many points at once.
+                        // Doing so might be more efficient than this method.
+                        LatLonPoint latLon = grid.transformToLatLon(x, y);
+                        // Translate this lat-lon point to a point in the data's projection coordinates
+                        ProjectionPoint projPoint = dataProj.latLonToProj(latLon);
                         // Translate the projection point to grid point indices i, j
                         int i, j;
                         if (xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
