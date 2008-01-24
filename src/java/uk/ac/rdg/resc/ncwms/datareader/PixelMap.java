@@ -44,7 +44,8 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
  * Class that maps x and y indices in source data arrays to pixel indices in
- * the image that is to be created.  
+ * the image that is to be created.  This class performs the projection of
+ * coordinate systems.
  * 
  * @author Jon Blower
  * $Revision$
@@ -87,9 +88,10 @@ public class PixelMap
         // We can gain efficiency if the target grid is a lat-lon grid and
         // the data exist on a lat-long grid by minimizing the number of
         // calls to axis.getIndex().
-        if (dataProj.isLatLon() && grid.isLatLon())
+        if (dataProj.isLatLon() && grid.isLatLon() &&
+            xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
         {
-            logger.debug("Using optimized method for lat-lon coordinates");
+            logger.debug("Using optimized method for lat-lon coordinates with 1D axes");
             // These class casts should always be valid
             OneDCoordAxis xAxis1D = (OneDCoordAxis)xAxis;
             OneDCoordAxis yAxis1D = (OneDCoordAxis)yAxis;

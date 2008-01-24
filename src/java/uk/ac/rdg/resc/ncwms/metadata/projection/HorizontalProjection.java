@@ -34,9 +34,9 @@ import ucar.unidata.geoloc.ProjectionPoint;
 import ucar.unidata.geoloc.ProjectionPointImpl;
 
 /**
- * Interface describing a horizontal projection from lat-lon to projection
- * coordinates.  This is independent of any particular implementation, even 
- * though we use simple classes from the NetCDF Java libraries.
+ * Abstract class describing a horizontal projection from lat-lon to projection
+ * coordinates (i.e. the coordinates that are understood by the coordinate axes,
+ * which are subclasses of CoordAxis).
  *
  * @author Jon Blower
  * $Revision$
@@ -72,7 +72,11 @@ public abstract class HorizontalProjection
         {
             public ProjectionPoint latLonToProj(LatLonPoint point)
             {
-                return proj.latLonToProj(point);
+                // Apparently ProjectionImpls are not always thread-safe.
+                synchronized(proj)
+                {
+                    return proj.latLonToProj(point);
+                }
             }
             
             public boolean isLatLon()
