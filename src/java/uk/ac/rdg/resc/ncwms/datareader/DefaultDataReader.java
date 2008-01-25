@@ -131,6 +131,7 @@ public class DefaultDataReader extends DataReader
             VariableDS enhanced = new VariableDS(null, nc.findVariable(layer.getId()), true);
             this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, enhanced);
             long after = System.currentTimeMillis();
+            // Write to the benchmark logger (if enabled in log4j.properties)
             // Headings are written in NcwmsContext.init()
             if (pixelMap.getNumUniqueXYPairs() > 1)
             {
@@ -179,7 +180,7 @@ public class DefaultDataReader extends DataReader
         PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
     {
         DataChunk dataChunk = null;
-        // Cycle through the latitude values, extracting a scanline of
+        // Cycle through the y indices, extracting a scanline of
         // data each time from minX to maxX
         for (int yIndex : pixelMap.getYIndices())
         {
