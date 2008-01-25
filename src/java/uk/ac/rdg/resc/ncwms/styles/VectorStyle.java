@@ -36,7 +36,6 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Style for plotting vector data as arrows
