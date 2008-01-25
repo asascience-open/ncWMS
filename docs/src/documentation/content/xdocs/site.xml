@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (c) 2007 The University of Reading
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University of Reading, nor the names of the
+ *    authors or contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!--
+Forrest site.xml
+
+This file contains an outline of the site's information content.  It is used to:
+- Generate the website menus (though these can be overridden - see docs)
+- Provide semantic, location-independent aliases for internal 'site:' URIs, eg
+<link href="site:changes"> links to changes.html (or ../changes.html if in
+  subdir).
+- Provide aliases for external URLs in the external-refs section.  Eg, <link
+  href="ext:cocoon"> links to http://cocoon.apache.org/ 
+
+See http://forrest.apache.org/docs/linking.html for more info
+-->
+<!-- The label attribute of the outer "site" element will only show
+  in the linkmap (linkmap.html).
+  Use elements project-name and group-name in skinconfig to change name of 
+  your site or project that is usually shown at the top of page.
+  No matter what you configure for the href attribute, Forrest will
+  always use index.html when you request http://yourHost/
+  See FAQ: "How can I use a start-up-page other than index.html?"
+-->
+<site label="ncWMS" href="" xmlns="http://apache.org/forrest/linkmap/1.0" tab="">
+  <about label="Welcome">
+    <index label="Introduction" href="index.html" description="Welcome to ncWMS"/>
+    <userstories label="User stories" href="userstories.html" description="How people are using ncWMS and what they say"/>
+    <credits label="Credits" href="credits.html" description="Funders and contributors"/>
+    <linkmap label="Documentation ToC" href="linkmap.html" description="Table of Contents for this example site"/>
+  </about>
+  <usersguide label="Users' Guide" tab="usersguide">
+      <index label="Introduction" href="usersguide/index.html"/>
+  </usersguide>
+  <adminguide label="Administrators' Guide" tab="adminguide">
+      <index label="Introduction" href="adminguide/index.html"/>
+  </adminguide>
+  <adminguide label="Developers' Guide" tab="devguide">
+      <index label="Introduction" href="devguide/index.html"/>
+      <architecture label="High-level architecture" href="devguide/architecture.html"/>
+      <readandreproject label="Reading and reprojecting data" href="devguide/readandreproject.html"/>
+      <luts label="Look-up tables for arbitrary grids" href="devguide/lookuptables.html"/>
+      <rendering label="Rendering images" href="devguide/rendering.html"/>
+  </adminguide>
+  <!--<samples label="Samples" href="samples/" tab="samples">
+    <index label="Overview" href="index.html"/>
+    <sample label="Apache doc v2.0" href="sample.html" description="A nonsense
+      document using all possible elements in the current document v2.0">
+      <top href="#top"/>
+      <section href="#section"/>
+    </sample>
+    <static label="Static content" href="static.html" description="Static raw
+      un-processed content"/>
+    <linking label="Linking" href="linking.html" description="Linking explained
+      and demonstrated"/>
+    <sample-howto label="How To" href="howto-howto.html"
+      description="Test of How To documents"/>
+    <sample-html label="Embedded HTML" href="embedded_html.html"
+      description="Test of Embedded HTML"/>
+    <sample-ascii-art label="ascii-art page" href="ascii-art.html"
+      description="Sample Ascii Art page"/>
+    <svg label="Using SVG" href="svg.html" description="Using Scalable Vector Graphics (SVG)"/>
+    <sample-usemap label="usemap" href="usemap.html" description="Client-side
+      imagemap"/>
+    <i18n label="Internationalisation (i18n)" href="i18n.html"/>
+    <i18n-demo label="i18n demonstration" href="demo-i18n.html"/>
+    <sample-custom label="Custom Schema" href="customSchema.html"
+      description="Custom XML schema and doctypes"/>
+    <custom-example href="custom.html" description="A custom XML file"/>
+    <xml-entities label="XML entities" href="xml-entities.html"
+      description="Using XML entities for character replacements"/>
+    <faq label="FAQ" href="faq.html" description="Frequently Asked Questions"/>
+    <locationmap label="Locationmap" href="locationmap/index.html"
+      description="Locationmaps allow the user URL space to be different from
+      the storage URL Space"/>
+    <subdir label="Subdir" href="subdir/">
+      <index label="Index" href="index.html" description="Page generated from a
+        sub-directory"/>
+    </subdir>
+    <showonlywhenselected label="Conditional display of menuitems" href="showonlywhenselected/">
+      <page1 label="Always visible page" href="page1.html"/>
+      <page2 label="Visible only when current" href="page2.html" type="showWhenSelected"/>
+    </showonlywhenselected>
+  </samples>
+  <plugins label="Plugins" href="pluginDocs/plugins_0_70/" tab="plugins">
+    <index label="Index" href="index.html" description="List of plugins
+      available for Forrest"/>
+  </plugins>
+  <files>
+    <hello_print href="hello.pdf"/>
+    <test1 href="test1.html"/>
+  </files>-->
+<!--
+  The href must be wholesite.html/pdf  You can change the labels and node names
+  <all label="All">
+    <whole_site_html label="Whole Site HTML" href="wholesite.html"/>
+    <whole_site_pdf label="Whole Site PDF" href="wholesite.pdf"/>
+  </all>
+  -->
+  <external-refs>
+    <forrest href="http://forrest.apache.org/">
+      <linking href="docs/linking.html"/>
+      <validation href="docs/validation.html"/>
+      <webapp href="docs/your-project.html#webapp"/>
+      <dtd-docs href="docs/dtd-docs.html"/>
+      <new_content_type href="docs/your-project.html#adding_new_content_type"/>
+      <buildPlugin href="docs/howto/howto-buildPlugin.html"/>
+    </forrest>
+    <forrest-zone href="http://forrest.zones.apache.org/"/>
+    <cocoon href="http://cocoon.apache.org/"/>
+    <xml.apache.org href="http://xml.apache.org/"/>
+    <javanetcdf href="http://www.unidata.ucar.edu/software/netcdf-java/"/>
+    <nerc href="http://www.nerc.ac.uk"/>
+  </external-refs>
+</site>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (c) 2007 The University of Reading
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University of Reading, nor the names of the
+ *    authors or contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!DOCTYPE tabs PUBLIC "-//APACHE//DTD Cocoon Documentation Tab V1.1//EN" "http://forrest.apache.org/dtd/tab-cocoon-v11.dtd">
+<tabs software="ncWMS"
+  title="Web Map Service for gridded NetCDF data"
+  copyright="University of Reading 2008"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- The rules for tabs are:
+    @dir will always have '/@indexfile' added.
+    @indexfile gets appended to @dir if the tab is selected. Defaults to 'index.html'
+    @href is not modified unless it is root-relative and obviously specifies a
+    directory (ends in '/'), in which case /index.html will be added
+    If @id's are present, site.xml entries with a matching @tab will be in that tab.
+
+   Tabs can be embedded to a depth of two. The second level of tabs will only 
+    be displayed when their parent tab is selected.    
+  -->
+  <tab id="" label="Home" dir="" indexfile="index.html"/>
+  <tab id="usersguide" label="Users' Guide" dir="usersguide"/>
+  <tab id="adminguide" label="Administrators' Guide" dir="adminguide"/>
+  <tab id="devguide" label="Developers' Guide" dir="devguide"/>
+  <!--<tab id="samples" label="Samples" dir="samples" indexfile="sample.html">
+    <tab id="samples-index" label="Index" dir="samples" indexfile="index.html"/>
+    <tab id="samples-sample2" label="Sample2" dir="samples" indexfile="static.html"/>
+  </tab>
+  <tab label="Apache XML Projects" href="http://xml.apache.org">
+    <tab label="Forrest" href="http://forrest.apache.org"/>
+    <tab label="Xerces" href="http://xml.apache.org/xerces"/>
+  </tab>
+  <tab id="plugins" label="Plugins" dir="pluginDocs/plugins_0_80" indexfile="index.html"/>-->
+<!-- Add new tabs here, eg:
+  <tab label="How-Tos" dir="community/howto/"/>
+  <tab label="XML Site" dir="xml-site/"/>
+  -->
+</tabs>

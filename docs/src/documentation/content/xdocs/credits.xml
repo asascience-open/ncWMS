@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (c) 2007 The University of Reading
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University of Reading, nor the names of the
+ *    authors or contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+  <header>
+    <title>Credits</title>
+  </header>
+  <body>
+    <section id="contributors">
+        <title>Contributors</title>
+        <p>The following people have contributed directly to the ncWMS project:</p>
+        <ul>
+            <li>Jon Blower, Reading e-Science Centre: lead developer and designer</li>
+            <li>Adit Santokhee, Reading e-Science Centre: metadata and database work</li>
+            <li>Pauline Mak, University of Tasmania: THREDDS integration (in development)</li>
+            <li>Marcos Hermida, Meteogalicia: support for data projections</li>
+            <li>Dave Crossman, Australian Institute of Marine Science: generation of transects (in development)</li>
+            <li><i>Please get in touch if we have forgotten you!</i></li>
+        </ul>
+    </section>
+    <section id="dependencies">
+        <title>Projects upon which we depend</title>
+        <p>ncWMS could not have been developed without the work of these projects.
+        Thanks for all your hard work!</p>
+        <ul>
+            <li><a href="ext:javanetcdf">Java NetCDF libraries</a>, Unidata</li>
+            <li>GeoTools</li>
+            <li>GeoAPI</li>
+            <li><i>Plus many more...</i></li>
+        </ul>
+    </section>
+    <section id="fundingagencies">
+        <title>Funding agencies</title>
+        <p>The ncWMS project gratefully acknowledges the following sources of funding:</p>
+        <ul>
+            <li>UK Department for Trade and Industry (DEWS project)</li>
+            <li><a href="ext:nerc">Natural Environment Research Council (NERC)</a>: Reading e-Science Centre
+            grant and SHAVER Knowledge Transfer funds</li>
+        </ul>
+    </section>
+  </body>
+</document>
