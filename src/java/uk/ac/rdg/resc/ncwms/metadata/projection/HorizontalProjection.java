@@ -72,10 +72,14 @@ public abstract class HorizontalProjection
         {
             public ProjectionPoint latLonToProj(LatLonPoint point)
             {
+                // (Thanks to Marcos Hermida of Meteogalicia for helping to
+                // sort out thread safety issues here.)
                 // Apparently ProjectionImpls are not always thread-safe.
                 synchronized(proj)
                 {
-                    return proj.latLonToProj(point);
+                    // We need to create a new object each time because
+                    // this is not guaranteed by proj.latLonToProj().
+                    return new ProjectionPointImpl(proj.latLonToProj(point));
                 }
             }
             
@@ -89,7 +93,8 @@ public abstract class HorizontalProjection
     /**
      * Converts a latitude-longitude point to projection coordinates.
      * This is used by PixelMap to find the projection
-     * coordinates before finding axis indices.
+     * coordinates before finding axis indices.  A new object must be
+     * returned with each invocation to ensure thread safety.
      */
     public abstract ProjectionPoint latLonToProj(LatLonPoint point);
     
