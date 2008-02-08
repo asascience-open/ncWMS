@@ -66,7 +66,6 @@ public class MetadataController
 {
     // These objects will be injected by Spring
     private Config config;
-    private Factory<TargetGrid> gridFactory;
     private MetadataStore metadataStore;
     private UsageLogger usageLogger;
     
@@ -418,14 +417,6 @@ public class MetadataController
             }
         }
         return new float[]{min, max};
-    }
-    
-    /**
-     * Called by Spring to inject the gridFactory object
-     */
-    public void setGridFactory(Factory<TargetGrid> gridFactory)
-    {
-        this.gridFactory = gridFactory;
     }
 
     /**
