@@ -57,17 +57,17 @@ public class PixelByPixelDataReader extends DefaultDataReader
         long start = System.currentTimeMillis();
 
         // Now create the picture from the data array
-        for (int yIndex : pixelMap.getYIndices())
+        for (int j : pixelMap.getJIndices())
         {
-            Range yRange = new Range(yIndex, yIndex);
-            for (int xIndex : pixelMap.getXIndices(yIndex))
+            Range yRange = new Range(j, j);
+            for (int i : pixelMap.getIIndices(i))
             {
-                Range xRange = new Range(xIndex, xIndex);
+                Range xRange = new Range(i, i);
                 GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
                 // Read all of the x-y data in this subset
                 DataChunk dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
                 float val = (float)enhanced.convertScaleOffsetMissing(dataChunk.getValue(0));
-                for (int pixelIndex : pixelMap.getPixelIndices(xIndex, yIndex))
+                for (int pixelIndex : pixelMap.getPixelIndices(i, j))
                 {
                     picData[pixelIndex] = val;
                 }

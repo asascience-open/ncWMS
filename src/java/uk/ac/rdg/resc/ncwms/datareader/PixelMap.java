@@ -43,9 +43,51 @@ import uk.ac.rdg.resc.ncwms.metadata.TwoDCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
- * Class that maps x and y indices in source data arrays to pixel indices in
- * the image that is to be created.  This class performs the projection of
- * coordinate systems.
+ *<p>Maps pixels within the requested image to i and j indices of corresponding
+ * points within the source data.  This is a very important class in ncWMS.  A
+ * PixelMap is constructed using the constructor <code>new PixelMap(layer, grid)</code>,
+ * which employs the following general algorithm:</p>
+ *
+ * <pre>
+ * For each pixel in the image (i.e. each point in the target grid):
+ *    1. Find the x-y coordinates of this point in the CRS of the target grid
+ *    2. Transform these x-y coordinates into latitude and longitude using grid.transformToLatLon()
+ *    3. Transform lat-lon into index values (i and j) along the horizontal axes of the data,
+ *       using axis.getIndex()
+ *    4. Add the mapping (pixel -> i,j) to the image map
+ * </pre>
+ *
+ * <p>(A more efficient algorithm is used for the special case in which both the 
+ * requested CRS and the CRS of the data are lat-lon.)</p>
+ *
+ * <p>The resulting PixelMap is then used by {@link DataReader}s to work out what
+ * data to read from the source data files.  A variety of strategies are possible:</p>
+ * <ol>
+ *   <li>Read all data in one operation (potentially including lots of data points
+ *       that are not needed) by finding the overall i-j bounding box with
+ *       PixelMap.getMaxIIndex(), .getMinIIndex(), etc.  This minimizes the number
+ *       of calls to low-level data extraction code, but may result in a large memory
+ *       footprint.  The {@link DataReader} would then subset this data array in-memory.
+ *       See {@link BoundingBoxDataReader}.  This approach is recommended for remote
+ *       datasets (e.g. on an OPeNDAP server) as it minimizes the overhead associated
+ *       with the data extraction operation.
+ *   <li>Read each data point individually by iterating through PixelMap.getJIndices() 
+ *       and PixelMap.getIIndices().  This minimizes the memory footprint as the minimum
+ *       amount of data is read from disk.  However, in general this method is inefficient
+ *       as it maximizes the overhead of the low-level data extraction code by making 
+ *       a large number of small data extractions.  See {@link PixelByPixelDataReader}.
+ *   <li>A compromise strategy, which balances memory considerations against the overhead 
+ *       of the low-level data extraction code, works as follows:
+ *       <ol>
+ *          <li>Iterate through each j index that is represented in the PixelMap</li>
+ *          <li>For each j index, extract data from the minimum to the maximum i index
+ *              in this row.</li>
+ *       </ol>
+ *       Therefore if there are 25 distinct j indices in the PixelMap there will be 25
+ *       individual calls to the low-level data extraction code.  This algorithm has
+ *       been found to work well in a variety of situations although it may not always
+ *       be the most efficient.  See {@link DefaultDataReader}.</li>
+ * </ol>
  * 
  * @author Jon Blower
  * $Revision$
@@ -56,17 +98,18 @@ public class PixelMap
 {
     private static final Logger logger = Logger.getLogger(PixelMap.class);
     
-    // These define the bounding box of the data to extract from the source files
-    private int minXIndex = Integer.MAX_VALUE;
-    private int minYIndex = Integer.MAX_VALUE;
-    private int maxXIndex = -1;
-    private int maxYIndex = -1;
+    // These define the bounding box (in terms of axis indices) of the data
+    // to extract from the source files
+    private int minIIndex = Integer.MAX_VALUE;
+    private int minJIndex = Integer.MAX_VALUE;
+    private int maxIIndex = -1;
+    private int maxJIndex = -1;
     
     // Maps Y indices to row information
     private Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
     
-    // Number of unique x-y pairs
-    private int numUniqueXYPairs = 0;
+    // Number of unique i-j pairs
+    private int numUniqueIJPairs = 0;
     
     /**
      * Generates a PixelMap for the given Layer.  Data read from the Layer will
@@ -168,33 +211,33 @@ public class PixelMap
     /**
      * Adds a new pixel index to this map.  Does nothing if either x or y is
      * negative.
-     * @param x The x index of the point in the source data
-     * @param y The y index of the point in the source data
+     * @param i The i index of the point in the source data
+     * @param j The j index of the point in the source data
      * @param pixel The index of the corresponding point in the picture
      */
-    private void put(int x, int y, int pixel)
+    private void put(int i, int j, int pixel)
     {
         // If either of the indices are negative there is no data for this
         // pixel index
-        if (x < 0 || y < 0) return;
+        if (i < 0 || j < 0) return;
         
         // Modify the bounding box if necessary
-        if (x < this.minXIndex) this.minXIndex = x;
-        if (x > this.maxXIndex) this.maxXIndex = x;
-        if (y < this.minYIndex) this.minYIndex = y;
-        if (y > this.maxYIndex) this.maxYIndex = y;
+        if (i < this.minIIndex) this.minIIndex = i;
+        if (i > this.maxIIndex) this.maxIIndex = i;
+        if (j < this.minJIndex) this.minJIndex = j;
+        if (j > this.maxJIndex) this.maxJIndex = j;
         
         // Get the information for this row (i.e. this y index),
         // creating a new row if necessary
-        Row row = this.pixelMap.get(y);
+        Row row = this.pixelMap.get(j);
         if (row == null)
         {
             row = new Row();
-            this.pixelMap.put(y, row);
+            this.pixelMap.put(j, row);
         }
         
         // Add the pixel to this row
-        row.put(x, pixel);
+        row.put(i, pixel);
     }
     
     /**
@@ -207,20 +250,20 @@ public class PixelMap
     }
     
     /**
-     * @return the Set of all y indices in this pixel map
+     * @return the Set of all j indices in this pixel map
      */
-    public Set<Integer> getYIndices()
+    public Set<Integer> getJIndices()
     {
         return this.pixelMap.keySet();
     }
     
     /**
-     * @return the Set of all x indices in the given row
+     * @return the Set of all I indices in the given row
      * @throws IllegalArgumentException if there is no row with the given y index
      */
-    public Set<Integer> getXIndices(int y)
+    public Set<Integer> getIIndices(int j)
     {
-        return this.getRow(y).getXIndices().keySet();
+        return this.getRow(j).getIIndices().keySet();
     }
     
     /**
@@ -229,33 +272,33 @@ public class PixelMap
      * @throws IllegalArgumentException if there is no row with the given y index
      * or if the given x index is not found in the row
      */
-    public List<Integer> getPixelIndices(int x, int y)
+    public List<Integer> getPixelIndices(int i, int j)
     {
-        Map<Integer, List<Integer>> row = this.getRow(y).getXIndices();
-        if (!row.containsKey(x))
+        Map<Integer, List<Integer>> row = this.getRow(j).getIIndices();
+        if (!row.containsKey(i))
         {
-            throw new IllegalArgumentException("The x index " + x +
-                " was not found in the row with y index " + y);
+            throw new IllegalArgumentException("The i index " + i +
+                " was not found in the row with j index " + j);
         }
-        return row.get(x);
+        return row.get(i);
     }
     
     /**
-     * @return the minimum x index in the row with the given y index
+     * @return the minimum i index in the row with the given j index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
-    public int getMinXIndexInRow(int y)
+    public int getMinIIndexInRow(int j)
     {
-        return this.getRow(y).getMinXIndex();
+        return this.getRow(j).getMinIIndex();
     }
     
     /**
-     * @return the maximum x index in the row with the given y index
+     * @return the maximum i index in the row with the given j index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
-    public int getMaxXIndexInRow(int y)
+    public int getMaxIIndexInRow(int j)
     {
-        return this.getRow(y).getMaxXIndex();
+        return this.getRow(j).getMaxIIndex();
     }
     
     /**
@@ -274,33 +317,33 @@ public class PixelMap
     /**
      * @return the minimum x index in the whole pixel map
      */
-    public int getMinXIndex()
+    public int getMinIIndex()
     {
-        return minXIndex;
+        return minIIndex;
     }
 
     /**
      * @return the minimum y index in the whole pixel map
      */
-    public int getMinYIndex()
+    public int getMinJIndex()
     {
-        return minYIndex;
+        return minJIndex;
     }
 
     /**
      * @return the maximum x index in the whole pixel map
      */
-    public int getMaxXIndex()
+    public int getMaxIIndex()
     {
-        return maxXIndex;
+        return maxIIndex;
     }
 
     /**
      * @return the maximum y index in the whole pixel map
      */
-    public int getMaxYIndex()
+    public int getMaxJIndex()
     {
-        return maxYIndex;
+        return maxJIndex;
     }
     
     /**
@@ -308,47 +351,47 @@ public class PixelMap
      */
     private class Row
     {
-        // Maps x Indices to a list of pixel indices
-        //             x        pixels
-        private Map<Integer, List<Integer>> xIndices =
+        // Maps i Indices to a list of pixel indices
+        //             i        pixels
+        private Map<Integer, List<Integer>> iIndices =
             new HashMap<Integer, List<Integer>>();
         // Min and max x Indices in this row
-        private int minXIndex = Integer.MAX_VALUE;
-        private int maxXIndex = -1;
+        private int minIIndex = Integer.MAX_VALUE;
+        private int maxIIndex = -1;
         
         /**
-         * Adds a mapping of an x index to a pixel index
+         * Adds a mapping of an i index to a pixel index
          */
-        public void put(int x, int pixel)
+        public void put(int i, int pixel)
         {
-            if (x < this.minXIndex) this.minXIndex = x;
-            if (x > this.maxXIndex) this.maxXIndex = x;
+            if (i < this.minIIndex) this.minIIndex = i;
+            if (i > this.maxIIndex) this.maxIIndex = i;
             
-            List<Integer> pixelIndices = this.xIndices.get(x);
+            List<Integer> pixelIndices = this.iIndices.get(i);
             if (pixelIndices == null)
             {
                 pixelIndices = new ArrayList<Integer>();
-                this.xIndices.put(x, pixelIndices);
+                this.iIndices.put(i, pixelIndices);
                 // We have a new unique x-y pair
-                numUniqueXYPairs++;
+                numUniqueIJPairs++;
             }
             // Add the pixel index to the set
             pixelIndices.add(pixel);
         }
 
-        public Map<Integer, List<Integer>> getXIndices()
+        public Map<Integer, List<Integer>> getIIndices()
         {
-            return xIndices;
+            return iIndices;
         }
 
-        public int getMinXIndex()
+        public int getMinIIndex()
         {
-            return minXIndex;
+            return minIIndex;
         }
 
-        public int getMaxXIndex()
+        public int getMaxIIndex()
         {
-            return maxXIndex;
+            return maxIIndex;
         }
     }
 
@@ -358,9 +401,9 @@ public class PixelMap
      * oversampling.  This is the number of data points that will be extracted
      * by the PixelByPixelDataReader.
      */
-    public int getNumUniqueXYPairs()
+    public int getNumUniqueIJPairs()
     {
-        return numUniqueXYPairs;
+        return numUniqueIJPairs;
     }
     
     /**
@@ -373,7 +416,7 @@ public class PixelMap
         int sumRowLengths = 0;
         for (Row row : this.pixelMap.values())
         {
-            sumRowLengths += (row.getMaxXIndex() - row.getMinXIndex() + 1);
+            sumRowLengths += (row.getMaxIIndex() - row.getMinIIndex() + 1);
         }
         return sumRowLengths;
     }
@@ -384,8 +427,8 @@ public class PixelMap
      */
     public int getBoundingBoxSize()
     {
-        return (this.maxXIndex - this.minXIndex + 1) *
-               (this.maxYIndex - this.minYIndex + 1);
+        return (this.maxIIndex - this.minIIndex + 1) *
+               (this.maxJIndex - this.minJIndex + 1);
     }
     
 }
