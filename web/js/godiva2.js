@@ -52,14 +52,18 @@ window.onload = function()
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
     var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' } );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' }, { wrapDateLine: true} );
     var bluemarble_wms = new OpenLayers.Layer.WMS( "Blue Marble", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' } );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' }, { wrapDateLine: true} );
     var osm_wms = new OpenLayers.Layer.WMS( "Openstreetmap", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' } );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' }, { wrapDateLine: true} );
     var human_wms = new OpenLayers.Layer.WMS( "Human Footprint", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' } );
-        
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' }, { wrapDateLine: true} );
+    var demis_wms = new OpenLayers.Layer.WMS( "Demis WMS",
+        "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE", {layers:
+        'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'},
+        {wrapDateLine: true});
+
     // ESSI WMS (see Stefano Nativi's email to me, Feb 15th)
     /*var essi_wms = new OpenLayers.Layer.WMS.Untiled( "ESSI WMS", 
         "http://athena.pin.unifi.it:8080/ls/servlet/LayerService?",
@@ -71,7 +75,7 @@ window.onload = function()
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);
     
-    map.addLayers([bluemarble_wms, ol_wms, osm_wms, human_wms, seazone_wms/*, essi_wms*/]);
+    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, seazone_wms/*, essi_wms*/]);
     
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
@@ -761,12 +765,12 @@ function updateMap()
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1}
+            {buffer: 1, wrapDateLine: true}
         );
         ncwms_untiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1, ratio: 1.5, singleTile: true}
+            {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: true}
         );
         setVisibleLayer(false);
         map.addLayers([ncwms_tiled, ncwms_untiled]);
