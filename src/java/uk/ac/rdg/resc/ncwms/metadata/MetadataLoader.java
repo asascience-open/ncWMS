@@ -45,7 +45,7 @@ import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 
 /**
  * Class that handles the periodic reloading of metadata (manages calls to
@@ -303,7 +303,7 @@ public class MetadataLoader
             {
                 // Set the scale range for each variable by reading a 100x100
                 // chunk of data and finding the min and max values of this chunk.
-                TargetGrid grid = new TargetGrid("CRS:84", 100, 100, layer.getBbox());
+                HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, layer.getBbox());
                 LayerImpl layerImpl = (LayerImpl)layer;
                 layerImpl.setDataset(ds);
                 // Read from the first t and z indices

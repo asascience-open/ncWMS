@@ -29,9 +29,8 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.nc2.Variable;
 import ucar.nc2.dataset.AxisType;
@@ -54,15 +53,14 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
 {
     private static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegree.class);
     
-    protected List<Layer> getLayers(String filename)
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
         throws IOException
     {
-        List<Layer> layers = new ArrayList<Layer>();
         NetcdfDataset nc = null;
         
         try
         {
-            nc = NetcdfDataset.openDataset(filename, false, null);
+            nc = NetcdfDataset.openDataset(location, false, null);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
@@ -99,33 +97,41 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                 if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
                     && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))
                 {
-                    LayerImpl layer = new LayerImpl();
-                    layer.setId(var.getName());
-                    layer.setAbstract(var.getDescription());
-                    layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
-                    layer.setUnits(var.getUnitsString());
-                    layer.setZpositive(false);
-                    // TODO: check for the presence of a z axis in a neater way
-                    if (var.getRank() == 4)
+                    LayerImpl layer;
+                    if (layers.containsKey(var.getName()))
                     {
-                        layer.setZvalues(zVals);
-                        layer.setZunits(zUnits);
+                        layer = (LayerImpl)layers.get(var.getName());
                     }
-                    
-                    layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat", AxisType.GeoX));
-                    layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat", AxisType.GeoY));
+                    else
+                    {
+                        layer = new LayerImpl();
+                        layer.setId(var.getName());
+                        layer.setAbstract(var.getDescription());
+                        layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
+                        layer.setUnits(var.getUnitsString());
+                        layer.setZpositive(false);
+                        // TODO: check for the presence of a z axis in a neater way
+                        if (var.getRank() == 4)
+                        {
+                            layer.setZvalues(zVals);
+                            layer.setZunits(zUnits);
+                        }
+
+                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat", AxisType.GeoX));
+                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat", AxisType.GeoY));
+                        
+                        // Add this new layer to the map
+                        layers.put(layer.getId(), layer);
+                    }
                     
                     // Set the time axis
                     for (int i = 0; i < ftVals.length; i++)
                     {
                         Date timestep = dateUnit.makeDate(ftVals[i]);
-                        layer.addTimestepInfo(new TimestepInfo(timestep, filename, i));
+                        layer.addTimestepInfo(new TimestepInfo(timestep, location, i));
                     }
-
-                    layers.add(layer);
                 }
             }
-            return layers;
         }
         finally
         {

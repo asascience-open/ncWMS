@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
@@ -40,7 +41,6 @@ import ucar.nc2.Variable;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -72,7 +72,7 @@ public class NemoDataReader extends DefaultDataReader
      * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer, int tIndex, int zIndex, TargetGrid grid)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception
     {
         logger.debug("Reading data from {}", filename);
@@ -142,16 +142,15 @@ public class NemoDataReader extends DefaultDataReader
             // Add dummy ranges for x and y
             ranges.add(new Range(0,0));
             ranges.add(new Range(0,0));
-
             
             // Iterate through the scanlines, the order doesn't matter
-            for (int yIndex : pixelMap.getYIndices())
+            for (int j : pixelMap.getJIndices())
             {
-                ranges.set(yAxisIndex, new Range(yIndex, yIndex));
-                int xmin = pixelMap.getMinXIndexInRow(yIndex);
-                int xmax = pixelMap.getMaxXIndexInRow(yIndex);
-                Range xRange = new Range(xmin, xmax);
-                logger.debug("GetYIndices : " + yIndex +"::" +xmin + ":::" + xmax);
+                ranges.set(yAxisIndex, new Range(j, j));
+                int imin = pixelMap.getMinIIndexInRow(j);
+                int imax = pixelMap.getMaxIIndexInRow(j);
+                Range xRange = new Range(imin, imax);
+                logger.debug("GetYIndices : " + j +"::" +imin + ":::" + imax);
                 
                 ranges.set(xAxisIndex, xRange);
 
@@ -159,27 +158,27 @@ public class NemoDataReader extends DefaultDataReader
                 Array data = var.read(ranges);
                 Object arrObj = data.copyTo1DJavaArray();
                 
-                for (int xIndex : pixelMap.getXIndices(yIndex))
+                for (int i : pixelMap.getIIndices(j))
                 {
-                    for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
+                    float val;
+                    if (arrObj instanceof float[])
                     {
-                        float val;
-                        if (arrObj instanceof float[])
+                        val = ((float[])arrObj)[i - imin];
+                    }
+                    else
+                    {
+                        // We assume this is an array of shorts
+                        val = ((short[])arrObj)[i - imin];
+                    }
+                    // The missing value is calculated based on the compressed,
+                    // not the uncompressed, data, despite the fact that it's
+                    // recorded as a float
+                    if (val != missingValue)
+                    {
+                        float realVal = addOffset + val * scaleFactor;
+                        if (realVal >= validMin && realVal <= validMax)
                         {
-                            val = ((float[])arrObj)[xIndex - xmin];
-                        }
-                        else
-                        {
-                            // We assume this is an array of shorts
-                            val = ((short[])arrObj)[xIndex - xmin];
-                        }
-                        // The missing value is calculated based on the compressed,
-                        // not the uncompressed, data, despite the fact that it's
-                        // recorded as a float
-                        if (val != missingValue)
-                        {
-                            float realVal = addOffset + val * scaleFactor;
-                            if (realVal >= validMin && realVal <= validMax)
+                            for (int p : pixelMap.getPixelIndices(i, j))
                             {
                                 picData[p] = realVal;
                             }
@@ -211,19 +210,18 @@ public class NemoDataReader extends DefaultDataReader
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param filename Full path to the dataset (N.B. not an aggregation)
+     * @param location Full path to the dataset (N.B. not an aggregation)
      * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<Layer> getLayers(String filename)
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
         throws IOException
     {
-        List<Layer> layers = new ArrayList<Layer>();
         NetcdfDataset nc = null;
         
         try
         {
-            nc = NetcdfDataset.openDataset(filename, false, null);
+            nc = NetcdfDataset.openDataset(location, false, null);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
@@ -260,47 +258,57 @@ public class NemoDataReader extends DefaultDataReader
                 if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
                     && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))
                 {
-                    LayerImpl layer = new LayerImpl();
-                    layer.setId(var.getName());
-                    layer.setAbstract(var.getDescription());
-                    layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
-                    layer.setUnits(var.getUnitsString());
-                    layer.setZpositive(false);
-                    // TODO: check for the presence of a z axis in a neater way
-                    if (var.getRank() == 4)
+                    LayerImpl layer;
+                    if (layers.containsKey(var.getName()))
                     {
-                        layer.setZvalues(zVals);
-                        layer.setZunits(zUnits);
-                    }
-                    
-                    // Create the coordinate axes
-                    if (nc.findGlobalAttributeIgnoreCase("resolution") == null)
-                    {
-                        throw new IOException("NEMO datasets must have a \"resolution\" attribute");
-                    }
-                    String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
-                    if (res.equals("one_degree"))
-                    {
-                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat", AxisType.GeoX));
-                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat", AxisType.GeoY));
+                        // This variable already exists in the map.  We don't need to
+                        // create a new one.  We'll just update the timesteps later.
+                        layer = (LayerImpl)layers.get(var.getName());
                     }
                     else
                     {
-                        layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat", AxisType.GeoX));
-                        layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat", AxisType.GeoY));
+                        layer = new LayerImpl();
+                        layer.setId(var.getName());
+                        layer.setAbstract(var.getDescription());
+                        layer.setTitle(var.getDescription()); // TODO: standard_names are not set: set these in NcML?
+                        layer.setUnits(var.getUnitsString());
+                        layer.setZpositive(false);
+                        // TODO: check for the presence of a z axis in a neater way
+                        if (var.getRank() == 4)
+                        {
+                            layer.setZvalues(zVals);
+                            layer.setZunits(zUnits);
+                        }
+
+                        // Create the coordinate axes
+                        if (nc.findGlobalAttributeIgnoreCase("resolution") == null)
+                        {
+                            throw new IOException("NEMO datasets must have a \"resolution\" attribute");
+                        }
+                        String res = nc.findGlobalAttributeIgnoreCase("resolution").getStringValue();
+                        if (res.equals("one_degree"))
+                        {
+                            layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_ilt_4x4.dat", AxisType.GeoX));
+                            layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA1_4x4.zip/ORCA1_jlt_4x4.dat", AxisType.GeoY));
+                        }
+                        else
+                        {
+                            layer.setXaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_ilt_12x12_new.dat", AxisType.GeoX));
+                            layer.setYaxis(LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/ORCA025_12x12.zip/ORCA025_jlt_12x12_new.dat", AxisType.GeoY));
+                        }
+                        
+                        // Add this new layer to the map
+                        layers.put(layer.getId(), layer);
                     }
                     
                     // Set the time axis
                     for (int i = 0; i < ftVals.length; i++)
                     {
                         Date timestep = dateUnit.makeDate(ftVals[i]);
-                        layer.addTimestepInfo(new TimestepInfo(timestep, filename, i));
+                        layer.addTimestepInfo(new TimestepInfo(timestep, location, i));
                     }
-
-                    layers.add(layer);
                 }
             }
-            return layers;
         }
         finally
         {

@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.log4j.Logger;
-import thredds.catalog.DataType;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
@@ -41,17 +40,10 @@ import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.nc2.dt.GridDataset;
-import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
-import ucar.nc2.dt.TypedDatasetFactory;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
-import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for Rich Signell's example data
@@ -79,7 +71,7 @@ public class USGSDataReader extends DefaultDataReader
      * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer, int tIndex, int zIndex, TargetGrid grid)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception
     {
         NetcdfDataset nc = null;
@@ -143,47 +135,43 @@ public class USGSDataReader extends DefaultDataReader
                 xAxisIndex = 3;
             }
             
-            // Add dummy ranges for x and y
-            ranges.add(new Range(0,0));
-            ranges.add(new Range(0,0));
+            // Read the whole chunk of x-y data (cf. BoundingBoxDataReader)
+            ranges.add(new Range(pixelMap.getMinJIndex(), pixelMap.getMaxJIndex()));
+            ranges.add(new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex()));
+            int iSize = pixelMap.getMaxIIndex() - pixelMap.getMinIIndex() + 1;
             
-            // Iterate through the y indices, the order doesn't matter
-            for (int yIndex : pixelMap.getYIndices())
+            // Read the data from disk
+            Array data = var.read(ranges);
+            Object arrObj = data.copyTo1DJavaArray();
+            
+            // Copy the data to the image array
+            for (int j : pixelMap.getJIndices())
             {
-                // Set the Ranges to read all the data between x_min and x_max
-                // in this row
-                ranges.set(yAxisIndex, new Range(yIndex, yIndex));
-                int xmin = pixelMap.getMinXIndexInRow(yIndex);
-                int xmax = pixelMap.getMaxXIndexInRow(yIndex);
-                Range xRange = new Range(xmin, xmax);
-                ranges.set(xAxisIndex, xRange);
-                
-                // Read the scanline from the disk, from the first to the last x index
-                Array data = var.read(ranges);
-                Object arrObj = data.copyTo1DJavaArray();
-                
-                for (int xIndex : pixelMap.getXIndices(yIndex))
+                int jIndex = j - pixelMap.getMinJIndex();
+                for (int i : pixelMap.getIIndices(j))
                 {
-                    for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
+                    int iIndex = i - pixelMap.getMinIIndex();
+                    int indexInArr = jIndex * iSize + iIndex;
+                    float val;
+                    if (arrObj instanceof float[])
                     {
-                        float val;
-                        if (arrObj instanceof float[])
+                        val = ((float[])arrObj)[indexInArr];
+                    }
+                    else
+                    {
+                        // We assume this is an array of shorts
+                        val = ((short[])arrObj)[indexInArr];
+                    }
+                    // The missing value is calculated based on the compressed,
+                    // not the uncompressed, data, despite the fact that it's
+                    // recorded as a float
+                    if (val != missingValue)
+                    {
+                        float realVal = addOffset + val * scaleFactor;
+                        if (Double.isNaN(validMin) || Double.isNaN(validMax) ||
+                            (realVal >= validMin && realVal <= validMax))
                         {
-                            val = ((float[])arrObj)[xIndex - xmin];
-                        }
-                        else
-                        {
-                            // We assume this is an array of shorts
-                            val = ((short[])arrObj)[xIndex - xmin];
-                        }
-                        // The missing value is calculated based on the compressed,
-                        // not the uncompressed, data, despite the fact that it's
-                        // recorded as a float
-                        if (val != missingValue)
-                        {
-                            float realVal = addOffset + val * scaleFactor;
-                            if (Double.isNaN(validMin) || Double.isNaN(validMax) ||
-                                (realVal >= validMin && realVal <= validMax))
+                            for (int p : pixelMap.getPixelIndices(i, j))
                             {
                                 picData[p] = realVal;
                             }
@@ -210,109 +198,43 @@ public class USGSDataReader extends DefaultDataReader
         }
     }
     
-    /**
-     * Reads and returns the metadata for all the variables in the dataset
-     * at the given location, which is the location of a NetCDF file, NcML
-     * aggregation, or OPeNDAP location (i.e. one element resulting from the
-     * expansion of a glob aggregation).
-     * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link Layer} objects
-     * @throws IOException if there was an error reading from the data source
-     */
-    protected List<Layer> getLayers(String filename) throws IOException
+    protected boolean includeGrid(GridDatatype grid)
     {
-        logger.debug("Reading metadata for dataset {}", filename);
-        List<Layer> layers = new ArrayList<Layer>();
-        NetcdfDataset nc = null;
-        try
-        {
-            // We use openDataset() rather than acquiring from cache
-            // because we need to enhance the dataset
-            nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
-            
-            // Search through all coordinate systems, creating appropriate metadata
-            // for each.  This allows metadata objects to be shared among Layer objects,
-            // saving memory.
-            for (Gridset gridset : gd.getGridsets())
-            {
-                GridCoordSystem coordSys = gridset.getGeoCoordSystem();
-                
-                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat", AxisType.GeoX);
-                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat", AxisType.GeoY);
-                
-                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                
-                // Now compute TimestepInfo objects for this file
-                List<TimestepInfo> timesteps = getTimesteps(filename, coordSys);
-                
-                // Set the bounding box
-                // TODO: should take into account the cell bounds
-                LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
-                LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
-                LatLonPoint upperRight = latLonRect.getUpperRightPoint();
-                double minLon = lowerLeft.getLongitude();
-                double maxLon = upperRight.getLongitude();
-                double minLat = lowerLeft.getLatitude();
-                double maxLat = upperRight.getLatitude();
-                if (latLonRect.crossDateline())
-                {
-                    minLon = -180.0;
-                    maxLon = 180.0;
-                }
-                double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
-            
-                for (GridDatatype grid : gd.getGrids())
-                {
-                    if (!grid.getName().equals("temp") && !grid.getName().equals("shflux") &&
-                        !grid.getName().equals("ssflux") && !grid.getName().equals("latent") &&
-                        !grid.getName().equals("sensible") && !grid.getName().equals("lwrad") &&
-                        !grid.getName().equals("swrad") && !grid.getName().equals("zeta"))
-                    {
-                        // Only display certain fields for the moment
-                        continue;
-                    }
-                    logger.debug("Creating new Layer object for {}", grid.getName());
-                    LayerImpl layer = new LayerImpl();
-                    layer.setId(grid.getName());
-                    layer.setTitle(getStandardName(grid.getVariable()));
-                    layer.setAbstract(grid.getDescription());
-                    layer.setUnits(grid.getUnitsString());
-                    layer.setXaxis(xAxis);
-                    layer.setYaxis(yAxis);
-
-                    if (zAxis != null)
-                    {
-                        layer.setZunits(zAxis.getUnitsString());
-                        layer.setZpositive(false);
-                        layer.setZvalues(zAxis.getCoordValues());
-                    }
-
-                    // Now add the timestep information to the Layer object
-                    for (TimestepInfo timestep : timesteps)
-                    {
-                        layer.addTimestepInfo(timestep);
-                    }
-                    
-                    // Add this to the Hashtable
-                    layers.add(layer);
-                }
-            }
-        }
-        finally
-        {
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
-        }
-        return layers;
+        return grid.getName().equals("temp") || grid.getName().equals("shflux") ||
+               grid.getName().equals("ssflux") || grid.getName().equals("latent") ||
+               grid.getName().equals("sensible") || grid.getName().equals("lwrad") ||
+               grid.getName().equals("swrad") || grid.getName().equals("zeta");
+    }
+    
+    /**
+     * Gets the X axis from the given coordinate system
+     */
+    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat", AxisType.GeoX);
+    }
+    
+    /**
+     * Gets the Y axis from the given coordinate system
+     */
+    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat", AxisType.GeoY);
+    }
+    
+    /**
+     * @return false: the z axis is never positive for this dataset
+     */
+    protected boolean isZPositive(GridCoordSystem coordSys)
+    {
+        return false;
+    }
+    
+    /**
+     * @return the values on the z axis
+     */
+    protected double[] getZValues(CoordinateAxis1D zAxis, boolean zPositive)
+    {
+        return zAxis == null ? null : zAxis.getCoordValues();
     }
 }

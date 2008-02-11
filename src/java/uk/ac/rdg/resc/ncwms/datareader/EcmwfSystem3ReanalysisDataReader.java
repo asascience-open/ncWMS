@@ -30,7 +30,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
@@ -58,15 +58,15 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * Corrects problem with reading bounding box in source data (use of latitude
      * values > +/- 90 degrees causes latitude portion of BBOX to be NaN)
      */
-    public List<Layer> getLayers(String location) throws IOException
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+        throws IOException
     {
-        List<Layer> layers = super.getLayers(location);
-        for (Layer layer : layers)
+        super.findAndUpdateLayers(location, layers);
+        for (Layer layer : layers.values())
         {
             // Must convert to a mutable Layer: we know this is safe
             ((LayerImpl)layer).setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
         }
-        return layers;
     }
     
     /**

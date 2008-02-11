@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -519,7 +519,7 @@ public class LayerImpl implements Layer
      * single component of a vector).  Missing values will be represented by
      * Float.NaN.
      */
-    public float[] read(int tIndex, int zIndex, TargetGrid grid)
+    public float[] read(int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception
     {
         // Get a DataReader object for reading the data

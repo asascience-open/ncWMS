@@ -48,7 +48,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
@@ -192,7 +192,7 @@ public class WmsController extends AbstractController
         models.put("config", this.config);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         // TODO: show a subset of only the CRS codes that we are likely to use?
-        models.put("supportedCrsCodes", TargetGrid.SUPPORTED_CRS_CODES);
+        models.put("supportedCrsCodes", HorizontalGrid.SUPPORTED_CRS_CODES);
         models.put("supportedImageFormats", this.picMakerFactory.getKeys());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
@@ -257,7 +257,7 @@ public class WmsController extends AbstractController
         usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
-        TargetGrid grid = new TargetGrid(dr);
+        HorizontalGrid grid = new HorizontalGrid(dr);
 
         AbstractStyle style = this.getStyle(getMapRequest, layer);
 
@@ -320,7 +320,7 @@ public class WmsController extends AbstractController
      * elements if the variable is a vector
      */
     static List<float[]> readData(Layer layer, int tIndex, int zIndex,
-        TargetGrid grid) throws Exception
+        HorizontalGrid grid) throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
         if (layer instanceof VectorLayer)
@@ -388,7 +388,7 @@ public class WmsController extends AbstractController
         }
         
         // Get the grid onto which the data is being projected
-        TargetGrid grid = new TargetGrid(dataRequest);
+        HorizontalGrid grid = new HorizontalGrid(dataRequest);
         // Get the x and y values of the point of interest
         double x = grid.getXAxisValues()[dataRequest.getPixelColumn()];
         double y = grid.getYAxisValues()[dataRequest.getPixelRow()];
@@ -411,7 +411,7 @@ public class WmsController extends AbstractController
             
             // Create a trivial Grid for reading a single point of data.
             // We use the same coordinate reference system as the original request
-            TargetGrid singlePointGrid = new TargetGrid(dataRequest.getCrsCode(),
+            HorizontalGrid singlePointGrid = new HorizontalGrid(dataRequest.getCrsCode(),
                 1, 1, new double[]{x, y, x, y});
             
             float val;

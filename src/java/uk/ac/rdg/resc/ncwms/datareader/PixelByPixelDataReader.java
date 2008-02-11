@@ -60,7 +60,7 @@ public class PixelByPixelDataReader extends DefaultDataReader
         for (int j : pixelMap.getJIndices())
         {
             Range yRange = new Range(j, j);
-            for (int i : pixelMap.getIIndices(i))
+            for (int i : pixelMap.getIIndices(j))
             {
                 Range xRange = new Range(i, i);
                 GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);

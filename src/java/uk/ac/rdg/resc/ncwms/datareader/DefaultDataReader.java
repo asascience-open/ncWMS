@@ -33,12 +33,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import thredds.catalog.DataType;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
-import ucar.nc2.NetcdfFile;
-import ucar.nc2.Variable;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasetCache;
@@ -51,7 +50,6 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -87,7 +85,7 @@ public class DefaultDataReader extends DataReader
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer, int tIndex, int zIndex,
-        TargetGrid grid) throws Exception
+        HorizontalGrid grid) throws Exception
     {
         NetcdfDataset nc = null;
         try
@@ -133,7 +131,7 @@ public class DefaultDataReader extends DataReader
             long after = System.currentTimeMillis();
             // Write to the benchmark logger (if enabled in log4j.properties)
             // Headings are written in NcwmsContext.init()
-            if (pixelMap.getNumUniqueXYPairs() > 1)
+            if (pixelMap.getNumUniqueIJPairs() > 1)
             {
                 // Don't log single-pixel (GetFeatureInfo) requests
                 benchmarkLogger.info
@@ -142,7 +140,7 @@ public class DefaultDataReader extends DataReader
                     layer.getId() + "," +
                     this.getClass().getSimpleName() + "," +
                     grid.getSize() + "," +
-                    pixelMap.getNumUniqueXYPairs() + "," +
+                    pixelMap.getNumUniqueIJPairs() + "," +
                     pixelMap.getSumRowLengths() + "," +
                     pixelMap.getBoundingBoxSize() + "," +
                     (after - before)
@@ -182,13 +180,13 @@ public class DefaultDataReader extends DataReader
         DataChunk dataChunk = null;
         // Cycle through the y indices, extracting a scanline of
         // data each time from minX to maxX
-        for (int yIndex : pixelMap.getYIndices())
+        for (int j : pixelMap.getJIndices())
         {
-            Range yRange = new Range(yIndex, yIndex);
+            Range yRange = new Range(j, j);
             // Read a row of data from the source
-            int xmin = pixelMap.getMinXIndexInRow(yIndex);
-            int xmax = pixelMap.getMaxXIndexInRow(yIndex);
-            Range xRange = new Range(xmin, xmax);
+            int imin = pixelMap.getMinIIndexInRow(j);
+            int imax = pixelMap.getMaxIIndexInRow(j);
+            Range xRange = new Range(imin, imax);
             // Read a chunk of data - values will not be unpacked or
             // checked for missing values yet
             GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
@@ -196,16 +194,16 @@ public class DefaultDataReader extends DataReader
             dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
             
             // Now copy the scanline's data to the picture array
-            for (int xIndex : pixelMap.getXIndices(yIndex))
+            for (int i : pixelMap.getIIndices(j))
             {
-                float val = dataChunk.getValue(xIndex - xmin);
+                float val = dataChunk.getValue(i - imin);
                 if (picData.length == 100) logger.debug("val = {}", val);
                 // We unpack and check for missing values just for
                 // the points we need to display.
                 val = (float)enhanced.convertScaleOffsetMissing(val);
                 // Now we set the value of all the image pixels associated with
                 // this data point.
-                for (int p : pixelMap.getPixelIndices(xIndex, yIndex))
+                for (int p : pixelMap.getPixelIndices(i, j))
                 {
                     picData[p] = val;
                 }
@@ -226,25 +224,24 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
-     * Reads and returns the metadata for all the variables in the dataset
+     * Reads the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link Layer} objects
+     * @param location Full path to the dataset
+     * @param layers Map of Layer Ids to Layer objects to populate or update
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<Layer> getLayers(String filename) throws IOException
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers) throws IOException
     {
-        logger.debug("Getting layers in file {}", filename);
-        List<Layer> layers = new ArrayList<Layer>();
+        logger.debug("Finding layers in {}", location);
         
         NetcdfDataset nc = null;
         try
         {
             // We use openDataset() rather than acquiring from cache
             // because we need to enhance the dataset
-            nc = NetcdfDataset.openDataset(filename, true, null);
+            nc = NetcdfDataset.openDataset(location, true, null);
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
             
             // Search through all coordinate systems, creating appropriate metadata
@@ -254,80 +251,95 @@ public class DefaultDataReader extends DataReader
             {
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
-                CoordAxis xAxis = CoordAxis.create(coordSys.getXHorizAxis());
-                CoordAxis yAxis = CoordAxis.create(coordSys.getYHorizAxis());
-                HorizontalProjection proj = HorizontalProjection.create(coordSys.getProjection());
+                // Compute TimestepInfo objects for this file
+                List<TimestepInfo> timesteps = getTimesteps(location, coordSys);
                 
-                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                double[] zValues = null;
-                if (zAxis != null)
+                // Look for new variables in this coordinate system.
+                List<GridDatatype> grids = gridset.getGrids();
+                List<GridDatatype> newGrids = new ArrayList<GridDatatype>();
+                for (GridDatatype grid : grids)
                 {
-                    zValues = zAxis.getCoordValues();
-                    if (!coordSys.isZPositive())
+                    if (!layers.containsKey(grid.getName()) &&
+                        this.includeGrid(grid))
                     {
-                        double[] zVals = new double[zValues.length];
-                        for (int i = 0; i < zVals.length; i++)
+                        // We haven't seen this variable before so we must create
+                        // a Layer object later
+                        newGrids.add(grid);
+                    }
+                }
+                
+                // We only create all the coordsys-related objects if we have
+                // new Layers to create
+                if (newGrids.size() > 0)
+                {
+                    CoordAxis xAxis = this.getXAxis(coordSys);
+                    CoordAxis yAxis = this.getYAxis(coordSys);
+                    HorizontalProjection proj = HorizontalProjection.create(coordSys.getProjection());
+                    
+                    boolean zPositive = this.isZPositive(coordSys);
+                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                    double[] zValues = this.getZValues(zAxis, zPositive);
+
+                    // Set the bounding box
+                    // TODO: should take into account the cell bounds
+                    LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
+                    LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
+                    LatLonPoint upperRight = latLonRect.getUpperRightPoint();
+                    double minLon = lowerLeft.getLongitude();
+                    double maxLon = upperRight.getLongitude();
+                    double minLat = lowerLeft.getLatitude();
+                    double maxLat = upperRight.getLatitude();
+                    // Correct the bounding box in case of mistakes or in case it 
+                    // crosses the date line
+                    if (latLonRect.crossDateline() || minLon >= maxLon)
+                    {
+                        minLon = -180.0;
+                        maxLon = 180.0;
+                    }
+                    if (minLat >= maxLat)
+                    {
+                        minLat = -90.0;
+                        maxLat = 90.0;
+                    }
+                    double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
+
+                    // Now add every variable that has this coordinate system
+                    for (GridDatatype grid : newGrids)
+                    {
+                        logger.debug("Creating new Layer object for {}", grid.getName());
+                        LayerImpl layer = new LayerImpl();
+                        layer.setId(grid.getName());
+                        layer.setTitle(getStandardName(grid.getVariable()));
+                        layer.setAbstract(grid.getDescription());
+                        layer.setUnits(grid.getUnitsString());
+                        layer.setXaxis(xAxis);
+                        layer.setYaxis(yAxis);
+                        layer.setHorizontalProjection(proj);
+                        layer.setBbox(bbox);
+
+                        if (zAxis != null)
                         {
-                            zVals[i] = 0.0 - zValues[i];
+                            layer.setZunits(zAxis.getUnitsString());
+                            layer.setZpositive(zPositive);
+                            layer.setZvalues(zValues);
                         }
-                        zValues = zVals;
+
+                        // Add this layer to the Map
+                        layers.put(layer.getId(), layer);
                     }
                 }
-                
-                // Now compute TimestepInfo objects for this file
-                List<TimestepInfo> timesteps = getTimesteps(filename, coordSys);
-                
-                // Set the bounding box
-                // TODO: should take into account the cell bounds
-                LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
-                LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
-                LatLonPoint upperRight = latLonRect.getUpperRightPoint();
-                double minLon = lowerLeft.getLongitude();
-                double maxLon = upperRight.getLongitude();
-                double minLat = lowerLeft.getLatitude();
-                double maxLat = upperRight.getLatitude();
-                // Correct the bounding box in case of mistakes or in case it 
-                // crosses the date line
-                if (latLonRect.crossDateline() || minLon >= maxLon)
+                // Now we add the new timestep information for all grids
+                // in this Gridset
+                for (GridDatatype grid : grids)
                 {
-                    minLon = -180.0;
-                    maxLon = 180.0;
-                }
-                if (minLat >= maxLat)
-                {
-                    minLat = -90.0;
-                    maxLat = 90.0;
-                }
-                double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
-                
-                // Now add every variable that has this coordinate system
-                for (GridDatatype grid : gridset.getGrids())
-                {
-                    logger.debug("Creating new Layer object for {}", grid.getName());
-                    LayerImpl layer = new LayerImpl();
-                    layer.setId(grid.getName());
-                    layer.setTitle(getStandardName(grid.getVariable()));
-                    layer.setAbstract(grid.getDescription());
-                    layer.setUnits(grid.getUnitsString());
-                    layer.setXaxis(xAxis);
-                    layer.setYaxis(yAxis);
-                    layer.setHorizontalProjection(proj);
-                    layer.setBbox(bbox);
-                    
-                    if (zAxis != null)
+                    if (this.includeGrid(grid))
                     {
-                        layer.setZunits(zAxis.getUnitsString());
-                        layer.setZpositive(coordSys.isZPositive());
-                        layer.setZvalues(zValues);
+                        LayerImpl layer = (LayerImpl)layers.get(grid.getName());
+                        for (TimestepInfo timestep : timesteps)
+                        {
+                            layer.addTimestepInfo(timestep);
+                        }
                     }
-                    
-                    for (TimestepInfo timestep : timesteps)
-                    {
-                        layer.addTimestepInfo(timestep);
-                    }
-                    
-                    // Add this layer to the List
-                    layers.add(layer);
                 }
             }
         }
@@ -348,8 +360,62 @@ public class DefaultDataReader extends DataReader
                 }
             }
         }
-        logger.debug("Found {} layers in {}", layers.size(), filename);
-        return layers;
+    }
+    
+    /**
+     * @return true if the given Grid is to be included
+     * This default implementation always returns true.
+     */
+    protected boolean includeGrid(GridDatatype grid)
+    {
+        return true;
+    }
+    
+    /**
+     * Gets the X axis from the given coordinate system
+     */
+    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return CoordAxis.create(coordSys.getXHorizAxis());
+    }
+    
+    /**
+     * Gets the Y axis from the given coordinate system
+     */
+    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return CoordAxis.create(coordSys.getYHorizAxis());
+    }
+    
+    /**
+     * @return the values on the z axis, with sign reversed if zPositive == false.
+     * Returns null if zAxis is null.
+     */
+    protected double[] getZValues(CoordinateAxis1D zAxis, boolean zPositive)
+    {
+        double[] zValues = null;
+        if (zAxis != null)
+        {
+            zValues = zAxis.getCoordValues();
+            if (!zPositive)
+            {
+                double[] zVals = new double[zValues.length];
+                for (int i = 0; i < zVals.length; i++)
+                {
+                    zVals[i] = 0.0 - zValues[i];
+                }
+                zValues = zVals;
+            }
+        }
+        return zValues;
+    }
+    
+    /**
+     * @return true if the zAxis is positive
+     */
+    protected boolean isZPositive(GridCoordSystem coordSys)
+    {
+        return coordSys.isZPositive();
     }
     
     /**

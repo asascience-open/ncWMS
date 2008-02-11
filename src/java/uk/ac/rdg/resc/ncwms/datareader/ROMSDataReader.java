@@ -29,25 +29,12 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
-import thredds.catalog.DataType;
 import ucar.nc2.dataset.AxisType;
-import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.nc2.dt.GridDataset;
-import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
-import ucar.nc2.dt.TypedDatasetFactory;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
-import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for ROMS data from Damian Smyth (damian.smyth@marine.ie)
@@ -61,110 +48,26 @@ public class ROMSDataReader extends USGSDataReader
 {
     private static final Logger logger = Logger.getLogger(ROMSDataReader.class);
     
-    /**
-     * Reads and returns the metadata for all the variables in the dataset
-     * at the given location, which is the location of a NetCDF file, NcML
-     * aggregation, or OPeNDAP location (i.e. one element resulting from the
-     * expansion of a glob aggregation).
-     * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link Layer} objects
-     * @throws IOException if there was an error reading from the data source
-     */
-    protected List<Layer> getLayers(String filename) throws IOException
+    protected boolean includeGrid(GridDatatype grid)
     {
-        logger.debug("Reading metadata for dataset {}", filename);
-        List<Layer> layers = new ArrayList<Layer>();
-        
-        NetcdfDataset nc = null;
-        try
-        {
-            // We use openDataset() rather than acquiring from cache
-            // because we need to enhance the dataset
-            nc = NetcdfDataset.openDataset(filename, true, null);
-            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
-            
-            // Search through all coordinate systems, creating appropriate metadata
-            // for each.  This allows metadata objects to be shared among Layer objects,
-            // saving memory.
-            for (Gridset gridset : gd.getGridsets())
-            {
-                GridCoordSystem coordSys = gridset.getGeoCoordSystem();
-                
-                CoordAxis xAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat", AxisType.GeoX);
-                CoordAxis yAxis = LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat", AxisType.GeoY);
-                
-                CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                
-                // Now compute TimestepInfo objects for this file
-                List<TimestepInfo> timesteps = getTimesteps(filename, coordSys);
-                
-                // Set the bounding box
-                // TODO: should take into account the cell bounds
-                LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
-                LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
-                LatLonPoint upperRight = latLonRect.getUpperRightPoint();
-                double minLon = lowerLeft.getLongitude();
-                double maxLon = upperRight.getLongitude();
-                double minLat = lowerLeft.getLatitude();
-                double maxLat = upperRight.getLatitude();
-                if (latLonRect.crossDateline())
-                {
-                    minLon = -180.0;
-                    maxLon = 180.0;
-                }
-                double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
-            
-                for (GridDatatype grid : gd.getGrids())
-                {
-                    if (!grid.getName().equals("temp") && !grid.getName().equals("salt")
-                        && !grid.getName().equals("latent") && !grid.getName().equals("sensible")
-                        && !grid.getName().equals("lwrad") && !grid.getName().equals("evaporation"))
-                    {
-                        // Only display certain fields for the moment
-                        continue;
-                    }
-                    logger.debug("Creating new Layer object for {}", grid.getName());
-                    LayerImpl layer = new LayerImpl();
-                    layer.setId(grid.getName());
-                    layer.setTitle(getStandardName(grid.getVariable()));
-                    layer.setAbstract(grid.getDescription());
-                    layer.setUnits(grid.getUnitsString());
-                    layer.setXaxis(xAxis);
-                    layer.setYaxis(yAxis);
-
-                    if (zAxis != null)
-                    {
-                        layer.setZunits(zAxis.getUnitsString());
-                        layer.setZpositive(false);
-                        layer.setZvalues(zAxis.getCoordValues());
-                    }
-
-                    // Now add the timestep information to the Layer object
-                    for (TimestepInfo timestep : timesteps)
-                    {
-                        layer.addTimestepInfo(timestep);
-                    }
-                    
-                    // Add this to the Hashtable
-                    layers.add(layer);
-                }
-            }
-        }
-        finally
-        {
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
-        }
-        return layers;
+        return grid.getName().equals("temp") || grid.getName().equals("salt") ||
+               grid.getName().equals("latent") || grid.getName().equals("sensible") ||
+               grid.getName().equals("lwrad") || grid.getName().equals("evaporation");
     }
     
+    /**
+     * Gets the X axis from the given coordinate system
+     */
+    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_i_1231_721.dat", AxisType.GeoX);
+    }
+    
+    /**
+     * Gets the Y axis from the given coordinate system
+     */
+    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
+    {
+        return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_ROMS_1231_721.zip/LUT_j_1231_721.dat", AxisType.GeoY);
+    }
 }

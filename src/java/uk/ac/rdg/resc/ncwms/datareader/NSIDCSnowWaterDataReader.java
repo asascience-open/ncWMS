@@ -36,13 +36,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -90,15 +88,14 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param filepath Full path to the individual file
+     * @param location Full path to the individual file
      * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
-    protected List<Layer> getLayers(String filepath) throws IOException
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+        throws IOException
     {
-        List<Layer> layers = new ArrayList<Layer>();
         LayerImpl layer = new LayerImpl();
-        
         layer.setId("swe");
         layer.setTitle("snow_water_equivalent");
         layer.setUnits("mm");
@@ -106,19 +103,18 @@ public class NSIDCSnowWaterDataReader extends DataReader
         
         try
         {
-            String filename = new File(filepath).getName();
+            String filename = new File(location).getName();
             Date timestep = DATE_FORMAT.parse(filename);
-            layer.addTimestepInfo(new TimestepInfo(timestep, filepath, 0));
+            layer.addTimestepInfo(new TimestepInfo(timestep, location, 0));
         }
         catch(ParseException pe)
         {
-            logger.error("Error parsing filepath " + filepath, pe);
+            logger.error("Error parsing filepath " + location, pe);
             // TODO: not really an IOException
-            throw new IOException("Error parsing filepath " + filepath);
+            throw new IOException("Error parsing filepath " + location);
         }
         
-        layers.add(layer);
-        return layers;
+        layers.put(layer.getId(), layer);
     }
     
     /**
@@ -145,7 +141,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer, int tIndex, int zIndex, TargetGrid grid)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception
     {
         // Find the file containing the data

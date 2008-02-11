@@ -38,10 +38,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.datareader.TargetGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
-import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * Abstract superclass for classes that read data and metadata from datasets.
@@ -113,7 +110,7 @@ public abstract class DataReader
      * @throws Exception if an error occurs
      */
     public abstract float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, TargetGrid grid)
+        int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception;
     
     /**
@@ -162,44 +159,27 @@ public abstract class DataReader
             }
         }
         // Now extract the data for each individual file
-        Map<String, Layer> aggLayers = new HashMap<String, Layer>();
+        Map<String, Layer> layers = new HashMap<String, Layer>();
         for (String filename : filenames)
         {
-            // Read the metadata from the file and add them to the aggregation
-            for (Layer newLayer : this.getLayers(filename))
-            {
-                // Look to see if this layer is already present in the aggregation
-                Layer existingLayer = aggLayers.get(newLayer.getId());
-                if (existingLayer == null)
-                {
-                    // We haven't seen this variable before: just add it to the aggregation
-                    aggLayers.put(newLayer.getId(), newLayer);
-                }
-                else
-                {
-                    // We've already seen this variable: just update the timesteps
-                    // TODO: check that the rest of the metadata matches
-                    for (TimestepInfo tInfo : newLayer.getTimesteps())
-                    {
-                        // Must convert to a mutable layer before adding info
-                        ((LayerImpl)existingLayer).addTimestepInfo(tInfo);
-                    }
-                }
-            }
+            // Read the metadata from the file and update the Map.
+            // TODO: only do this if the file's last modified date has changed?
+            // This would require us to keep the previous metadata...
+            this.findAndUpdateLayers(filename, layers);
         }
-        return aggLayers;
+        return layers;
     }
     
     /**
-     * Reads and returns the metadata for all the layers in the dataset
+     * Reads the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param filename Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link Layer} objects
+     * @param location Full path to the dataset
+     * @param layers Map of Layer Ids to Layer objects to populate or update
      * @throws IOException if there was an error reading from the data source
      */
-    protected abstract List<Layer> getLayers(String filename)
+    protected abstract void findAndUpdateLayers(String location, Map<String, Layer> layers)
         throws IOException;
     
     public static boolean isOpendapLocation(String location)

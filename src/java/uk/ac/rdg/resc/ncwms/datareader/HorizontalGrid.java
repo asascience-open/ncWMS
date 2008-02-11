@@ -53,9 +53,9 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
  * $Date$
  * $Log$
  */
-public class TargetGrid
+public class HorizontalGrid
 {
-    private static final Logger logger = Logger.getLogger(TargetGrid.class);
+    private static final Logger logger = Logger.getLogger(HorizontalGrid.class);
     public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
     public static final List<String> SUPPORTED_CRS_CODES;
     
@@ -101,18 +101,20 @@ public class TargetGrid
     }
     
     /**
-     * Creates a TargetGrid from the parameters in the given GetMapDataRequest
+     * Creates a HorizontalGrid from the parameters in the given GetMapDataRequest
+     * 
      * @throws InvalidCrsException if the given CRS code is not recognized
      * @throws Exception if there was an internal error.
      * @todo: check validity of the bounding box?
      */
-    public TargetGrid(GetMapDataRequest dr) throws InvalidCrsException, Exception
+    public HorizontalGrid(GetMapDataRequest dr) throws InvalidCrsException, Exception
     {
         this(dr.getCrsCode(), dr.getWidth(), dr.getHeight(), dr.getBbox());
     }
     
     /**
-     * Creates a TargetGrid.
+     * Creates a HorizontalGrid.
+     * 
      * @param crsCode Code for the CRS of the grid
      * @param width Width of the grid in pixels
      * @param height Height of the grid in pixels
@@ -121,7 +123,7 @@ public class TargetGrid
      * @throws Exception if there was an internal error.
      * @todo: check validity of the bounding box?
      */
-    public TargetGrid(String crsCode, int width, int height, double[] bbox)
+    public HorizontalGrid(String crsCode, int width, int height, double[] bbox)
         throws InvalidCrsException, Exception
     {
         try
@@ -130,7 +132,7 @@ public class TargetGrid
             // The "true" means "force longitude-first axis order"
             this.crs = CRS.decode(crsCode, true);
             logger.debug("Finding transform for CRS {} to Plate Carree", crsCode);
-            // Get a converter to convert the target grid's CRS to lat-lon
+            // Get a converter to convert the grid's CRS to lat-lon
             this.transformToLatLon = CRS.findMathTransform(
                 this.crs, PLATE_CARREE_CRS);
             logger.debug("Found transform to Plate Carree");
@@ -165,7 +167,7 @@ public class TargetGrid
             // The y axis is flipped
             this.yAxisValues[i] = this.bbox[1] + (this.height - i - 0.5) * dy;
         }
-        logger.debug("Created TargetGrid object for CRS {}", crsCode);
+        logger.debug("Created HorizontalGrid object for CRS {}", crsCode);
     }
 
     public int getWidth()

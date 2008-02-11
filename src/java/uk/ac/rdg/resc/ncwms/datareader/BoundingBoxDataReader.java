@@ -61,10 +61,10 @@ public class BoundingBoxDataReader extends DefaultDataReader
         PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
     {
         // Read the whole chunk of x-y data
-        Range xRange = new Range(pixelMap.getMinXIndex(), pixelMap.getMaxXIndex());
-        Range yRange = new Range(pixelMap.getMinYIndex(), pixelMap.getMaxYIndex());
+        Range iRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
+        Range jRange = new Range(pixelMap.getMinJIndex(), pixelMap.getMaxJIndex());
         long start = System.currentTimeMillis();
-        GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+        GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, jRange, iRange);
         // Read all of the x-y data in this subset
         Array arr = subset.readDataSlice(0, 0, -1, -1).reduce();
         logger.debug("Rank of arr = {}", arr.getRank());
@@ -77,18 +77,18 @@ public class BoundingBoxDataReader extends DefaultDataReader
         logger.debug("Read data using bounding box algorithm in {} milliseconds", (readData - start));
 
         // Now create the picture from the data array
-        for (int yIndex : pixelMap.getYIndices())
+        for (int j : pixelMap.getJIndices())
         {
-            for (int xIndex : pixelMap.getXIndices(yIndex))
+            for (int i : pixelMap.getIIndices(j))
             {
                 try
                 {
-                    float val = dataChunk.getValue(yIndex - pixelMap.getMinYIndex(),
-                        xIndex - pixelMap.getMinXIndex());
+                    float val = dataChunk.getValue(j - pixelMap.getMinJIndex(),
+                        i - pixelMap.getMinIIndex());
                     // We unpack and check for missing values just for
                     // the points we need to display.
                     val = (float)enhanced.convertScaleOffsetMissing(val);
-                    for (int pixelIndex : pixelMap.getPixelIndices(xIndex, yIndex))
+                    for (int pixelIndex : pixelMap.getPixelIndices(i, j))
                     {
                         picData[pixelIndex] = val;
                     }
@@ -96,7 +96,7 @@ public class BoundingBoxDataReader extends DefaultDataReader
                 catch(ArrayIndexOutOfBoundsException aioobe)
                 {
                     logger.error("Array index ({},{}) out of bounds",
-                        yIndex - pixelMap.getMinYIndex(), xIndex - pixelMap.getMinXIndex());
+                        j - pixelMap.getMinJIndex(), i - pixelMap.getMinIIndex());
                     throw aioobe;
                 }
             }

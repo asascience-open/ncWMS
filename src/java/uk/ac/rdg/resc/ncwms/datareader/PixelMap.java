@@ -113,10 +113,11 @@ public class PixelMap
     
     /**
      * Generates a PixelMap for the given Layer.  Data read from the Layer will
-     * be projected onto the given TargetGrid
+     * be projected onto the given HorizontalGrid
+     * 
      * @throws Exception if the necessary transformations could not be performed
      */
-    public PixelMap(Layer layer, TargetGrid grid) throws Exception
+    public PixelMap(Layer layer, HorizontalGrid grid) throws Exception
     {
         long start = System.currentTimeMillis();
         
@@ -157,7 +158,7 @@ public class PixelMap
                 }
                 else
                 {
-                    // We still need to increment the pixel index array
+                    // We still need to increment the pixel index
                     pixelIndex += xIndices.length;
                 }
             }
