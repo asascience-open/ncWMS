@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.cache;
 /**
  * Key that is used to identify a particular image tile in the cache.  Simple
  * Java bean.
+ * @deprecated Has not kept up with other developments, so is not currently used.
  *
  * @author Jon Blower
  * $Revision$

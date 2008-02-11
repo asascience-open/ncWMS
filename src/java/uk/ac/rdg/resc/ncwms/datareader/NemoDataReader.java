@@ -211,7 +211,6 @@ public class NemoDataReader extends DefaultDataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param location Full path to the dataset (N.B. not an aggregation)
-     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
     protected void findAndUpdateLayers(String location, Map<String, Layer> layers)

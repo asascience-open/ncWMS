@@ -52,7 +52,6 @@ public abstract class OneDCoordAxis extends CoordAxis
      * Static factory convenience method for creating a 1-D coordinate axis
      * from classes that are returned from the Java NetCDF libraries.
      * @param axis1D A {@link CoordinateAxis1D}
-     * @param proj The projection used by this coordinate system
      * @throws IllegalArgumentException if the given axis is not of type latitude,
      * longitude, GeoX or GeoY.
      */

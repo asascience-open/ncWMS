@@ -22,7 +22,7 @@
 
 package uk.ac.rdg.resc.ncwms.graphics;
 
-public class NeuQuant {
+class NeuQuant {
 
 	protected static final int netsize = 256; /* number of colours used */
 

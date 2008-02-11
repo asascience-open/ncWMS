@@ -104,7 +104,7 @@ public class WmsUtils
     /**
      * Converts an ISO8601-formatted time into a number of milliseconds since the
      * epoch
-     * @todo: shouldn't this throw a parse error?
+     * @todo shouldn't this throw a parse error?
      */
     public static long iso8601ToMilliseconds(String isoDateTime)
     {

@@ -89,7 +89,6 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
      * @param location Full path to the individual file
-     * @return List of {@link Layer} objects
      * @throws IOException if there was an error reading from the data source
      */
     protected void findAndUpdateLayers(String location, Map<String, Layer> layers)

@@ -26,28 +26,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.usagelog;
-
 /**
- * Interface describing a class that logs usage of the ncWMS server.  This
- * will log requests for images and metadata.  Note that all entries use the
- * same UsageLogEntry class.
- * @todo Do we really need this interface?  Can't we just use the H2 database
- * for everything?
- *
- * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * This package contains the Controllers of ncWMS, which are the classes that
+ * handle user requests (these are the main entry points to the ncWMS application
+ * from the point of view of the end user).  The {@link uk.ac.rdg.resc.ncwms.controller.WmsController}
+ * handles the requests for WMS operations (GetCapabilities, GetMap, GetFeatureInfo).
+ * The {@link uk.ac.rdg.resc.ncwms.controller.AdminController} handles the administrative
+ * web application.  The {@link uk.ac.rdg.resc.ncwms.controller.MetadataController}
+ * handles requests for metadata from the Godiva2 website (for which the Capabilities
+ * document is not suitable).  The {@link uk.ac.rdg.resc.ncwms.controller.FrontPageController}
+ * handles requests for the ncWMS "Front Page", which is a simple diagnostic page that
+ * provides links to the Capabilities document, the Godiva2 application, the admin
+ * application and sample GetMap and GetFeatureInfo requests.
  */
-public interface UsageLogger
-{
-    /**
-     * Make an entry in the usage log.  This method does not throw an
-     * Exception: all problems with the usage logger must be recorded
-     * in the log4j text log.  Implementing methods should make sure they
-     * set the time to process the request, by taking System.currentTimeMs()
-     * and subtracting logEntry.getRequestTime().
-     */
-    public void logUsage(UsageLogEntry logEntry);
-}
+package uk.ac.rdg.resc.ncwms.controller;

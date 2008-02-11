@@ -26,28 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.usagelog;
-
 /**
- * Interface describing a class that logs usage of the ncWMS server.  This
- * will log requests for images and metadata.  Note that all entries use the
- * same UsageLogEntry class.
- * @todo Do we really need this interface?  Can't we just use the H2 database
- * for everything?
- *
- * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * <b><i>(Deprecated)</i></b> Contains code to read configuration from a THREDDS catalog.
+ * The code as it stands is not ready for use and will be improved and
+ * superseded in the <a href="http://www.resc.rdg.ac.uk/twiki/bin/view/Resc/SHaVER">SHAVER</a>
+ * project.
  */
-public interface UsageLogger
-{
-    /**
-     * Make an entry in the usage log.  This method does not throw an
-     * Exception: all problems with the usage logger must be recorded
-     * in the log4j text log.  Implementing methods should make sure they
-     * set the time to process the request, by taking System.currentTimeMs()
-     * and subtracting logEntry.getRequestTime().
-     */
-    public void logUsage(UsageLogEntry logEntry);
-}
+package uk.ac.rdg.resc.ncwms.config.thredds;

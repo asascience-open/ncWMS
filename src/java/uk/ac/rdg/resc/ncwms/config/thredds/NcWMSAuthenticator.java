@@ -15,7 +15,8 @@ import java.net.PasswordAuthentication;
 import java.net.Authenticator;
 
 /**
-* Proxy Authentication.  
+* Proxy Authentication.
+ * @deprecated Not used in the current version of ncWMS
 **/
 public class NcWMSAuthenticator extends Authenticator 
 {

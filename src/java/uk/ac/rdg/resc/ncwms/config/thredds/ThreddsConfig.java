@@ -26,6 +26,7 @@ import uk.ac.rdg.resc.ncwms.config.Dataset;
 
 /**
  * Reads in Datasets from a THREDDS catalog
+ * @deprecated Not used in the current version of ncWMS
  * @author pmak
  */
 public class ThreddsConfig 

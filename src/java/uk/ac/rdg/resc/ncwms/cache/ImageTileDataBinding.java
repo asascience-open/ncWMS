@@ -36,8 +36,9 @@ import java.util.Date;
 /**
  * TupleBinding to convert an array of floats to a form that can be used as an
  * entry in the Berkeley DB.
+ * @deprecated Has not kept up with other developments, so is not currently used.
  *
- * @todo: lastModified and lastAccessed values?
+ * @todo lastModified and lastAccessed values?
  *
  * @author Jon Blower
  * $Revision$

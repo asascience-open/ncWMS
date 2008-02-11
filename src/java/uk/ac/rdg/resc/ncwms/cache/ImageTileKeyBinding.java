@@ -35,6 +35,7 @@ import com.sleepycat.bind.tuple.TupleOutput;
 /**
  * TupleBinding to convert an ImageTileKey to a form that can be used as a key
  * in the Berkeley DB.
+ * @deprecated Has not kept up with other developments, so is not currently used.
  *
  * @author Jon Blower
  * $Revision$

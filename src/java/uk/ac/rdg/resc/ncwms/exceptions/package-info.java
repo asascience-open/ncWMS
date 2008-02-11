@@ -26,28 +26,21 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.usagelog;
-
 /**
- * Interface describing a class that logs usage of the ncWMS server.  This
- * will log requests for images and metadata.  Note that all entries use the
- * same UsageLogEntry class.
- * @todo Do we really need this interface?  Can't we just use the H2 database
- * for everything?
+ * <p>Exceptions that can be thrown by ncWMS.  {@link uk.ac.rdg.resc.ncwms.exceptions.WmsException}s
+ * and subclasses will be caught by the Spring framework and rendered using
+ * the XML template <tt>WEB-INF/jsp/displayWmsException.jsp</tt>, which returns
+ * the exception to the client in XML format, according to the WMS specification.</p>
+ * 
+ * <p>Similarly, 
+ * {@link uk.ac.rdg.resc.ncwms.exceptions.MetadataException}s are rendered
+ * in JSON format for the Godiva2 website by <tt>WEB-INF/jsp/displayMetadataException.jsp</tt>.</p>
  *
- * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * <p>Other exceptions represent internal bugs and are rendered using
+ * <tt>WEB-INF/jsp/displayDefaultException.jsp</tt>.</p>
+ * 
+ * <p>The mapping of exception classes to JSP templates is done in the Spring
+ * configuration file, <tt>WEB-INF/WMS-servlet.xml</tt> (look for the
+ * <tt>exceptionResolver</tt> bean).</p>
  */
-public interface UsageLogger
-{
-    /**
-     * Make an entry in the usage log.  This method does not throw an
-     * Exception: all problems with the usage logger must be recorded
-     * in the log4j text log.  Implementing methods should make sure they
-     * set the time to process the request, by taking System.currentTimeMs()
-     * and subtracting logEntry.getRequestTime().
-     */
-    public void logUsage(UsageLogEntry logEntry);
-}
+package uk.ac.rdg.resc.ncwms.exceptions;

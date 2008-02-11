@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
  * Uses the Berkeley DB Java software to cache "image" tiles: in fact, this caches
  * the extracted data arrays that are used to create image tiles so that we can
  * change the styling without re-extracting the data.
+ * @deprecated Has not kept up with other developments, so is not currently used.
  *
  * @todo Create a Comparator to sort in order of last accessed?
  *

@@ -105,7 +105,7 @@ public class HorizontalGrid
      * 
      * @throws InvalidCrsException if the given CRS code is not recognized
      * @throws Exception if there was an internal error.
-     * @todo: check validity of the bounding box?
+     * @todo check validity of the bounding box?
      */
     public HorizontalGrid(GetMapDataRequest dr) throws InvalidCrsException, Exception
     {
@@ -121,7 +121,7 @@ public class HorizontalGrid
      * @param bbox Bounding box of the grid in the units of the given CRS
      * @throws InvalidCrsException if the given CRS code is not recognized
      * @throws Exception if there was an internal error.
-     * @todo: check validity of the bounding box?
+     * @todo check validity of the bounding box?
      */
     public HorizontalGrid(String crsCode, int width, int height, double[] bbox)
         throws InvalidCrsException, Exception

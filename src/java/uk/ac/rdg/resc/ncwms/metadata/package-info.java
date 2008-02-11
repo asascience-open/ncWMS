@@ -26,28 +26,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.usagelog;
-
 /**
- * Interface describing a class that logs usage of the ncWMS server.  This
- * will log requests for images and metadata.  Note that all entries use the
- * same UsageLogEntry class.
- * @todo Do we really need this interface?  Can't we just use the H2 database
- * for everything?
- *
- * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * Contains classes that represent metadata and handle the loading and
+ * storing of metadata.  The key classes are:
+ * <ul>
+ * <li>{@link uk.ac.rdg.resc.ncwms.metadata.Layer}, which represents a single
+ * layer in the WMS server (i.e. a variable in a NetCDF file)</li>
+ * <li>{@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore}, which is where metadata
+ * objects are held</li>
+ * <li>{@link uk.ac.rdg.resc.ncwms.metadata.MetadataLoader}, which handles the
+ * periodic synchronization of metadata in the {@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore}
+ * with the source files</li>
+ * </ul>
  */
-public interface UsageLogger
-{
-    /**
-     * Make an entry in the usage log.  This method does not throw an
-     * Exception: all problems with the usage logger must be recorded
-     * in the log4j text log.  Implementing methods should make sure they
-     * set the time to process the request, by taking System.currentTimeMs()
-     * and subtracting logEntry.getRequestTime().
-     */
-    public void logUsage(UsageLogEntry logEntry);
-}
+package uk.ac.rdg.resc.ncwms.metadata;
