@@ -173,7 +173,6 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
     /**
      * Performs a binary search to find the index of the element of the array
      * whose value is closest to the target
-     * @param values The array to search
      * @param target The value to search for
      * @return the index of the element in values whose value is closest to target,
      * or -1 if the target is out of range

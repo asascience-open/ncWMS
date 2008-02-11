@@ -27,6 +27,9 @@
  */
 
 /**
- * Description goes here
+ * A {@link uk.ac.rdg.resc.ncwms.usagelog.UsageLogger} that logs usage information
+ * in an <a href="http://www.h2database.com/">H2 database</a>.  The file <tt>init.sql</tt>
+ * in this package contains an SQL script to initialize the database.  This will
+ * be run automatically if the database does not already exist.
  */
 package uk.ac.rdg.resc.ncwms.usagelog.h2;

@@ -27,6 +27,8 @@
  */
 
 /**
- * Description goes here
+ * Classes that relate to the logging of hits on the ncWMS application. 
+ * Administrators can set the particular {@link uk.ac.rdg.resc.ncwms.usagelog.UsageLogger}
+ * to be used in the Spring configuration file <tt>web/WEB-INF/WMS-servlet.xml</tt>.
  */
 package uk.ac.rdg.resc.ncwms.usagelog;

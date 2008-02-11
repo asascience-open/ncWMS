@@ -27,6 +27,6 @@
  */
 
 /**
- * Description goes here
+ * Different styles in which data can be rendered as pictures.
  */
 package uk.ac.rdg.resc.ncwms.styles;

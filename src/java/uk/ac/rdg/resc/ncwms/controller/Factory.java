@@ -158,10 +158,4 @@ public final class Factory<T>
         }
     }
     
-    private static class TestClass
-    {
-        public static final String TEST = "hello";
-        //public String TEST_2 = "hello2";
-    }
-    
 }

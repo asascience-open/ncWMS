@@ -36,6 +36,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Simple representation of a Dataset that is stored in the Berkeley database
+ * @deprecated Not used in current code.
  *
  * @author Jon Blower
  * $Revision$

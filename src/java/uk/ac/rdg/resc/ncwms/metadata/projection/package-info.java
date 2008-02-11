@@ -27,6 +27,7 @@
  */
 
 /**
- * Description goes here
+ * The part of the metadata that deals with converting latitude and longitude
+ * to other horizontal projections.
  */
 package uk.ac.rdg.resc.ncwms.metadata.projection;

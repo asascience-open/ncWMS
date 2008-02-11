@@ -26,7 +26,9 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
- *
+ * A {@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore}
+ * that stores metadata in an XML document.  
+ * @deprecated Has not kept up with other code developments.
  * @author ads
  */
 public class XmlMetadataStore  extends MetadataStore  {

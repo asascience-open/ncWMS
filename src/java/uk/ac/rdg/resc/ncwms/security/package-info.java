@@ -27,6 +27,7 @@
  */
 
 /**
- * Description goes here
+ * Code related to securing the ncWMS. (Currently only the administrative application
+ * is secured).
  */
 package uk.ac.rdg.resc.ncwms.security;

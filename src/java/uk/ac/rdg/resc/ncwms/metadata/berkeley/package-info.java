@@ -27,6 +27,7 @@
  */
 
 /**
- * Description goes here
+ * <b><i>(Deprecated)</i></b> Stores metadata in a Berkeley database.
+ * Not used: has not kept up with other developments.
  */
 package uk.ac.rdg.resc.ncwms.metadata.berkeley;

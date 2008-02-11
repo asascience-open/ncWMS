@@ -66,7 +66,7 @@ class RequestParams
      * Replaces URL escape sequences with their correct characters, and replaces
      * plus signs with spaces.  Nearly a direct port of urllib.unquote_plus() in
      * Python 2.3.
-     * @todo: doesn't handle "%%" correctly as an escape sequence for "%"
+     * @todo doesn't handle "%%" correctly as an escape sequence for "%"
      */
     private static final String unquotePlus(String s)
     {

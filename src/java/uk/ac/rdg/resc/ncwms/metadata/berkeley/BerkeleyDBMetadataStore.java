@@ -48,6 +48,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Stores metadata in a Berkeley database.
+ * @deprecated Not used in current code.
  *
  * @author Jon Blower
  * $Revision$

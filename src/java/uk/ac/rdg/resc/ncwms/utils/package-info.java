@@ -27,6 +27,7 @@
  */
 
 /**
- * Description goes here
+ * Utility classes that contain useful general methods that are used in various
+ * places throughout the ncWMS application.
  */
 package uk.ac.rdg.resc.ncwms.utils;

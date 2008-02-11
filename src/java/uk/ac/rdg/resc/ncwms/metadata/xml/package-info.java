@@ -27,6 +27,8 @@
  */
 
 /**
- * Description goes here
+ * <b><i>(Deprecated)</i></b> A {@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore}
+ * that stores metadata as an XML document.  Has not kept up with other code
+ * developments.
  */
 package uk.ac.rdg.resc.ncwms.metadata.xml;

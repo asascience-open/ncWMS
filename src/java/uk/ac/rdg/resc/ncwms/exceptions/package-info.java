@@ -29,18 +29,18 @@
 /**
  * <p>Exceptions that can be thrown by ncWMS.  {@link uk.ac.rdg.resc.ncwms.exceptions.WmsException}s
  * and subclasses will be caught by the Spring framework and rendered using
- * the XML template <tt>WEB-INF/jsp/displayWmsException.jsp</tt>, which returns
+ * the XML template <tt>web/WEB-INF/jsp/displayWmsException.jsp</tt>, which returns
  * the exception to the client in XML format, according to the WMS specification.</p>
  * 
  * <p>Similarly, 
  * {@link uk.ac.rdg.resc.ncwms.exceptions.MetadataException}s are rendered
- * in JSON format for the Godiva2 website by <tt>WEB-INF/jsp/displayMetadataException.jsp</tt>.</p>
+ * in JSON format for the Godiva2 website by <tt>web/WEB-INF/jsp/displayMetadataException.jsp</tt>.</p>
  *
  * <p>Other exceptions represent internal bugs and are rendered using
- * <tt>WEB-INF/jsp/displayDefaultException.jsp</tt>.</p>
+ * <tt>web/WEB-INF/jsp/displayDefaultException.jsp</tt>.</p>
  * 
  * <p>The mapping of exception classes to JSP templates is done in the Spring
- * configuration file, <tt>WEB-INF/WMS-servlet.xml</tt> (look for the
+ * configuration file, <tt>web/WEB-INF/WMS-servlet.xml</tt> (look for the
  * <tt>exceptionResolver</tt> bean).</p>
  */
 package uk.ac.rdg.resc.ncwms.exceptions;
