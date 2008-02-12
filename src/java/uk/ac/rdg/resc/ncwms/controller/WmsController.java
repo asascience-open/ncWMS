@@ -135,6 +135,7 @@ public class WmsController extends AbstractController
         HttpServletResponse httpServletResponse) throws Exception
     {
         UsageLogEntry usageLogEntry = new UsageLogEntry(httpServletRequest);
+        boolean logUsage = true;
         try
         {
             // Create an object that allows request parameters to be retrieved in
@@ -167,6 +168,24 @@ public class WmsController extends AbstractController
                 return this.metadataController.handleRequest(httpServletRequest,
                     httpServletResponse, usageLogEntry);
             }
+            else if (request.equals("GetKML"))
+            {
+                // This is a request for a KML document that allows the selected
+                // layer(s) to be displayed in Google Earth in a manner that 
+                // supports region-based overlays.  Note that this is distinct
+                // from simply setting "KMZ" as the output format of a GetMap
+                // request: GetKML will give generally better results, but relies
+                // on callbacks to this server.  Requesting KMZ files from GetMap
+                // returns a standalone KMZ file.
+                return getKML(params, httpServletRequest, httpServletResponse,
+                    usageLogEntry);
+            }
+            else if (request.equals("GetKMLRegion"))
+            {
+                // This is a request for a particular sub-region from Google Earth.
+                logUsage = false; // We don't log usage for this operation
+                return getKMLRegion(params, httpServletRequest, httpServletResponse);
+            }
             else
             {
                 throw new OperationNotSupportedException(request);
@@ -186,8 +205,11 @@ public class WmsController extends AbstractController
         }
         finally
         {
-            // Log this request to the usage log
-            this.usageLogger.logUsage(usageLogEntry);
+            if (logUsage)
+            {
+                // Log this request to the usage log
+                this.usageLogger.logUsage(usageLogEntry);
+            }
         }
     }
     
@@ -494,6 +516,68 @@ public class WmsController extends AbstractController
             return null;
         }
     }
+
+    private ModelAndView getKML(RequestParams params,
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse,
+        UsageLogEntry usageLogEntry) throws Exception
+    {
+        // Get the Layer objects that we are to include in the KML
+        List<Layer> layers = new ArrayList<Layer>();
+        for (String layerName : params.getMandatoryString("layers").split(","))
+        {
+            layers.add(this.metadataStore.getLayerByUniqueName(layerName));
+        }
+        
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("layers", layers);
+        models.put("title", this.config.getServer().getTitle());
+        models.put("description", this.config.getServer().getAbstract());
+        models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
+        return new ModelAndView("topLevelKML", models);
+    }
+    
+    private ModelAndView getKMLRegion(RequestParams params,
+        HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse) throws Exception
+    {
+        Layer layer = this.metadataStore.getLayerByUniqueName(params.getMandatoryString("layer"));
+        double[] dbox = WmsUtils.parseBbox(params.getMandatoryString("dbox"));
+        // Calculate the bounding boxes of all the four sub-regions
+        double[][] regionDBoxes = new double[4][4];
+        double halfLon = (dbox[2] - dbox[0]) / 2.0;
+        double halfLat = (dbox[3] - dbox[1]) / 2.0;
+        
+        regionDBoxes[0][0] = dbox[0];
+        regionDBoxes[0][1] = dbox[1];
+        regionDBoxes[0][2] = dbox[0] + halfLon;
+        regionDBoxes[0][3] = dbox[1] + halfLat;
+        
+        regionDBoxes[1][0] = dbox[0] + halfLon;
+        regionDBoxes[1][1] = dbox[1];
+        regionDBoxes[1][2] = dbox[2];
+        regionDBoxes[1][3] = dbox[1] + halfLat;
+        
+        regionDBoxes[2][0] = dbox[0];
+        regionDBoxes[2][1] = dbox[1] + halfLat;
+        regionDBoxes[2][2] = dbox[0] + halfLon;
+        regionDBoxes[2][3] = dbox[3];
+        
+        regionDBoxes[3][0] = dbox[0] + halfLon;
+        regionDBoxes[3][1] = dbox[1] + halfLat;
+        regionDBoxes[3][2] = dbox[2];
+        regionDBoxes[3][3] = dbox[3];
+        
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("layer", layer);
+        models.put("elevation", params.getString("elevation"));
+        models.put("time", params.getString("time"));
+        models.put("dbox", dbox);
+        models.put("size", 256);
+        models.put("regionDBoxes", regionDBoxes);
+        models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
+        return new ModelAndView("regionBasedOverlay", models);
+    }
     
     /**
      * Gets the style object that will be used to control the rendering of the
@@ -510,6 +594,12 @@ public class WmsController extends AbstractController
             // Use the default style for the variable
             style = this.styleFactory.createObject(layer.getDefaultStyleKey());
             assert style != null;
+            // Set the scale to the default scale for the layer
+            // TODO: this method is silly: should be a setScale(double, double) method
+            style.setAttribute("scale", new String[]{
+                String.valueOf(layer.getScaleRange()[0]),
+                String.valueOf(layer.getScaleRange()[1])
+            });
         }
         else
         {
@@ -525,6 +615,13 @@ public class WmsController extends AbstractController
                 throw new StyleNotDefinedException("The style \"" + els[0] +
                     "\" is not supported by this layer");
             }
+            // Set the scale to the default scale for the layer
+            // TODO: this method is silly: should be a setScale(double, double) method
+            // Also repeats code from above!
+            style.setAttribute("scale", new String[]{
+                String.valueOf(layer.getScaleRange()[0]),
+                String.valueOf(layer.getScaleRange()[1])
+            });
             // Set the attributes of the AbstractStyle
             for (int i = 1; i < els.length; i++)
             {

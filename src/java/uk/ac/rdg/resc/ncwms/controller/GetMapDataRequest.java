@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 
 /**
@@ -74,28 +75,7 @@ public class GetMapDataRequest
     {
         // WMS1.3.0 uses "CRS", 1.1.1 uses "SRS".  This is a bit of a kludge
         this.crsCode = params.getMandatoryString(version.equals("1.3.0") ? "crs" : "srs");
-        String[] bboxEls = params.getMandatoryString("bbox").split(",");
-        // Check the validity of the bounding box
-        if (bboxEls.length != 4)
-        {
-            throw new WmsException("Invalid bounding box format: need four elements");
-        }
-        this.bbox = new double[4];
-        try
-        {
-            for (int i = 0; i < bbox.length; i++)
-            {
-                this.bbox[i] = Double.parseDouble(bboxEls[i]);
-            }
-        }
-        catch(NumberFormatException nfe)
-        {
-            throw new WmsException("Invalid bounding box format: all elements must be numeric");
-        }
-        if (this.bbox[0] >= this.bbox[2] || this.bbox[1] >= this.bbox[3])
-        {
-            throw new WmsException("Invalid bounding box format");
-        }
+        this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"));
         this.width = params.getMandatoryPositiveInt("width");
         this.height = params.getMandatoryPositiveInt("height");
         this.timeString = params.getString("time");

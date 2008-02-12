@@ -63,7 +63,7 @@ public class UsageLogEntry
     private String exceptionMessage = null;
     
     // These fields pertain to data requests
-    private String crs = null;
+    private String crsCode = null;
     private double[] bbox = null;
     private String elevation = null;
     private String timeStr = null; // The time string requested by the user
@@ -145,7 +145,7 @@ public class UsageLogEntry
     private void setGetMapDataRequest(GetMapDataRequest dr)
     {
         this.layer = dr.getLayers()[0];
-        this.crs = dr.getCrsCode();
+        this.crsCode = dr.getCrsCode();
         this.bbox = dr.getBbox();
         this.elevation = dr.getElevationString();
         this.width = dr.getWidth();
@@ -247,7 +247,7 @@ public class UsageLogEntry
 
     public String getCrs()
     {
-        return crs;
+        return crsCode;
     }
 
     public double[] getBbox()

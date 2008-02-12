@@ -49,12 +49,12 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  * which employs the following general algorithm:</p>
  *
  * <pre>
- * For each pixel in the image (i.e. each point in the target grid):
- *    1. Find the x-y coordinates of this point in the CRS of the target grid
- *    2. Transform these x-y coordinates into latitude and longitude using grid.transformToLatLon()
- *    3. Transform lat-lon into index values (i and j) along the horizontal axes of the data,
- *       using axis.getIndex()
- *    4. Add the mapping (pixel -> i,j) to the image map
+ * For each pixel in the image:
+ *    1. Find the x-y coordinates of this point in the CRS of the image
+ *    2. Transform these x-y coordinates into latitude and longitude
+ *    3. Transform lat-lon into the coordinate system of the source data
+ *    4. Transform the coordinate pair into index values (i and j)
+ *    5. Add the mapping (pixel -> i,j) to the pixel map
  * </pre>
  *
  * <p>(A more efficient algorithm is used for the special case in which both the 

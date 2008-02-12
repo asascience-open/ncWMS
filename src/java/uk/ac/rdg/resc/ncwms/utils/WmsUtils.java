@@ -35,13 +35,9 @@ import java.util.Date;
 import ucar.nc2.units.DateFormatter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
+import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 
 /**
  * <p>Collection of static utility methods that are useful in the WMS application.</p>
@@ -188,6 +184,38 @@ public class WmsUtils
             // parse error occurs
             throw new ParseException(uniqueLayerName + " is not in the correct format", -1);
         }
+    }
+    
+    /**
+     * Converts a string of the form "x1,y1,x2,y2" into a bounding box of four
+     * doubles.
+     * @throws WmsException if the format of the bounding box is invalid
+     */
+    public static double[] parseBbox(String bboxStr) throws WmsException
+    {
+        String[] bboxEls = bboxStr.split(",");
+        // Check the validity of the bounding box
+        if (bboxEls.length != 4)
+        {
+            throw new WmsException("Invalid bounding box format: need four elements");
+        }
+        double[] bbox = new double[4];
+        try
+        {
+            for (int i = 0; i < bbox.length; i++)
+            {
+                bbox[i] = Double.parseDouble(bboxEls[i]);
+            }
+        }
+        catch(NumberFormatException nfe)
+        {
+            throw new WmsException("Invalid bounding box format: all elements must be numeric");
+        }
+        if (bbox[0] >= bbox[2] || bbox[1] >= bbox[3])
+        {
+            throw new WmsException("Invalid bounding box format");
+        }
+        return bbox;
     }
     
 }
