@@ -94,6 +94,7 @@ public abstract class OneDCoordAxis extends CoordAxis
      * or it may be a value in a projected coordinate system).
      * @return the index corresponding with this value, or -1 if the value is
      * out of range for this axis.
+     * @see uk.ac.rdg.resc.ncwms.datareader.PixelMap PixelMap
      */
     public abstract int getIndex(double coordValue);
 

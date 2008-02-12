@@ -37,8 +37,10 @@ import ucar.nc2.dataset.CoordinateAxis1D;
  * A CoordAxis converts lat-lon points to an integer index in the data
  * structure.  Implementations should ensure that the getIndex() method
  * is as efficient as possible as this will be called very many times
- * during the generation of an image.
+ * during the generation of an image (this happens in the
+ * {@link uk.ac.rdg.resc.ncwms.datareader.PixelMap PixelMap} class).
  *
+ * @see uk.ac.rdg.resc.ncwms.datareader.PixelMap PixelMap
  * @author Jon Blower
  * $Revision$
  * $Date$
@@ -53,7 +55,7 @@ public abstract class CoordAxis
      * Method for creating an CoordAxis.
      * 
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
-     * latitude or longitude axis
+     * one-dimensional axis (in the current implementation).
      * @return an CoordAxis
      * @throws IllegalArgumentException if the provided axis cannot be turned into
      * an CoordAxis

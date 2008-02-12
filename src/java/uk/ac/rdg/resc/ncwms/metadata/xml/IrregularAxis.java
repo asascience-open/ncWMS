@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 
 @Root(name="irregularAxis")
-public class IrregularAxis implements Serializable {
+class IrregularAxis implements Serializable {
     
     @Attribute(required=false)
     private String axisname;

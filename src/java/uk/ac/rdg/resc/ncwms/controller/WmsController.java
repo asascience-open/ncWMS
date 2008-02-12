@@ -275,11 +275,25 @@ public class WmsController extends AbstractController
      * <li>Creates a {@link GetMapRequest} object from the given {@link RequestParams}.
      * This parses the parameters and checks their validity.</li>
      * <li>Finds the relevant {@link Layer} object from the {@link MetadataStore}.</li>
-     * <li>Creates a {@link HorizontalGrid} object that represents the grid of
-     * data points that will be ... TODO</li>
+     * <li>Creates a {@link HorizontalGrid} object that represents the grid on
+     * which the final image will sit (based on the requested CRS and image
+     * width/height).</li>
+     * <li>Looks for TIME and ELEVATION parameters (TIME may be expressed as a
+     * start/end range, in which case we will produce an animation).</li>
+     * <li>Extracts the data using {@link Layer#read Layer.read()}, which in turn calls
+     * {@link uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()}.  This returns an array of floats, representing
+     * the data values at each pixel in the final image.</li>
+     * <li>Uses an {@link AbstractStyle} object to turn the array of data into
+     * a {@link java.awt.image.BufferedImage} (or, in the case of an animation, several
+     * {@link java.awt.image.BufferedImage}s).</li>
+     * <li>Uses a {@link PicMaker} object to write the image to the servlet's
+     * output stream.</li>
      * </ol>
      * @throws WmsException if the user has provided invalid parameters
      * @throws Exception if an internal error occurs
+     * @see Layer#read Layer.read()
+     * @see uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()
+     * @see uk.ac.rdg.resc.ncwms.datareader.DefaultDataReader#read DefaultDataReader.read()
      * @todo Separate Model and View code more cleanly
      */
     protected ModelAndView getMap(RequestParams params, 

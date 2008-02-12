@@ -543,6 +543,8 @@ public class LayerImpl implements Layer
             // There is no time axis
             // TODO: this fails if there is a layer in the dataset which 
             // has no time axis but the dataset is still a glob aggregation
+            // (e.g. a bathymetry layer that is present in every file in the glob
+            // aggregation, but has no time dependence).
             filename = this.dataset.getLocation();
             tIndexInFile = tIndex;
         }

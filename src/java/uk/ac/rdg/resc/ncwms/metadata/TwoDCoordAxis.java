@@ -51,6 +51,7 @@ public abstract class TwoDCoordAxis extends CoordAxis
     /**
      * Gets the index on this axis of the given point, expressed in the coordinate
      * system of the layer's horizontal projection (may equate to lon and lat).
+     * @see uk.ac.rdg.resc.ncwms.datareader.PixelMap PixelMap
      */
     public int getIndex(ProjectionPoint point)
     {
@@ -60,6 +61,7 @@ public abstract class TwoDCoordAxis extends CoordAxis
     /**
      * Gets the index on this axis of the given point, expressed in the coordinate
      * system of the layer's horizontal projection (may equate to lon and lat).
+     * @see uk.ac.rdg.resc.ncwms.datareader.PixelMap PixelMap
      */
     public abstract int getIndex(double x, double y);
     

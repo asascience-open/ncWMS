@@ -21,7 +21,7 @@ import java.util.Iterator;
  */
 
 @Root
-public class Variable implements Serializable {
+class Variable implements Serializable {
     
     @Attribute(required=false)
     private String name;

@@ -71,11 +71,15 @@ public class DefaultDataReader extends DataReader
     private static final Logger benchmarkLogger = Logger.getLogger("ncwms.benchmark");
     
     /**
-     * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single timestep only.  This method knows
+     * <p>Reads an array of data from a NetCDF file and projects onto the given
+     * {@link HorizontalGrid}.  Reads data for a single timestep and elevation only.
+     * This method knows
      * nothing about aggregation: it simply reads data from the given file. 
-     * Missing values (e.g. land pixels in oceanography data) will be represented
-     * by Float.NaN.
+     * Missing values (e.g. land pixels in marine data) will be represented
+     * by Float.NaN.</p>
+     *
+     * <p>The actual reading of data is performed in {@link #populatePixelArray
+     * populatePixelArray()}</p>
      * 
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
      * @param layer {@link Layer} object representing the variable to read
@@ -127,6 +131,7 @@ public class DefaultDataReader extends DataReader
             // Get an enhanced variable for doing the conversion of missing
             // values
             VariableDS enhanced = new VariableDS(null, nc.findVariable(layer.getId()), true);
+            // The actual reading of data from the variable is done here
             this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, enhanced);
             long after = System.currentTimeMillis();
             // Write to the benchmark logger (if enabled in log4j.properties)
@@ -170,9 +175,10 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
-     * Reads data from the given GeoGrid and populates the given pixel array.
+     * Reads data from the given GridDatatype and populates the given pixel array.
      * This uses a scanline-based algorithm: subclasses can override this to
-     * use alternative strategies, e.g. point-by-point or bounding box
+     * use alternative strategies, e.g. point-by-point or bounding box.
+     * @see PixelMap
      */
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
         PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception

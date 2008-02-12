@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Iterator;
 
 @Root
-public class Datacollection implements Serializable {
+class Datacollection implements Serializable {
 
 	@ElementList(inline=true, required=false)
 	private List<MetaDataset> dataset;

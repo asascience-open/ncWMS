@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Iterator;
 
 @Root
-public class Grid implements Serializable {
+class Grid implements Serializable {
     
     @Attribute(required=false)
     private String name;

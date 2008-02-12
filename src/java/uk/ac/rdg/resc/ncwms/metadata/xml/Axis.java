@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Iterator;
 
 @Root(name="axis")
-public class Axis {
+class Axis {
     
     @Attribute(required=false)
     private String axistype;

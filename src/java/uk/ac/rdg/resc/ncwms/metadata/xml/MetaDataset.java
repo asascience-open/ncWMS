@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Iterator;
 
 @Root(name="dataset")
-public class MetaDataset implements Serializable {
+class MetaDataset implements Serializable {
     
     @Attribute(required=false)
     private String id;

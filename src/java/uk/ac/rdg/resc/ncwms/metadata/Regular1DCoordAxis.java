@@ -86,7 +86,7 @@ public class Regular1DCoordAxis extends OneDCoordAxis
     
     /**
      * Gets the index of the given point. Uses index = (value - start) / stride,
-     * hence this is fast.
+     * hence this is faster than an exhaustive search.
      * @param coordValue The value along this coordinate axis
      * @return the index that is nearest to this point, or -1 if the point is
      * out of range for the axis

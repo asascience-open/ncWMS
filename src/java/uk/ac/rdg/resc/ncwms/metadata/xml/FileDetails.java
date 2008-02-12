@@ -18,7 +18,7 @@ import java.util.Iterator;
  * @author ads
  */
 @Root(name="filedetails")
-public class FileDetails implements Serializable{
+class FileDetails implements Serializable{
     
     @Attribute(required=false)
     private String location;

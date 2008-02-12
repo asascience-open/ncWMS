@@ -19,7 +19,7 @@ import java.util.Iterator;
  * @author ads
  */
 @Root(name="regularAxis")
-public class RegularAxis {
+class RegularAxis {
     
     @Attribute(required=false)
     private String axisname;

@@ -33,6 +33,7 @@ import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.userdetails.UserDetails;
 import org.acegisecurity.userdetails.UserDetailsService;
 import org.acegisecurity.userdetails.UsernameNotFoundException;
+import org.opengis.coverage.ThiessenPolygonCoverage;
 import org.springframework.dao.DataAccessException;
 
 /**
@@ -64,7 +65,9 @@ public class Users implements UserDetailsService, Serializable
     }
     
     /**
-     * Sets the admin password
+     * Sets the admin password.  This is only called from
+     * {@link uk.ac.rdg.resc.ncwms.config.Config#setApplicationContext}
+     * and should not be called separately.
      */
     public void setAdminPassword(String password)
     {

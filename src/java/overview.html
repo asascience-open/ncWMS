@@ -24,18 +24,19 @@
       <p>ncWMS is a standard Java web application, which should run in any standard
           web app container that supports version 2.4 of the Servlet specification and 
           version 2.0 of the JSP specification.  It has been tested successfully in Tomcat
-      versions 5.5 and 6.0</p>
+      versions 5.5 and 6.0.</p>
       
       <p>ncWMS uses the <a href="http://www.springframework.org">Spring framework</a>,
       for two main reasons:</p>
       <ul>
+          <li>to allow components to be loosely coupled.  Spring's 
+          <a href="http://static.springframework.org/spring/docs/2.5.0/reference/beans.html">Inversion of Control</a>
+          framework is used to handle the internal wiring of components, which can
+          be developed in isolation.</li>
           <li>to make a clean separation between internal logic and presentation code (i.e. the
               "model-view-controller" or "MVC" paradigm: see the <a href="http://static.springframework.org/spring/docs/2.5.0/reference/mvc.html">
           Spring documentation</a> on the subject).  This is used mainly to help
           in the generation of large XML documents such as the Capabilities document.</li>
-          <li>to handle the internal wiring of components, using Spring's 
-          <a href="http://static.springframework.org/spring/docs/2.5.0/reference/beans.html">Inversion of Control</a>
-          framework.</li>
       </ul>
       <p>A major advantage of Spring is that it does not pollute the code base, therefore
           most of the classes in ncWMS have no knowledge of Spring.  The web application is set

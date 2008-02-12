@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Iterator;
 
 @Root
-public class Datafiles implements Serializable {
+class Datafiles implements Serializable {
     
     @Attribute(required=false)
     private String fileformat;

@@ -39,7 +39,12 @@ import org.apache.log4j.Logger;
 import ucar.nc2.dataset.HttpClientManager;
 
 /**
- * Handles authentication with OPeNDAP servers
+ * Handles authentication with OPeNDAP servers.  This object is created by
+ * the Spring framework and is then injected into the
+ * {@link uk.ac.rdg.resc.ncwms.metadata.MetadataLoader MetadataLoader}.
+ * The {@link uk.ac.rdg.resc.ncwms.metadata.MetadataLoader MetadataLoader}
+ * then looks for usernames and passwords in OPeNDAP
+ * URLs, then calls {@link #addCredentials} when it finds them.
  *
  * @author Jon Blower
  * $Revision$
