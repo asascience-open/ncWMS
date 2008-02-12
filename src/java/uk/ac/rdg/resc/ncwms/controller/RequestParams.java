@@ -41,7 +41,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
  * $Date$
  * $Log$
  */
-class RequestParams
+public class RequestParams
 {
     private Map<String, String> paramMap = new HashMap<String, String>();
     

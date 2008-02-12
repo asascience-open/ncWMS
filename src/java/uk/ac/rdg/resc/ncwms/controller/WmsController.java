@@ -66,9 +66,22 @@ import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
- * Entry point for the WMS.  Note that we cannot use a CommandController here
+ * <p>This Controller is the entry point for all standard WMS operations
+ * (GetMap, GetCapabilities, GetFeatureInfo).  Only one WmsController object 
+ * is created.  Spring manages the creation of this object and the injection 
+ * of the objects that it needs (i.e. its dependencies), such as the
+ * {@linkplain MetadataStore store of metadata} and the
+ * {@linkplain Config configuration object}.  The Spring configuration file <tt>web/WEB-INF/WMS-servlet.xml</tt>
+ * defines all this information and also defines that this Controller will handle
+ * all requests to the URI pattern <tt>/wms</tt>.  (See the SimpleUrlHandlerMapping
+ * in <tt>web/WEB-INF/WMS-servlet.xml</tt>).</p>
+ *
+ * <p>See the {@link #handleRequestInternal handleRequestInternal()}
+ * method for more information.</p>
+ *
+ * <p><i>(Note that we cannot use a CommandController here
  * because there is no (apparent) way in Spring to use case-insensitive parameter
- * names to bind request parameters to an object.
+ * names to bind request parameters to an object.)</i></p>
  *
  * @author Jon Blower
  * $Revision$
@@ -97,7 +110,26 @@ public class WmsController extends AbstractController
     private MetadataController metadataController;
     
     /**
-     * Entry point for all requests to the WMS
+     * <p>Entry point for all requests to the WMS.  This method first 
+     * creates a <tt>RequestParams</tt> object from the URL query string.  This
+     * object provides methods for retrieving parameter values, based on the fact that
+     * WMS parameter <i>names</i> are case-insensitive.</p>
+     * 
+     * <p>Based on the value of the
+     * REQUEST parameter this method then delegates to
+     * {@link #getCapabilities getCapabilities()},
+     * {@link #getMap getMap()}
+     * or {@link #getFeatureInfo getFeatureInfo()}.
+     * If the information returned from
+     * this method is to be presented as an XML/JSON/HTML document, the method returns
+     * a ModelAndView object containing the name of a JSP page and the data that the JSP
+     * needs to render.  If the information is to be presented as an image, the method
+     * writes the image to the servlet's output stream, then returns null.</p>
+     *
+     * <p>Any Exceptions that are thrown by this method or its delegates are 
+     * automatically handled by Spring and converted to XML to be presented to the
+     * user.  See the <a href="../exceptions/package-summary.html">Exceptions package</a>
+     * for more details.</p>
      */
     protected ModelAndView handleRequestInternal(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) throws Exception
@@ -161,10 +193,13 @@ public class WmsController extends AbstractController
     
     /**
      * Executes the GetCapabilities operation, returning a ModelAndView for
-     * display of the information.
-     * @todo allow the display of certain layers, or groups of layers.
+     * display of the information as an XML document.  If the user has
+     * requested VERSION=1.1.1 the information will be rendered using
+     * <tt>web/WEB-INF/jsp/capabilities_xml_1_1_1.jsp</tt>.  If the user
+     * specifies VERSION=1.3.0 (or does not specify a version) the information
+     * will be rendered using <tt>web/WEB-INF/jsp/capabilities_xml.jsp</tt>.
      */
-    private ModelAndView getCapabilities(RequestParams params,
+    protected ModelAndView getCapabilities(RequestParams params,
         HttpServletRequest httpServletRequest, UsageLogEntry usageLogEntry)
         throws WmsException
     {
@@ -213,19 +248,19 @@ public class WmsController extends AbstractController
     }
     
     /**
-     * @return a WmsVersion object representing the version of the capabilities
-     * document that the client will see (based on the version negotiation defined
-     * in the WMS spec
-     */
-    //private static WmsVersion
-    
-    /**
-     * Executes the GetMap operation
+     * Executes the GetMap operation.  This methods performs the following steps:
+     * <ol>
+     * <li>Creates a {@link GetMapRequest} object from the given {@link RequestParams}.
+     * This parses the parameters and checks their validity.</li>
+     * <li>Finds the relevant {@link Layer} object from the {@link MetadataStore}.</li>
+     * <li>Creates a {@link HorizontalGrid} object that represents the grid of
+     * data points that will be ... TODO</li>
+     * </ol>
      * @throws WmsException if the user has provided invalid parameters
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    private ModelAndView getMap(RequestParams params, 
+    protected ModelAndView getMap(RequestParams params, 
         HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
         throws WmsException, Exception
     {
@@ -342,7 +377,7 @@ public class WmsController extends AbstractController
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    private ModelAndView getFeatureInfo(RequestParams params,
+    protected ModelAndView getFeatureInfo(RequestParams params,
         HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse,
         UsageLogEntry usageLogEntry)
