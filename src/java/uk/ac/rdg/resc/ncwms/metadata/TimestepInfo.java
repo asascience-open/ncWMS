@@ -33,7 +33,7 @@ import java.util.Date;
 
 /**
  * Simple class that holds information about which files in an aggregation
- * hold which timesteps for this variable.  Implements Comparable to allow
+ * hold which timesteps for a variable.  Implements Comparable to allow
  * collections of this class to be sorted in order of their timestep.
  *
  * @author Jon Blower
@@ -94,6 +94,9 @@ public class TimestepInfo implements Comparable<TimestepInfo>
         return this.timestep.compareTo(otherInfo.timestep);
     }
     
+    /**
+     * Compares all fields for equality
+     */
     public boolean equals(Object obj)
     {
         if (this == obj) return true;

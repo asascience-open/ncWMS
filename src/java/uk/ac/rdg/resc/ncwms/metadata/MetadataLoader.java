@@ -46,6 +46,7 @@ import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Class that handles the periodic reloading of metadata (manages calls to
@@ -85,7 +86,9 @@ public class MetadataLoader
     }
     
     /**
-     * Task that runs periodically, refreshing the metadata catalogue
+     * Task that runs periodically, refreshing the metadata catalogue.
+     * Each dataset is loaded in a new thread
+     * @todo Use a thread pool to prevent server overload?
      */
     private class DatasetReloader extends TimerTask
     {
@@ -99,7 +102,9 @@ public class MetadataLoader
     }
     
     /**
-     * Called by the AdminController to force a reload of the given dataset
+     * Called by the
+     * {@link uk.ac.rdg.resc.ncwms.controller.AdminController AdminController}
+     * to force a reload of the given dataset
      * in a new thread, without waiting for the periodic reloader.
      */
     public void forceReloadMetadata(final Dataset ds)
@@ -350,7 +355,7 @@ public class MetadataLoader
     private void updateCredentialsProvider(Dataset ds)
     {
         logger.debug("Called updateCredentialsProvider, {}", ds.getLocation());
-        if (DataReader.isOpendapLocation(ds.getLocation()))
+        if (WmsUtils.isOpendapLocation(ds.getLocation()))
         {
             // Make sure the URL starts with "http://" or the 
             // URL parsing might not work

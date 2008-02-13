@@ -39,9 +39,13 @@ import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Abstract superclass for classes that read data and metadata from datasets.
+ * Only one instance of each DataReader class will be created, hence subclasses
+ * must be thread-safe (no instance variables etc).
+ * @see DefaultDataReader
  * @author jdb
  */
 public abstract class DataReader
@@ -65,7 +69,6 @@ public abstract class DataReader
      * Gets a DataReader object.  <b>Only one</b> object of each class will be
      * created (hence methods have to be thread-safe).
      * 
-     * 
      * @param className Name of the class to generate
      * @param location the location of the dataset: used to detect OPeNDAP URLs
      * @return a DataReader object of the given class, or {@link DefaultDataReader}
@@ -77,7 +80,7 @@ public abstract class DataReader
         throws Exception
     {
         String clazz = DefaultDataReader.class.getName();
-        if (isOpendapLocation(location))
+        if (WmsUtils.isOpendapLocation(location))
         {
             clazz = BoundingBoxDataReader.class.getName();
         }
@@ -114,19 +117,18 @@ public abstract class DataReader
         throws Exception;
     
     /**
-     * Reads and returns the metadata for all the layers (i.e. variables) in the dataset
-     * at the given location, which may be a glob aggregation (e.g. "/path/to/*.nc").
-     * Also sets the Dataset property of each layer
+     * Reads and returns the metadata for all the layers (i.e. variables) in the
+     * given {@link Dataset}.
      * @param ds Object describing the Dataset to which the layer belongs
      * @return Map of layer IDs mapped to {@link Layer} objects
-     * @throws Exception if there was an error reading from the data source
+     * @throws IOException if there was an error reading from the data source
      */
     public Map<String, Layer> getAllLayers(Dataset ds)
         throws IOException
     {
         // A list of names of files resulting from glob expansion
         List<String> filenames = new ArrayList<String>();
-        if (isOpendapLocation(ds.getLocation()))
+        if (WmsUtils.isOpendapLocation(ds.getLocation()))
         {
             // We don't do the glob expansion
             filenames.add(ds.getLocation());
@@ -137,17 +139,17 @@ public abstract class DataReader
             // of the location path will be the filter expression
             File locFile = new File(ds.getLocation());
             FilenameFilter filter = new GlobFilenameFilter(locFile.getName());
-            File parentFile = locFile.getParentFile();
-            if (parentFile == null)
+            File parentDir = locFile.getParentFile();
+            if (parentDir == null)
             {
                 throw new IOException(locFile.getPath() + " is not a valid path");
             }
-            if (!parentFile.isDirectory())
+            if (!parentDir.isDirectory())
             {
-                throw new IOException(parentFile.getPath() + " is not a valid directory");
+                throw new IOException(parentDir.getPath() + " is not a valid directory");
             }
             // Find the files that match the glob pattern
-            File[] files = parentFile.listFiles(filter);
+            File[] files = parentDir.listFiles(filter);
             if (files == null || files.length == 0)
             {
                 throw new IOException(ds.getLocation() + " does not match any files");
@@ -181,10 +183,5 @@ public abstract class DataReader
      */
     protected abstract void findAndUpdateLayers(String location, Map<String, Layer> layers)
         throws IOException;
-    
-    public static boolean isOpendapLocation(String location)
-    {
-        return location.startsWith("http://") || location.startsWith("dods://");
-    }
     
 }

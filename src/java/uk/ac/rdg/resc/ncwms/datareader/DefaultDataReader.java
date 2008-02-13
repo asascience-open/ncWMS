@@ -234,11 +234,13 @@ public class DefaultDataReader extends DataReader
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
      * expansion of a glob aggregation).
-     * @param location Full path to the dataset
+     * @param location Full path to the dataset. This will be passed to 
+     * {@link NetcdfDataset#openDataset}.
      * @param layers Map of Layer Ids to Layer objects to populate or update
      * @throws IOException if there was an error reading from the data source
      */
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers) throws IOException
+    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+        throws IOException
     {
         logger.debug("Finding layers in {}", location);
         
@@ -369,8 +371,9 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
-     * @return true if the given Grid is to be included
-     * This default implementation always returns true.
+     * @return true if the given variable is to be exposed through the WMS.
+     * This default implementation always returns true, but allows subclasses
+     * to filter out variables if required.
      */
     protected boolean includeGrid(GridDatatype grid)
     {

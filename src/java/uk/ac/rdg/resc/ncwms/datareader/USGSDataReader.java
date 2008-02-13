@@ -198,6 +198,9 @@ public class USGSDataReader extends DefaultDataReader
         }
     }
     
+    /**
+     * This is used to filter out certain fields from the dataset
+     */
     protected boolean includeGrid(GridDatatype grid)
     {
         return grid.getName().equals("temp") || grid.getName().equals("shflux") ||
@@ -207,7 +210,8 @@ public class USGSDataReader extends DefaultDataReader
     }
     
     /**
-     * Gets the X axis from the given coordinate system
+     * @return a {@link LUTCoordAxis}, since the axes in this dataset
+     * are curvilinear.
      */
     protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
     {
@@ -215,7 +219,8 @@ public class USGSDataReader extends DefaultDataReader
     }
     
     /**
-     * Gets the Y axis from the given coordinate system
+     * @return a {@link LUTCoordAxis}, since the axes in this dataset
+     * are curvilinear.
      */
     protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
     {
@@ -231,7 +236,8 @@ public class USGSDataReader extends DefaultDataReader
     }
     
     /**
-     * @return the values on the z axis
+     * @return the values on the z axis, obtained directly from 
+     * {@code zAxis.getCoordValues()}.
      */
     protected double[] getZValues(CoordinateAxis1D zAxis, boolean zPositive)
     {

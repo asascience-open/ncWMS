@@ -68,8 +68,8 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  * <p>A variety of strategies are possible for reading these data points:</p>
  *
  * <h3>Strategy 1: read data points one at a time</h3> 
- * <p>Read each data point individually by iterating through PixelMap.getJIndices() 
- *    and PixelMap.getIIndices().  This minimizes the memory footprint as the minimum
+ * <p>Read each data point individually by iterating through {@link #getJIndices} 
+ *    and {@link #getIIndices}.  This minimizes the memory footprint as the minimum
  *    amount of data is read from disk.  However, in general this method is inefficient
  *    as it maximizes the overhead of the low-level data extraction code by making 
  *    a large number of small data extractions.  This strategy is employed by
@@ -78,7 +78,8 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  * <h3>Strategy 2: read all data points in one operation</h3>
  * <p>Read all data in one operation (potentially including lots of data points
  *       that are not needed) by finding the overall i-j bounding box with
- *       PixelMap.getMaxIIndex(), .getMinIIndex(), etc.  This minimizes the number
+ *       {@link #getMinIIndex}, {@link #getMaxIIndex}, {@link #getMinJIndex}
+ *       and {@link #getMaxJIndex}.  This minimizes the number
  *       of calls to low-level data extraction code, but may result in a large memory
  *       footprint.  The {@link DataReader} would then subset this data array in-memory.
  *       This strategy is employed by {@link BoundingBoxDataReader}.  This approach is recommended for remote
@@ -93,11 +94,13 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  * <p>A compromise strategy, which balances memory considerations against the overhead 
  *       of the low-level data extraction code, works as follows:
  *       <ol>
- *          <li>Iterate through each j index that is represented in the PixelMap</li>
+ *          <li>Iterate through each row (i.e. each j index) that is represented in
+ *              the PixelMap using {@link #getJIndices}.</li>
  *          <li>For each j index, extract data from the minimum to the maximum i index
- *              in this row (a "scanline").  This assumes that the data are stored with the i
+ *              in this row (a "scanline") using {@link #getMinIIndexInRow} and
+ *              {@link #getMaxIIndexInRow}.  (This assumes that the data are stored with the i
  *              dimension varying fastest, meaning that the scanline represents
- *              contiguous data in the source files.</li>
+ *              contiguous data in the source files.)</li>
  *       </ol>
  *       Therefore if there are 25 distinct j indices in the PixelMap there will be 25
  *       individual calls to the low-level data extraction code.  This algorithm has
@@ -261,6 +264,8 @@ public class PixelMap
     }
     
     /**
+     * Returns true if this PixelMap does not contain any data: this will happen
+     * if there is no intersection between the requested data and the data on disk.
      * @return true if this PixelMap does not contain any data: this will happen
      * if there is no intersection between the requested data and the data on disk
      */
@@ -270,6 +275,7 @@ public class PixelMap
     }
     
     /**
+     * Gets the j indices of all rows in this pixel map
      * @return the Set of all j indices in this pixel map
      */
     public Set<Integer> getJIndices()
@@ -278,6 +284,8 @@ public class PixelMap
     }
     
     /**
+     * Gets the i indices of all the data points in the given row that
+     * are needed to make the final image.
      * @return the Set of all I indices in the given row
      * @throws IllegalArgumentException if there is no row with the given y index
      */
@@ -287,10 +295,14 @@ public class PixelMap
     }
     
     /**
-     * @return a List of all pixel indices that correspond with the given x and
-     * y index
-     * @throws IllegalArgumentException if there is no row with the given y index
-     * or if the given x index is not found in the row
+     * Gets the list of all pixel indices, representing individual points in the 
+     * final image, that correspond with the given point in the source data.  A single
+     * value from the source data might map to several pixels in the final image,
+     * especially if we are "zoomed in".
+     * @return a List of all pixel indices that correspond with the given i and
+     * j index
+     * @throws IllegalArgumentException if there is no row with the given j index
+     * or if the given i index is not found in the row
      */
     public List<Integer> getPixelIndices(int i, int j)
     {
@@ -304,6 +316,7 @@ public class PixelMap
     }
     
     /**
+     * Gets the minimum i index in the row with the given j index
      * @return the minimum i index in the row with the given j index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
@@ -313,6 +326,7 @@ public class PixelMap
     }
     
     /**
+     * Gets the maximum i index in the row with the given j index
      * @return the maximum i index in the row with the given j index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
@@ -322,20 +336,21 @@ public class PixelMap
     }
     
     /**
-     * @return the row with the given y index
+     * @return the row with the given j index
      * @throws IllegalArgumentException if there is no row with the given y index
      */
-    private Row getRow(int y)
+    private Row getRow(int j)
     {
-        if (!this.pixelMap.containsKey(y))
+        if (!this.pixelMap.containsKey(j))
         {
-            throw new IllegalArgumentException("There is no row with y index " + y);
+            throw new IllegalArgumentException("There is no row with j index " + j);
         }
-        return this.pixelMap.get(y);
+        return this.pixelMap.get(j);
     }
 
     /**
-     * @return the minimum x index in the whole pixel map
+     * Gets the minimum i index in the whole pixel map
+     * @return the minimum i index in the whole pixel map
      */
     public int getMinIIndex()
     {
@@ -343,7 +358,8 @@ public class PixelMap
     }
 
     /**
-     * @return the minimum y index in the whole pixel map
+     * Gets the minimum j index in the whole pixel map
+     * @return the minimum j index in the whole pixel map
      */
     public int getMinJIndex()
     {
@@ -351,7 +367,8 @@ public class PixelMap
     }
 
     /**
-     * @return the maximum x index in the whole pixel map
+     * Gets the maximum i index in the whole pixel map
+     * @return the maximum i index in the whole pixel map
      */
     public int getMaxIIndex()
     {
@@ -359,7 +376,8 @@ public class PixelMap
     }
 
     /**
-     * @return the maximum y index in the whole pixel map
+     * Gets the maximum j index in the whole pixel map
+     * @return the maximum j index in the whole pixel map
      */
     public int getMaxJIndex()
     {
@@ -416,10 +434,11 @@ public class PixelMap
     }
 
     /**
-     * @return the number of unique x-y pairs in this pixel map.  When combined
+     * Gets the number of unique i-j pairs in this pixel map. When combined
      * with the size of the resulting image we can quantify the under- or
      * oversampling.  This is the number of data points that will be extracted
-     * by the PixelByPixelDataReader.
+     * by the {@link PixelByPixelDataReader}.
+     * @return the number of unique i-j pairs in this pixel map.
      */
     public int getNumUniqueIJPairs()
     {
@@ -427,9 +446,10 @@ public class PixelMap
     }
     
     /**
-     * @return the sum of the lengths of each row of data points,
-     * i.e. sum(xmax - xmin + 1).  This is the number of data points that will
-     * be extracted by the DefaultDataReader.
+     * Gets the sum of the lengths of each row of data points,
+     * i.e. sum(imax - imin + 1).  This is the number of data points that will
+     * be extracted by the {@link DefaultDataReader}.
+     * @return the sum of the lengths of each row of data points
      */
     public int getSumRowLengths()
     {
@@ -442,8 +462,10 @@ public class PixelMap
     }
     
     /**
-     * @return the size of the bounding box that encompasses all data.  This is
-     * the number of data points that will be extracted by the OpendapDataReader.
+     * Gets the size of the i-j bounding box that encompasses all data.  This is
+     * the number of data points that will be extracted by the
+     * {@link BoundingBoxDataReader}.
+     * @return the size of the i-j bounding box that encompasses all data.
      */
     public int getBoundingBoxSize()
     {
