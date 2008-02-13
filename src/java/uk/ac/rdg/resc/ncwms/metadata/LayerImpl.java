@@ -35,9 +35,7 @@ import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -512,43 +510,6 @@ public class LayerImpl implements Layer
     public boolean isQueryable()
     {
         return this.dataset.isQueryable();
-    }
-    
-    /**
-     * Reads a layer of data from this variable (which must be a scalar or a
-     * single component of a vector).  Missing values will be represented by
-     * Float.NaN.
-     */
-    public float[] read(int tIndex, int zIndex, HorizontalGrid grid)
-        throws Exception
-    {
-        // Get a DataReader object for reading the data
-        String dataReaderClass = this.dataset.getDataReaderClass();
-        String location = this.dataset.getLocation();
-        DataReader dr = DataReader.getDataReader(dataReaderClass, location);
-        logger.debug("Got data reader of type {}", dr.getClass().getName());
-        
-        // See exactly which file we're reading from, and which time index in 
-        // the file (handles datasets with glob aggregation)
-        String filename;
-        int tIndexInFile;
-        if (tIndex >= 0)
-        {
-            TimestepInfo tInfo = this.timesteps.get(tIndex);
-            filename = tInfo.getFilename();
-            tIndexInFile = tInfo.getIndexInFile();
-        }
-        else
-        {
-            // There is no time axis
-            // TODO: this fails if there is a layer in the dataset which 
-            // has no time axis but the dataset is still a glob aggregation
-            // (e.g. a bathymetry layer that is present in every file in the glob
-            // aggregation, but has no time dependence).
-            filename = this.dataset.getLocation();
-            tIndexInFile = tIndex;
-        }
-        return dr.read(filename, this, tIndexInFile, zIndex, grid);
     }
     
     /**

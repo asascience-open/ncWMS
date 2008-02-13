@@ -31,7 +31,6 @@ package uk.ac.rdg.resc.ncwms.metadata;
 import java.util.List;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 
 /**
@@ -196,13 +195,6 @@ public interface Layer
     boolean isZaxisPresent();
 
     boolean isZpositive();
-
-    /**
-     * Reads a layer of data from this variable (which must be a scalar or a
-     * single component of a vector).  Missing values will be represented by
-     * Float.NaN.
-     */
-    float[] read(int tIndex, int zIndex, HorizontalGrid grid) throws Exception;
     
     /**
      * @return true if this Layer can be rendered in the style with the 

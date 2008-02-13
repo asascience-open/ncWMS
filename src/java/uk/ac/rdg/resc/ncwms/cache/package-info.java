@@ -27,7 +27,6 @@
  */
 
 /**
- * <b><i>(Deprecated)</i></b> A cache for image tiles, intended to enhance performance.
- * Does not work with the current code (cache consistency issues).
+ * A cache for extracted data arrays, intended to enhance performance.
  */
 package uk.ac.rdg.resc.ncwms.cache;

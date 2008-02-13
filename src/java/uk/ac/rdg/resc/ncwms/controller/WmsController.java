@@ -48,6 +48,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.Config;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -60,6 +61,7 @@ import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
@@ -280,8 +282,9 @@ public class WmsController extends AbstractController
      * width/height).</li>
      * <li>Looks for TIME and ELEVATION parameters (TIME may be expressed as a
      * start/end range, in which case we will produce an animation).</li>
-     * <li>Extracts the data using {@link Layer#read Layer.read()}, which in turn calls
-     * {@link uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()}.  This returns an array of floats, representing
+     * <li>Extracts the data using
+     * {@link uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()}.
+     * This returns an array of floats, representing
      * the data values at each pixel in the final image.</li>
      * <li>Uses an {@link AbstractStyle} object to turn the array of data into
      * a {@link java.awt.image.BufferedImage} (or, in the case of an animation, several
@@ -291,7 +294,6 @@ public class WmsController extends AbstractController
      * </ol>
      * @throws WmsException if the user has provided invalid parameters
      * @throws Exception if an internal error occurs
-     * @see Layer#read Layer.read()
      * @see uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()
      * @see uk.ac.rdg.resc.ncwms.datareader.DefaultDataReader#read DefaultDataReader.read()
      * @todo Separate Model and View code more cleanly
@@ -397,14 +399,51 @@ public class WmsController extends AbstractController
         if (layer instanceof VectorLayer)
         {
             VectorLayer vecLayer = (VectorLayer)layer;
-            picData.add(vecLayer.getEastwardComponent().read(tIndex, zIndex, grid));
-            picData.add(vecLayer.getNorthwardComponent().read(tIndex, zIndex, grid));
+            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, grid));
+            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, grid));
         }
         else
         {
-            picData.add(layer.read(tIndex, zIndex, grid));
+            picData.add(readDataArray(layer, tIndex, zIndex, grid));
         }
         return picData;
+    }
+    
+    /**
+     * Reads an array of data from a Layer that is <b>not</b> a VectorLayer.
+     */
+    private static float[] readDataArray(Layer layer, int tIndex, int zIndex,
+        HorizontalGrid grid) throws Exception
+    {
+        // Get a DataReader object for reading the data
+        String dataReaderClass = layer.getDataset().getDataReaderClass();
+        String location = layer.getDataset().getLocation();
+        DataReader dr = DataReader.getDataReader(dataReaderClass, location);
+        logger.debug("Got data reader of type {}", dr.getClass().getName());
+        
+        // See exactly which file we're reading from, and which time index in 
+        // the file (handles datasets with glob aggregation)
+        String filename;
+        int tIndexInFile;
+        if (tIndex >= 0)
+        {
+            TimestepInfo tInfo = layer.getTimesteps().get(tIndex);
+            filename = tInfo.getFilename();
+            tIndexInFile = tInfo.getIndexInFile();
+        }
+        else
+        {
+            // There is no time axis
+            // TODO: this fails if there is a layer in the dataset which 
+            // has no time axis but the dataset is still a glob aggregation
+            // (e.g. a bathymetry layer that is present in every file in the glob
+            // aggregation, but has no time dependence).
+            filename = layer.getDataset().getLocation();
+            tIndexInFile = tIndex;
+        }
+        // TODO: check the cache to see if we've already extracted this data
+        // Don't use the cache for NcML or OPenDAP datasets!
+        return dr.read(filename, layer, tIndexInFile, zIndex, grid);
     }
     
     /**
@@ -489,13 +528,13 @@ public class WmsController extends AbstractController
             if (layer instanceof VectorLayer)
             {
                 VectorLayer vecLayer = (VectorLayer)layer;
-                float xval = vecLayer.getEastwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
-                float yval = vecLayer.getNorthwardComponent().read(tIndex, zIndex, singlePointGrid)[0];
+                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, singlePointGrid)[0];
+                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, singlePointGrid)[0];
                 val = (float)Math.sqrt(xval * xval + yval * yval);
             }
             else
             {
-                val = layer.read(tIndex, zIndex, singlePointGrid)[0];
+                val = readDataArray(layer, tIndex, zIndex, singlePointGrid)[0];
             }
             featureData.put(date, Float.isNaN(val) ? null : val);
         }
