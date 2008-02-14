@@ -612,7 +612,7 @@ function validateScale()
         // Reset to the old value
         $('scaleMax').value = scaleMaxVal;
     }
-    else if (fMin >= fMax)
+    else if (fMin > fMax)
     {
         alert('Minimum scale value must be less than the maximum');
         // Reset to the old values
