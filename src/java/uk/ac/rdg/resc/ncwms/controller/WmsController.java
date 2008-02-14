@@ -47,6 +47,8 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.cache.TileCache;
+import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
@@ -110,6 +112,7 @@ public class WmsController extends AbstractController
     private Factory<AbstractStyle> styleFactory;
     private UsageLogger usageLogger;
     private MetadataController metadataController;
+    private TileCache tileCache;
     
     /**
      * <p>Entry point for all requests to the WMS.  This method first 
@@ -347,7 +350,7 @@ public class WmsController extends AbstractController
         for (int tIndex : tIndices)
         {
             // tIndex == -1 if there is no t axis present
-            List<float[]> picData = readData(layer, tIndex, zIndex, grid);
+            List<float[]> picData = readData(layer, tIndex, zIndex, grid, this.tileCache);
             // Only add a label if this is part of an animation
             String tValue = "";
             if (layer.isTaxisPresent() && tIndices.size() > 1)
@@ -393,18 +396,18 @@ public class WmsController extends AbstractController
      * elements if the variable is a vector
      */
     static List<float[]> readData(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid) throws Exception
+        HorizontalGrid grid, TileCache tileCache) throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
         if (layer instanceof VectorLayer)
         {
             VectorLayer vecLayer = (VectorLayer)layer;
-            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, grid));
-            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, grid));
+            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, grid, tileCache));
+            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, grid, tileCache));
         }
         else
         {
-            picData.add(readDataArray(layer, tIndex, zIndex, grid));
+            picData.add(readDataArray(layer, tIndex, zIndex, grid, tileCache));
         }
         return picData;
     }
@@ -413,7 +416,7 @@ public class WmsController extends AbstractController
      * Reads an array of data from a Layer that is <b>not</b> a VectorLayer.
      */
     private static float[] readDataArray(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid) throws Exception
+        HorizontalGrid grid, TileCache tileCache) throws Exception
     {
         // Get a DataReader object for reading the data
         String dataReaderClass = layer.getDataset().getDataReaderClass();
@@ -441,8 +444,15 @@ public class WmsController extends AbstractController
             filename = layer.getDataset().getLocation();
             tIndexInFile = tIndex;
         }
-        // TODO: check the cache to see if we've already extracted this data
-        // Don't use the cache for NcML or OPenDAP datasets!
+        if (tileCache != null)
+        {
+            // Check the cache to see if we've already extracted this data
+            // TODO: Careful when using the cache for NcML or OPenDAP datasets!
+            TileCacheKey key = new TileCacheKey(filename, layer, grid, tIndexInFile, zIndex);
+            float[] data = tileCache.get(key);
+            if (data != null) return data;
+        }
+        // We haven't got the data from cache, so do the read
         return dr.read(filename, layer, tIndexInFile, zIndex, grid);
     }
     
@@ -525,16 +535,17 @@ public class WmsController extends AbstractController
                 1, 1, new double[]{x, y, x, y});
             
             float val;
+            // We don't use the tile cache for getFeatureInfo
             if (layer instanceof VectorLayer)
             {
                 VectorLayer vecLayer = (VectorLayer)layer;
-                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, singlePointGrid)[0];
-                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, singlePointGrid)[0];
+                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, singlePointGrid, null)[0];
+                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, singlePointGrid, null)[0];
                 val = (float)Math.sqrt(xval * xval + yval * yval);
             }
             else
             {
-                val = readDataArray(layer, tIndex, zIndex, singlePointGrid)[0];
+                val = readDataArray(layer, tIndex, zIndex, singlePointGrid, null)[0];
             }
             featureData.put(date, Float.isNaN(val) ? null : val);
         }
@@ -831,6 +842,14 @@ public class WmsController extends AbstractController
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
+    }
+    
+    /**
+     * Called by Spring to inject the tile cache
+     */
+    public void setTileCache(TileCache tileCache)
+    {
+        this.tileCache = tileCache;
     }
 }
 

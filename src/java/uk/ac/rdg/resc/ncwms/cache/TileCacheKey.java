@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
 import java.io.Serializable;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
@@ -61,14 +62,14 @@ public class TileCacheKey implements Serializable
      * @throws IllegalArgumentException if the given filepath does not represent
      * a valid file on the server
      */
-    public TileCacheKey(Layer layer, String crsCode, double[] bbox, int width,
-        int height, String filepath, int tIndex, int zIndex)
+    public TileCacheKey(String filepath, Layer layer, HorizontalGrid grid,
+        int tIndex, int zIndex)
     {
         this.layerId = layer.getId();
-        this.crsCode = crsCode;
-        this.bbox = bbox;
-        this.width = width;
-        this.height = height;
+        this.crsCode = grid.getCrsCode();
+        this.bbox = grid.getBbox();
+        this.width = grid.getWidth();
+        this.height = grid.getHeight();
         File f = new File(filepath);
         if (!f.exists() || !f.isFile())
         {

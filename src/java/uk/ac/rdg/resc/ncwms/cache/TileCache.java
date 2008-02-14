@@ -29,10 +29,14 @@
 package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
+import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
+import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.DiskStoreConfiguration;
+import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
+import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 
 /**
@@ -53,6 +57,8 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
  */
 public class TileCache
 {
+    private static final Logger logger = Logger.getLogger(TileCache.class);
+    
     private static final String CACHE_NAME = "tilecache";
     private CacheManager cacheManager;
     
@@ -67,22 +73,43 @@ public class TileCache
     {
         // Setting the location of the disk store programmatically is tedious,
         // requiring the creation of lots of objects...
-        Configuration cacheConfig = new Configuration();
+        Configuration config = new Configuration();
         DiskStoreConfiguration diskStore = new DiskStoreConfiguration();
         diskStore.setPath(new File(ncwmsContext.getWorkingDirectory(), "tilecache").getPath());
-        cacheConfig.addDiskStore(diskStore);
-        this.cacheManager = new CacheManager(cacheConfig);
+        config.addDiskStore(diskStore);
+        config.addDefaultCache(new CacheConfiguration());
+        this.cacheManager = new CacheManager(config);
         
-        /*Cache tileCache = new Cache(
+        // Each 256*256 tile will take up 262144 bytes.
+        // Default is to allocate 50MB of memory and 500MB of disk ~ 200 and 2000 elements
+        // respectively.
+        Cache tileCache = new Cache(
             CACHE_NAME,                    // Name for the cache
-            1000,                          // Maximum number of elements in memory
+            200,                           // Maximum number of elements in memory
             MemoryStoreEvictionPolicy.LRU, // evict least-recently-used elements
             true,                          // Use the disk store
             "",                            // disk store path (ignored)
-            
+            false,                         // elements are not eternal
+            60 * 60 * 24,                  // Elements will last for 1 day in the cache
+            0,                             // Ignore time since last access/modification
+            true,                          // will overflow to disk
+            1000,                          // number of seconds between clearouts of disk store
+            null,                          // no registered event listeners
+            null,                          // no bootstrap cache loader
+            2000                           // Maximum number of elements on disk
         );
         
-        this.cacheManager.addCache(tileCache);*/
+        this.cacheManager.addCache(tileCache);
+        logger.info("Tile cache started");
+    }
+    
+    /**
+     * Called by Spring to shut down the cache
+     */
+    public void close()
+    {
+        this.cacheManager.shutdown();
+        logger.info("Tile cache shut down");
     }
     
     /**
@@ -91,7 +118,17 @@ public class TileCache
      */
     public float[] get(TileCacheKey key)
     {
-        return (float[])this.cacheManager.getCache(CACHE_NAME).get(key).getValue();
+        Element el = this.cacheManager.getCache(CACHE_NAME).get(key);
+        if (el == null)
+        {
+            logger.debug("Not found in cache");
+            return null;
+        }
+        else
+        {
+            logger.debug("Found in cache");
+            return (float[])el.getValue();
+        }
     }
     
     /**

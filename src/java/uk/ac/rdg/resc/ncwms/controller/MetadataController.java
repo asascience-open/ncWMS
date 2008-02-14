@@ -395,7 +395,8 @@ public class MetadataController
         throws Exception
     {
         // Now read the data
-        List<float[]> picData = WmsController.readData(layer, tIndex, zIndex, grid);
+        // TODO: should we use the tile cache here?
+        List<float[]> picData = WmsController.readData(layer, tIndex, zIndex, grid, null);
         
         // Now find the minimum and maximum values: for a vector this is the magnitude
         boolean allFillValue = true;

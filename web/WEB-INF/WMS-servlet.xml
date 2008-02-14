@@ -12,8 +12,6 @@
        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
        xsi:schemaLocation='http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd'>
     
-    <!-- TODO: Need a bean for the tile cache -->
-    
     <!-- An object that stores the context of the ncWMS application.  This contains
          the location of the application's working directory, which defaults to
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
@@ -21,11 +19,16 @@
     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
         <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
     </bean>
+    
+    <!-- A cache for image tiles -->
+    <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
+            init-method="init" destroy-method="close">
+         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+    </bean>
           
     <!-- An object that is used to store and read metadata about the variables
-         that are being exposed through this server. To change the store to
-         an in-memory store (for performance or debugging purposes) change
-         the class to "uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore" -->
+         that are being exposed through this server. Currently the
+         InMemoryMetadataStore is the only one that works properly. -->
     <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"-->
     <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"
             init-method="init" destroy-method="close">
@@ -100,6 +103,7 @@
         <property name="styleFactory"><ref local="styleFactory"/></property>
         <property name="metadataController"><ref local="metadataController"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
+        <property name="tileCache"><ref local="tileCache"/></property>
     </bean>
     
     <!-- This Controller will handle all requests for the non-standard

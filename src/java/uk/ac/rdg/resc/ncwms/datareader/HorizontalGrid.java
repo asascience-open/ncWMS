@@ -59,9 +59,10 @@ public class HorizontalGrid
     public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
     public static final List<String> SUPPORTED_CRS_CODES;
     
-    private int width;    // Width of the grid in pixels
-    private int height;   // Height of the grid in pixels
-    private double[] bbox; // Array of four floats representing the bounding box
+    private int width;      // Width of the grid in pixels
+    private int height;     // Height of the grid in pixels
+    private double[] bbox;  // Array of four floats representing the bounding box
+    private String crsCode; // String representing the CRS
     private CoordinateReferenceSystem crs;
     private MathTransform transformToLatLon;
     
@@ -148,6 +149,7 @@ public class HorizontalGrid
                 "transform to Plate Carree", crsCode);
             throw ex; // This is an internal error 
         }
+        this.crsCode = crsCode;
         this.width = width;
         this.height = height;
         this.bbox = bbox;
@@ -250,5 +252,10 @@ public class HorizontalGrid
     public boolean isLatLon()
     {
         return this.transformToLatLon.isIdentity();
+    }
+
+    public String getCrsCode()
+    {
+        return crsCode;
     }
 }
