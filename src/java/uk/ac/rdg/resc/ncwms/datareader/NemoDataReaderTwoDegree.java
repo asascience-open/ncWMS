@@ -60,7 +60,7 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
         
         try
         {
-            nc = NetcdfDataset.openDataset(location, false, null);
+            nc = getDataset(location);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");

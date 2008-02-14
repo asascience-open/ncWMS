@@ -38,9 +38,11 @@ import org.apache.log4j.Logger;
 import thredds.catalog.DataType;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
+import ucar.nc2.dataset.CoordSysBuilder;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDatasetCache;
+import ucar.nc2.dataset.NetcdfDatasetFactory;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.VariableEnhanced;
 import ucar.nc2.dt.GridCoordSystem;
@@ -48,6 +50,7 @@ import ucar.nc2.dt.GridDataset;
 import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
+import ucar.nc2.util.CancelTask;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
@@ -69,6 +72,40 @@ public class DefaultDataReader extends DataReader
     private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
     // We'll use this logger to output performance information
     private static final Logger benchmarkLogger = Logger.getLogger("ncwms.benchmark");
+    
+    /**
+     * A {@link DatasetFactory} that is used in {#getDataset} by
+     * {@link NetcdfDataset#acquire}
+     * to open a dataset without enhancement, then add the coordinate systems.
+     * This is used so that we can read data without conversion of scale factors
+     * and missing values (makes the reading of data from disk faster).  Calculations
+     * with scale factors and missing values are then performed by explicitly
+     * creating a {@link VariableDS}.
+     * @see #read
+     */
+    private static final NetcdfDatasetFactory DATASET_FACTORY = new NetcdfDatasetFactory()
+    {
+        public NetcdfDataset openDataset(String location, int buffer_size,
+            CancelTask cancelTask, Object spiObject) throws IOException
+        {
+            NetcdfDataset nc = NetcdfDataset.openDataset(location, false,
+                buffer_size, cancelTask, spiObject);
+            CoordSysBuilder.addCoordinateSystems(nc, null);
+            return nc;
+        }
+    };
+    
+    /**
+     * Gets the {@link NetcdfDataset} at the given location, reading from the cache
+     * if possible.
+     * @throws IOException if there was an error opening the dataset
+     */
+    protected static NetcdfDataset getDataset(String location) throws IOException
+    {
+        NetcdfDataset nc = NetcdfDatasetCache.acquire(location, null, DATASET_FACTORY);
+        logger.debug("Returning NetcdfDataset at {} from cache", location);
+        return nc;
+    }
     
     /**
      * <p>Reads an array of data from a NetCDF file and projects onto the given
@@ -218,18 +255,6 @@ public class DefaultDataReader extends DataReader
     }
     
     /**
-     * Gets the {@link NetcdfDataset} at the given location from the cache.
-     * @throws IOException if there was an error opening the dataset
-     */
-    protected static synchronized NetcdfDataset getDataset(String location)
-        throws IOException
-    {
-        NetcdfDataset nc = NetcdfDatasetCache.acquire(location, null, DatasetFactory.get());
-        logger.debug("Returning NetcdfDataset at {} from cache", location);
-        return nc;
-    }
-    
-    /**
      * Reads the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location (i.e. one element resulting from the
@@ -247,9 +272,8 @@ public class DefaultDataReader extends DataReader
         NetcdfDataset nc = null;
         try
         {
-            // We use openDataset() rather than acquiring from cache
-            // because we need to enhance the dataset
-            nc = NetcdfDataset.openDataset(location, true, null);
+            // Get the dataset from the cache
+            nc = getDataset(location);
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
             
             // Search through all coordinate systems, creating appropriate metadata

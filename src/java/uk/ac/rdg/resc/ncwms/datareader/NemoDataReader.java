@@ -220,7 +220,8 @@ public class NemoDataReader extends DefaultDataReader
         
         try
         {
-            nc = NetcdfDataset.openDataset(location, false, null);
+            // Get the dataset from the cache
+            nc = getDataset(location);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
