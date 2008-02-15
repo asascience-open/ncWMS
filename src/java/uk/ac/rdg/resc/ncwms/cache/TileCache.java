@@ -137,6 +137,7 @@ public class TileCache
     public void put(TileCacheKey key, float[] data)
     {
         this.cacheManager.getCache(CACHE_NAME).put(new Element(key, data));
+        logger.debug("Data put into cache");
     }
     
     /**

@@ -444,16 +444,25 @@ public class WmsController extends AbstractController
             filename = layer.getDataset().getLocation();
             tIndexInFile = tIndex;
         }
+        float[] data = null;
+        TileCacheKey key = null;
         if (tileCache != null)
         {
             // Check the cache to see if we've already extracted this data
             // TODO: Careful when using the cache for NcML or OPenDAP datasets!
-            TileCacheKey key = new TileCacheKey(filename, layer, grid, tIndexInFile, zIndex);
-            float[] data = tileCache.get(key);
-            if (data != null) return data;
+            key = new TileCacheKey(filename, layer, grid, tIndexInFile, zIndex);
+            // Try to get the data from cache
+            data = tileCache.get(key);
         }
-        // We haven't got the data from cache, so do the read
-        return dr.read(filename, layer, tIndexInFile, zIndex, grid);
+        if (data == null)
+        {
+            // Data not found in cache
+            data = dr.read(filename, layer, tIndexInFile, zIndex, grid);
+            // Put the data into the cache
+            if (tileCache != null) tileCache.put(key, data);
+        }
+        
+        return data;
     }
     
     /**

@@ -82,4 +82,32 @@ public class TileCacheKey implements Serializable
         this.zIndex = zIndex;
     }
     
+    public boolean equals(Object o)
+    {
+        System.out.println("Called equals(" + o.getClass().getName() + ")");
+        if (this == o) return true;
+        if (!(o instanceof TileCacheKey)) return false;
+        TileCacheKey other = (TileCacheKey)o;
+        
+        if (this.crsCode.equals(other.crsCode) &&
+            this.fileSize == other.fileSize &&
+            this.filepath.equals(other.filepath) &&
+            this.height == other.height &&
+            this.lastModified == other.lastModified &&
+            this.layerId.equals(other.layerId) &&
+            this.tIndex == other.tIndex &&
+            this.zIndex == other.zIndex &&
+            this.bbox.length == other.bbox.length)
+        {
+            // Now we can compare the bboxes
+            for (int i = 0; i < this.bbox.length; i++)
+            {
+                if (this.bbox[i] != other.bbox[i]) return false;
+            }
+            // If we've got this far they are equal
+            return true;
+        }
+        return false;
+    }
+    
 }
