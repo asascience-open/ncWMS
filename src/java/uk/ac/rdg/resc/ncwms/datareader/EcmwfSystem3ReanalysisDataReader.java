@@ -74,7 +74,7 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * In the ECMWF data the time is represented as a separate variable,
      * not a proper dimension!
      * @param nc The NetcdfDataset to which the variable belongs
-     * @param grid the variable as a GeoGrid
+     * @param grid the variable as a GridDatatype
      * @return Array of {@link Date}s
      * @throws IOException if there was an error reading the timesteps data
      */
