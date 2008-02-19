@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
+import java.io.Serializable;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -82,7 +83,7 @@ public class TileCache
         
         // Each 256*256 tile will take up 262144 bytes.
         // Default is to allocate 50MB of memory and 500MB of disk ~ 200 and 2000 elements
-        // respectively.
+        // respectively.  TODO make this configurable
         Cache tileCache = new Cache(
             CACHE_NAME,                    // Name for the cache
             200,                           // Maximum number of elements in memory
@@ -92,7 +93,7 @@ public class TileCache
             false,                         // elements are not eternal
             60 * 60 * 24,                  // Elements will last for 1 day in the cache
             0,                             // Ignore time since last access/modification
-            true,                          // will overflow to disk
+            true,                          // Will persist cache to disk in between JVM restarts
             1000,                          // number of seconds between clearouts of disk store
             null,                          // no registered event listeners
             null,                          // no bootstrap cache loader
@@ -119,12 +120,6 @@ public class TileCache
     public float[] get(TileCacheKey key)
     {
         Cache cache = this.cacheManager.getCache(CACHE_NAME);
-        logger.debug("There are {} elements in the cache", cache.getSize());
-        int i = 0;
-        for (Object keyObj : cache.getKeys())
-        {
-            logger.debug("Key {} " + (keyObj.equals(key) ? "matches" : "does not match"), i++);
-        }
         Element el = cache.get(key);
         if (el == null)
         {

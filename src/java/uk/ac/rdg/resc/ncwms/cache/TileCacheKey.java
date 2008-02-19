@@ -35,7 +35,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * Key that is used to identify a particular data array (tile) in a
- * {@link TileCache}.
+ * {@link TileCache}.  TileCacheKeys are immutable.
  *
  * @author Jon Blower
  * $Revision$
@@ -56,6 +56,11 @@ public class TileCacheKey implements Serializable
                                // (used to check for changes to the file)
     private int tIndex;        // The t index of this tile in the file
     private int zIndex;        // The z index of this tile in the file
+    
+    // TileCacheKeys are immutable so these properties can be stored to save
+    // repeated recomputation:
+    private String str;        // String representation of this key
+    private int hashCode;      // Hash code for this key
     
     /**
      * Creates a key for the storing and locating of data arrays in a TileCache.
@@ -80,34 +85,137 @@ public class TileCacheKey implements Serializable
         this.fileSize = f.length();
         this.tIndex = tIndex;
         this.zIndex = zIndex;
+        
+        // Create a String representation of this key
+        StringBuffer buf = new StringBuffer();
+        buf.append(this.layerId);
+        buf.append(",");
+        buf.append(this.crsCode);
+        buf.append(",{");
+        for (double bboxVal : this.bbox)
+        {
+            buf.append(bboxVal);
+            buf.append(",");
+        }
+        buf.append("}");
+        buf.append(this.width);
+        buf.append(",");
+        buf.append(this.height);
+        buf.append(",");
+        buf.append(this.filepath);
+        buf.append(",");
+        buf.append(this.lastModified);
+        buf.append(",");
+        buf.append(this.fileSize);
+        buf.append(",");
+        buf.append(this.tIndex);
+        buf.append(",");
+        buf.append(this.zIndex);
+        
+        // Create and store the string representations and hash code for this
+        // key.  The key is immutable so these will not change.
+        this.str = buf.toString();
+        this.hashCode = this.str.hashCode();
     }
     
+    /**
+     * <p>Generates an integer code that is used by ehcache to test for equality
+     * of TileCacheKeys.  Two different TileCacheKeys can theoretically generate
+     * the same hash code, although this is unlikely.  ehcache uses this to reduce
+     * the search space before calling equals() to check for definite equality.
+     * (Note that just implementing equals() will not do!)</p>
+     */
+    public int hashCode()
+    {
+        return this.hashCode;
+    }
+    
+    public String toString()
+    {
+        return this.str;
+    }
+    
+    /**
+     * This is called by ehcache after the hashcodes of the objects have been
+     * compared for equality
+     */
     public boolean equals(Object o)
     {
-        System.out.println("Called equals(" + o.getClass().getName() + ")");
+        if (o == null) return false;
         if (this == o) return true;
         if (!(o instanceof TileCacheKey)) return false;
+        
         TileCacheKey other = (TileCacheKey)o;
         
-        if (this.crsCode.equals(other.crsCode) &&
-            this.fileSize == other.fileSize &&
-            this.filepath.equals(other.filepath) &&
-            this.height == other.height &&
-            this.lastModified == other.lastModified &&
-            this.layerId.equals(other.layerId) &&
-            this.tIndex == other.tIndex &&
-            this.zIndex == other.zIndex &&
-            this.bbox.length == other.bbox.length)
+        if (this.getCrsCode().equals(other.getCrsCode()) &&
+            this.getFileSize() == other.getFileSize() &&
+            this.getFilepath().equals(other.getFilepath()) &&
+            this.getHeight() == other.getHeight() &&
+            this.getLastModified() == other.getLastModified() &&
+            this.getLayerId().equals(other.getLayerId()) &&
+            this.getTIndex() == other.getTIndex() &&
+            this.getZIndex() == other.getZIndex() &&
+            this.getBbox().length == other.getBbox().length)
         {
             // Now we can compare the bboxes
-            for (int i = 0; i < this.bbox.length; i++)
+            for (int i = 0; i < this.getBbox().length; i++)
             {
-                if (this.bbox[i] != other.bbox[i]) return false;
+                if (this.getBbox()[i] != other.getBbox()[i]) return false;
             }
             // If we've got this far they are equal
             return true;
         }
         return false;
+    }
+
+    public String getLayerId()
+    {
+        return layerId;
+    }
+
+    public String getCrsCode()
+    {
+        return crsCode;
+    }
+
+    public double[] getBbox()
+    {
+        return bbox;
+    }
+
+    public int getWidth()
+    {
+        return width;
+    }
+
+    public int getHeight()
+    {
+        return height;
+    }
+
+    public String getFilepath()
+    {
+        return filepath;
+    }
+
+    public long getLastModified()
+    {
+        return lastModified;
+    }
+
+    public long getFileSize()
+    {
+        return fileSize;
+    }
+
+    public int getTIndex()
+    {
+        return tIndex;
+    }
+
+    public int getZIndex()
+    {
+        return zIndex;
     }
     
 }
