@@ -118,7 +118,14 @@ public class TileCache
      */
     public float[] get(TileCacheKey key)
     {
-        Element el = this.cacheManager.getCache(CACHE_NAME).get(key);
+        Cache cache = this.cacheManager.getCache(CACHE_NAME);
+        logger.debug("There are {} elements in the cache", cache.getSize());
+        int i = 0;
+        for (Object keyObj : cache.getKeys())
+        {
+            logger.debug("Key {} " + (keyObj.equals(key) ? "matches" : "does not match"), i++);
+        }
+        Element el = cache.get(key);
         if (el == null)
         {
             logger.debug("Not found in cache");
