@@ -69,6 +69,9 @@
               representations of the standard WMS Exception types.</li>
           <li><a href="uk/ac/rdg/resc/ncwms/usagelog/package-summary.html">Usage logging system</a>,
               which records all "hits" on the ncWMS server.</li>
+          <li><a href="uk/ac/rdg/resc/ncwms/cache/package-summary.html">Caching system</a>,
+              which increases performance and reduces the load on the server by
+              caching recently-extracted arrays of data.</li>
       </ul>
       
       <h3>Development Environment</h3>
@@ -86,6 +89,7 @@
           <li>GeoTools</li>
           <li>Spring core and MVC libraries</li>
           <li>H2 database (for usage logging and possible future metadata holdings)</li>
+          <li>EHCache for the cache of extracted data arrays</li>
           <li>Simple XML for serializing and deserializing XML config files</li>
       </ul>
       

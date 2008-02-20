@@ -250,7 +250,8 @@ public class Dataset
     /**
      * @return a Date object representing the time at which this dataset was
      * last updated, or null if this dataset has never been updated.  Delegates
-     * to MetadataStore.getLastUpdateTime() (because the last update time is 
+     * to {@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore#getLastUpdateTime}
+     * (because the last update time is 
      * stored with the metadata - which may or may not be persistent across
      * server reboots, depending on the type of MetadataStore).
      */

@@ -76,7 +76,16 @@ public class H2UsageLogger implements UsageLogger
             "output_format, transparent, background_color, menu, remote_server_url) " +
             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     
+    private static final String GET_NUM_GETMAP_REQUESTS = "SELECT COUNT(*) FROM " +
+        "usage_log WHERE wms_operation = 'GetMap'";
+    
+    private static final String GET_NUM_CACHED_GETMAP_REQUESTS = "SELECT COUNT(*) FROM " +
+        "usage_log WHERE wms_operation = 'GetMap' AND used_cache = true";
+    
     private Connection conn;
+    
+    private PreparedStatement getNumGetMapRequests;
+    private PreparedStatement getNumCachedGetMapRequests;
     
     // These properties will be injected by Spring
     private NcwmsContext ncwmsContext;
@@ -115,6 +124,10 @@ public class H2UsageLogger implements UsageLogger
 
             // Now run the script to initialize the database
             RunScript.execute(this.conn, scriptReader);
+            
+            // Now prepare the statements we will execute
+            this.getNumGetMapRequests = this.conn.prepareStatement(GET_NUM_GETMAP_REQUESTS);
+            this.getNumCachedGetMapRequests = this.conn.prepareStatement(GET_NUM_CACHED_GETMAP_REQUESTS);
         }
         catch(Exception e)
         {
@@ -166,7 +179,7 @@ public class H2UsageLogger implements UsageLogger
             ps.setString(22, logEntry.getDatasetId());
             ps.setString(23, logEntry.getVariableId());
             ps.setObject(24, logEntry.getTimeToExtractDataMs());
-            ps.setObject(25, logEntry.getUsedCache());
+            ps.setBoolean(25, logEntry.isUsedCache());
             ps.setObject(26, logEntry.getFeatureInfoLon());
             ps.setObject(27, logEntry.getFeatureInfoLat());
             ps.setObject(28, logEntry.getFeatureInfoPixelCol());
@@ -224,6 +237,45 @@ public class H2UsageLogger implements UsageLogger
     public void setNcwmsContext(NcwmsContext ncwmsContext)
     {
         this.ncwmsContext = ncwmsContext;
+    }
+
+    /**
+     * @return the number of GetMap requests in the usage log, or -1 if there
+     * was an error getting the data from the log.
+     */
+    public int getNumGetMapRequests()
+    {
+        return getIntegerValueFromDatabase(this.getNumGetMapRequests);
+    }
+
+    /**
+     * @return the number of GetMap requests in the usage log that have been
+     * served using the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache},
+     * or -1 if there was an error getting the data from the log.
+     */
+    public int getNumCachedGetMapRequests()
+    {
+        return getIntegerValueFromDatabase(this.getNumCachedGetMapRequests);
+    }
+    
+    /**
+     * Utility method that executes the given prepared statement and returns the
+     * integer value of the first column in the first row of the result set, or
+     * -1 if there was an error getting the data from the log.
+     */
+    private static int getIntegerValueFromDatabase(PreparedStatement ps)
+    {
+        try
+        {
+            ResultSet results = ps.executeQuery();
+            results.first();
+            return results.getInt(1);
+        }
+        catch(SQLException sqle)
+        {
+            logger.error("Error getting integer value from database", sqle);
+            return -1;
+        }
     }
     
 }

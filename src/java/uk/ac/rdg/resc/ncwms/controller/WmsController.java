@@ -350,7 +350,8 @@ public class WmsController extends AbstractController
         for (int tIndex : tIndices)
         {
             // tIndex == -1 if there is no t axis present
-            List<float[]> picData = readData(layer, tIndex, zIndex, grid, this.tileCache);
+            List<float[]> picData = readData(layer, tIndex, zIndex, grid,
+                this.tileCache, usageLogEntry);
             // Only add a label if this is part of an animation
             String tValue = "";
             if (layer.isTaxisPresent() && tIndices.size() > 1)
@@ -396,27 +397,35 @@ public class WmsController extends AbstractController
      * elements if the variable is a vector
      */
     static List<float[]> readData(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid, TileCache tileCache) throws Exception
+        HorizontalGrid grid, TileCache tileCache, UsageLogEntry usageLogEntry)
+        throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
         if (layer instanceof VectorLayer)
         {
             VectorLayer vecLayer = (VectorLayer)layer;
-            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, grid, tileCache));
-            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, grid, tileCache));
+            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex,
+                zIndex, grid, tileCache, usageLogEntry));
+            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex,
+                zIndex, grid, tileCache, usageLogEntry));
         }
         else
         {
-            picData.add(readDataArray(layer, tIndex, zIndex, grid, tileCache));
+            picData.add(readDataArray(layer, tIndex, zIndex, grid, tileCache,
+                usageLogEntry));
         }
         return picData;
     }
     
     /**
      * Reads an array of data from a Layer that is <b>not</b> a VectorLayer.
+     * @param usageLogEntry a UsageLogEntry that is used to collect information
+     * about the usage of this WMS (may be null, e.g. if this is being called
+     * from the MetadataLoader).
      */
     private static float[] readDataArray(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid, TileCache tileCache) throws Exception
+        HorizontalGrid grid, TileCache tileCache, UsageLogEntry usageLogEntry)
+        throws Exception
     {
         // Get a DataReader object for reading the data
         String dataReaderClass = layer.getDataset().getDataReaderClass();
@@ -449,17 +458,26 @@ public class WmsController extends AbstractController
         if (tileCache != null)
         {
             // Check the cache to see if we've already extracted this data
-            // TODO: Careful when using the cache for NcML or OPenDAP datasets!
+            // The TileCacheKey class stores different information depending
+            // on whether the file in question is a local file, an OPeNDAP
+            // endpoint or an NcML aggregation (see the Javadoc for the TileCache
+            // class)
             key = new TileCacheKey(filename, layer, grid, tIndexInFile, zIndex);
             // Try to get the data from cache
             data = tileCache.get(key);
         }
         if (data == null)
         {
-            // Data not found in cache
+            // Data not found in cache or cache not present
             data = dr.read(filename, layer, tIndexInFile, zIndex, grid);
             // Put the data into the cache
             if (tileCache != null) tileCache.put(key, data);
+            if (usageLogEntry != null) usageLogEntry.setUsedCache(false);
+        }
+        else
+        {
+            // Data were found in the cache
+            if (usageLogEntry != null) usageLogEntry.setUsedCache(true);
         }
         
         return data;
@@ -548,13 +566,16 @@ public class WmsController extends AbstractController
             if (layer instanceof VectorLayer)
             {
                 VectorLayer vecLayer = (VectorLayer)layer;
-                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex, zIndex, singlePointGrid, null)[0];
-                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex, zIndex, singlePointGrid, null)[0];
+                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex,
+                    zIndex, singlePointGrid, null, usageLogEntry)[0];
+                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex,
+                    zIndex, singlePointGrid, null, usageLogEntry)[0];
                 val = (float)Math.sqrt(xval * xval + yval * yval);
             }
             else
             {
-                val = readDataArray(layer, tIndex, zIndex, singlePointGrid, null)[0];
+                val = readDataArray(layer, tIndex, zIndex, singlePointGrid, null,
+                    usageLogEntry)[0];
             }
             featureData.put(date, Float.isNaN(val) ? null : val);
         }

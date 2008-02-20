@@ -314,7 +314,8 @@ public class MetadataLoader
                 // Read from the first t and z indices
                 int tIndex = layer.isTaxisPresent() ? 0 : -1;
                 int zIndex = layer.isZaxisPresent() ? 0 : -1;
-                float[] minMax = MetadataController.findMinMax(layer, tIndex, zIndex, grid);
+                float[] minMax = MetadataController.findMinMax(layer, tIndex,
+                    zIndex, grid, null);
                 if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
                 {
                     // Just guess at a scale

@@ -104,7 +104,7 @@ public class MetadataController
             }
             else if (item.equals("minmax"))
             {
-                return this.showMinMax(request);
+                return this.showMinMax(request, usageLogEntry);
             }
             else
             {
@@ -353,8 +353,8 @@ public class MetadataController
      * Shows an XML document containing the minimum and maximum values for the
      * tile given in the parameters.
      */
-    private ModelAndView showMinMax(HttpServletRequest request)
-        throws Exception
+    private ModelAndView showMinMax(HttpServletRequest request,
+        UsageLogEntry usageLogEntry) throws Exception
     {
         RequestParams params = new RequestParams(request.getParameterMap());
         // We only need the bit of the GetMap request that pertains to data extraction
@@ -377,7 +377,7 @@ public class MetadataController
         int tIndex = WmsController.getTIndices(dataRequest.getTimeString(), layer).get(0);
         
         // Now read the data and calculate the minimum and maximum values
-        float[] minMax = findMinMax(layer, tIndex, zIndex, grid);
+        float[] minMax = findMinMax(layer, tIndex, zIndex, grid, usageLogEntry);
         
         return new ModelAndView("showMinMax", "minMax", minMax);
     }
@@ -388,15 +388,20 @@ public class MetadataController
      * @param tIndex the time index, or -1 if there is no time axis
      * @param zIndex the z index, or -1 if there is to vertical axis
      * @param grid The grid onto which the data is to be read
+     * @param usageLogEntry a UsageLogEntry that is used to collect information
+     * about the usage of this WMS (may be null, if this method is called from
+     * the MetadataLoader).
      * @return Array of two floats: [min, max]
      * @throws Exception if there was an error reading the data
      */
-    public static float[] findMinMax(Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
+    public static float[] findMinMax(Layer layer, int tIndex, int zIndex,
+        HorizontalGrid grid, UsageLogEntry usageLogEntry)
         throws Exception
     {
         // Now read the data
         // TODO: should we use the tile cache here?
-        List<float[]> picData = WmsController.readData(layer, tIndex, zIndex, grid, null);
+        List<float[]> picData = WmsController.readData(layer, tIndex, zIndex,
+            grid, null, usageLogEntry);
         
         // Now find the minimum and maximum values: for a vector this is the magnitude
         boolean allFillValue = true;

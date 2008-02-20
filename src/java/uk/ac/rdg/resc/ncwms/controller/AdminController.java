@@ -34,9 +34,9 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.sql.DataSource;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
+import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Contact;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
@@ -58,6 +58,7 @@ public class AdminController extends MultiActionController
     // These will be injected by Spring
     private MetadataLoader metadataLoader;
     private Config config;
+    private TileCache tileCache;
     private UsageLogger usageLogger;
     
     /**
@@ -95,7 +96,7 @@ public class AdminController extends MultiActionController
     public ModelAndView displayUsagePage(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        return new ModelAndView("admin_usage");
+        return new ModelAndView("admin_usage", "usageLogger", this.usageLogger);
     }
     
     /**
@@ -225,6 +226,13 @@ public class AdminController extends MultiActionController
                 i++;
             }
             
+            // Set the properties of the cache
+            config.getCache().setEnabled(request.getParameter("cache.enable") != null);
+            config.getCache().setElementLifetimeMinutes(Integer.parseInt(request.getParameter("cache.elementLifetime")));
+            config.getCache().setMaxNumItemsInMemory(Integer.parseInt(request.getParameter("cache.maxNumItemsInMemory")));
+            config.getCache().setEnableDiskStore(request.getParameter("cache.enableDiskStore") != null);
+            config.getCache().setMaxNumItemsOnDisk(Integer.parseInt(request.getParameter("cache.maxNumItemsOnDisk")));
+            
             // Set the location of the THREDDS catalog if it has changed
             String newThreddsCatalogLocation = request.getParameter("thredds.catalog.location");
             if (!config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
@@ -272,6 +280,14 @@ public class AdminController extends MultiActionController
     public void setUsageLogger(UsageLogger usageLogger)
     {
         this.usageLogger = usageLogger;
+    }
+    
+    /**
+     * Called by Spring to inject the tile cache
+     */
+    public void setTileCache(TileCache tileCache)
+    {
+        this.tileCache = tileCache;
     }
     
 }

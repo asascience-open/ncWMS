@@ -107,6 +107,49 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <!--<h2>THREDDS (experimental!)</h2>
         THREDDS catalog location: <input type="text" name="thredds.catalog.location" value="${config.threddsCatalogLocation}" size="60"/>-->
         
+        <h2>Cache settings</h2>
+        <p>This ncWMS server uses a cache of recently-extracted data arrays to increase
+        performance and reduce the load on the server.  Note that the cache will use up
+        some memory and some disk space (configurable below).</p>
+        <table border="1">
+            <tr>
+                <th>Enable cache?</th>
+                <td><input type="checkbox" name="cache.enable"<c:if test="${config.cache.enabled}"> checked="checked"</c:if>/></td>
+                <td>Check this box to enable the cache.  <font color="red">This can be changed while the server is running.</font></td>
+            </tr>
+            <tr>
+                <th>Lifetime of each cached array (minutes)</th>
+                <td><input type="text" name="cache.elementLifetime" value="${config.cache.elementLifetimeMinutes}"/></td>
+                <td>Data arrays will expire automatically from the cache after this number of minutes.
+                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+            </tr>
+            <tr>
+                <c:set var="memoryFootprintMB" value="${256*256*4*config.cache.maxNumItemsInMemory / (1024*1024)}"/>
+                <th>Maximum number of items to hold in memory</th>
+                <td><input type="text" name="cache.maxNumItemsInMemory" value="${config.cache.maxNumItemsInMemory}"/></td>
+                <td>If each item in the cache is a 256x256 array of 4-byte floating point data then 
+                    this value gives a memory footprint for the cache of <b>${memoryFootprintMB} megabytes</b>.
+                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+            </tr>
+            <tr>
+                <th>Enable disk store?</th>
+                <td><input type="checkbox" name="cache.enableDiskStore"<c:if test="${config.cache.enableDiskStore}"> checked="checked"</c:if>/></td>
+                <td>Check this box to enable the disk store (recommended).  If enabled, items that
+                    do not fit into the memory footprint will overflow to disk.  All
+                    items in the cache will automatically be written to disk when the
+                    server is shut down or restarted.
+                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+            </tr>
+            <tr>
+                <c:set var="diskFootprintMB" value="${256*256*4*config.cache.maxNumItemsOnDisk / (1024*1024)}"/>
+                <th>Maximum number of items to hold on disk</th>
+                <td><input type="text" name="cache.maxNumItemsOnDisk" value="${config.cache.maxNumItemsOnDisk}"/></td>
+                <td>If each item in the cache is a 256x256 array of 4-byte floating point data then 
+                    this value gives a disk footprint for the cache of <b>${diskFootprintMB} megabytes</b>.
+                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+            </tr>
+        </table>
+        
         <h2>Server metadata</h2>
         <table border="1">
             <tr><th>Title</th><td><input type="text" name="server.title" value="${config.server.title}"/></td><td>Title for this WMS</td></tr>

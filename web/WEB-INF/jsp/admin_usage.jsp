@@ -11,9 +11,12 @@
     <body>
     
     <h1>ncWMS Usage Monitor</h1>
-    <p>This page will contain usage information.  However, at the moment all 
-    you can do is...</p>
-    <p><a href="downloadUsageLog">Download whole usage log into Excel (CSV)</a></p>
+    <p>This page contains summary usage information.  If you need more detail you can
+    download the whole usage log in CSV format (e.g. for Microsoft Excel) by clicking
+    <a href="downloadUsageLog">here</a>.</p>
+    
+    <p>Number of GetMap requests received by this server = ${usageLogger.numGetMapRequests},
+    of which ${usageLogger.numCachedGetMapRequests} were served by the cache of data arrays.</p>
     
     </body>
 </html>

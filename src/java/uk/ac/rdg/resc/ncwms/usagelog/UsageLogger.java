@@ -50,4 +50,16 @@ public interface UsageLogger
      * and subtracting logEntry.getRequestTime().
      */
     public void logUsage(UsageLogEntry logEntry);
+    
+    /**
+     * @return the number of GetMap requests in the usage log
+     */
+    public int getNumGetMapRequests();
+    
+    /**
+     * @return the number of GetMap requests in the usage log that have been
+     * served using the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache},
+     * or -1 if there was an error getting the data from the log.
+     */
+    public int getNumCachedGetMapRequests();
 }

@@ -37,6 +37,7 @@ import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.DiskStoreConfiguration;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 
 /**
@@ -77,17 +78,14 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
  * is still possible but is made less likely by this mechanism.)</li>
  * </ol>
  *
- * <p>Items are never explicitly removed from the cache by the ncWMS code: they are
- * simply allowed to be cleaned up by ehcache itself.  A least-recently-used (LRU)
- * algorithm is used for cache cleanup.</p>
+ * <p>Items are never explicitly removed from the cache by the ncWMS code: ehcache
+ * does the clean-up in a background thread using a least-recently-used (LRU)
+ * algorithm.</p>
  *
  * <p>This object is created by the Spring framework, then injected into the
  * {@link uk.ac.rdg.resc.ncwms.controller.WmsController WmsController}.</p>
  *
  * @author Jon Blower
- * @todo Allow configuration via the admin interface and the Config class
- * @todo Allow the cache to be disabled via the admin interface
- * @todo Include check on Dataset last-modified time for NcML and OPeNDAP
  * $Revision$
  * $Date$
  * $Log$
@@ -101,6 +99,8 @@ public class TileCache
     
     // Injected by Spring to provide the location of the working directory
     private NcwmsContext ncwmsContext;
+    // Injected by Spring to provide the configuration of the server
+    private Config ncwmsConfig;
     
     /**
      * Called by the Spring framework to initialize the cache.  This will be
@@ -117,23 +117,20 @@ public class TileCache
         config.addDefaultCache(new CacheConfiguration());
         this.cacheManager = new CacheManager(config);
         
-        // Each 256*256 tile will take up 262144 bytes.
-        // Default is to allocate 50MB of memory and 500MB of disk ~ 200 and 2000 elements
-        // respectively.  TODO make this configurable
         Cache tileCache = new Cache(
-            CACHE_NAME,                    // Name for the cache
-            200,                           // Maximum number of elements in memory
-            MemoryStoreEvictionPolicy.LRU, // evict least-recently-used elements
-            true,                          // Use the disk store
-            "",                            // disk store path (ignored)
-            false,                         // elements are not eternal
-            60 * 60 * 24,                  // Elements will last for 1 day in the cache
-            0,                             // Ignore time since last access/modification
-            true,                          // Will persist cache to disk in between JVM restarts
-            1000,                          // number of seconds between clearouts of disk store
-            null,                          // no registered event listeners
-            null,                          // no bootstrap cache loader
-            2000                           // Maximum number of elements on disk
+            CACHE_NAME,                                           // Name for the cache
+            this.ncwmsConfig.getCache().getMaxNumItemsInMemory(), // Maximum number of elements in memory
+            MemoryStoreEvictionPolicy.LRU,                        // evict least-recently-used elements
+            this.ncwmsConfig.getCache().isEnableDiskStore(),      // Use the disk store?
+            "",                                                   // disk store path (ignored)
+            false,                                                // elements are not eternal
+            this.ncwmsConfig.getCache().getElementLifetimeMinutes() * 60, // Elements will last for this number of seconds in the cache
+            0,                                                    // Ignore time since last access/modification
+            this.ncwmsConfig.getCache().isEnableDiskStore(),      // Will persist cache to disk in between JVM restarts
+            1000,                                                 // number of seconds between clearouts of disk store
+            null,                                                 // no registered event listeners
+            null,                                                 // no bootstrap cache loader
+            this.ncwmsConfig.getCache().getMaxNumItemsOnDisk()    // Maximum number of elements on disk
         );
         
         this.cacheManager.addCache(tileCache);
@@ -151,10 +148,15 @@ public class TileCache
     
     /**
      * Gets an array of data from this cache, returning null if there is no
-     * data matching the given key.
+     * data matching the given key or of the cache is disabled.
      */
     public float[] get(TileCacheKey key)
     {
+        if (!this.ncwmsConfig.getCache().isEnabled())
+        {
+            logger.debug("Tile cache is disabled");
+            return null;
+        }
         Cache cache = this.cacheManager.getCache(CACHE_NAME);
         Element el = cache.get(key);
         if (el == null)
@@ -170,10 +172,15 @@ public class TileCache
     }
     
     /**
-     * Adds an array of data to this cache.
+     * Adds an array of data to this cache.  Does nothing if the cache is disabled.
      */
     public void put(TileCacheKey key, float[] data)
     {
+        if (!this.ncwmsConfig.getCache().isEnabled())
+        {
+            logger.debug("Tile cache is disabled: data not put into cache");
+            return;
+        }
         this.cacheManager.getCache(CACHE_NAME).put(new Element(key, data));
         logger.debug("Data put into cache");
     }
@@ -185,5 +192,13 @@ public class TileCache
     public void setNcwmsContext(NcwmsContext ncwmsContext)
     {
         this.ncwmsContext = ncwmsContext;
+    }
+
+    /**
+     * Called by Spring to set the configuration information for the server
+     */
+    public void setConfig(Config config)
+    {
+        this.ncwmsConfig = config;
     }
 }

@@ -220,12 +220,22 @@ public class WmsUtils
     
     /**
      * @return true if the given location represents an OPeNDAP dataset.
-     * This method simply checks to see if the string starts with "http://"
+     * This method simply checks to see if the location string starts with "http://"
      * or "dods://".
      */
     public static boolean isOpendapLocation(String location)
     {
         return location.startsWith("http://") || location.startsWith("dods://");
+    }
+    
+    /**
+     * @return true if the given location represents an NcML aggregation. dataset.
+     * This method simply checks to see if the location string ends with ".xml"
+     * or ".ncml", following the same procedure as the Java NetCDF library.
+     */
+    public static boolean isNcmlAggregation(String location)
+    {
+        return location.endsWith(".xml") || location.endsWith(".ncml");
     }
     
 }

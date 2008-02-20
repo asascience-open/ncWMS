@@ -83,7 +83,10 @@ public class Config implements ApplicationContextAware
     private Contact contact = new Contact();
     
     @Element(name="server")
-    private Server server = new Server();
+    private Server server;
+    
+    @Element(name="cache", required=false)
+    private Cache cache = new Cache();
     
     // Time of the last update to this configuration or any of the contained
     // metadata, in milliseconds since the epoch
@@ -263,7 +266,17 @@ public class Config implements ApplicationContextAware
     {
         this.server = server;
     }
+    
+    public Cache getCache()
+    {
+        return this.cache;
+    }
 
+    public void setCache(Cache cache)
+    {
+        this.cache = cache;
+    }
+    
     public Contact getContact()
     {
         return contact;

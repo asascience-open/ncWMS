@@ -19,12 +19,6 @@
     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
         <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
     </bean>
-    
-    <!-- A cache for image tiles -->
-    <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
-            init-method="init" destroy-method="close">
-         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
-    </bean>
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. Currently the
@@ -41,6 +35,13 @@
            factory-method="readConfig">
         <constructor-arg ref="ncwmsContext"/>
         <constructor-arg ref="metadataStore"/>
+    </bean>
+    
+    <!-- A cache for image data arrays -->
+    <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
+            init-method="init" destroy-method="close">
+         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+         <property name="config"><ref local="config"/></property>
     </bean>
     
     <!-- An object that is used to create PicMakers. -->
@@ -132,6 +133,7 @@
         <property name="config"><ref local="config"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
+        <property name="tileCache"><ref local="tileCache"/></property>
         <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
     </bean>
     <!-- This maps URL patterns to the methods of the admin controller -->

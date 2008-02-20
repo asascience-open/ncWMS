@@ -303,9 +303,18 @@ public class UsageLogEntry
         return timeToExtractDataMs;
     }
 
-    public Boolean getUsedCache()
+    /**
+     * @return true if the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache}
+     * was used to service this request.
+     */
+    public boolean isUsedCache()
     {
         return usedCache;
+    }
+
+    public void setUsedCache(boolean usedCache)
+    {
+        this.usedCache = usedCache;
     }
 
     public Double getFeatureInfoLon()
