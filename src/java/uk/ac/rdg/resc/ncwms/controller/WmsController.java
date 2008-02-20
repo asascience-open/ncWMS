@@ -772,23 +772,16 @@ public class WmsController extends AbstractController
                 // Interpret the time specification
                 for (String t : timeString.split(","))
                 {
-                    String[] startStopPeriod = t.split("/");
-                    if (startStopPeriod.length == 1)
+                    String[] startStop = t.split("/");
+                    if (startStop.length == 1)
                     {
                         // This is a single time value
-                        tIndices.add(layer.findTIndex(startStopPeriod[0]));
+                        tIndices.add(layer.findTIndex(startStop[0]));
                     }
-                    else if (startStopPeriod.length == 2)
+                    else if (startStop.length == 2)
                     {
                         // Use all time values from start to stop inclusive
-                        tIndices.addAll(layer.findTIndices(startStopPeriod[0],
-                            startStopPeriod[1]));
-                    }
-                    else if (startStopPeriod.length == 3)
-                    {
-                        // Extract time values from start to stop inclusive
-                        // with a set periodicity
-                        throw new WmsException("Cannot yet handle animations with a set periodicity");
+                        tIndices.addAll(layer.findTIndices(startStop[0], startStop[1]));
                     }
                     else
                     {
@@ -863,8 +856,8 @@ public class WmsController extends AbstractController
 }
 
 /**
- * Represents a WMS version number.  Used in version negotiation for Capabilities
- * document
+ * Represents a WMS version number.  Not used in the current code, but preserved
+ * for future use in version negotiation.
  */
 class WmsVersion implements Comparable<WmsVersion>
 {
