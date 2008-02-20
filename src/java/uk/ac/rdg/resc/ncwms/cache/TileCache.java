@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
-import java.io.Serializable;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -42,16 +41,53 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 
 /**
  * <p>Uses the <a href="http://ehcache.sf.net">EHCache</a> software to cache
- * "image" tiles: in fact, this caches
- * the extracted data arrays that are used to create image tiles so that we can
- * change the styling without re-extracting the data.</p>
+ * arrays of data that have been extracted.  This cache reduces the load on the server
+ * in cases where clients make the same requests for data multiple times.  This 
+ * happens commonly when clients use a tiling WMS interface such as OpenLayers or
+ * Google Maps.  Since the cache stores data arrays and not images, clients can
+ * make a new request for the same data in a different style: the data will then
+ * be loaded from the cache and styled.  This supports the useful functionality
+ * of the Godiva2 website, which allows the user to change the colour scale
+ * of an image to increase (or reduce) contrast.</p>
+ *
+ * <p>It is of course important to ensure that the cache remains consistent with
+ * the underlying data.  We wish to avoid, as far as possible, the situation where
+ * cached data are used incorrectly because the underlying data have changed.
+ * The following measures are taken to preserve cache consistency:</p>
+ * <ol>
+ * <li>Each item in the cache will expire after a given time interval, which is
+ * settable using the administrative interface (through the
+ * {@link uk.ac.rdg.resc.ncwms.config.Config Config} class).</li>
+ *
+ * <li>If we know the exact file (on the local disk) that corresponds with the
+ * given cache request, we check the last modified time and size of this file.
+ * If either of these has changed then the cached data will not be used.  (This
+ * check is achieved by including these quantities in the {@link TileCacheKey}).  This
+ * mechanism is used when a dataset is either a single file or a glob aggregation.
+ * It does not, however, work correctly for OPeNDAP datasets or NcML aggregations,
+ * because we do not have access to the underlying data files in these cases.</li>
+ *
+ * <li>For OPeNDAP datasets and NcML aggregations, we check the last modified time
+ * of the relevant {@link uk.ac.rdg.resc.ncwms.config.Dataset Dataset} object.  This
+ * means that when the metadata for the dataset are re-loaded, all items in the cache
+ * that come from this dataset become invalid.  This at least ensures that the cache remains
+ * consistent with the metadata holdings.  It will often mean that items in the cache
+ * become invalid even when the underlying data have not changed, but this is preferable
+ * to a situation in which cached data are used incorrectly.  (The latter situation
+ * is still possible but is made less likely by this mechanism.)</li>
+ * </ol>
+ *
+ * <p>Items are never explicitly removed from the cache by the ncWMS code: they are
+ * simply allowed to be cleaned up by ehcache itself.  A least-recently-used (LRU)
+ * algorithm is used for cache cleanup.</p>
  *
  * <p>This object is created by the Spring framework, then injected into the
  * {@link uk.ac.rdg.resc.ncwms.controller.WmsController WmsController}.</p>
  *
- * <p><b>NOT YET WORKING!!</b></p>
- *
  * @author Jon Blower
+ * @todo Allow configuration via the admin interface and the Config class
+ * @todo Allow the cache to be disabled via the admin interface
+ * @todo Include check on Dataset last-modified time for NcML and OPeNDAP
  * $Revision$
  * $Date$
  * $Log$
