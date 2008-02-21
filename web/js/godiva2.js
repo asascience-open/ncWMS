@@ -13,6 +13,7 @@ var scaleMinVal;
 var scaleMaxVal;
 var newVariable = true;  // This will be true when we have chosen a new variable
 var gotScaleRange = false;
+var scaleLocked = false; // see toggleLockScale()
 var autoLoad = new Object(); // Will contain data for auto-loading data from a permalink
 var menu = ''; // The menu that is being displayed (e.g. "mersea", "ecoop")
 var bbox = null; // The bounding box of the currently-displayed layer
@@ -414,17 +415,18 @@ function layerSelected(layerDetails)
     
     // Only show the scale bar if the data are coming from an ncWMS server
     var scaleVisibility = isNcWMS ? 'visible' : 'hidden';
-    // TODO: could put these in a container and make all (in)visible at the same time
     $('scaleBar').style.visibility = scaleVisibility;
     $('scaleMin').style.visibility = scaleVisibility;
     $('scaleMax').style.visibility = scaleVisibility;
-    $('autoScale').style.visibility = scaleVisibility;
+    $('autoScale').style.visibility = scaleLocked ? 'hidden' : scaleVisibility;
+    $('lockScale').style.visibility = scaleVisibility;
     
     // Set the scale value if this is present in the metadata
     if (typeof layerDetails.scaleRange != 'undefined' &&
             layerDetails.scaleRange != null &&
             layerDetails.scaleRange.length > 1 &&
-            layerDetails.scaleRange[0] != layerDetails.scaleRange[1]) {
+            layerDetails.scaleRange[0] != layerDetails.scaleRange[1] &&
+            !scaleLocked) {
         scaleMinVal = layerDetails.scaleRange[0];
         scaleMaxVal = layerDetails.scaleRange[1];
         $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
@@ -555,8 +557,8 @@ function updateTimesteps(times)
         $('scaleMin').value = autoLoad.scaleMin;
         $('scaleMax').value = autoLoad.scaleMax;
         validateScale(); // this calls updateMap()
-    } else if (!gotScaleRange) {
-        autoScale(); // We didn't get a scale range from the layerDetails
+    } else if (!gotScaleRange && !scaleLocked) {// We didn't get a scale range from the layerDetails
+        autoScale();
     } else {
         updateMap(); // Update the map without changing the scale
     }
@@ -585,6 +587,30 @@ function autoScale()
         elevation: getZValue(),
         time: isoTValue
     });
+}
+
+// When the scale is locked, the user cannot change the colour scale either
+// by editing manually or clicking "auto".  Furthermore the scale will not change
+// when a new layer is loaded
+function toggleLockScale()
+{
+    if (scaleLocked) {
+        // We need to unlock the scale
+        scaleLocked = false;
+        // TODO: not very neat!
+        $('lockScale').innerHTML = '<a href="#" onclick="javascript:toggleLockScale()">lock</a>';
+        $('autoScale').style.visibility = 'visible';
+        $('scaleMin').disabled = false;
+        $('scaleMax').disabled = false;
+    } else {
+        // We need to lock the scale
+        scaleLocked = true;
+        // TODO: not very neat!
+        $('lockScale').innerHTML = '<a href="#" onclick="javascript:toggleLockScale()">unlock</a>';
+        $('autoScale').style.visibility = 'hidden';
+        $('scaleMin').disabled = true;
+        $('scaleMax').disabled = true;
+    }
 }
 
 // This function is called when we have received the min and max values from the server

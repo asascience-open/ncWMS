@@ -218,6 +218,13 @@ input.scaleMin
 #autoScale
 {
     position: absolute;
-    top: 188px;
+    top: 165px;
+    visibility: hidden;
+}
+
+#lockScale
+{
+    position: absolute;
+    top: 210px;
     visibility: hidden;
 }
