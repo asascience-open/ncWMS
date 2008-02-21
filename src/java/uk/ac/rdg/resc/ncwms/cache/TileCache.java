@@ -162,7 +162,7 @@ public class TileCache
         Element el = cache.get(key);
         if (el == null)
         {
-            logger.debug("Not found in cache");
+            logger.debug("Not found in cache: {}", key);
             return null;
         }
         else
@@ -183,7 +183,7 @@ public class TileCache
             return;
         }
         this.cacheManager.getCache(CACHE_NAME).put(new Element(key, data));
-        logger.debug("Data put into cache");
+        logger.debug("Data put into cache: {}", key);
     }
     
     /**

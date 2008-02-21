@@ -36,7 +36,7 @@ package uk.ac.rdg.resc.ncwms.usagelog;
  * $Date$
  * $Log$
  */
-public class DoNothingUsageLogger implements UsageLogger
+public class DoNothingUsageLogger //implements UsageLogger
 {
     public void logUsage(UsageLogEntry logEntry) {}
 }
