@@ -83,7 +83,8 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
  * algorithm.</p>
  *
  * <p>This object is created by the Spring framework, then injected into the
- * {@link uk.ac.rdg.resc.ncwms.controller.WmsController WmsController}.</p>
+ * {@link uk.ac.rdg.resc.ncwms.controller.WmsController WmsController} and the
+ * {@link uk.ac.rdg.resc.ncwms.controller.AdminController AdminController}.</p>
  *
  * @author Jon Blower
  * $Revision$
