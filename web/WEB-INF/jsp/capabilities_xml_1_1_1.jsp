@@ -16,7 +16,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
 <!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd">
-<WMT_MS_Capabilities version="1.1.1"><%-- TODO: do UpdateSequence properly --%>
+<WMT_MS_Capabilities
+        version="1.1.1"
+        xmlns:xlink="http://www.w3.org/1999/xlink"><%-- TODO: do UpdateSequence properly --%>
     <!-- Service Metadata -->
     <Service>
         <!-- The WMT-defined name for this type of service -->
@@ -33,8 +35,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         </KeywordList>
         <!-- Top-level web address of service or service provider. See also OnlineResource
         elements under <DCPType>. -->
-        <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
-            xlink:type="simple" xlink:href="${config.server.url}" />
+        <OnlineResource xlink:type="simple" xlink:href="${config.server.url}" />
         <!-- Contact information -->
         <ContactInformation>
             <ContactPersonPrimary>
@@ -48,7 +49,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <Fees>none</Fees>
         <AccessConstraints>none</AccessConstraints>
     </Service>
-    
     <Capability>
         <Request>
             <GetCapabilities>
@@ -56,8 +56,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
-                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
                         </Get>
                     </HTTP>
                 </DCPType>
@@ -69,8 +68,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
-                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
                         </Get>
                     </HTTP>
                 </DCPType>
@@ -82,8 +80,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink"
-                                xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
                         </Get>
                     </HTTP>
                 </DCPType>
@@ -130,7 +127,15 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </Extent>
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyleKeys}">
-                    <Style><Name>${style}</Name><Title>${style}</Title></Style>
+                    <Style>
+                        <Name>${style}</Name><Title>${style}</Title>
+                        <%-- TODO: abstract --%>
+                        <%-- TODO: width and height must match AbstractStyle.createLegend() --%>
+                        <LegendURL width="110" height="264">
+                            <Format>image/png</Format>
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}?REQUEST=GetLegendGraphic&amp;LAYER=${layer.layerName}&amp;STYLE=${style}"/>
+                        </LegendURL>
+                    </Style>
                     </c:forEach>
                 </Layer>
                 </c:forEach> <%-- End loop through variables --%>

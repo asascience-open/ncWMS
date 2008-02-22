@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 The University of Reading
+ * Copyright (c) 2008 The University of Reading
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,58 +28,37 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
-import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import java.util.List;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
- * Object representing a request to the GetFeatureInfo operation.  This simply parses
- * the request and only does very basic sanity checking on the parameters 
- * (e.g. checking for valid integers).
- *
+ * Simple class that stores a Layer object and associated top-level tiles,
+ * created by the WmsController and passed to topLevelKML.jsp.
+ * @see WmsController#getKML
+ * 
  * @author Jon Blower
  * $Revision$
  * $Date$
  * $Log$
  */
-public class GetFeatureInfoRequest
+public class TiledLayer
 {
-    private String wmsVersion;
-    private GetFeatureInfoDataRequest dataRequest;
-    private String outputFormat;
+    private Layer layer;
+    private List<double[]> tiles;  // bounding boxes of tiles
     
-    /**
-     * Creates a new instance of GetMapRequest from the given RequestParams
-     * @throws WmsException if the request is invalid
-     */
-    public GetFeatureInfoRequest(RequestParams params) throws WmsException
+    public TiledLayer(Layer layer, List<double[]> tiles)
     {
-        this.wmsVersion = params.getMandatoryString("version");
-        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.getWmsVersion()))
-        {
-            throw new WmsException("VERSION " + this.getWmsVersion() + " not supported");
-        }
-        // TODO: deal with the EXCEPTIONS parameter
-        this.dataRequest = new GetFeatureInfoDataRequest(params, this.getWmsVersion());
-        this.outputFormat = params.getMandatoryString("info_format");
-    }
-
-    /**
-     * @return the portion of the GetMap request that pertains to the data
-     * extraction, i.e. independent of styling concerns
-     */
-    public GetFeatureInfoDataRequest getDataRequest()
-    {
-        return dataRequest;
-    }
-
-    public String getOutputFormat()
-    {
-        return outputFormat;
-    }
-
-    public String getWmsVersion()
-    {
-        return wmsVersion;
+        this.layer = layer;
+        this.tiles = tiles;
     }
     
+    public Layer getLayer()
+    {
+        return layer;
+    }
+    
+    public List<double[]> getTiles()
+    {
+        return tiles;
+    }
 }

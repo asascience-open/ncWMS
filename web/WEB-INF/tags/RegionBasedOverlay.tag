@@ -7,48 +7,36 @@
 <%@attribute name="time" required="false" description="Time value in ISO8601 format"%>
 <c:set var="layer" value="${tiledLayer.layer}"/>
 <c:set var="href" value="${baseURL}?REQUEST=GetKMLRegion"/>
-<c:set var="name" value="${layer.title}"/>
-<c:set var="useDescription" value="true"/>
 <c:if test="${not empty elevation}">
     <c:set var="href" value="${href}&amp;ELEVATION=${elevation}"/>
-    <c:set var="name" value="${elevation} ${layer.zunits}"/>
-    <c:set var="useDescription" value="false"/>
 </c:if>
 <c:if test="${not empty time}">
     <c:set var="href" value="${href}&amp;TIME=${time}"/>
-    <c:set var="name" value="${time}"/>
-    <c:set var="useDescription" value="false"/>
 </c:if>
-<Folder>
-    <name>${name}</name>
-    <c:if test="${useDescription}">
-        <description>${layer.abstract}</description>
-    </c:if>
-    <%-- One link for each tile associated with this Layer - see WmsController.getKML() --%>
-    <c:forEach var="bbox" items="${tiledLayer.tiles}">
-        <NetworkLink>
-            <visibility>1</visibility> 
-            <Region>
-                <LatLonAltBox>
-                    <north>${bbox[3]}</north>
-                    <south>${bbox[1]}</south>
-                    <east>${bbox[2]}</east>
-                    <west>${bbox[0]}</west>
-                </LatLonAltBox>
-                <Lod>
-                    <minLodPixels>380</minLodPixels> 
-                    <maxLodPixels>-1</maxLodPixels> 
-                </Lod>
-            </Region>
-            <Link>
-                <viewRefreshMode>onRegion</viewRefreshMode>
-                <href>${href}&amp;LAYER=${layer.layerName}&amp;DBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}</href> 
-            </Link>
-            <c:if test="${not empty time}">
-                <TimeStamp>
-                    <when>${time}</when>
-                </TimeStamp>
-            </c:if>
-        </NetworkLink>
-    </c:forEach>
-</Folder>
+<%-- One link for each tile associated with this Layer - see WmsController.getKML() --%>
+<c:forEach var="bbox" items="${tiledLayer.tiles}">
+    <NetworkLink>
+        <visibility>1</visibility> 
+        <Region>
+            <LatLonAltBox>
+                <north>${bbox[3]}</north>
+                <south>${bbox[1]}</south>
+                <east>${bbox[2]}</east>
+                <west>${bbox[0]}</west>
+            </LatLonAltBox>
+            <Lod>
+                <minLodPixels>380</minLodPixels> 
+                <maxLodPixels>-1</maxLodPixels> 
+            </Lod>
+        </Region>
+        <Link>
+            <viewRefreshMode>onRegion</viewRefreshMode>
+            <href>${href}&amp;LAYER=${layer.layerName}&amp;DBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}</href> 
+        </Link>
+        <c:if test="${not empty time}">
+            <TimeStamp>
+                <when>${time}</when>
+            </TimeStamp>
+        </c:if>
+    </NetworkLink>
+</c:forEach>

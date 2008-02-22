@@ -315,9 +315,6 @@ public class WmsController extends AbstractController
         HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
         throws WmsException, Exception
     {
-        // I don't think VERSION is compulsory for GetMap
-        usageLogEntry.setWmsVersion(params.getString("VERSION"));
-        
         // Parse the URL parameters
         GetMapRequest getMapRequest = new GetMapRequest(params);
         usageLogEntry.setGetMapRequest(getMapRequest);
@@ -514,9 +511,6 @@ public class WmsController extends AbstractController
             return null;
         }
         
-        // I don't think VERSION is compulsory for GetFeatureInfo
-        usageLogEntry.setWmsVersion(params.getString("VERSION"));
-        
         GetFeatureInfoRequest request = new GetFeatureInfoRequest(params);
         usageLogEntry.setGetFeatureInfoRequest(request);
         GetFeatureInfoDataRequest dataRequest = request.getDataRequest();
@@ -631,12 +625,14 @@ public class WmsController extends AbstractController
         String layerName = params.getMandatoryString("layer");
         Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         
-        // The legend graphic is created by the BoxFillStyle class
-        BoxFillStyle style = new BoxFillStyle();
+        // Find the requested style, or use the layer's default style
+        String styleStr = params.getString("style");
+        if (styleStr == null) styleStr = layer.getDefaultStyleKey();
+        AbstractStyle style = this.styleFactory.createObject(styleStr);
         
         // Now find the (optional) scale range.  TODO: refactor so
         // getKML can use this too
-        String scaleRangeStr = params.getString("SCALERANGE");
+        String scaleRangeStr = params.getString("scalerange");
         if (scaleRangeStr == null)
         {
             // Use the default range for the layer

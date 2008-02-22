@@ -10,25 +10,14 @@
     <c:when test="${empty layer.timesteps}">
         <wms2kml:regionBasedOverlay tiledLayer="${tiledLayer}" elevation="${elevation}" baseURL="${baseURL}"/>
     </c:when>
+    <%-- If the layer has a time dimension we create a folder for each timestep --%>
     <c:otherwise>
-        <%-- Create a folder to contain all the time values --%>
-        <Folder>
-            <c:choose>
-                <c:when test="${empty elevation}">
-                    <name>${layer.title} from ${layer.dataset.title}</name>
-                    <description>${layer.abstract}</description>
-                </c:when>
-                <c:otherwise>
-                    <%-- This is in a folder of elevation values --%>
-                    <name>${elevation} ${layer.zunits}</name>
-                </c:otherwise>
-            </c:choose>
-            <visibility>0</visibility>
-            <open>0</open>
-            <c:forEach items="${layer.timesteps}" var="timestep">
-                <c:set var="isoTime" value="${wmsUtils:dateToISO8601(timestep.date)}"/>
+        <c:forEach items="${layer.timesteps}" var="timestep">
+            <c:set var="isoTime" value="${wmsUtils:dateToISO8601(timestep.date)}"/>
+            <Folder>
+                <name>${isoTime}</name>
                 <wms2kml:regionBasedOverlay tiledLayer="${tiledLayer}" elevation="${elevation}" time="${isoTime}" baseURL="${baseURL}"/>
-            </c:forEach>
-        </Folder>
+            </Folder>
+        </c:forEach>
     </c:otherwise>
 </c:choose>

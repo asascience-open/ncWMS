@@ -48,43 +48,24 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <MaxWidth>${config.server.maxImageWidth}</MaxWidth>
         <MaxHeight>${config.server.maxImageHeight}</MaxHeight>
     </Service>
-    
     <Capability>
         <Request>
             <GetCapabilities>
                 <Format>text/xml</Format>
-                <DCPType>
-                    <HTTP>
-                        <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/>
-                        </Get>
-                    </HTTP>
-                </DCPType>
+                <DCPType><HTTP><Get><OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/></Get></HTTP></DCPType>
             </GetCapabilities>
             <GetMap>
                 <c:forEach var="mimeType" items="${supportedImageFormats}">
                 <Format>${mimeType}</Format>
                 </c:forEach>
-                <DCPType>
-                    <HTTP>
-                        <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/>
-                        </Get>
-                    </HTTP>
-                </DCPType>
+                <DCPType><HTTP><Get><OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/></Get></HTTP></DCPType>
             </GetMap>
             <c:if test="${config.server.allowFeatureInfo}">
             <GetFeatureInfo>
                 <c:forEach var="mimeType" items="${featureInfoFormats}">
                 <Format>${mimeType}</Format>
                 </c:forEach>
-                <DCPType>
-                    <HTTP>
-                        <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/>
-                        </Get>
-                    </HTTP>
-                </DCPType>
+                <DCPType><HTTP><Get><OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}"/></Get></HTTP></DCPType>
             </GetFeatureInfo>
             </c:if>
         </Request>
@@ -129,7 +110,15 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </Dimension>
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyleKeys}">
-                    <Style><Name>${style}</Name><Title>${style}</Title></Style>
+                    <Style>
+                        <Name>${style}</Name><Title>${style}</Title>
+                        <%-- TODO: abstract --%>
+                        <%-- TODO: width and height must match AbstractStyle.createLegend() --%>
+                        <LegendURL width="110" height="264">
+                            <Format>image/png</Format>
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}?REQUEST=GetLegendGraphic&amp;LAYER=${layer.layerName}&amp;STYLE=${style}"/>
+                        </LegendURL>
+                    </Style>
                     </c:forEach>
                 </Layer>
                 </c:forEach> <%-- End loop through variables --%>

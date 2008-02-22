@@ -121,6 +121,7 @@ public class UsageLogEntry
      */
     public void setGetMapRequest(GetMapRequest getMapRequest)
     {
+        this.wmsVersion = getMapRequest.getWmsVersion();
         this.setGetMapDataRequest(getMapRequest.getDataRequest());
         GetMapStyleRequest sr = getMapRequest.getStyleRequest();
         this.outputFormat = sr.getImageFormat();
@@ -134,6 +135,7 @@ public class UsageLogEntry
 
     public void setGetFeatureInfoRequest(GetFeatureInfoRequest request)
     {
+        this.wmsVersion = request.getWmsVersion();
         this.outputFormat = request.getOutputFormat();
         // GetFeatureInfoDataRequest inherits from GetMapDataRequest
         GetFeatureInfoDataRequest dr = request.getDataRequest();

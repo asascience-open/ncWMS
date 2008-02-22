@@ -54,6 +54,10 @@ public abstract class AbstractStyle
     protected boolean transparent;
     protected int bgColor; // Background colour as an integer
     
+    // Scale range of the picture
+    protected float scaleMin;
+    protected float scaleMax;
+    
     // set of rendered images, ready to be turned into a picture
     protected List<BufferedImage> renderedFrames;
     // If we need to cache the frame data and associated labels (we do this if
@@ -69,6 +73,22 @@ public abstract class AbstractStyle
     {
         this.name = name;
         this.renderedFrames = new ArrayList<BufferedImage>();
+    }
+    
+    public void setScaleRange(float[] scaleRange)
+    {
+        if (scaleRange.length != 2)
+        {
+            throw new IllegalArgumentException("scaleRange must have two elements");
+        }
+        this.setScaleRange(scaleRange[0], scaleRange[1]);
+    }
+    
+    public void setScaleRange(float scaleMin, float scaleMax)
+    {
+        this.scaleMin = scaleMin;
+        this.scaleMax = scaleMax;
+        logger.debug("Set SCALE to {},{}", this.scaleMin, this.scaleMax);
     }
     
     /**

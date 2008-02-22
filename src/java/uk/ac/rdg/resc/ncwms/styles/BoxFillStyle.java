@@ -62,9 +62,6 @@ public class BoxFillStyle extends AbstractStyle
      */
     public static final String[] KEYS = new String[]{"boxfill"};
     
-    // Scale range of the picture
-    private float scaleMin;
-    private float scaleMax;
     // The percentage opacity of the picture
     private int opacity;
     
@@ -143,22 +140,6 @@ public class BoxFillStyle extends AbstractStyle
             throw new StyleNotDefinedException("Attribute " + attName + 
                 " is not supported by the " + this.name + " style");
         }
-    }
-    
-    public void setScaleRange(float[] scaleRange)
-    {
-        if (scaleRange.length != 2)
-        {
-            throw new IllegalArgumentException("scaleRange must have two elements");
-        }
-        this.setScaleRange(scaleRange[0], scaleRange[1]);
-    }
-    
-    public void setScaleRange(float scaleMin, float scaleMax)
-    {
-        this.scaleMin = scaleMin;
-        this.scaleMax = scaleMax;
-        logger.debug("Set SCALE to {},{}", this.scaleMin, this.scaleMax);
     }
     
     /**
@@ -368,6 +349,9 @@ public class BoxFillStyle extends AbstractStyle
      */
     public BufferedImage createLegend(Layer layer)
     {
+        // NOTE!! If you change the width and height here, you need to change
+        // them in the Capabilities documents too.
+        // TODO: make this consistent
         BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();
         

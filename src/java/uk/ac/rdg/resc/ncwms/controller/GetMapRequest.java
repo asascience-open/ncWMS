@@ -43,6 +43,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class GetMapRequest
 {
+    private String wmsVersion;
     private GetMapDataRequest dataRequest;
     private GetMapStyleRequest styleRequest;
     
@@ -52,14 +53,14 @@ public class GetMapRequest
      */
     public GetMapRequest(RequestParams params) throws WmsException
     {
-        String version = params.getMandatoryString("version");
-        if (!WmsUtils.SUPPORTED_VERSIONS.contains(version))
+        this.wmsVersion = params.getMandatoryString("version");
+        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.getWmsVersion()))
         {
-            throw new WmsException("VERSION " + version + " not supported");
+            throw new WmsException("VERSION " + this.getWmsVersion() + " not supported");
         }
         // TODO: deal with the EXCEPTIONS parameter
         
-        this.dataRequest = new GetMapDataRequest(params, version);
+        this.dataRequest = new GetMapDataRequest(params, this.getWmsVersion());
         this.styleRequest = new GetMapStyleRequest(params);
         // Check that the Styles and Layers match
         if (this.styleRequest.getStyles().length != this.dataRequest.getLayers().length
@@ -86,6 +87,11 @@ public class GetMapRequest
     public GetMapStyleRequest getStyleRequest()
     {
         return styleRequest;
+    }
+
+    public String getWmsVersion()
+    {
+        return wmsVersion;
     }
     
 }
