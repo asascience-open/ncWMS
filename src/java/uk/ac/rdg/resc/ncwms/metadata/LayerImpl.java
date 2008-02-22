@@ -62,8 +62,8 @@ public class LayerImpl implements Layer
     protected double[] zValues;
     protected boolean zPositive;
     protected double[] bbox; // Bounding box : minx, miny, maxx, maxy
-    protected double scaleMin;
-    protected double scaleMax;
+    protected float scaleMin;
+    protected float scaleMax;
     protected CoordAxis xaxis;
     protected CoordAxis yaxis;
     private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
@@ -184,29 +184,29 @@ public class LayerImpl implements Layer
         this.id = id;
     }
 
-    public double getScaleMin()
+    public float getScaleMin()
     {
         return scaleMin;
     }
 
-    public void setScaleMin(double scaleMin)
+    public void setScaleMin(float scaleMin)
     {
         this.scaleMin = scaleMin;
     }
 
-    public double getScaleMax()
+    public float getScaleMax()
     {
         return scaleMax;
     }
 
-    public void setScaleMax(double scaleMax)
+    public void setScaleMax(float scaleMax)
     {
         this.scaleMax = scaleMax;
     }
     
-    public double[] getScaleRange()
+    public float[] getScaleRange()
     {
-        return new double[]{this.scaleMin, this.scaleMax};
+        return new float[]{this.scaleMin, this.scaleMax};
     }
 
     public String getUnits()

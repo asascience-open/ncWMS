@@ -319,8 +319,8 @@ public class MetadataLoader
                 if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
                 {
                     // Just guess at a scale
-                    layerImpl.setScaleMin(-50.0);
-                    layerImpl.setScaleMin(50.0);
+                    layerImpl.setScaleMin(-50.0f);
+                    layerImpl.setScaleMin(50.0f);
                 }
                 else
                 {
@@ -328,8 +328,8 @@ public class MetadataLoader
                     // to deal with the fact that the sample data we read might
                     // not be representative
                     float diff = minMax[1] - minMax[0];
-                    layerImpl.setScaleMin(minMax[0] - 0.05 * diff);
-                    layerImpl.setScaleMax(minMax[1] + 0.05 * diff);
+                    layerImpl.setScaleMin(minMax[0] - 0.05f * diff);
+                    layerImpl.setScaleMax(minMax[1] + 0.05f * diff);
                 }
                 logger.debug("Set scale range for {} to {}, {}", new Object[]{
                     layer.getId(), layer.getScaleMin(), layer.getScaleMax()});

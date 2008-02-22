@@ -134,9 +134,8 @@ public class BoxFillStyle extends AbstractStyle
             {
                 throw new StyleNotDefinedException("Format error for SCALE attribute of BOXFILL style");
             }
-            this.scaleMin = Float.parseFloat(values[0]); // TODO: trap number format errors
-            this.scaleMax = Float.parseFloat(values[1]);
-            logger.debug("Set SCALE to {},{}", this.scaleMin, this.scaleMax);
+            // TODO: trap number format errors
+            this.setScaleRange(Float.parseFloat(values[0]), Float.parseFloat(values[1]));
         }
         // TODO: set the palette ("rainbow", etc)
         else
@@ -144,6 +143,22 @@ public class BoxFillStyle extends AbstractStyle
             throw new StyleNotDefinedException("Attribute " + attName + 
                 " is not supported by the " + this.name + " style");
         }
+    }
+    
+    public void setScaleRange(float[] scaleRange)
+    {
+        if (scaleRange.length != 2)
+        {
+            throw new IllegalArgumentException("scaleRange must have two elements");
+        }
+        this.setScaleRange(scaleRange[0], scaleRange[1]);
+    }
+    
+    public void setScaleRange(float scaleMin, float scaleMax)
+    {
+        this.scaleMin = scaleMin;
+        this.scaleMax = scaleMax;
+        logger.debug("Set SCALE to {},{}", this.scaleMin, this.scaleMax);
     }
     
     /**
@@ -351,7 +366,7 @@ public class BoxFillStyle extends AbstractStyle
      * @param layer The Layer object for which this legend is being 
      * created (needed for title and units strings)
      */
-    protected BufferedImage createLegend(Layer layer)
+    public BufferedImage createLegend(Layer layer)
     {
         BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();

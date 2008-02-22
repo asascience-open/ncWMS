@@ -150,20 +150,20 @@ public interface Layer
      * same as a "valid_max" for the dataset.  This is simply a hint to visualization
      * tools.
      */
-    double getScaleMax();
+    float getScaleMax();
 
     /**
      * @return the min value of the suggested scale range.  Note that this is not the
      * same as a "valid_min" for the dataset.  This is simply a hint to visualization
      * tools.
      */
-    double getScaleMin();
+    float getScaleMin();
     
     /**
      * @return array of two doubles, representing the min and max of the scale range
-     * (i.e. new double[]{getScaleMin(), getScaleMax()})
+     * (i.e. new float[]{getScaleMin(), getScaleMax()})
      */
-    double[] getScaleRange();
+    float[] getScaleRange();
 
     CoordAxis getXaxis();
 

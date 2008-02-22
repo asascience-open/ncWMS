@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
@@ -66,6 +67,7 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
+import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -165,6 +167,8 @@ public class WmsController extends AbstractController
                 return getFeatureInfo(params, httpServletRequest, httpServletResponse,
                     usageLogEntry);
             }
+            // The REQUESTs below are non-standard and could be refactored into
+            // a different servlet endpoint
             else if (request.equals("GetMetadata"))
             {
                 // This is a request for non-standard metadata.  (This will one
@@ -172,6 +176,12 @@ public class WmsController extends AbstractController
                 // Delegate to the MetadataController
                 return this.metadataController.handleRequest(httpServletRequest,
                     httpServletResponse, usageLogEntry);
+            }
+            else if (request.equals("GetLegendGraphic"))
+            {
+                // This is a request for an image that contains the colour scale
+                // and range for a given layer
+                return getLegendGraphic(params, httpServletResponse);
             }
             else if (request.equals("GetKML"))
             {
@@ -609,6 +619,50 @@ public class WmsController extends AbstractController
             ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(), chart, 400, 300);
             return null;
         }
+    }
+
+    /**
+     * Creates and returns a PNG image with the colour scale and range for 
+     * a given Layer
+     */
+    private ModelAndView getLegendGraphic(RequestParams params,
+        HttpServletResponse httpServletResponse) throws Exception
+    {
+        String layerName = params.getMandatoryString("layer");
+        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+        
+        // The legend graphic is created by the BoxFillStyle class
+        BoxFillStyle style = new BoxFillStyle();
+        
+        // Now find the (optional) scale range.  TODO: refactor so
+        // getKML can use this too
+        String scaleRangeStr = params.getString("SCALERANGE");
+        if (scaleRangeStr == null)
+        {
+            // Use the default range for the layer
+            style.setScaleRange(layer.getScaleRange());
+        }
+        else
+        {
+            try
+            {
+                String[] rangeEls = scaleRangeStr.split(",");
+                if (rangeEls.length != 2) throw new Exception();
+                style.setScaleRange(Float.parseFloat(rangeEls[0]),
+                    Float.parseFloat(rangeEls[1]));
+            }
+            catch(Exception e)
+            {
+                throw new Exception("Invalid SCALERANGE");
+            }
+        }
+        
+        // Get the legend graphic and write it to the client
+        httpServletResponse.setContentType("image/png");
+        ImageIO.write(style.getLegend(layer), "png",
+            httpServletResponse.getOutputStream());
+        
+        return null;
     }
 
     private ModelAndView getKML(RequestParams params,
