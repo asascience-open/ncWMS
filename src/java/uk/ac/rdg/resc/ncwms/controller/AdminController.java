@@ -241,6 +241,7 @@ public class AdminController extends MultiActionController
                 // Reload Thredds datasets in a new thread
                 new Thread()
                 {
+                    @Override
                     public void run()
                     {
                         config.loadThreddsCatalog();

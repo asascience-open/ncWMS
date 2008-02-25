@@ -51,6 +51,7 @@ public class PixelByPixelDataReader extends DefaultDataReader
      * This method reads each pixel with a separate request to the data source
      * and is not expected to be efficient.
      */
+    @Override
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
         PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
     {

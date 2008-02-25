@@ -71,6 +71,7 @@ public class USGSDataReader extends DefaultDataReader
      * @param grid The grid onto which the data are to be read
      * @throws Exception if an error occurs
      */
+    @Override
     public float[] read(String filename, Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
         throws Exception
     {
@@ -201,6 +202,7 @@ public class USGSDataReader extends DefaultDataReader
     /**
      * This is used to filter out certain fields from the dataset
      */
+    @Override
     protected boolean includeGrid(GridDatatype grid)
     {
         return grid.getName().equals("temp") || grid.getName().equals("shflux") ||
@@ -213,6 +215,7 @@ public class USGSDataReader extends DefaultDataReader
      * @return a {@link LUTCoordAxis}, since the axes in this dataset
      * are curvilinear.
      */
+    @Override
     protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
     {
         return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_i_501_351.dat", AxisType.GeoX);
@@ -222,6 +225,7 @@ public class USGSDataReader extends DefaultDataReader
      * @return a {@link LUTCoordAxis}, since the axes in this dataset
      * are curvilinear.
      */
+    @Override
     protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
     {
         return LUTCoordAxis.createAxis("/uk/ac/rdg/resc/ncwms/metadata/LUT_USGS_501_351.zip/LUT_USGS_j_501_351.dat", AxisType.GeoY);
@@ -230,6 +234,7 @@ public class USGSDataReader extends DefaultDataReader
     /**
      * @return false: the z axis is never positive for this dataset
      */
+    @Override
     protected boolean isZPositive(GridCoordSystem coordSys)
     {
         return false;
@@ -239,6 +244,7 @@ public class USGSDataReader extends DefaultDataReader
      * @return the values on the z axis, obtained directly from 
      * {@code zAxis.getCoordValues()}.
      */
+    @Override
     protected double[] getZValues(CoordinateAxis1D zAxis, boolean zPositive)
     {
         return zAxis == null ? null : zAxis.getCoordValues();

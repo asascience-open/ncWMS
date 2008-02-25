@@ -30,7 +30,6 @@ package uk.ac.rdg.resc.ncwms.controller;
 
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
-import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 
 /**
  * Contains the parts of the GetMap request that pertain to data extraction,

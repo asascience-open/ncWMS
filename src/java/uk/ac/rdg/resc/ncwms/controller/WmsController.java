@@ -67,7 +67,6 @@ import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
-import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -96,7 +95,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class WmsController extends AbstractController
 {
-    private static final Logger logger = Logger.getLogger(WmsController.class);
+    private static final Logger log = Logger.getLogger(WmsController.class);
     
     /**
      * The maximum number of layers that can be requested in a single GetMap
@@ -214,7 +213,7 @@ public class WmsController extends AbstractController
         }
         catch(Exception e)
         {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             usageLogEntry.setException(e);
             throw e;
         }
@@ -438,7 +437,7 @@ public class WmsController extends AbstractController
         String dataReaderClass = layer.getDataset().getDataReaderClass();
         String location = layer.getDataset().getLocation();
         DataReader dr = DataReader.getDataReader(dataReaderClass, location);
-        logger.debug("Got data reader of type {}", dr.getClass().getName());
+        log.debug("Got data reader of type {}", dr.getClass().getName());
         
         // See exactly which file we're reading from, and which time index in 
         // the file (handles datasets with glob aggregation)
@@ -692,23 +691,23 @@ public class WmsController extends AbstractController
             // bounding box in degrees.  (We know that layer.getBbox() returns
             // values in lat/lon degrees.)
             double[] bbox = layer.getBbox();
-            logger.debug("Layer bbox = {},{},{},{}", new Object[]{
+            log.debug("Layer bbox = {},{},{},{}", new Object[]{
                 bbox[0], bbox[1], bbox[2], bbox[3]});
             double longestBboxSideLength = Math.max(
                 bbox[2] - bbox[0],
                 bbox[3] - bbox[1]
             );
-            logger.debug("Longest side length = {}", longestBboxSideLength);
+            log.debug("Longest side length = {}", longestBboxSideLength);
             // z = ln(180/l) / ln(2)
             double zoom = Math.log(180.0 / longestBboxSideLength) / Math.log(2.0);
             // Need to take the floor of this number to ensure that the tiles
             // are big enough (remember the lower the z value, the larger the tiles)
             int z = (int)Math.floor(zoom);
             if (z < 0) z = 0; // Don't want to zoom out any further
-            logger.debug("Zoom level = {}", z);
+            log.debug("Zoom level = {}", z);
             // Calculate the side length at this zoom level
             double sideLength = 180.0 / Math.pow(2, z);
-            logger.debug("Side length at this zoom level = {}", sideLength);
+            log.debug("Side length at this zoom level = {}", sideLength);
             assert(sideLength >= longestBboxSideLength);
             // Calculate the index of the tile in the horizontal direction
             // that contains the left-hand edge of the bounding box of the layer
@@ -718,7 +717,7 @@ public class WmsController extends AbstractController
             // Similarly for the bottom and top edges of the layer's bbox
             int bottomIndex = (int)((bbox[1] +  90.0) / sideLength);
             int topIndex    = (int)((bbox[3] +  90.0) / sideLength);
-            logger.debug("Indices: L={}, R={}, B={}, T={}", new Object[]{
+            log.debug("Indices: L={}, R={}, B={}, T={}", new Object[]{
                 leftIndex, rightIndex, bottomIndex, topIndex});
             // Create bounding boxes for the tiles that cover the layer
             List<double[]> tiles = new ArrayList<double[]>();
@@ -730,13 +729,13 @@ public class WmsController extends AbstractController
                 {
                     double left = sideLength * i - 180.0;
                     double right = left + sideLength;
-                    logger.debug("Adding new tile({},{},{},{})", new Object[]{
+                    log.debug("Adding new tile({},{},{},{})", new Object[]{
                         left, bottom, right, top});
                     tiles.add(new double[]{left, bottom, right, top});
                 }
             }
             assert(tiles.size() <= 4);
-            logger.debug("Created {} tiles for layer {}", tiles.size(), layer.getLayerName());
+            log.debug("Created {} tiles for layer {}", tiles.size(), layer.getLayerName());
             tiledLayers.add(new TiledLayer(layer, tiles));
         }
         
@@ -846,7 +845,7 @@ public class WmsController extends AbstractController
                 System.arraycopy(keyAndValues, 1, vals, 0, vals.length);
                 style.setAttribute(keyAndValues[0], vals);
             }
-            logger.debug("Style object of type {} created from style spec {}",
+            log.debug("Style object of type {} created from style spec {}",
                 style.getClass(), styleSpecs[0]);
         }
         style.setTransparent(getMapRequest.getStyleRequest().isTransparent());
@@ -1065,6 +1064,7 @@ class WmsVersion implements Comparable<WmsVersion>
     /**
      * @return String representation of this version, e.g. "1.3.0"
      */
+    @Override
     public String toString()
     {
         return this.x + "." + this.y + "." + this.z;
