@@ -55,6 +55,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 public class HorizontalGrid
 {
     private static final Logger logger = Logger.getLogger(HorizontalGrid.class);
+    public static final String PLATE_CARREE_CRS_CODE = "CRS:84";
     public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
     public static final List<String> SUPPORTED_CRS_CODES;
     
@@ -92,7 +93,7 @@ public class HorizontalGrid
         }
         try
         {
-            PLATE_CARREE_CRS = CRS.decode("CRS:84", true); // force longitude-first
+            PLATE_CARREE_CRS = CRS.decode(PLATE_CARREE_CRS_CODE, true); // force longitude-first
         }
         catch (Exception ex)
         {

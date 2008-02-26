@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.Serializable;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.Longitude;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -86,10 +87,7 @@ public class TileCacheKey implements Serializable
         int tIndex, int zIndex)
     {
         this.layerId = layer.getId();
-        this.crsCode = grid.getCrsCode();
-        this.bbox = grid.getBbox();
-        this.width = grid.getWidth();
-        this.height = grid.getHeight();
+        this.setGrid(grid);
         this.filepath = filepath;
         File f = new File(filepath);
         if (f.exists())
@@ -126,7 +124,7 @@ public class TileCacheKey implements Serializable
             buf.append(bboxVal);
             buf.append(",");
         }
-        buf.append("}");
+        buf.append("},");
         buf.append(this.width);
         buf.append(",");
         buf.append(this.height);
@@ -156,6 +154,7 @@ public class TileCacheKey implements Serializable
      * the search space before calling {@link #equals} to check for definite equality.
      * (Note that just implementing equals() will not do!)
      */
+    @Override
     public int hashCode()
     {
         return this.hashCode;
@@ -164,6 +163,7 @@ public class TileCacheKey implements Serializable
     /**
      * @return a string representation of this key
      */
+    @Override
     public String toString()
     {
         return this.str;
@@ -173,6 +173,7 @@ public class TileCacheKey implements Serializable
      * This is called by ehcache after the hashcodes of the objects have been
      * compared for equality.
      */
+    @Override
     public boolean equals(Object o)
     {
         if (o == null) return false;
@@ -181,21 +182,24 @@ public class TileCacheKey implements Serializable
         
         TileCacheKey other = (TileCacheKey)o;
         
-        if (this.crsCode.equals(other.crsCode) &&
-            this.fileSize == other.fileSize &&
-            this.filepath.equals(other.filepath) &&
-            this.height == other.height &&
-            this.lastModified == other.lastModified &&
-            this.layerId.equals(other.layerId) &&
-            this.tIndex == other.tIndex &&
+        // For speed we start with the cheap comparisons (i.e. not the string
+        // comparisons) and the things that are most likely to be different.
+        if (this.tIndex == other.tIndex &&
             this.zIndex == other.zIndex &&
-            this.bbox.length == other.bbox.length &&
-            this.datasetLastModified == other.datasetLastModified)
+            this.fileSize == other.fileSize &&
+            this.lastModified == other.lastModified &&
+            this.datasetLastModified == other.datasetLastModified &&
+            this.width == other.width &&
+            this.height == other.height &&
+            this.crsCode.equals(other.crsCode) &&
+            this.filepath.equals(other.filepath) &&
+            this.layerId.equals(other.layerId) &&
+            this.bbox.length == other.bbox.length)
         {
             // Now we can compare the bboxes
             for (int i = 0; i < this.bbox.length; i++)
             {
-                if (this.bbox[i] != other.bbox[i]) return false;
+                if (Double.compare(this.bbox[i], other.bbox[i]) != 0) return false;
             }
             // If we've got this far they are equal
             return true;
@@ -203,4 +207,36 @@ public class TileCacheKey implements Serializable
         return false;
     }
     
+    /**
+     * Sets the properties of this Key that relate to the horizontal grid of the layer.
+     * Some CRSs have multiple, equivalent, codes (e.g. CRS:84 and EPSG:4326).
+     * Furthermore, for CRSs with longitude axes, some apparently-different
+     * bounding boxes are functionally equivalent (e.g. 360 degrees = 0 degrees).
+     * This method sets the CRS and bbox to standard values to ensure that
+     * data are retrieved accurately and without unnecessary repetition.
+     */
+    private void setGrid(HorizontalGrid grid)
+    {
+        this.width = grid.getWidth();
+        this.height = grid.getHeight();
+        if (grid.isLatLon())
+        {
+            this.crsCode = HorizontalGrid.PLATE_CARREE_CRS_CODE;
+            // Constrain longitudes to range [-180,180]
+            this.bbox = new double[] {
+                Longitude.constrain180(grid.getBbox()[0]),
+                grid.getBbox()[1],
+                Longitude.constrain180(grid.getBbox()[2]),
+                grid.getBbox()[3]
+            };
+        }
+        else
+        {
+            this.crsCode = grid.getCrsCode();
+            // We are paranoid and create a clone so that we know for sure
+            // that the bounding box will not be altered in another class:
+            // guarantees immutability of the TileCacheKey object
+            this.bbox = (double[])grid.getBbox().clone();
+        }
+    }
 }
