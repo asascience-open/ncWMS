@@ -133,8 +133,12 @@ public class HorizontalGrid
             this.crs = CRS.decode(crsCode, true);
             logger.debug("Finding transform for CRS {} to Plate Carree", crsCode);
             // Get a converter to convert the grid's CRS to lat-lon
+            // The "true" means "lenient", i.e. ignore datum shifts.  This 
+            // is necessary to prevent "Bursa wolf parameters required"
+            // errors (Some CRSs, including British National Grid, fail if
+            // we are not "lenient".)
             this.transformToLatLon = CRS.findMathTransform(
-                this.crs, PLATE_CARREE_CRS);
+                this.crs, PLATE_CARREE_CRS, true);
             logger.debug("Found transform to Plate Carree");
         }
         catch (NoSuchAuthorityCodeException ex)
