@@ -31,6 +31,9 @@
     </head>
     
     <body>
+        <!-- Walter Zorn's library for tool tips.  Must be included inside
+             the body for some reason. See http://www.walterzorn.com/tooltip/tooltip_e.htm. -->
+        <script type="text/javascript" src="js/wz_tooltip.js"></script>
 
     <!-- This is the left menu bar that will contain the layer selector -->
     <div id="layerSelector" class="yui-skin-sam"></div>
@@ -48,8 +51,8 @@
                 <span id="units"></span><br />
                 <span id="zAxis"></span><select id="zValues" onchange="javascript:updateMap()"><option value="0">dummy</option></select><br />
                 <span id="date"></span>&nbsp;<span id="time"></span> <span id="utc">UTC</span>
-                <span id="setFrames"><span id="setFirstFrame"><a href="#" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
-                <span id="setLastFrame"><a href="#" onclick="javascript:setLastAnimationFrame()">last frame</a></span></span><br />
+                <span id="setFrames"><span id="setFirstFrame"><a href="#" onmouseover="Tip('Set the current frame as the first frame of an animation')" onclick="javascript:setFirstAnimationFrame()">first frame</a></span>
+                <span id="setLastFrame"><a href="#" onmouseover="Tip('Set the current frame as the last frame of an animation')" onclick="javascript:setLastAnimationFrame()">last frame</a></span></span><br />
                 <span id="animation"><span id="createAnimation"><a href="#" onclick="javascript:createAnimation()">Create animation</a></span> from 
                 <span id="firstFrame"></span>&nbsp;to&nbsp;<span id="lastFrame"></span></span><br /><br />
                 <span id="featureInfo"></span><br />
@@ -75,8 +78,8 @@
             <div class="scaleMarkers">
                 <input id="scaleMax" class="scaleMax" type="text" size="4" onblur="javascript:validateScale()"/>
                 <span id="scaleTwoThirds"></span>
-                <span id="autoScale"><a href="#" onclick="javascript:autoScale()">auto</a></span>
-                <span id="lockScale"><a href="#" onclick="javascript:toggleLockScale()">lock</a></span>
+                <span id="autoScale"><a href="#" onmouseover="Tip('Automatically stretch the colour scale range for maximum contrast')" onclick="javascript:autoScale()">auto</a></span>
+                <span id="lockScale"><a href="#" onmouseover="Tip('Locks/Unlocks the colour scale range')" onclick="javascript:toggleLockScale()">lock</a></span>
                 <span id="scaleOneThird"></span>
                 <input id="scaleMin" class="scaleMin" type="text" size="4" onblur="javascript:validateScale()"/>
             </div>
