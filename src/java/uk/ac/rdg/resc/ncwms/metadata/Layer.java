@@ -196,6 +196,8 @@ public interface Layer
 
     boolean isZpositive();
     
+    String getCopyrightStatement();
+    
     /**
      * @return true if this Layer can be rendered in the style with the 
      * given name, false otherwise.

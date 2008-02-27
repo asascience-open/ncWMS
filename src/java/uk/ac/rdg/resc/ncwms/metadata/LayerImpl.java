@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -533,5 +534,39 @@ public class LayerImpl implements Layer
     {
         this.horizProj = horizProj;
     }
-    
+
+    /**
+     * Gets the copyright statement for this layer, replacing ${year} as 
+     * appropriate with the year range that this layer covers.
+     * @return The copyright statement, or the empty string if no copyright
+     * statement has been set.
+     */
+    public String getCopyrightStatement()
+    {
+        String copyright = this.dataset.getCopyrightStatement();
+        if (copyright == null || copyright.trim().equals(""))
+        {
+            return "";
+        }
+        else if (!this.isTaxisPresent())
+        {
+            return copyright;
+        }
+        // We (might) need to use the year range of the layer to generate
+        // the final copyright statement.
+        // This method shows just how horrible Java's Calendar/Date architecture is...
+        // Joda-time would be a better alternative...
+        Calendar cal = Calendar.getInstance(WmsUtils.GMT);
+        cal.setTime(this.timesteps.get(0).getDate());
+        int startYear = cal.get(Calendar.YEAR);
+        cal.setTime(this.timesteps.get(this.timesteps.size() - 1).getDate());
+        int endYear = cal.get(Calendar.YEAR);
+        String yearStr = "" + startYear;
+        if (startYear != endYear)
+        {
+            yearStr += "-" + endYear;
+        }
+        // Don't forget to escape dollar signs and backslashes in the regexp
+        return copyright.replaceAll("\\$\\{year\\}", yearStr);
+    }
 }
