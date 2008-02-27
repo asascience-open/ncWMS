@@ -72,6 +72,9 @@ public class Dataset
     private String dataReaderClass = ""; // We'll use a default data reader
                                          // unless this is overridden in the config file
     
+    @Attribute(name="copyrightStatement", required=false)
+    private String copyrightStatement = "";
+    
     @Attribute(name="disabled", required=false)
     private boolean disabled = false; // Set true to disable the dataset without removing it completely
     
@@ -211,6 +214,7 @@ public class Dataset
         this.state = state;
     }
     
+    @Override
     public String toString()
     {
         return "id: " + this.id + ", location: " + this.location;
@@ -278,5 +282,15 @@ public class Dataset
     public void setDisabled(boolean disabled)
     {
         this.disabled = disabled;
+    }
+
+    public String getCopyrightStatement()
+    {
+        return copyrightStatement;
+    }
+
+    public void setCopyrightStatement(String copyrightStatement)
+    {
+        this.copyrightStatement = copyrightStatement;
     }
 }

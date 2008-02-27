@@ -173,6 +173,7 @@ public class AdminController extends MultiActionController
                     ds.setDisabled(request.getParameter("dataset." + ds.getId() + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
+                    ds.setCopyrightStatement(request.getParameter("dataset." + ds.getId() + ".copyright"));
                     
                     if (request.getParameter("dataset." + ds.getId() + ".refresh") != null)
                     {
@@ -220,6 +221,7 @@ public class AdminController extends MultiActionController
                     ds.setDisabled(request.getParameter("dataset.new" + i + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset.new" + i + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
+                    ds.setCopyrightStatement(request.getParameter("dataset.new" + i + ".copyright"));
                     config.addDataset(ds);
                     this.metadataLoader.forceReloadMetadata(ds);
                 }

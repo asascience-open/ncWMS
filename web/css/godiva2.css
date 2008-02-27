@@ -139,16 +139,23 @@ div.map
     visibility: hidden;
 }
 
-div.underMap
+#copyright
 {
     position: absolute;
     top: 430px;
+    font-style: italic;
+}
+
+div.underMap
+{
+    position: absolute;
+    top: 450px;
 }
 
 #opacityControl
 {
     position: absolute;
-    top: 430px;
+    top: 450px;
     left: 350px;
     visibility: hidden; /* Will make visible when we load the page if we need this control */
 }
@@ -156,7 +163,7 @@ div.underMap
 #poweredBy
 {
     position: absolute;
-    top: 460px;
+    top: 480px;
     left: 0px;
     font-size: 10px;
 }
@@ -164,7 +171,7 @@ div.underMap
 #permalink
 {
     position: absolute;
-    top: 460px;
+    top: 480px;
     right: 50px;
     font-size: 10px;
     visibility: hidden;
