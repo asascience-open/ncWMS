@@ -58,6 +58,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
+import uk.ac.rdg.resc.ncwms.exceptions.Wms1_1_1Exception;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
 import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
@@ -142,13 +143,12 @@ public class WmsController extends AbstractController
     {
         UsageLogEntry usageLogEntry = new UsageLogEntry(httpServletRequest);
         boolean logUsage = true;
+        // Create an object that allows request parameters to be retrieved in
+        // a way that is not sensitive to the case of the parameter NAMES
+        // (but is sensitive to the case of the parameter VALUES).
+        RequestParams params = new RequestParams(httpServletRequest.getParameterMap());
         try
         {
-            // Create an object that allows request parameters to be retrieved in
-            // a way that is not sensitive to the case of the parameter NAMES
-            // (but is sensitive to the case of the parameter VALUES).
-            RequestParams params = new RequestParams(httpServletRequest.getParameterMap());
-            
             // Check the REQUEST parameter to see if we're producing a capabilities
             // document, a map or a FeatureInfo
             String request = params.getMandatoryString("request");
@@ -209,6 +209,16 @@ public class WmsController extends AbstractController
         {
             // We don't log these errors
             usageLogEntry.setException(wmse);
+            // Set the WMS version that the user has requested.  This will then
+            // be used in displayWmsException.jsp to customize the exception XML.
+            String wmsVersion = params.getWmsVersion();
+            if (wmsVersion != null && wmsVersion.equals("1.1.1"))
+            {
+                // We create a new exception type to ensure that the correct
+                // JSP is used to render it.  This class also translates any
+                // exception codes that are different in 1.1.1 (i.e. InvalidCRS/SRS)
+                throw new Wms1_1_1Exception(wmse);
+            }
             throw wmse;
         }
         catch(Exception e)
@@ -246,8 +256,8 @@ public class WmsController extends AbstractController
             throw new WmsException("The value of the SERVICE parameter must be \"WMS\"");
         }
         
-        // Check the VERSION parameter
-        String version = params.getString("version");
+        // Check the VERSION parameter (not compulsory for GetCapabilities)
+        String version = params.getWmsVersion();
         usageLogEntry.setWmsVersion(version);
         
         // Check the FORMAT parameter

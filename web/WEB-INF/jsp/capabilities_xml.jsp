@@ -111,7 +111,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyleKeys}">
                     <Style>
-                        <Name>${style}</Name><Title>${style}</Title>
+                        <Name>${style}</Name>
+                        <Title>${style}</Title>
                         <%-- TODO: abstract --%>
                         <%-- TODO: width and height must match AbstractStyle.createLegend() --%>
                         <LegendURL width="110" height="264">

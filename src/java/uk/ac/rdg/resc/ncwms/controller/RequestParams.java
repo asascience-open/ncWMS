@@ -103,7 +103,7 @@ public class RequestParams
     /**
      * Returns the value of the parameter with the given name as a String, or null if the
      * parameter does not have a value.  This method is not sensitive to the case
-     * of the parameter name.
+     * of the parameter name.  Use getWmsVersion() to get the requested WMS version.
      */
     public String getString(String paramName)
     {
@@ -112,7 +112,8 @@ public class RequestParams
     
     /**
      * Returns the value of the parameter with the given name, throwing a
-     * WmsException if the parameter does not exist.
+     * WmsException if the parameter does not exist.  Use getMandatoryWmsVersion()
+     * to get the requested WMS version.
      */
     public String getMandatoryString(String paramName) throws WmsException
     {
@@ -123,6 +124,37 @@ public class RequestParams
                 + paramName.toUpperCase());
         }
         return value;
+    }
+    
+    /**
+     * Finds the WMS version that the user has requested.  This looks for both
+     * WMTVER and VERSION, the latter taking precedence.
+     * @return The request WMS version as a string, or null if not set
+     */
+    public String getWmsVersion()
+    {
+        String version = this.getString("version");
+        if (version == null)
+        {
+            version = this.getString("wmtver");
+        }
+        return version; // might be null
+    }
+    
+    /**
+     * Finds the WMS version that the user has requested, throwing a WmsException
+     * if a version has not been set.
+     * @return The request WMS version as a string
+     * @throws WmsException if neither VERSION nor WMTVER have been requested
+     */
+    public String getMandatoryWmsVersion() throws WmsException
+    {
+        String version = this.getWmsVersion();
+        if (version == null)
+        {
+            throw new WmsException("Must provide a value for VERSION");
+        }
+        return version;
     }
     
     /**

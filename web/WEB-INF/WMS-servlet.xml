@@ -183,6 +183,7 @@
         <property name="exceptionMappings">
             <props>
                 <prop key="uk.ac.rdg.resc.ncwms.exceptions.WmsException">displayWmsException</prop>
+                <prop key="uk.ac.rdg.resc.ncwms.exceptions.Wms1_1_1Exception">displayWms1_1_1Exception</prop>
                 <prop key="uk.ac.rdg.resc.ncwms.exceptions.MetadataException">displayMetadataException</prop>
             </props>
         </property>

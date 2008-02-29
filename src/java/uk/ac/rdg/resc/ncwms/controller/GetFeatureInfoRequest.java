@@ -53,13 +53,13 @@ public class GetFeatureInfoRequest
      */
     public GetFeatureInfoRequest(RequestParams params) throws WmsException
     {
-        this.wmsVersion = params.getMandatoryString("version");
-        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.getWmsVersion()))
+        this.wmsVersion = params.getMandatoryWmsVersion();
+        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.wmsVersion))
         {
-            throw new WmsException("VERSION " + this.getWmsVersion() + " not supported");
+            throw new WmsException("VERSION " + this.wmsVersion + " not supported");
         }
         // TODO: deal with the EXCEPTIONS parameter
-        this.dataRequest = new GetFeatureInfoDataRequest(params, this.getWmsVersion());
+        this.dataRequest = new GetFeatureInfoDataRequest(params, this.wmsVersion);
         this.outputFormat = params.getMandatoryString("info_format");
     }
 

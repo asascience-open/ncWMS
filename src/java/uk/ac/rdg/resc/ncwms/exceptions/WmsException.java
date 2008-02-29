@@ -56,5 +56,4 @@ public class WmsException extends Exception
     {
         return code;
     }
-    
 }

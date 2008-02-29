@@ -1,4 +1,4 @@
-<%@page contentType="text/xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<%@page contentType="application/vnd.ogc.wms_xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="/WEB-INF/taglib/wmsUtils" prefix="utils"%> <%-- tag library for useful utility functions --%>
 <%
@@ -15,7 +15,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
      --%>
-<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd">
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/capabilities_1_1_1.dtd">
 <WMT_MS_Capabilities
         version="1.1.1"
         xmlns:xlink="http://www.w3.org/1999/xlink"><%-- TODO: do UpdateSequence properly --%>
@@ -128,7 +128,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyleKeys}">
                     <Style>
-                        <Name>${style}</Name><Title>${style}</Title>
+                        <Name>${style}</Name>
+                        <Title>${style}</Title>
                         <%-- TODO: abstract --%>
                         <%-- TODO: width and height must match AbstractStyle.createLegend() --%>
                         <LegendURL width="110" height="264">

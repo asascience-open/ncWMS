@@ -53,14 +53,14 @@ public class GetMapRequest
      */
     public GetMapRequest(RequestParams params) throws WmsException
     {
-        this.wmsVersion = params.getMandatoryString("version");
-        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.getWmsVersion()))
+        this.wmsVersion = params.getMandatoryWmsVersion();
+        if (!WmsUtils.SUPPORTED_VERSIONS.contains(this.wmsVersion))
         {
-            throw new WmsException("VERSION " + this.getWmsVersion() + " not supported");
+            throw new WmsException("VERSION " + this.wmsVersion + " not supported");
         }
         // TODO: deal with the EXCEPTIONS parameter
         
-        this.dataRequest = new GetMapDataRequest(params, this.getWmsVersion());
+        this.dataRequest = new GetMapDataRequest(params, this.wmsVersion);
         this.styleRequest = new GetMapStyleRequest(params);
         // Check that the Styles and Layers match
         if (this.styleRequest.getStyles().length != this.dataRequest.getLayers().length
