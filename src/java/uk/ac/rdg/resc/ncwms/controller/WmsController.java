@@ -209,8 +209,6 @@ public class WmsController extends AbstractController
         {
             // We don't log these errors
             usageLogEntry.setException(wmse);
-            // Set the WMS version that the user has requested.  This will then
-            // be used in displayWmsException.jsp to customize the exception XML.
             String wmsVersion = params.getWmsVersion();
             if (wmsVersion != null && wmsVersion.equals("1.1.1"))
             {

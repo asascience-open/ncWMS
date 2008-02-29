@@ -9,27 +9,37 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <%-- This file defines the menu structure for the MERSEA site.  This file will
      be loaded if someone loads up the godiva2 site with "menu=MERSEA"--%>
  <menu:folder label="MERSEA Dynamic Quick View">
-     <menu:folder label="Global TEP">
-         <menu:dataset dataset="${datasets.MERSEA_GLOBAL}"/>
-         <menu:dataset dataset="${datasets.MERSEA_NRTSLA}"/>
-         <%-- The CORIOLIS Temp and Sal come from two different datasets so we
-              manually aggregate them in a single folder --%>
-         <menu:folder label="CORIOLIS global in-situ daily">
-             <menu:layer id="MERSEA_CORIOLIS_TEMP/temperature" label="temperature"/>
-             <menu:layer id="MERSEA_CORIOLIS_SAL/salinity" label="salinity"/>
+     <menu:folder label="Global Oceans">
+         <menu:folder label="MERCATOR">
+             <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1}" label="Global Ocean forecast (degraded resolution)"/>
+             <menu:folder label="Global ocean forecast by region (full resolution)">
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_NAT}" label="North Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_SAT}" label="South Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_TAT}" label="Tropical Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_MED}" label="Mediterranean"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_NPA}" label="North Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_SPA}" label="South Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_TPA}" label="Tropical Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_ARC}" label="Arctic Ocean"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_ACC}" label="Circumpolar Antarctic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_IND}" label="Indian Ocean"/>
+             </menu:folder>
          </menu:folder>
+         <menu:dataset dataset="${datasets.MERSEA_NRTSLA}"/>
+         <menu:dataset dataset="${datasets.MERSEA_CORIOLIS}"/>
+         <menu:dataset dataset="${datasets.CERSAT_NRT_SST}"/>
      </menu:folder>
-     <menu:folder label="Baltic TEP">
+     <menu:folder label="Baltic Sea">
          <menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
          <menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
      </menu:folder>
-     <menu:folder label="North-East Atlantic TEP">
-         <menu:dataset dataset="${datasets.MERSEA_NATL}"/>
+     <menu:folder label="North-East Atlantic Ocean">
+         <menu:dataset dataset="${datasets.MERSEA_NATL}" label="FOAM North Atlantic analysis"/>
      </menu:folder>
-     <menu:folder label="Mediterranean TEP">
+     <menu:folder label="Mediterranean Sea">
          <%-- The Mediterranean data come from three different datasets so we
               manually aggregate them in a single folder --%>
-          <menu:folder label="Mediterranean ocean analyses/forecasts">
+          <menu:folder label="Mediterranean ocean analyses">
               <menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
               <menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
               <menu:layer id="MERSEA_MED_T/ssh" label="sea_surface_height_above_sea_level"/>
@@ -37,5 +47,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               <menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
               <menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
           </menu:folder>
+     </menu:folder>
+     <menu:folder label="Arctic Ocean">
+         <menu:dataset dataset="${datasets.MERSEA_ARCTIC_TOPAZ}" label="Arctic Ocean analyses and forecasts"/>
      </menu:folder>
  </menu:folder>

@@ -31,7 +31,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     </menu:folder>
     <menu:folder label="University of Cyprus">
         <menu:dataset dataset="${datasets.ECOOP_CYCO}"/>
-    </menu:folder>
+         <menu:dataset dataset="${datasets.ECOOP_TEST_CYPRUS}"/>
+     </menu:folder>
     <menu:folder label="Marine Institute, Ireland">
         <menu:dataset dataset="${datasets.ECOOP_ROMS_TEST}"/>
     </menu:folder>
