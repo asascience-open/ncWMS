@@ -73,23 +73,11 @@ public class HorizontalGrid
     {
         // Find the supported CRS codes
         SUPPORTED_CRS_CODES = new ArrayList<String>();
-        for (Object authObj : CRS.getSupportedAuthorities(false))
+        // I think this is the appropriate method to get all the CRS codes
+        // that we can support
+        for (Object codeObj : CRS.getSupportedCodes("urn:ogc:def"))
         {
-            String authStr = (String)authObj;
-            for (Object codeObj : CRS.getSupportedCodes(authStr))
-            {
-                // For some reason the code sometimes includes the authority
-                // string
-                String crsCode = (String)codeObj;
-                if (crsCode.startsWith(authStr + ":"))
-                {
-                    SUPPORTED_CRS_CODES.add(crsCode);
-                }
-                else
-                {
-                    SUPPORTED_CRS_CODES.add(authStr + ":" + crsCode);
-                }
-            }
+            SUPPORTED_CRS_CODES.add((String)codeObj);
         }
         try
         {
