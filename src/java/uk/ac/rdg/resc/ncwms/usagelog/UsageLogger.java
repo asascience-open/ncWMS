@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.usagelog;
 
+import javax.sql.DataSource;
+
 /**
  * Interface describing a class that logs usage of the ncWMS server.  This
  * will log requests for images and metadata.  Note that all entries use the
@@ -52,14 +54,10 @@ public interface UsageLogger
     public void logUsage(UsageLogEntry logEntry);
     
     /**
-     * @return the number of GetMap requests in the usage log
+     * Gets a JDBC DataSource object for accessing the usage log directly.
+     * @return the DataSource object.  Subclasses may choose to return a new
+     * DataSource with each invocation, or may choose to return the same
+     * object each time.
      */
-    public int getNumGetMapRequests();
-    
-    /**
-     * @return the number of GetMap requests in the usage log that have been
-     * served using the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache},
-     * or -1 if there was an error getting the data from the log.
-     */
-    public int getNumCachedGetMapRequests();
+    public DataSource getDataSource();
 }

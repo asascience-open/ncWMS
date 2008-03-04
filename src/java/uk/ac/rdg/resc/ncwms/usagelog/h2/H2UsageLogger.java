@@ -41,9 +41,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 import org.h2.tools.Csv;
 import org.h2.tools.RunScript;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
@@ -76,16 +78,8 @@ public class H2UsageLogger implements UsageLogger
             "output_format, transparent, background_color, menu, remote_server_url) " +
             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     
-    private static final String GET_NUM_GETMAP_REQUESTS = "SELECT COUNT(*) FROM " +
-        "usage_log WHERE wms_operation = 'GetMap'";
-    
-    private static final String GET_NUM_CACHED_GETMAP_REQUESTS = "SELECT COUNT(*) FROM " +
-        "usage_log WHERE wms_operation = 'GetMap' AND used_cache = true";
-    
     private Connection conn;
-    
-    private PreparedStatement getNumGetMapRequests;
-    private PreparedStatement getNumCachedGetMapRequests;
+    private DataSource dataSource;
     
     // These properties will be injected by Spring
     private NcwmsContext ncwmsContext;
@@ -121,13 +115,17 @@ public class H2UsageLogger implements UsageLogger
             this.conn = DriverManager.getConnection("jdbc:h2:" + databasePath);
             // Set auto-commit to true: can't see any reason why not
             this.conn.setAutoCommit(true);
+            
+            // Create the DataSource object.  The H2 database only allows a
+            // single connection when used in embedded mode, so we use a
+            // DataSource that reuses the same Connection object.
+            // We set suppressClose = true to ensure that the connection is
+            // not closed by the client of the datasource.  We close the connection
+            // ourselves in this.close().
+            this.dataSource = new SingleConnectionDataSource(this.conn, true);
 
             // Now run the script to initialize the database
             RunScript.execute(this.conn, scriptReader);
-            
-            // Now prepare the statements we will execute
-            this.getNumGetMapRequests = this.conn.prepareStatement(GET_NUM_GETMAP_REQUESTS);
-            this.getNumCachedGetMapRequests = this.conn.prepareStatement(GET_NUM_CACHED_GETMAP_REQUESTS);
         }
         catch(Exception e)
         {
@@ -213,6 +211,16 @@ public class H2UsageLogger implements UsageLogger
         ResultSet results = stmt.executeQuery("SELECT * from usage_log");
         Csv.getInstance().write(writer, results);
     }
+
+    /**
+     * Returns a DataSource for accessing the database directly.  This method
+     * returns the same object with each invocation.
+     * @return the DataSource object
+     */
+    public DataSource getDataSource()
+    {
+        return this.dataSource;
+    }
     
     /**
      * Called by Spring to clean up the database
@@ -238,44 +246,4 @@ public class H2UsageLogger implements UsageLogger
     {
         this.ncwmsContext = ncwmsContext;
     }
-
-    /**
-     * @return the number of GetMap requests in the usage log, or -1 if there
-     * was an error getting the data from the log.
-     */
-    public int getNumGetMapRequests()
-    {
-        return getIntegerValueFromDatabase(this.getNumGetMapRequests);
-    }
-
-    /**
-     * @return the number of GetMap requests in the usage log that have been
-     * served using the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache},
-     * or -1 if there was an error getting the data from the log.
-     */
-    public int getNumCachedGetMapRequests()
-    {
-        return getIntegerValueFromDatabase(this.getNumCachedGetMapRequests);
-    }
-    
-    /**
-     * Utility method that executes the given prepared statement and returns the
-     * integer value of the first column in the first row of the result set, or
-     * -1 if there was an error getting the data from the log.
-     */
-    private static int getIntegerValueFromDatabase(PreparedStatement ps)
-    {
-        try
-        {
-            ResultSet results = ps.executeQuery();
-            results.first();
-            return results.getInt(1);
-        }
-        catch(SQLException sqle)
-        {
-            logger.error("Error getting integer value from database", sqle);
-            return -1;
-        }
-    }
-    
 }

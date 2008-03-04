@@ -128,7 +128,8 @@ public class RequestParams
     
     /**
      * Finds the WMS version that the user has requested.  This looks for both
-     * WMTVER and VERSION, the latter taking precedence.
+     * WMTVER and VERSION, the latter taking precedence.  WMTVER is used by
+     * older versions of WMS and older clients may use this in version negotiation.
      * @return The request WMS version as a string, or null if not set
      */
     public String getWmsVersion()
