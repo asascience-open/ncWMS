@@ -19,6 +19,11 @@ from usage_log where wms_operation = 'GetMap' group by client_hostname order by 
 select client_user_agent, count(1) as count, count(nullif(used_cache, false)) as used_cache
 from usage_log where wms_operation = 'GetMap' group by client_user_agent order by count desc
 </sql:query>
+<sql:query var="getMapRequestsByReferrer" dataSource="${usageLogger.dataSource}">
+select client_referrer, count(1) as count, count(nullif(used_cache, false)) as used_cache
+from usage_log where wms_operation = 'GetMap' group by client_referrer order by count desc
+</sql:query>
+
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -88,6 +93,35 @@ from usage_log where wms_operation = 'GetMap' group by client_user_agent order b
             <th><fmt:formatNumber value="${cache_hits / total}" type="percent" minFractionDigits="2"/></th>
         </tr>
     </table>
+    
+    <h2>GetMap requests by referrer</h2>
+    <table border="1">
+        <tr>
+            <th>Referrer</th>
+            <th>Number of GetMap requests</th>
+            <th>Number of cache hits</th>
+            <th>Percentage cache hits</th>
+        </tr>
+        <c:set var="total" value="0"/>
+        <c:set var="cache_hits" value="0"/>
+        <c:forEach var="row" items="${getMapRequestsByReferrer.rows}">
+            <tr>
+                <td>${row.client_referrer}</td>
+                <td>${row.count}</td>
+                <td>${row.used_cache}</td>
+                <td><fmt:formatNumber value="${row.used_cache / row.count}" type="percent" minFractionDigits="2"/></td>
+                <c:set var="total" value="${total + row.count}"/>
+                <c:set var="cache_hits" value="${cache_hits + row.used_cache}"/>
+            </tr>
+        </c:forEach>
+        <tr>
+            <th>TOTAL (check)</th>
+            <th>${total}</th>
+            <th>${cache_hits}</th>
+            <th><fmt:formatNumber value="${cache_hits / total}" type="percent" minFractionDigits="2"/></th>
+        </tr>
+    </table>
+
     
     </body>
 </html>
