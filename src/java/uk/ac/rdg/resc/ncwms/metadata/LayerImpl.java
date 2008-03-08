@@ -38,7 +38,7 @@ import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
-import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
+import uk.ac.rdg.resc.ncwms.styles.Style;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -56,13 +56,13 @@ public class LayerImpl implements Layer
     private static final Logger logger = Logger.getLogger(LayerImpl.class);
     
     protected String id;
-    protected String title;
-    protected String abstr; // "abstract" is a reserved word
+    protected String title = null;
+    protected String abstr = null; // "abstract" is a reserved word
     protected String units;
     protected String zUnits;
     protected double[] zValues;
     protected boolean zPositive;
-    protected double[] bbox; // Bounding box : minx, miny, maxx, maxy
+    protected double[] bbox = new double[]{-180.0, -90.0, 180.0, 90.0}; // Bounding box : minx, miny, maxx, maxy
     protected float scaleMin;
     protected float scaleMax;
     protected CoordAxis xaxis;
@@ -70,9 +70,9 @@ public class LayerImpl implements Layer
     private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
     protected transient Dataset dataset; // Not stored in the metadata database
     // Sorted in ascending order of time
-    protected List<TimestepInfo> timesteps;
+    protected List<TimestepInfo> timesteps = new ArrayList<TimestepInfo>();
     // Stores the keys of the styles that this variable supports
-    protected List<String> supportedStyles = new ArrayList<String>();
+    protected List<Style> supportedStyles = new ArrayList<Style>();
     
     /**
      * Creates a new Layer using a default bounding box (covering the whole 
@@ -80,24 +80,7 @@ public class LayerImpl implements Layer
      */
     public LayerImpl()
     {
-        this.title = null;
-        this.abstr = null;
-        this.zUnits = null;
-        this.zValues = null;
-        this.bbox = new double[]{-180.0, -90.0, 180.0, 90.0};
-        this.xaxis = null;
-        this.yaxis = null;
-        this.dataset = null;
-        this.timesteps = new ArrayList<TimestepInfo>();
-        this.addStyles(BoxFillStyle.KEYS);
-    }
-    
-    protected void addStyles(String[] styles)
-    {
-        for (String style : styles)
-        {
-            this.supportedStyles.add(style.trim());
-        }
+        this.supportedStyles.add(Style.BOXFILL);
     }
 
     public String getTitle()
@@ -402,19 +385,18 @@ public class LayerImpl implements Layer
     }
 
     /**
-     * @return List of Strings representing the keys of styles that this
-     * variable can be rendered in.
+     * @return List of styles that this layer can be rendered in.
      */
-    public List<String> getSupportedStyleKeys()
+    public List<Style> getSupportedStyles()
     {
         return this.supportedStyles;
     }
     
     /**
      * @return the key of the default style for this Variable.  Exactly 
-     * equivalent to getSupportedStyleKeys().get(0)
+     * equivalent to getSupportedStyles().get(0)
      */
-    public String getDefaultStyleKey()
+    public Style getDefaultStyle()
     {
         // Could be an IndexOutOfBoundsException here, but would be a programming
         // error if so

@@ -44,35 +44,6 @@
          <property name="config"><ref local="config"/></property>
     </bean>
     
-    <!-- An object that is used to create PicMakers. -->
-    <bean id="picMakerFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
-        <!-- This constructor argument is the name of the superclass of all PicMakers -->
-        <constructor-arg value="uk.ac.rdg.resc.ncwms.graphics.PicMaker"/>
-        <!-- This list defines the PicMaker classes that will be used to handle
-             different mime types of images -->
-        <property name="classes">
-            <list>
-                <value>uk.ac.rdg.resc.ncwms.graphics.SimplePicMaker</value>
-                <value>uk.ac.rdg.resc.ncwms.graphics.GifMaker</value>
-                <value>uk.ac.rdg.resc.ncwms.graphics.KmzMaker</value>
-            </list>
-        </property>
-    </bean>
-    
-    <!-- An object that is used to create Styles -->
-    <bean id="styleFactory" class="uk.ac.rdg.resc.ncwms.controller.Factory">
-        <!-- This constructor argument is the name of the superclass of all styles -->
-        <constructor-arg value="uk.ac.rdg.resc.ncwms.styles.AbstractStyle"/>
-        <!-- This list defines the classes that will be used to handle
-             different styles of images -->
-        <property name="classes">
-            <list>
-                <value>uk.ac.rdg.resc.ncwms.styles.BoxFillStyle</value>
-                <value>uk.ac.rdg.resc.ncwms.styles.VectorStyle</value>
-            </list>
-        </property>
-    </bean>
-    
     <!-- Object that handles the provision of authentication credentials
          for OPeNDAP servers -->
     <bean id="credentialsProvider"
@@ -96,12 +67,11 @@
     </bean>
     
     <!-- This Controller will handle all the requests to the WMS -->
-    <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController">
+    <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController"
+            init-method="init">
         <property name="supportedMethods" value="GET"/>
         <property name="config"><ref local="config"/></property>
         <property name="metadataStore"><ref local="metadataStore"/></property>
-        <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
-        <property name="styleFactory"><ref local="styleFactory"/></property>
         <property name="metadataController"><ref local="metadataController"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
         <property name="tileCache"><ref local="tileCache"/></property>
@@ -122,7 +92,6 @@
     <bean id="frontPageController" class="uk.ac.rdg.resc.ncwms.controller.FrontPageController">
         <property name="supportedMethods" value="GET"/>
         <property name="config"><ref local="config"/></property>
-        <property name="picMakerFactory"><ref local="picMakerFactory"/></property>
     </bean>
     
     <!-- This Controller is used to display the administrative pages of the server.

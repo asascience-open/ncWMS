@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -35,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
@@ -57,17 +58,17 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
-import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.Wms1_1_1Exception;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
-import uk.ac.rdg.resc.ncwms.graphics.KmzMaker;
-import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
+import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
+import uk.ac.rdg.resc.ncwms.graphics.KmzFormat;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
-import uk.ac.rdg.resc.ncwms.styles.AbstractStyle;
+import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
+import uk.ac.rdg.resc.ncwms.styles.ImageProducer;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -110,11 +111,32 @@ public class WmsController extends AbstractController
     // These objects will be injected by Spring
     private Config config;
     private MetadataStore metadataStore;
-    private Factory<PicMaker> picMakerFactory;
-    private Factory<AbstractStyle> styleFactory;
     private UsageLogger usageLogger;
     private MetadataController metadataController;
     private TileCache tileCache;
+    
+    /**
+     * Called automatically by Spring
+     */
+    public void init()
+    {
+        // We initialize the ColorPalettes.  We need to do this from here
+        // because we need a way to find out the real path of the 
+        // directory containing the palettes.  Therefore we need a way of 
+        // getting at the ServletContext object, which isn't available from
+        // the ColorPalette class.
+        String paletteLocation = this.getWebApplicationContext()
+            .getServletContext().getRealPath("/WEB-INF/conf/palettes");
+        File paletteLocationDir = new File(paletteLocation);
+        if (paletteLocationDir.exists() && paletteLocationDir.isDirectory())
+        {
+            ColorPalette.loadPalettes(paletteLocationDir);
+        }
+        else
+        {
+            logger.info("Directory of palette files does not exist or is not a directory");
+        }
+    }
     
     /**
      * <p>Entry point for all requests to the WMS.  This method first 
@@ -124,8 +146,7 @@ public class WmsController extends AbstractController
      * 
      * <p>Based on the value of the
      * REQUEST parameter this method then delegates to
-     * {@link #getCapabilities getCapabilities()},
-     * {@link #getMap getMap()}
+     * {@link #getCapabilities getCapabilities()}, {@link #getMap getMap()}
      * or {@link #getFeatureInfo getFeatureInfo()}.
      * If the information returned from
      * this method is to be presented as an XML/JSON/HTML document, the method returns
@@ -272,7 +293,7 @@ public class WmsController extends AbstractController
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         // TODO: show a subset of only the CRS codes that we are likely to use?
         models.put("supportedCrsCodes", HorizontalGrid.SUPPORTED_CRS_CODES);
-        models.put("supportedImageFormats", this.picMakerFactory.getKeys());
+        models.put("supportedImageFormats", ImageFormat.getSupportedMimeTypes());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
             FEATURE_INFO_XML_FORMAT});
@@ -306,7 +327,7 @@ public class WmsController extends AbstractController
      * {@link uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()}.
      * This returns an array of floats, representing
      * the data values at each pixel in the final image.</li>
-     * <li>Uses an {@link AbstractStyle} object to turn the array of data into
+     * <li>Uses an {@link ImageProducer} object to turn the array of data into
      * a {@link java.awt.image.BufferedImage} (or, in the case of an animation, several
      * {@link java.awt.image.BufferedImage}s).</li>
      * <li>Uses a {@link PicMaker} object to write the image to the servlet's
@@ -326,14 +347,10 @@ public class WmsController extends AbstractController
         GetMapRequest getMapRequest = new GetMapRequest(params);
         usageLogEntry.setGetMapRequest(getMapRequest);
 
-        // Get the PicMaker that corresponds with this MIME type
+        // Get the ImageFormat object corresponding with the requested MIME type
         String mimeType = getMapRequest.getStyleRequest().getImageFormat();
-        PicMaker picMaker = this.picMakerFactory.createObject(mimeType);
-        if (picMaker == null)
-        {
-            throw new InvalidFormatException("The image format " + mimeType +
-                " is not supported by this server");
-        }
+        // This throws an InvalidFormatException if the MIME type is not supported
+        ImageFormat imageFormat = ImageFormat.get(mimeType);
 
         GetMapDataRequest dr = getMapRequest.getDataRequest();
         String[] layers = dr.getLayers();
@@ -349,16 +366,33 @@ public class WmsController extends AbstractController
         // Get the grid onto which the data will be projected
         HorizontalGrid grid = new HorizontalGrid(dr);
 
-        AbstractStyle style = this.getStyle(getMapRequest, layer);
+        // Create an object that will turn data into BufferedImages
+        ImageProducer imageProducer = new ImageProducer(getMapRequest, layer);
+        // Need to make sure that the images will be compatible with the
+        // requested image format
+        if (imageProducer.isTransparent() && !imageFormat.supportsFullyTransparentPixels())
+        {
+            throw new WmsException("The image format " + mimeType +
+                " does not support fully-transparent pixels");
+        }
+        if (imageProducer.getOpacity() < 100 && !imageFormat.supportsPartiallyTransparentPixels())
+        {
+            throw new WmsException("The image format " + mimeType +
+                " does not support partially-transparent pixels");
+        }
 
         String zValue = dr.getElevationString();
         int zIndex = getZIndex(zValue, layer); // -1 if no z axis present
 
         // Cycle through all the provided timesteps, extracting data for each step
-        // If there is no time axis getTimesteps will return a single value of null
         List<String> tValues = new ArrayList<String>();
         String timeString = getMapRequest.getDataRequest().getTimeString();
         List<Integer> tIndices = getTIndices(timeString, layer);
+        if (tIndices.size() > 1 && !imageFormat.supportsMultipleFrames())
+        {
+            throw new WmsException("The image format " + mimeType +
+                " does not support multiple frames");
+        }
         usageLogEntry.setNumTimeSteps(tIndices.size());
         long beforeExtractData = System.currentTimeMillis();
         for (int tIndex : tIndices)
@@ -373,34 +407,28 @@ public class WmsController extends AbstractController
                 tValue = WmsUtils.dateToISO8601(layer.getTimesteps().get(tIndex).getDate());
             }
             tValues.add(tValue);
-            style.addFrame(picData, tValue); // the tValue is the label for the image
+            imageProducer.addFrame(picData, tValue); // the tValue is the label for the image
         }
         long timeToExtractData = System.currentTimeMillis() - beforeExtractData;
         usageLogEntry.setTimeToExtractDataMs(timeToExtractData);
-
-        // We write some of the request elements to the picMaker - this is
-        // used to create labels and metadata, e.g. in KMZ.
-        picMaker.setLayer(layer);
-        picMaker.setTvalues(tValues);
-        picMaker.setZvalue(zValue);
-        picMaker.setBbox(grid.getBbox());
-        // Set the legend if we need one (required for KMZ files, for instance)
-        if (picMaker.needsLegend()) picMaker.setLegend(style.getLegend(layer));
+        
+        // We only create a legend object if the image format requires it
+        BufferedImage legend = null;//imageFormat.requiresLegend() ? imageProducer.getLegend(layer) : null;
 
         // Write the image to the client
         httpServletResponse.setStatus(HttpServletResponse.SC_OK);
         httpServletResponse.setContentType(mimeType);
         // If this is a KMZ file give it a sensible filename
-        if (picMaker instanceof KmzMaker)
+        if (imageFormat instanceof KmzFormat)
         {
             httpServletResponse.setHeader("Content-Disposition", "inline; filename=" +
                 layer.getDataset().getId() + "_" + layer.getId() + ".kmz");
         }
 
         // Send the images to the picMaker and write to the output
-        // TODO: for KMZ output, better to do this via a JSP page?
-        picMaker.writeImage(style.getRenderedFrames(), mimeType,
-            httpServletResponse.getOutputStream());
+        imageFormat.writeImage(imageProducer.getRenderedFrames(),
+            httpServletResponse.getOutputStream(), layer, tValues, zValue,
+            grid.getBbox(), legend);
 
         return null;
     }
@@ -632,10 +660,10 @@ public class WmsController extends AbstractController
         String layerName = params.getMandatoryString("layer");
         Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         
-        // Find the requested style, or use the layer's default style
+        // Find the requested imageProducer, or use the layer's default imageProducer
         String styleStr = params.getString("style");
-        if (styleStr == null) styleStr = layer.getDefaultStyleKey();
-        AbstractStyle style = this.styleFactory.createObject(styleStr);
+        /*if (styleStr == null) styleStr = layer.getDefaultStyleKey();
+        ImageProducer style = this.styleFactory.createObject(styleStr);
         
         // Now find the (optional) scale range.  TODO: refactor so
         // getKML can use this too
@@ -663,7 +691,7 @@ public class WmsController extends AbstractController
         // Get the legend graphic and write it to the client
         httpServletResponse.setContentType("image/png");
         ImageIO.write(style.getLegend(layer), "png",
-            httpServletResponse.getOutputStream());
+            httpServletResponse.getOutputStream());*/
         
         return null;
     }
@@ -798,72 +826,6 @@ public class WmsController extends AbstractController
     }
     
     /**
-     * Gets the style object that will be used to control the rendering of the
-     * image.  Sets the transparency and background colour.
-     * @todo support returning of multiple styles
-     */
-    private AbstractStyle getStyle(GetMapRequest getMapRequest,
-        Layer layer) throws StyleNotDefinedException, Exception
-    {
-        AbstractStyle style = null;
-        String[] styleSpecs = getMapRequest.getStyleRequest().getStyles();
-        if (styleSpecs.length == 0)
-        {
-            // Use the default style for the variable
-            style = this.styleFactory.createObject(layer.getDefaultStyleKey());
-            assert style != null;
-            // Set the scale to the default scale for the layer
-            // TODO: this method is silly: should be a setScale(double, double) method
-            style.setAttribute("scale", new String[]{
-                String.valueOf(layer.getScaleRange()[0]),
-                String.valueOf(layer.getScaleRange()[1])
-            });
-        }
-        else
-        {
-            // Get the full Style object (with attributes set)
-            String[] els = styleSpecs[0].split(";");
-            style = this.styleFactory.createObject(els[0]);
-            if (style == null)
-            {
-                throw new StyleNotDefinedException(style + " is not a valid STYLE");
-            }
-            if (!layer.supportsStyle(els[0]))
-            {
-                throw new StyleNotDefinedException("The style \"" + els[0] +
-                    "\" is not supported by this layer");
-            }
-            // Set the scale to the default scale for the layer
-            // TODO: this method is silly: should be a setScale(double, double) method
-            // Also repeats code from above!
-            style.setAttribute("scale", new String[]{
-                String.valueOf(layer.getScaleRange()[0]),
-                String.valueOf(layer.getScaleRange()[1])
-            });
-            // Set the attributes of the AbstractStyle
-            for (int i = 1; i < els.length; i++)
-            {
-                String[] keyAndValues = els[i].split(":");
-                if (keyAndValues.length < 2)
-                {
-                    throw new StyleNotDefinedException("STYLE specification format error");
-                }
-                // Get the array of values for this attribute
-                String[] vals = new String[keyAndValues.length - 1];
-                System.arraycopy(keyAndValues, 1, vals, 0, vals.length);
-                style.setAttribute(keyAndValues[0], vals);
-            }
-            log.debug("Style object of type {} created from style spec {}",
-                style.getClass(), styleSpecs[0]);
-        }
-        style.setTransparent(getMapRequest.getStyleRequest().isTransparent());
-        style.setBgColor(getMapRequest.getStyleRequest().getBackgroundColour());
-        style.setPicWidth(getMapRequest.getDataRequest().getWidth());
-        style.setPicHeight(getMapRequest.getDataRequest().getHeight());
-        return style;
-    }
-    
-    /**
      * @return the index on the z axis of the requested Z value.  Returns 0 (the
      * default) if no value has been specified and the provided Variable has a z
      * axis.  Returns -1 if no value is needed because there is no z axis in the
@@ -941,22 +903,6 @@ public class WmsController extends AbstractController
             tIndices.add(-1); // Signifies a single frame with no particular time value
         }
         return tIndices;
-    }
-    
-    /**
-     * Called by Spring to inject the PicMakerFactory object
-     */
-    public void setPicMakerFactory(Factory<PicMaker> picMakerFactory)
-    {
-        this.picMakerFactory = picMakerFactory;
-    }
-    
-    /**
-     * Called by Spring to inject the StyleFactory object
-     */
-    public void setStyleFactory(Factory<AbstractStyle> styleFactory)
-    {
-        this.styleFactory = styleFactory;
     }
     
     /**

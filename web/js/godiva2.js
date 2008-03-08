@@ -788,7 +788,9 @@ function updateMap()
         elevation: getZValue(),
         time: isoTValue,
         transparent: 'true',
-        styles: style + ';scale:' + scaleMinVal + ':' + scaleMaxVal + ';opacity:' + opacity
+        styles: style,
+        colorscalerange: scaleMinVal + ',' + scaleMaxVal,
+        opacity: opacity
     };
     if (ncwms == null) {
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",

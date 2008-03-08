@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005 The University of Reading
+ * Copyright (c) 2008 The University of Reading
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,25 +36,49 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Writes images using the ImageIO class.  Will only write the first frame of
- * an animation: Use GifMaker or KmzMaker to make animations.
- * Supports any output format that is supported by ImageIO class.
+ * Writes PNG images using the ImageIO class.  Only one instance of this class
+ * will ever be created, so this class contains no member variables to ensure
+ * thread safety.
  * @author jdb
  */
-public class SimplePicMaker extends PicMaker
+public class PngFormat extends SimpleFormat
 {
     /**
-     * Defines the MIME types that this PicMaker supports: see Factory.setClasses()
+     * Protected default constructor to prevent direct instantiation.
      */
-    public static final String[] KEYS = new String[]{"image/png"};
+    protected PngFormat() {}
     
-    /**
-     * This just writes the first frame as the image.
-     */
-    public void writeImage(List<BufferedImage> frames, String mimeType,
-        OutputStream out) throws IOException
+    @Override
+    public String getMimeType()
     {
-        String imageType = mimeType.split("/")[1];
-        ImageIO.write(frames.get(0), imageType, out);
+        return "image/png";
+    }
+
+    @Override
+    public boolean supportsMultipleFrames()
+    {
+        return false;
+    }
+
+    @Override
+    public boolean supportsFullyTransparentPixels()
+    {
+        return true;
+    }
+
+    @Override
+    public boolean supportsPartiallyTransparentPixels()
+    {
+        return true;
+    }
+
+    @Override
+    protected void writeImage(List<BufferedImage> frames, OutputStream out) throws IOException
+    {
+        if (frames.size() > 1)
+        {
+            throw new IllegalArgumentException("Cannot render animations in PNG format");
+        }
+        ImageIO.write(frames.get(0), "png", out);
     }
 }

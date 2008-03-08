@@ -32,6 +32,7 @@ import java.util.List;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
+import uk.ac.rdg.resc.ncwms.styles.Style;
 
 /**
  * Interface describing the methods that must be implemented by a  displayable
@@ -78,10 +79,9 @@ public interface Layer
     Dataset getDataset();
 
     /**
-     * @return the key of the default style for this Variable.  Exactly 
-     * equivalent to getSupportedStyleKeys().get(0)
+     * @return the key of the default style for this Variable
      */
-    String getDefaultStyleKey();
+    Style getDefaultStyle();
 
     /**
      * @return the index of the default value of the t axis (i.e. the t value that will be
@@ -126,10 +126,9 @@ public interface Layer
     String getLayerName();
 
     /**
-     * @return List of Strings representing the keys of styles that this
-     * variable can be rendered in.
+     * @return List of Styles that this layer can be rendered in.
      */
-    List<String> getSupportedStyleKeys();
+    List<Style> getSupportedStyles();
 
     /**
      * @return all the timesteps in this variable

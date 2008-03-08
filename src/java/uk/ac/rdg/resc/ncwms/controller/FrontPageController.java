@@ -35,7 +35,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.graphics.PicMaker;
+import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
 
 /**
  * Displays the front page of the ncWMS application (i.e. jsp/index.jsp)
@@ -49,7 +49,6 @@ public class FrontPageController extends AbstractController
 {
     // These objects will be injected by Spring
     private Config config;
-    private Factory<PicMaker> picMakerFactory;
     
     /**
      * Entry point for all requests to the WMS
@@ -59,7 +58,7 @@ public class FrontPageController extends AbstractController
     {
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.config);
-        models.put("supportedImageFormats", this.picMakerFactory.getKeys());
+        models.put("supportedImageFormats", ImageFormat.getSupportedMimeTypes());
         return new ModelAndView("index", models); // results in display of jsp/index.jsp
     }
 
@@ -69,14 +68,6 @@ public class FrontPageController extends AbstractController
     public void setConfig(Config config)
     {
         this.config = config;
-    }
-    
-    /**
-     * Called by Spring to inject the PicMakerFactory object
-     */
-    public void setPicMakerFactory(Factory<PicMaker> picMakerFactory)
-    {
-        this.picMakerFactory = picMakerFactory;
     }
     
 }

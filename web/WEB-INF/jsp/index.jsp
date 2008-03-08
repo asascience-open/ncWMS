@@ -46,10 +46,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <th>${dataset.value.title}</th>
             <c:set var="layers" value="${dataset.value.layers}"/>
             <c:forEach var="mimeType" items="${supportedImageFormats}">
+            <c:set var="transparent" value="true"/>
+            <c:if test="${mimeType == 'image/jpeg'}">
+                <c:set var="transparent" value="false"/>
+            </c:if>
             <td>
                 <c:forEach var="layer" items="${layers}">
                 <c:set var="bbox" value="${layer.bbox}"/>
-                <a href="wms?REQUEST=GetMap&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=true&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
+                <a href="wms?REQUEST=GetMap&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=${transparent}&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
             </c:forEach>

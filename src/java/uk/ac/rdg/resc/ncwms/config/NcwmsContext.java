@@ -73,8 +73,6 @@ public class NcwmsContext implements ApplicationContextAware
     private File configFile; // location of the configuration file
     private ApplicationContext applicationContext; // Will be set by Spring
     
-    private boolean initialized = false;
-    
     public NcwmsContext()
     {
         // Set the location of the config file

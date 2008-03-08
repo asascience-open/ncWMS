@@ -47,6 +47,7 @@ import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -259,6 +260,10 @@ public class MetadataController
         models.put("layer", layer);
         models.put("datesWithData", datesWithData);
         models.put("nearestTimeIso", WmsUtils.millisecondsToISO8601(nearestTimeMs));
+        // The names of the palettes supported by this layer.  Actually this
+        // will be the same for all layers, but we can't put this in the menu
+        // because there might be several menu JSPs.
+        models.put("paletteNames", ColorPalette.getAvailablePaletteNames());
         return new ModelAndView("showLayerDetails", models);
     }
     

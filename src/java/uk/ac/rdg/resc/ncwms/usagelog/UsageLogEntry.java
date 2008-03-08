@@ -126,7 +126,7 @@ public class UsageLogEntry
         GetMapStyleRequest sr = getMapRequest.getStyleRequest();
         this.outputFormat = sr.getImageFormat();
         this.transparent = sr.isTransparent();
-        Color bgColor = new Color(sr.getBackgroundColour());
+        Color bgColor = sr.getBackgroundColour();
         this.backgroundColor = bgColor.getRed() + "," + bgColor.getGreen() + ","
             + bgColor.getBlue();
         // Just log the one style (we're only logging one layer after all)

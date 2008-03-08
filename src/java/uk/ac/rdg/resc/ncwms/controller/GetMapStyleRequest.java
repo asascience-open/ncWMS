@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.awt.Color;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 
 /**
@@ -44,7 +45,14 @@ public class GetMapStyleRequest
     private String[] styles;
     private String imageFormat;
     private boolean transparent;
-    private int backgroundColour; // TODO: should be java.awt.Color?
+    private Color backgroundColour;
+    private int opacity; // Opacity of the image in the range [0,100]
+    private String paletteName;
+    private int numColourBands; // Number of colour bands to use in the image
+    // These are the data values that correspond with the extremes of the
+    // colour scale
+    private float colourScaleMin = 0.0f;
+    private float colourScaleMax = 0.0f;
     
     /**
      * Creates a new instance of GetMapStyleRequest from the given parameters
@@ -65,20 +73,44 @@ public class GetMapStyleRequest
         else if (trans.equals("true")) this.transparent = true;
         else throw new WmsException("The value of TRANSPARENT must be \"TRUE\" or \"FALSE\"");
         
-        String bgc = params.getString("bgcolor", "0xFFFFFF");
-        if (bgc.length() != 8 || !bgc.startsWith("0x"))
-        {
-            throw new WmsException("Invalid format for BGCOLOR");
-        }
         try
         {
+            String bgc = params.getString("bgcolor", "0xFFFFFF");
+            if (bgc.length() != 8 || !bgc.startsWith("0x")) throw new Exception();
             // Parse the hexadecimal string, ignoring the "0x" prefix
-            this.backgroundColour = Integer.parseInt(bgc.substring(2), 16);
+            this.backgroundColour = new Color(Integer.parseInt(bgc.substring(2), 16));
         }
-        catch(NumberFormatException nfe)
+        catch(Exception e)
         {
             throw new WmsException("Invalid format for BGCOLOR");
         }
+        
+        this.opacity = params.getPositiveInt("opacity", 100);
+        if (this.opacity > 100) this.opacity = 100;
+        
+        String scaleStr = params.getString("colorscalerange");
+        if (scaleStr != null)
+        {
+            try
+            {
+                String[] scaleEls = scaleStr.split(",");
+                if (scaleEls.length != 2) throw new Exception();
+                this.colourScaleMin = Float.parseFloat(scaleEls[0]);
+                this.colourScaleMax = Float.parseFloat(scaleEls[1]);
+                if (this.colourScaleMin > this.colourScaleMax) throw new Exception();
+            }
+            catch(Exception e)
+            {
+                throw new WmsException("Invalid format for colorscalerange");
+            }
+        }
+        
+        this.paletteName = params.getString("palette");
+        this.numColourBands = params.getPositiveInt("numcolorbands", 254);
+        // 254 is the maximum number of colours we can support in a palette.
+        // One would be hard pushed to distinguish more colours than this in a
+        // typical scenario anyway.
+        if (this.numColourBands > 254) this.numColourBands = 254;
     }
 
     /**
@@ -100,9 +132,38 @@ public class GetMapStyleRequest
         return transparent;
     }
 
-    public int getBackgroundColour()
+    public Color getBackgroundColour()
     {
         return backgroundColour;
+    }
+
+    public int getOpacity()
+    {
+        return opacity;
+    }
+
+    public float getColourScaleMin()
+    {
+        return colourScaleMin;
+    }
+
+    public float getColourScaleMax()
+    {
+        return colourScaleMax;
+    }
+
+    /**
+     * Gets the name of the requested palette, or null if no specific palette
+     * has been requested.
+     */
+    public String getPaletteName()
+    {
+        return paletteName;
+    }
+
+    public int getNumColourBands()
+    {
+        return numColourBands;
     }
     
 }

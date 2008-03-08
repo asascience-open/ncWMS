@@ -29,8 +29,7 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
-import uk.ac.rdg.resc.ncwms.styles.BoxFillStyle;
-import uk.ac.rdg.resc.ncwms.styles.VectorStyle;
+import uk.ac.rdg.resc.ncwms.styles.Style;
 
 /**
  * Implementation of a VectorLayer.  TODO: what to do about the read() methods?
@@ -68,11 +67,8 @@ public class VectorLayerImpl extends LayerImpl implements VectorLayer
                                                   // store different variables in
                                                   // different files.
         
-        // Vector is the default style, but we can also render as a boxfill
-        // (magnitude only)
-        this.supportedStyles.clear(); // Remove the styles added by superclasses: TODO not neat!
-        this.addStyles(VectorStyle.KEYS);
-        this.addStyles(BoxFillStyle.KEYS);
+        // Vector is the default style, so we make sure it's at the head of the list
+        this.supportedStyles.add(0, Style.VECTOR);
         
         this.eastwardComponent = eastwardComponent;
         this.northwardComponent = northwardComponent;

@@ -120,6 +120,7 @@ public class MetadataLoader
     {
         new Thread("load-dataset-" + ds.getId())
         {
+            @Override
             public void run()
             {
                 logger.debug("Loading metadata for {}", ds.getLocation());
