@@ -97,11 +97,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <c:forEach var="crsCode" items="${supportedCrsCodes}">
             <SRS>${crsCode}</SRS>
             </c:forEach>
-            <c:forEach var="dataset" items="${config.datasets}">
-            <c:if test="${dataset.value.ready}">
+            <c:forEach var="dataset" items="${datasets}">
+            <c:if test="${dataset.ready}">
             <Layer>
-                <Title>${dataset.value.title}</Title>
-                <c:forEach var="layer" items="${dataset.value.layers}">
+                <Title>${dataset.title}</Title>
+                <c:forEach var="layer" items="${dataset.layers}">
                 <Layer<c:if test="${config.server.allowFeatureInfo} and ${layer.queryable}"> queryable="1"</c:if>>
                     <Name>${layer.layerName}</Name>
                     <Title>${layer.title}</Title>
@@ -126,7 +126,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                         <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:millisecondsToISO8601(tval)}</c:forEach>
                     </Extent>
                     </c:if>
-                    <c:forEach var="style" items="${layer.supportedStyleKeys}">
+                    <c:forEach var="style" items="${layer.supportedStyles}">
                     <Style>
                         <Name>${style}</Name>
                         <Title>${style}</Title>

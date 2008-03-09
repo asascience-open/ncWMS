@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.controller;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +53,7 @@ import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
@@ -288,11 +290,42 @@ public class WmsController extends AbstractController
         
         // TODO: check the UPDATESEQUENCE parameter
         
+        // The DATASET parameter is an optional parameter that allows a 
+        // Capabilities document to be generated for a single dataset only
+        String datasetId = params.getString("dataset");
+        Collection<Dataset> datasets;
+        if (datasetId == null || datasetId.trim().equals(""))
+        {
+            // No specific dataset has been chosen so we create a Capabilities
+            // document including every dataset
+            datasets = this.config.getDatasets().values();
+        }
+        else
+        {
+            // Look for this dataset
+            Dataset ds = this.config.getDatasets().get(datasetId);
+            if (ds == null)
+            {
+                throw new WmsException("There is no dataset with ID " + datasetId);
+            }
+            datasets = new ArrayList<Dataset>(1);
+            datasets.add(ds);
+        }
+        
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.config);
+        models.put("datasets", datasets);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
-        // TODO: show a subset of only the CRS codes that we are likely to use?
-        models.put("supportedCrsCodes", HorizontalGrid.SUPPORTED_CRS_CODES);
+        // Show only a subset of only the CRS codes that we are likely to use.
+        // Otherwise Capabilities doc gets very large indeed.
+        // TODO: make configurable in admin app
+        String[] supportedCrsCodes = new String[]{
+            "EPSG:4326", "CRS:84", // Plate Carree
+            "EPSG:41001",          // Mercator (~ Google Maps)
+            "EPSG:27700"           // British National Grid
+            // TODO: what is polar stereographic?
+        };
+        models.put("supportedCrsCodes", supportedCrsCodes); //HorizontalGrid.SUPPORTED_CRS_CODES);
         models.put("supportedImageFormats", ImageFormat.getSupportedMimeTypes());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
