@@ -73,7 +73,7 @@ public class JpegFormat extends SimpleFormat
     }
 
     @Override
-    protected void writeImage(List<BufferedImage> frames, OutputStream out) throws IOException
+    public void writeImage(List<BufferedImage> frames, OutputStream out) throws IOException
     {
         if (frames.size() > 1)
         {

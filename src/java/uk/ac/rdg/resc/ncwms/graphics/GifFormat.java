@@ -52,7 +52,8 @@ public class GifFormat extends SimpleFormat
     
     protected GifFormat() {}
 
-    protected void writeImage(List<BufferedImage> frames,
+    @Override
+    public void writeImage(List<BufferedImage> frames,
         OutputStream out) throws IOException
     {
         logger.debug("Writing GIF to output stream ...");

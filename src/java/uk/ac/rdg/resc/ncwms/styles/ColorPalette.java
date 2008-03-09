@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * A palette of colours that is used by an {@link ImageProducer} to render 
@@ -91,6 +90,15 @@ public class ColorPalette
     private ColorPalette(Color[] palette)
     {
         this.palette = palette;
+    }
+    
+    /**
+     * Gets the number of colours in this palette
+     * @return the number of colours in this palette
+     */
+    public int getSize()
+    {
+        return this.palette.length;
     }
     
     /**
@@ -146,10 +154,43 @@ public class ColorPalette
     }
     
     /**
+     * Creates a color bar with the given width and height and the given number
+     * of color bands.  The color bar will consist of horizontal stripes of color,
+     * with the first color at the bottom. Clients that wish to display the bar
+     * horizontally should rotate the image clockwise through ninety degrees.
+     * @param width The width of the requested color bar in pixels
+     * @param height The height of the requested color bar in pixels
+     * @param numColorBands The number of bands of color to include in the bar
+     * @return a new BufferedImage
+     */
+    public BufferedImage createColorBar(int width, int height, int numColorBands)
+    {
+        double colorBandWidth = (double)height / numColorBands;
+        // Get an interpolated/subsampled palette for the color bar
+        Color[] newPalette = this.getPalette(numColorBands);
+        // Create a BufferedImage of the correct size - we don't need the alpha channel
+        BufferedImage colorBar = new BufferedImage(width, height,
+            BufferedImage.TYPE_INT_RGB);
+        Graphics2D gfx = colorBar.createGraphics();
+        // Cycle through each row in the image and draw a band of the
+        // appropriate colour.
+        for (int i = 0; i < height; i++)
+        {
+            int colorIndex = (int)(i / colorBandWidth);
+            // The colours at the end of the palette need to be at the top
+            // of the image
+            gfx.setColor(newPalette[numColorBands - colorIndex - 1]);
+            gfx.drawLine(0, i, width - 1, i);
+        }
+        return colorBar;
+    }
+    
+    /**
      * Creates and returns a BufferedImage representing the legend for this 
      * palette
-     * @param layer The Layer object for which this legend is being
-     * created (needed for title and units strings)
+     * @param numColorBands The number of color bands to show in the legend
+     * @param title Title for the legend (e.g. the title of the layer in question,
+     * plus the units)
      * @param colourScaleMin Data value corresponding to the bottom of the colour
      * scale
      * @param colourScaleMax Data value corresponding to the top of the colour
@@ -157,8 +198,8 @@ public class ColorPalette
      * @return a BufferedImage object representing the legend.  This has a fixed
      * size (110 pixels wide, 264 pixels high)
      */
-    public BufferedImage createLegend(Layer layer, float colourScaleMin,
-        float colourScaleMax)
+    public BufferedImage createLegend(int numColorBands, String title,
+        float colourScaleMin, float colourScaleMax)
     {
         // NOTE!! If you change the width and height here, you need to change
         // them in the Capabilities documents too.
@@ -166,13 +207,10 @@ public class ColorPalette
         BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();
         
-        // Create the colour scale itself
-        for (int i = 5; i < 259; i++)
-        {
-            // TODO: doesn't work!  needs palette to be of correct length
-            gfx.setColor(this.palette[260 - i]);
-            gfx.drawLine(2, i, 25, i);
-        }
+        // Create the colour bar itself
+        BufferedImage colorBar = this.createColorBar(24, 254, numColorBands);
+        // Add the colour bar to the legend
+        gfx.drawImage(colorBar, null, 2, 5);
         
         // Draw the text items
         gfx.setColor(Color.WHITE);
@@ -196,11 +234,6 @@ public class ColorPalette
         rot.setToRotation(Math.PI / 2.0);
         trans.concatenate(rot);
         gfx.setTransform(trans);
-        String title = layer.getTitle();
-        if (layer.getUnits() != null)
-        {
-            title += " (" + layer.getUnits() + ")";
-        }
         gfx.drawString(title, 5, 0);
         
         return colourScale;
@@ -212,6 +245,7 @@ public class ColorPalette
      */
     private static String format(double d)
     {
+        if (d == 0.0) return "0";
         if (Math.abs(d) > 1000 || Math.abs(d) < 0.01)
         {
             return new DecimalFormat("0.###E0").format(d);
@@ -221,11 +255,68 @@ public class ColorPalette
     
     /**
      * Creates and returns an IndexColorModel based on this palette.
+     * @param numColorBands the number of bands of colour to use in the color
+     * model (note that the ColorModel will have two more bands than this: one
+     * for out-of-range pixels and one for transparent pixels)
+     * @param opacity The opacity of each pixel as a percentage
+     * @param bgColor The color to use for background pixels if transparent=false
+     * @param transparent If true, then the background will be fully-transparent.
      * @throws IllegalArgumentException if the requested number of colour bands
      * is less than one or greater than 254.
      */
     public IndexColorModel getColorModel(int numColorBands, int opacity,
         Color bgColor, boolean transparent)
+    {
+        // Gets an interpolated/subsampled version of this palette with the
+        // given number of colour bands
+        Color[] newPalette = this.getPalette(numColorBands);
+        // Compute the alpha value based on the percentage transparency
+        int alpha;
+        // Here we are playing safe and avoiding rounding errors that might
+        // cause the alpha to be set to zero instead of 255
+        if (opacity >= 100) alpha = 255;
+        else if (opacity <= 0)  alpha = 0;
+        else alpha = (int)(2.55 * opacity);
+
+        // Now simply copy the target palette to arrays of r,g,b and a
+        byte[] r = new byte[numColorBands + 2];
+        byte[] g = new byte[numColorBands + 2];
+        byte[] b = new byte[numColorBands + 2];
+        byte[] a = new byte[numColorBands + 2];
+        for (int i = 0; i < numColorBands; i++)
+        {
+            r[i] = (byte)newPalette[i].getRed();
+            g[i] = (byte)newPalette[i].getGreen();
+            b[i] = (byte)newPalette[i].getBlue();
+            a[i] = (byte)alpha;
+        }
+
+        // The next index represents the background colour (which may be transparent)
+        r[numColorBands] = (byte)bgColor.getRed();
+        g[numColorBands] = (byte)bgColor.getGreen();
+        b[numColorBands] = (byte)bgColor.getBlue();
+        a[numColorBands] = transparent ? 0 : (byte)alpha;
+
+        // The next represents out-of-range pixels (black)
+        r[numColorBands + 1] = 0;
+        g[numColorBands + 1] = 0;
+        b[numColorBands + 1] = 0;
+        a[numColorBands + 1] = (byte)alpha;
+
+        // Now we can create the color model
+        return new IndexColorModel(8, r.length, r, g, b, a);
+    }
+    
+    /**
+     * Gets a version of this palette with the given number of color bands,
+     * either by subsampling or interpolating the existing palette
+     * @param numColorBands The number of bands of colour to be used in the new
+     * palette
+     * @return An array of Colors, with length numColorBands
+     * @throws IllegalArgumentException if the requested number of colour bands
+     * is less than one or greater than 254.
+     */
+    private Color[] getPalette(int numColorBands)
     {
         if (numColorBands < 1 || numColorBands > 254)
         {
@@ -291,41 +382,7 @@ public class ColorPalette
                 }
             }
         }
-        // Compute the alpha value based on the percentage transparency
-        int alpha;
-        // Here we are playing safe and avoiding rounding errors that might
-        // cause the alpha to be set to zero instead of 255
-        if (opacity >= 100) alpha = 255;
-        else if (opacity <= 0)  alpha = 0;
-        else alpha = (int)(2.55 * opacity);
-
-        // Now simply copy the target palette to arrays of r,g,b and a
-        byte[] r = new byte[targetPalette.length + 2];
-        byte[] g = new byte[targetPalette.length + 2];
-        byte[] b = new byte[targetPalette.length + 2];
-        byte[] a = new byte[targetPalette.length + 2];
-        for (int i = 0; i < targetPalette.length; i++)
-        {
-            r[i] = (byte)targetPalette[i].getRed();
-            g[i] = (byte)targetPalette[i].getGreen();
-            b[i] = (byte)targetPalette[i].getBlue();
-            a[i] = (byte)alpha;
-        }
-
-        // The next index represents the background colour (which may be transparent)
-        r[targetPalette.length] = (byte)bgColor.getRed();
-        g[targetPalette.length] = (byte)bgColor.getGreen();
-        b[targetPalette.length] = (byte)bgColor.getBlue();
-        a[targetPalette.length] = transparent ? 0 : (byte)alpha;
-
-        // The next represents out-of-range pixels (black)
-        r[targetPalette.length + 1] = 0;
-        g[targetPalette.length + 1] = 0;
-        b[targetPalette.length + 1] = 0;
-        a[targetPalette.length + 1] = (byte)alpha;
-
-        // Now we can create the color model
-        return new IndexColorModel(8, r.length, r, g, b, a);
+        return targetPalette;
     }
     
     /**

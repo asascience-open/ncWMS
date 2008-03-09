@@ -87,6 +87,6 @@ public abstract class SimpleFormat extends ImageFormat
      * @throws IllegalArgumentException if this ImageFormat cannot render all
      * of the given BufferedImages.
      */
-    protected abstract void writeImage(List<BufferedImage> frames,
+    public abstract void writeImage(List<BufferedImage> frames,
         OutputStream out) throws IOException;
 }

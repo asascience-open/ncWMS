@@ -131,7 +131,6 @@ public final class ImageProducer
             throw new StyleNotDefinedException("There is no palette with the name "
                 + styleRequest.getPaletteName());
         }
-        // TODO: sort out the number of colour bands properly
         this.colorModel = colorPalette.getColorModel(this.numColourBands,
             this.opacity, bgColor, this.transparent);
     }
