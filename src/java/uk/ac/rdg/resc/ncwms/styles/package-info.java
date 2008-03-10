@@ -27,6 +27,7 @@
  */
 
 /**
- * Different styles in which data can be rendered as pictures.
+ * The classes in this package handle the generation of BufferedImages from
+ * data arrays, allowing for a choice of colour palettes.
  */
 package uk.ac.rdg.resc.ncwms.styles;

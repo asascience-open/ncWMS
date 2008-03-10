@@ -33,6 +33,8 @@ var activeLayer = null; // The currently-selected layer metadata
 
 var tree = null; // The tree control in the left-hand panel
 
+var paletteSelector = null; // Pop-up panel for selecting a new palette
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -111,6 +113,20 @@ window.onload = function()
     
     // Set up the left-hand menu
     setupTreeControl(menu);
+    
+    // Set up the palette selector pop-up
+    paletteSelector = new YAHOO.widget.Panel("paletteSelector", { 
+        width:"400px",
+        constraintoviewport: true,
+        fixedcenter: true,
+        underlay:"shadow",
+        close:true,
+        visible:false,
+        draggable:true,
+        modal:true
+    });
+    paletteSelector.setHeader('Choose a colour palette');
+    paletteSelector.render(document.body);
 }
 
 // Populates the autoLoad object from the given window location object
@@ -629,27 +645,20 @@ function validateScale()
 {
     var fMin = parseFloat($('scaleMin').value);
     var fMax = parseFloat($('scaleMax').value);
-    if (isNaN(fMin))
-    {
+    if (isNaN(fMin)) {
         alert('Scale limits must be set to valid numbers');
         // Reset to the old value
         $('scaleMin').value = scaleMinVal;
-    }
-    else if (isNaN(fMax))
-    {
+    } else if (isNaN(fMax)) {
         alert('Scale limits must be set to valid numbers');
         // Reset to the old value
         $('scaleMax').value = scaleMaxVal;
-    }
-    else if (fMin > fMax)
-    {
+    } else if (fMin > fMax) {
         alert('Minimum scale value must be less than the maximum');
         // Reset to the old values
         $('scaleMin').value = scaleMinVal;
         $('scaleMax').value = scaleMaxVal;
-    }
-    else   
-    {
+    } else {
         $('scaleMin').value = fMin;
         $('scaleMax').value = fMax;
         scaleMinVal = fMin;
@@ -778,7 +787,6 @@ function updateMap()
     var style = typeof activeLayer.supportedStyles == 'undefined' ? 'boxfill' : activeLayer.supportedStyles[0];
 
     // Notify the OpenLayers widget
-    // Note the non-standard way of constructing the STYLES string
     // TODO get the map projection from the base layer
     // TODO use a more informative title
     // Buffer is set to 1 to avoid loading a large halo of tiles outside the
@@ -826,6 +834,12 @@ function updateMap()
     setPermalinkURL();
 }
 
+// Shows a pop-up window with the available palettes for the user to select
+function showPaletteSelector()
+{
+    // paletteSelector.show(); disabled until this works properly
+}
+
 // Decides whether to display the animation, or the tiled or untiled
 // version of the ncwms layer
 function setVisibleLayer(animation)
@@ -869,7 +883,7 @@ function getZValue()
     return zPositive ? zValue : -zValue;
 }
 
-// Sets the permalink
+// Sets the permalink, i.e. the link back to this view of the page
 function setPermalinkURL()
 {
     if (activeLayer != null) {
@@ -891,7 +905,7 @@ function setPermalinkURL()
     }
 }
 
-// Sets the URL for "Open in Google Earth" and the permalink
+// Sets the URL for "Open in Google Earth"
 function setGEarthURL()
 {
     if (ncwms != null) {

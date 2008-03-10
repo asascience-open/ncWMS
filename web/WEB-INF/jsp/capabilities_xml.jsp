@@ -9,11 +9,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <%-- Displays the Capabilities document in XML.
      Data (models) passed in to this page:
          config     = Configuration of this server (uk.ac.rdg.resc.ncwms.config.Config)
+         datasets   = collection of datasets to display in this Capabilities document (Collection<Dataset>)
          wmsBaseUrl = Base URL of this server (java.lang.String)
          supportedCrsCodes = List of Strings of supported Coordinate Reference System codes
          supportedImageFormats = Set of Strings representing MIME types of supported image formats
          layerLimit = Maximum number of layers that can be requested simultaneously from this server (int)
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
+         legendWidth, legendHeight = size of the legend that will be returned from GetLegendGraphic
+         paletteNames = Names of colour palettes that are supported by this server (Set<String>)
      --%>
 <WMS_Capabilities
         version="1.3.0"
@@ -110,16 +113,17 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </Dimension>
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyles}">
+                    <c:forEach var="paletteName" items="${paletteNames}">
                     <Style>
-                        <Name>${style}</Name>
-                        <Title>${style}</Title>
-                        <%-- TODO: abstract --%>
-                        <%-- TODO: width and height must match AbstractStyle.createLegend() --%>
-                        <LegendURL width="110" height="264">
+                        <Name>${style}/${paletteName}</Name>
+                        <Title>${style}/${paletteName}</Title>
+                        <Abstract>${style} style, using the ${paletteName} palette</Abstract>
+                        <LegendURL width="${legendWidth}" height="${legendHeight}">
                             <Format>image/png</Format>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}?REQUEST=GetLegendGraphic&amp;LAYER=${layer.layerName}&amp;STYLE=${style}"/>
+                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}?REQUEST=GetLegendGraphic&amp;LAYER=${layer.layerName}&amp;PALETTE=${paletteName}"/>
                         </LegendURL>
                     </Style>
+                    </c:forEach>
                     </c:forEach>
                 </Layer>
                 </c:forEach> <%-- End loop through variables --%>

@@ -18,10 +18,16 @@
         <script type="text/javascript" src="js/calendar-setup.js"></script>
         
         <!-- For the tree control: TODO: download and serve locally --> 
-        <link type="text/css" rel="stylesheet" href="http://yui.yahooapis.com/2.3.1/build/treeview/assets/skins/sam/treeview.css">
-        <script src = "http://yui.yahooapis.com/2.3.1/build/yahoo/yahoo-min.js" ></script>
-        <script src = "http://yui.yahooapis.com/2.3.1/build/event/event-min.js" ></script>
-        <script src = "http://yui.yahooapis.com/2.3.1/build/treeview/treeview-min.js" ></script>
+        <link type="text/css" rel="stylesheet" href="http://yui.yahooapis.com/2.5.0/build/treeview/assets/skins/sam/treeview.css">
+        <script src="http://yui.yahooapis.com/2.5.0/build/yahoo/yahoo-min.js"></script>
+        <script src="http://yui.yahooapis.com/2.5.0/build/event/event-min.js"></script>
+        <script src="http://yui.yahooapis.com/2.5.0/build/treeview/treeview-min.js"></script>
+        
+        <!-- For the pop-up panel (used in the palette selector) -->
+        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.0/build/container/assets/skins/sam/container.css">
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/dragdrop/dragdrop-min.js"></script>
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/container/container-min.js"></script>
         
         <!-- Prototype is used only for Ajax requests in server.js - can we refactor
              to remove this dependency? -->
@@ -30,7 +36,7 @@
         <script type="text/javascript" src="js/godiva2.js"></script>
     </head>
     
-    <body>
+    <body class="yui-skin-sam">
         <!-- Walter Zorn's library for tool tips.  Must be included inside
              the body for some reason. See http://www.walterzorn.com/tooltip/tooltip_e.htm. -->
         <script type="text/javascript" src="js/wz_tooltip.js"></script>
@@ -74,7 +80,7 @@
             <!-- The mapOverlay will contain the animations -->
             <div class="map" id="mapOverlayDiv"><img id="mapOverlay" alt="map overlay" onload="javascript:animationLoaded();"/></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
-            <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar"/>
+            <img id="scaleBar" class="scaleBar" src="images/rainbowScaleBar.png" alt="scale bar" onclick="javascript:showPaletteSelector();"/>
             <div class="scaleMarkers">
                 <input id="scaleMax" class="scaleMax" type="text" size="4" onblur="javascript:validateScale()"/>
                 <span id="scaleTwoThirds"></span>

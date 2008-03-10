@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * A palette of colours that is used by an {@link ImageProducer} to render 
@@ -58,10 +59,27 @@ public class ColorPalette
         new HashMap<String, ColorPalette>();
     
     /**
+     * The name of the default palette that will be used if the user doesn't 
+     * request a specific palette.
+     * @see DEFAULT_PALETTE
+     */
+    private static final String DEFAULT_PALETTE_NAME = "rainbow";
+    
+    /**
+     * The width of the legend in pixels that will be created by createLegend()
+     */
+    public static final int LEGEND_WIDTH = 110;
+    /**
+     * The height of the legend in pixels that will be created by createLegend()
+     */
+    public static final int LEGEND_HEIGHT = 264;
+    
+    /**
      * This is the palette that will be used if no specific palette has been
      * chosen.  This palette is taken from the SGT graphics toolkit.
+     * @see DEFAULT_PALETTE_NAME
      */
-    public static final ColorPalette DEFAULT_PALETTE = new ColorPalette(new Color[] {
+    private static final ColorPalette DEFAULT_PALETTE = new ColorPalette(new Color[] {
         new Color(0,0,143), new Color(0,0,159), new Color(0,0,175),
         new Color(0,0,191), new Color(0,0,207), new Color(0,0,223),
         new Color(0,0,239), new Color(0,0,255), new Color(0,11,255),
@@ -137,6 +155,11 @@ public class ColorPalette
                 }
             }
         }
+        // If we don't already have a default palette, add one
+        if (!palettes.containsKey(DEFAULT_PALETTE_NAME))
+        {
+            palettes.put(DEFAULT_PALETTE_NAME, DEFAULT_PALETTE);
+        }
     }
     
     /**
@@ -149,7 +172,10 @@ public class ColorPalette
      */
     public static ColorPalette get(String name)
     {
-        if (name == null || name.trim().equals("")) return DEFAULT_PALETTE;
+        if (name == null || name.trim().equals(""))
+        {
+            return palettes.get(DEFAULT_PALETTE_NAME);
+        }
         return palettes.get(name.trim().toLowerCase());
     }
     
@@ -189,22 +215,23 @@ public class ColorPalette
      * Creates and returns a BufferedImage representing the legend for this 
      * palette
      * @param numColorBands The number of color bands to show in the legend
-     * @param title Title for the legend (e.g. the title of the layer in question,
-     * plus the units)
+     * @param layer Layer for which the legend is being created
      * @param colourScaleMin Data value corresponding to the bottom of the colour
-     * scale
+     * scale.  If both this and colourScaleMax are zero then the default scale
+     * range for the layer is used.
      * @param colourScaleMax Data value corresponding to the top of the colour
-     * scale
+     * scale.  If both this and colourScaleMin are zero then the default scale
+     * range for the layer is used.
      * @return a BufferedImage object representing the legend.  This has a fixed
      * size (110 pixels wide, 264 pixels high)
+     * @throws IllegalArgumentException if the requested number of colour bands
+     * is less than one or greater than 254.
      */
-    public BufferedImage createLegend(int numColorBands, String title,
+    public BufferedImage createLegend(int numColorBands, Layer layer,
         float colourScaleMin, float colourScaleMax)
     {
-        // NOTE!! If you change the width and height here, you need to change
-        // them in the Capabilities documents too.
-        // TODO: make this consistent
-        BufferedImage colourScale = new BufferedImage(110, 264, BufferedImage.TYPE_3BYTE_BGR);
+        BufferedImage colourScale = new BufferedImage(LEGEND_WIDTH,
+            LEGEND_HEIGHT, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D gfx = colourScale.createGraphics();
         
         // Create the colour bar itself
@@ -215,6 +242,12 @@ public class ColorPalette
         // Draw the text items
         gfx.setColor(Color.WHITE);
         // Add the scale values
+        // Test to see if we are auto-scaling
+        if (colourScaleMin == 0.0f && colourScaleMax == 0.0f)
+        {
+            colourScaleMin = layer.getScaleMin();
+            colourScaleMax = layer.getScaleMax();
+        }
         double quarter = 0.25 * (colourScaleMax - colourScaleMin);
         String scaleMinStr          = format(colourScaleMin);
         String scaleQuarterStr      = format(colourScaleMin + quarter);
@@ -227,7 +260,12 @@ public class ColorPalette
         gfx.drawString(scaleQuarterStr, 27, 201);
         gfx.drawString(scaleMinStr, 27, 264);
         
-        // Add the title as rotated text        
+        // Add the title as rotated text
+        String title = layer.getTitle();
+        if (layer.getUnits() != null && !layer.getUnits().trim().equals(""))
+        {
+            title += " (" + layer.getUnits() + ")";
+        }
         AffineTransform trans = new AffineTransform();
         trans.setToTranslation(90, 0);
         AffineTransform rot = new AffineTransform();

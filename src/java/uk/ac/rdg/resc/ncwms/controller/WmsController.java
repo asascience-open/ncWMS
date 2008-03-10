@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
@@ -316,7 +317,7 @@ public class WmsController extends AbstractController
         models.put("config", this.config);
         models.put("datasets", datasets);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
-        // Show only a subset of only the CRS codes that we are likely to use.
+        // Show only a subset of the CRS codes that we are likely to use.
         // Otherwise Capabilities doc gets very large indeed.
         // TODO: make configurable in admin app
         String[] supportedCrsCodes = new String[]{
@@ -330,6 +331,9 @@ public class WmsController extends AbstractController
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
             FEATURE_INFO_XML_FORMAT});
+        models.put("legendWidth", ColorPalette.LEGEND_WIDTH);
+        models.put("legendHeight", ColorPalette.LEGEND_HEIGHT);
+        models.put("paletteNames", ColorPalette.getAvailablePaletteNames());
         if (version == null || version.equals("1.3.0"))
         {
             return new ModelAndView("capabilities_xml", models);
@@ -363,8 +367,8 @@ public class WmsController extends AbstractController
      * <li>Uses an {@link ImageProducer} object to turn the array of data into
      * a {@link java.awt.image.BufferedImage} (or, in the case of an animation, several
      * {@link java.awt.image.BufferedImage}s).</li>
-     * <li>Uses a {@link PicMaker} object to write the image to the servlet's
-     * output stream.</li>
+     * <li>Uses a {@link ImageFormat} object to write the image to the servlet's
+     * output stream in the requested format.</li>
      * </ol>
      * @throws WmsException if the user has provided invalid parameters
      * @throws Exception if an internal error occurs
@@ -446,7 +450,7 @@ public class WmsController extends AbstractController
         usageLogEntry.setTimeToExtractDataMs(timeToExtractData);
         
         // We only create a legend object if the image format requires it
-        BufferedImage legend = null;//imageFormat.requiresLegend() ? imageProducer.getLegend(layer) : null;
+        BufferedImage legend = imageFormat.requiresLegend() ? imageProducer.getLegend() : null;
 
         // Write the image to the client
         httpServletResponse.setStatus(HttpServletResponse.SC_OK);
@@ -693,38 +697,20 @@ public class WmsController extends AbstractController
         String layerName = params.getMandatoryString("layer");
         Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         
-        // Find the requested imageProducer, or use the layer's default imageProducer
-        String styleStr = params.getString("style");
-        /*if (styleStr == null) styleStr = layer.getDefaultStyleKey();
-        ImageProducer style = this.styleFactory.createObject(styleStr);
+        // Find the requested colour palette, or use the default if not set
+        ColorPalette palette = ColorPalette.get(params.getString("palette"));
         
-        // Now find the (optional) scale range.  TODO: refactor so
-        // getKML can use this too
-        String scaleRangeStr = params.getString("scalerange");
-        if (scaleRangeStr == null)
-        {
-            // Use the default range for the layer
-            style.setScaleRange(layer.getScaleRange());
-        }
-        else
-        {
-            try
-            {
-                String[] rangeEls = scaleRangeStr.split(",");
-                if (rangeEls.length != 2) throw new Exception();
-                style.setScaleRange(Float.parseFloat(rangeEls[0]),
-                    Float.parseFloat(rangeEls[1]));
-            }
-            catch(Exception e)
-            {
-                throw new Exception("Invalid SCALERANGE");
-            }
-        }
+        float[] colourScaleRange = GetMapStyleRequest.getColourScaleRange(params);
+        int numColourBands = GetMapStyleRequest.getNumColourBands(params);
         
         // Get the legend graphic and write it to the client
+        // The scale range will be [0,0] if the client has not specified one
+        // explicitly.  In this case createLegend() will use the layer's
+        // default scale range.
+        BufferedImage legend = palette.createLegend(numColourBands, layer,
+            colourScaleRange[0], colourScaleRange[1]);
         httpServletResponse.setContentType("image/png");
-        ImageIO.write(style.getLegend(layer), "png",
-            httpServletResponse.getOutputStream());*/
+        ImageIO.write(legend, "png", httpServletResponse.getOutputStream());
         
         return null;
     }

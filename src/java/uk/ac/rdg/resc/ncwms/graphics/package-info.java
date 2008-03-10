@@ -27,6 +27,6 @@
  */
 
 /**
- * Classes that render data arrays into images for display on a client.
+ * Classes that write BufferedImages to various image formats (PNG, GIF etc).
  */
 package uk.ac.rdg.resc.ncwms.graphics;

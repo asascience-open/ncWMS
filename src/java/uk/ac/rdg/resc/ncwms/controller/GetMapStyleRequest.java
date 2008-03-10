@@ -47,7 +47,6 @@ public class GetMapStyleRequest
     private boolean transparent;
     private Color backgroundColour;
     private int opacity; // Opacity of the image in the range [0,100]
-    private String paletteName;
     private int numColourBands; // Number of colour bands to use in the image
     // These are the data values that correspond with the extremes of the
     // colour scale
@@ -88,29 +87,68 @@ public class GetMapStyleRequest
         this.opacity = params.getPositiveInt("opacity", 100);
         if (this.opacity > 100) this.opacity = 100;
         
+        float[] colourScale = getColourScaleRange(params);
+        if (colourScale != null)
+        {
+            this.colourScaleMin = colourScale[0];
+            this.colourScaleMax = colourScale[1];
+        }
+        
+        this.numColourBands = getNumColourBands(params);
+    }
+    
+    /**
+     * Gets the requested colour scale range as a pair of floats, [min,max]
+     * @param params The request parameters from the client
+     * @return an array of two floats ([min,max]).  If the colour scale range
+     * hasn't been set this returns an array of two zero-value floats
+     * @throws WmsException if the format of the scale range is invalid
+     */
+    static float[] getColourScaleRange(RequestParams params)
+        throws WmsException
+    {
         String scaleStr = params.getString("colorscalerange");
-        if (scaleStr != null)
+        if (scaleStr == null)
+        {
+            return new float[]{0.0f, 0.0f};
+        }
+        else
         {
             try
             {
                 String[] scaleEls = scaleStr.split(",");
                 if (scaleEls.length != 2) throw new Exception();
-                this.colourScaleMin = Float.parseFloat(scaleEls[0]);
-                this.colourScaleMax = Float.parseFloat(scaleEls[1]);
-                if (this.colourScaleMin > this.colourScaleMax) throw new Exception();
+                float[] scale = new float[]{
+                    Float.parseFloat(scaleEls[0]),
+                    Float.parseFloat(scaleEls[1])
+                };
+                if (scale[0] > scale[1]) throw new Exception();
+                return scale;
             }
             catch(Exception e)
             {
-                throw new WmsException("Invalid format for colorscalerange");
+                throw new WmsException("Invalid format for COLORSCALERANGE");
             }
         }
-        
-        this.paletteName = params.getString("palette");
-        this.numColourBands = params.getPositiveInt("numcolorbands", 254);
+    }
+
+    /**
+     * Gets the number of colour bands requested by the client, or 254 if none
+     * has been set or the requested number was bigger than 254.
+     * @param params The RequestParams object from the client.
+     * @return the requested number of colour bands, or 254 if none has been
+     * set or the requested number was bigger than 254.
+     * @throws WmsException if the client requested a negative number of colour
+     * bands
+     */
+    static int getNumColourBands(RequestParams params) throws WmsException
+    {
+        int numColourBands = params.getPositiveInt("numcolorbands", 254);
         // 254 is the maximum number of colours we can support in a palette.
         // One would be hard pushed to distinguish more colours than this in a
         // typical scenario anyway.
-        if (this.numColourBands > 254) this.numColourBands = 254;
+        if (numColourBands > 254) numColourBands = 254;
+        return numColourBands;
     }
 
     /**
@@ -150,15 +188,6 @@ public class GetMapStyleRequest
     public float getColourScaleMax()
     {
         return colourScaleMax;
-    }
-
-    /**
-     * Gets the name of the requested palette, or null if no specific palette
-     * has been requested.
-     */
-    public String getPaletteName()
-    {
-        return paletteName;
     }
 
     public int getNumColourBands()

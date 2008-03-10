@@ -60,6 +60,7 @@ public final class ImageProducer
 {
     private static final Logger logger = Logger.getLogger(ImageProducer.class);
     
+    private Layer layer;
     private Style style;
     // Width and height of the resulting picture
     private int picWidth;
@@ -67,6 +68,8 @@ public final class ImageProducer
     private boolean transparent;
     private int opacity;
     private int numColourBands;
+    private Color bgColor;
+    private ColorPalette colorPalette;
     
     // Scale range of the picture
     private float scaleMin;
@@ -76,8 +79,6 @@ public final class ImageProducer
      * The length of arrows in pixels, only used for vector plots
      */
     private float arrowLength = 10.0f;
-    
-    private ColorModel colorModel;
     
     // set of rendered images, ready to be turned into a picture
     private List<BufferedImage> renderedFrames = new ArrayList<BufferedImage>();
@@ -98,41 +99,56 @@ public final class ImageProducer
     {
         GetMapStyleRequest styleRequest = getMapRequest.getStyleRequest();
         GetMapDataRequest dataRequest = getMapRequest.getDataRequest();
+        this.layer = layer;
         if (styleRequest.getStyles().length == 0)
         {
-            // Use the default style for this layer
-            this.style = layer.getDefaultStyle();
+            // Use the default style and colour palette for this layer
+            this.style = this.layer.getDefaultStyle();
+            this.colorPalette = ColorPalette.get(null);
         }
         else
         {
-            String styleStr = styleRequest.getStyles()[0].trim();
-            if (styleStr.equalsIgnoreCase("boxfill")) this.style = Style.BOXFILL;
-            else if (styleStr.equalsIgnoreCase("vector")) this.style = Style.VECTOR;
-            else throw new StyleNotDefinedException("The style " + styleStr +
+            // The style specification consists of a style type and a colour palette,
+            // separated by a forward slash
+            String styleSpec = styleRequest.getStyles()[0].trim();
+            String[] styleStrEls = styleSpec.split("/");
+            String styleType = styleStrEls[0];
+            String paletteName = null;
+            if (styleStrEls.length > 1)
+            {
+                paletteName = styleStrEls[1];
+            }
+            if (styleType.equalsIgnoreCase("boxfill")) this.style = Style.BOXFILL;
+            else if (styleType.equalsIgnoreCase("vector")) this.style = Style.VECTOR;
+            else throw new StyleNotDefinedException("The style " + styleSpec +
                 " is not supported by this server");
             if (!layer.getSupportedStyles().contains(this.style))
             {
-                throw new StyleNotDefinedException("The style " + styleStr +
-                " is not supported by this layer");
+                throw new StyleNotDefinedException("The style " + styleSpec +
+                    " is not supported by this layer");
+            }
+            // Now get the colour palette
+            this.colorPalette = ColorPalette.get(paletteName);
+            if (this.colorPalette == null)
+            {
+                throw new StyleNotDefinedException("There is no palette with the name "
+                    + paletteName);
             }
         }
         this.transparent = styleRequest.isTransparent();
-        Color bgColor = styleRequest.getBackgroundColour();
+        this.bgColor = styleRequest.getBackgroundColour();
         this.opacity = styleRequest.getOpacity();
         this.scaleMin = styleRequest.getColourScaleMin();
         this.scaleMax = styleRequest.getColourScaleMax();
         this.picWidth = dataRequest.getWidth();
         this.picHeight = dataRequest.getHeight();
         this.numColourBands = styleRequest.getNumColourBands();
-        // This will get the default palette if getPaletteName() == null
-        ColorPalette colorPalette = ColorPalette.get(styleRequest.getPaletteName());
-        if (colorPalette == null)
-        {
-            throw new StyleNotDefinedException("There is no palette with the name "
-                + styleRequest.getPaletteName());
-        }
-        this.colorModel = colorPalette.getColorModel(this.numColourBands,
-            this.opacity, bgColor, this.transparent);
+    }
+
+    public BufferedImage getLegend()
+    {
+        return this.colorPalette.createLegend(this.numColourBands, this.layer,
+            this.scaleMin, this.scaleMax);
     }
     
     public int getPicWidth()
@@ -192,12 +208,16 @@ public final class ImageProducer
             pixels[i] = (byte)getColourIndex(magnitudes[i]);
         }
         
+        // Create a ColorModel for the image
+        ColorModel colorModel = this.colorPalette.getColorModel(this.numColourBands,
+            this.opacity, this.bgColor, this.transparent);
+        
         // Create the Image
         DataBuffer buf = new DataBufferByte(pixels, pixels.length);
         SampleModel sampleModel = new SinglePixelPackedSampleModel(
             DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
-        BufferedImage image = new BufferedImage(this.colorModel, raster, false, null);
+        BufferedImage image = new BufferedImage(colorModel, raster, false, null);
         
         // Add the label to the image
         // TODO: needs to change with different palettes!
