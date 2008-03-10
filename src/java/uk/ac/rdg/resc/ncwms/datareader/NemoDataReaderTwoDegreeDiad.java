@@ -28,8 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import org.apache.log4j.Logger;
-
 /**
  * The same as NemoDataReaderTwoDegree, but uses different look-up tables.
  *
@@ -40,8 +38,21 @@ import org.apache.log4j.Logger;
  */
 public class NemoDataReaderTwoDegreeDiad extends NemoDataReaderTwoDegree
 {
-    protected static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegreeDiad.class);
+    /**
+     * Gets the location of the x axis' LUT
+     */
+    @Override
+    protected String getXAxisLUTLocation()
+    {
+        return "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG_DIAD.zip/ORCA2_LUT_i_3601_1801.dat";
+    }
     
-    protected static final String X_AXIS_LUT = "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG_DIAD.zip/ORCA2_LUT_i_3601_1801.dat";
-    protected static final String Y_AXIS_LUT = "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG_DIAD.zip/ORCA2_LUT_j_3601_1801.dat";
+    /**
+     * Gets the location of the y axis' LUT
+     */
+    @Override
+    protected String getYAxisLUTLocation()
+    {
+        return "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG_DIAD.zip/ORCA2_LUT_j_3601_1801.dat";
+    }
 }

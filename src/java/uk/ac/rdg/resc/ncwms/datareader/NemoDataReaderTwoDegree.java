@@ -51,10 +51,7 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
  */
 public class NemoDataReaderTwoDegree extends NemoDataReader
 {
-    protected static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegree.class);
-    
-    protected static final String X_AXIS_LUT = "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat";
-    protected static final String Y_AXIS_LUT = "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat";
+    private static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegree.class);
     
     @Override
     protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
@@ -121,8 +118,8 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                             layer.setZunits(zUnits);
                         }
 
-                        layer.setXaxis(LUTCoordAxis.createAxis(X_AXIS_LUT, AxisType.GeoX));
-                        layer.setYaxis(LUTCoordAxis.createAxis(Y_AXIS_LUT, AxisType.GeoY));
+                        layer.setXaxis(LUTCoordAxis.createAxis(this.getXAxisLUTLocation(), AxisType.GeoX));
+                        layer.setYaxis(LUTCoordAxis.createAxis(this.getYAxisLUTLocation(), AxisType.GeoY));
                         
                         // Add this new layer to the map
                         layers.put(layer.getId(), layer);
@@ -151,5 +148,21 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                 }
             }
         }
+    }
+    
+    /**
+     * Gets the location of the x axis' LUT
+     */
+    protected String getXAxisLUTLocation()
+    {
+        return "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_i_3601_1801.dat";
+    }
+    
+    /**
+     * Gets the location of the y axis' LUT
+     */
+    protected String getYAxisLUTLocation()
+    {
+        return "/uk/ac/rdg/resc/ncwms/metadata/NEMO_2DEG.zip/ORCA2_LUT_j_3601_1801.dat";
     }
 }
