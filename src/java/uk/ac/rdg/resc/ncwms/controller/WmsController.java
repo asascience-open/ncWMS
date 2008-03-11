@@ -694,21 +694,37 @@ public class WmsController extends AbstractController
     private ModelAndView getLegendGraphic(RequestParams params,
         HttpServletResponse httpServletResponse) throws Exception
     {
-        String layerName = params.getMandatoryString("layer");
-        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+        BufferedImage legend;
         
         // Find the requested colour palette, or use the default if not set
         ColorPalette palette = ColorPalette.get(params.getString("palette"));
-        
-        float[] colourScaleRange = GetMapStyleRequest.getColourScaleRange(params);
+        // numColourBands defaults to 254 (the maximum) if not set
         int numColourBands = GetMapStyleRequest.getNumColourBands(params);
         
-        // Get the legend graphic and write it to the client
-        // The scale range will be [0,0] if the client has not specified one
-        // explicitly.  In this case createLegend() will use the layer's
-        // default scale range.
-        BufferedImage legend = palette.createLegend(numColourBands, layer,
-            colourScaleRange[0], colourScaleRange[1]);
+        // Find out if we just want the colour bar with no supporting text
+        String colorBarOnly = params.getString("colorbaronly", "false");
+        if (colorBarOnly.equalsIgnoreCase("true"))
+        {
+            // We're only creating the colour bar so we need to know a width
+            // and height
+            int width = params.getPositiveInt("width", 50);
+            int height = params.getPositiveInt("height", 200);
+            legend = palette.createColorBar(width, height, numColourBands);
+        }
+        else
+        {
+            // We're creating a legend with supporting text so we need to know
+            // the colour scale range and the layer in question
+            String layerName = params.getMandatoryString("layer");
+            Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+            float[] colourScaleRange = GetMapStyleRequest.getColourScaleRange(params);
+            // Get the legend graphic and write it to the client
+            // The scale range will be [0,0] if the client has not specified one
+            // explicitly.  In this case createLegend() will use the layer's
+            // default scale range.
+            legend = palette.createLegend(numColourBands, layer,
+                colourScaleRange[0], colourScaleRange[1]);
+        }
         httpServletResponse.setContentType("image/png");
         ImageIO.write(legend, "png", httpServletResponse.getOutputStream());
         

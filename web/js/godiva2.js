@@ -151,8 +151,7 @@ function populateAutoLoad(windowLocation)
                     autoLoad.scaleMin = keyAndVal[1].split(',')[0];
                     autoLoad.scaleMax = keyAndVal[1].split(',')[1];
                 } else if (key == 'menu') {
-                    // we must adapt the site for this brand (e.g. by showing only
-                    // certain datasets)
+                    // we load a specific menu instead of the default
                     menu = keyAndVal[1];
                 }
             }
@@ -460,7 +459,7 @@ function layerSelected(layerDetails)
     $('autoZoom').innerHTML = '<a href="#" onclick="map.zoomToExtent(new OpenLayers.Bounds(' +
         bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
         '));\">Fit layer to window</a>';
-        
+    
     // Set up the copyright statement
     $('copyright').innerHTML = layerDetails.copyright;
     
@@ -468,12 +467,21 @@ function layerSelected(layerDetails)
     // TODO: revert to default palette if layer doesn't support this one
     var palStr = 'There are no alternative palettes for this layer';
     if (layerDetails.palettes != null && layerDetails.palettes.length > 0) {
+        // TODO test if coming from a different server
+        var width = 50;
+        var height = 200;
+        var paletteUrl = activeLayer.server + 'wms?REQUEST=GetLegendGraphic' +
+            '&LAYER=' + activeLayer.id +
+            '&COLORBARONLY=true' +
+            '&WIDTH=1' +
+            '&HEIGHT=' + height;
+            // TODO: num colour bands
         palStr = '<div style="overflow:auto">'; // Creates scroll bars if necessary
         palStr += '<table border="1"><tr>';
         for (var i = 0; i < layerDetails.palettes.length; i++) {
-            palStr += '<td><img src="images/rainbowScaleBar.png" ' +
-                'width="50" height="200" title="' + layerDetails.palettes[i] + '" ' +
-                'onclick="paletteSelected(\'' + layerDetails.palettes[i] + '\')"' +
+            palStr += '<td><img src="' + paletteUrl + '&PALETTE=' + layerDetails.palettes[i] +
+                '" width="' + width + '" height="' + height + '" title="' + layerDetails.palettes[i] +
+                '" onclick="paletteSelected(\'' + layerDetails.palettes[i] + '\')"' +
                 '/></td>';
         }
         palStr += '</tr></table>';
@@ -866,6 +874,9 @@ function paletteSelected(thePalette)
 {
     paletteName = thePalette;
     paletteSelector.hide();
+    // Change the colour scale bar on the main page
+    $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=400'
+        + '&PALETTE=' + thePalette;
     updateMap();
 }
 

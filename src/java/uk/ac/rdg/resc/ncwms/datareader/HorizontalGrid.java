@@ -57,7 +57,7 @@ public class HorizontalGrid
     private static final Logger logger = Logger.getLogger(HorizontalGrid.class);
     public static final String PLATE_CARREE_CRS_CODE = "CRS:84";
     public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
-    public static final List<String> SUPPORTED_CRS_CODES;
+    public static final List<String> SUPPORTED_CRS_CODES = new ArrayList<String>();
     
     private int width;      // Width of the grid in pixels
     private int height;     // Height of the grid in pixels
@@ -72,7 +72,6 @@ public class HorizontalGrid
     static
     {
         // Find the supported CRS codes
-        SUPPORTED_CRS_CODES = new ArrayList<String>();
         // I think this is the appropriate method to get all the CRS codes
         // that we can support
         for (Object codeObj : CRS.getSupportedCodes("urn:ogc:def"))

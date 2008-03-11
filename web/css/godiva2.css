@@ -182,8 +182,6 @@ img.scaleBar
     position: absolute;
     left: 510px;
     top: 25px;
-    width: 40px;
-    height: 400px;
     visibility: hidden;
 }
 
