@@ -34,6 +34,7 @@ var activeLayer = null; // The currently-selected layer metadata
 var tree = null; // The tree control in the left-hand panel
 
 var paletteSelector = null; // Pop-up panel for selecting a new palette
+var paletteName = null; // Name of the currently-selected palette
 
 // Called when the page has loaded
 window.onload = function()
@@ -125,8 +126,7 @@ window.onload = function()
         draggable:true,
         modal:true
     });
-    paletteSelector.setHeader('Choose a colour palette');
-    paletteSelector.render(document.body);
+    paletteSelector.setHeader('Click to choose a colour palette');
 }
 
 // Populates the autoLoad object from the given window location object
@@ -463,6 +463,23 @@ function layerSelected(layerDetails)
         
     // Set up the copyright statement
     $('copyright').innerHTML = layerDetails.copyright;
+    
+    // Populate the palette selector dialog box
+    // TODO: revert to default palette if layer doesn't support this one
+    var palStr = 'There are no alternative palettes for this layer';
+    if (layerDetails.palettes != null && layerDetails.palettes.length > 0) {
+        palStr = '<div style="overflow:auto">'; // Creates scroll bars if necessary
+        palStr += '<table border="1"><tr>';
+        for (var i = 0; i < layerDetails.palettes.length; i++) {
+            palStr += '<td><img src="images/rainbowScaleBar.png" ' +
+                'width="50" height="200" title="' + layerDetails.palettes[i] + '" ' +
+                'onclick="paletteSelected(\'' + layerDetails.palettes[i] + '\')"' +
+                '/></td>';
+        }
+        palStr += '</tr></table>';
+        palStr += '</div>';
+    }
+    paletteSelector.setBody(palStr);
 
     // Now set up the calendar control
     if (layerDetails.datesWithData == null) {
@@ -785,6 +802,9 @@ function updateMap()
     // Get the default style for this layer.  There is some defensive programming here to 
     // take old servers into account that don't advertise the supported styles
     var style = typeof activeLayer.supportedStyles == 'undefined' ? 'boxfill' : activeLayer.supportedStyles[0];
+    if (paletteName != null) {
+        style += '/' + paletteName;
+    }
 
     // Notify the OpenLayers widget
     // TODO get the map projection from the base layer
@@ -837,7 +857,16 @@ function updateMap()
 // Shows a pop-up window with the available palettes for the user to select
 function showPaletteSelector()
 {
-    // paletteSelector.show(); disabled until this works properly
+    paletteSelector.render(document.body);
+    paletteSelector.show();
+}
+
+// Called when the user selects a new palette in the palette selector
+function paletteSelected(thePalette)
+{
+    paletteName = thePalette;
+    paletteSelector.hide();
+    updateMap();
 }
 
 // Decides whether to display the animation, or the tiled or untiled
