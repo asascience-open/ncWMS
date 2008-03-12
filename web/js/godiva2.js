@@ -125,7 +125,7 @@ window.onload = function()
         draggable:true,
         modal:true
     });
-    paletteSelector.setHeader('Click to choose a colour palette');
+    //paletteSelector.setHeader('Click to choose a colour palette');
 }
 
 // Populates the autoLoad object from the given window location object
@@ -460,32 +460,6 @@ function layerSelected(layerDetails)
     
     // Set up the copyright statement
     $('copyright').innerHTML = layerDetails.copyright;
-    
-    // Populate the palette selector dialog box
-    // TODO: revert to default palette if layer doesn't support this one
-    var palStr = 'There are no alternative palettes for this layer';
-    if (layerDetails.palettes != null && layerDetails.palettes.length > 0) {
-        // TODO test if coming from a different server
-        var width = 50;
-        var height = 200;
-        var paletteUrl = activeLayer.server + 'wms?REQUEST=GetLegendGraphic' +
-            '&LAYER=' + activeLayer.id +
-            '&COLORBARONLY=true' +
-            '&WIDTH=1' +
-            '&HEIGHT=' + height;
-            // TODO: num colour bands
-        palStr = '<div style="overflow:auto">'; // Creates scroll bars if necessary
-        palStr += '<table border="1"><tr>';
-        for (var i = 0; i < layerDetails.palettes.length; i++) {
-            palStr += '<td><img src="' + paletteUrl + '&PALETTE=' + layerDetails.palettes[i] +
-                '" width="' + width + '" height="' + height + '" title="' + layerDetails.palettes[i] +
-                '" onclick="paletteSelected(\'' + layerDetails.palettes[i] + '\')"' +
-                '/></td>';
-        }
-        palStr += '</tr></table>';
-        palStr += '</div>';
-    }
-    paletteSelector.setBody(palStr);
 
     // Now set up the calendar control
     if (layerDetails.datesWithData == null) {
@@ -824,7 +798,8 @@ function updateMap()
         transparent: 'true',
         styles: style,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
-        opacity: opacity
+        opacity: opacity,
+        numcolorbands: $('numColorBands').value
     };
     if (ncwms == null) {
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
@@ -864,8 +839,41 @@ function updateMap()
 // This is called when the user clicks the colour scale bar
 function showPaletteSelector()
 {
+    updatePaletteSelector();
     paletteSelector.render(document.body);
     paletteSelector.show();
+}
+
+// Updates the contents of the palette selection table
+function updatePaletteSelector()
+{
+    // Populate the palette selector dialog box
+    // TODO: revert to default palette if layer doesn't support this one
+    var palettes = activeLayer.palettes;
+    if (palettes == null || palettes.length == 0) {
+        $('paletteDiv').innerHTML = 'There are no alternative palettes for this layer';
+        return;
+    }
+    
+    // TODO test if coming from a different server
+    var width = 50;
+    var height = 200;
+    var paletteUrl = activeLayer.server + 'wms?REQUEST=GetLegendGraphic' +
+        '&LAYER=' + activeLayer.id +
+        '&COLORBARONLY=true' +
+        '&WIDTH=1' +
+        '&HEIGHT=' + height +
+        '&NUMCOLORBANDS=' + $('numColorBands').value;
+    var palStr = '<div style="overflow: auto">'; // ensures scroll bars appear if necessary
+    palStr += '<table border="1"><tr>';
+    for (var i = 0; i < palettes.length; i++) {
+        palStr += '<td><img src="' + paletteUrl + '&PALETTE=' + palettes[i] +
+            '" width="' + width + '" height="' + height + '" title="' + palettes[i] +
+            '" onclick="paletteSelected(\'' + palettes[i] + '\')"' +
+            '/></td>';
+    }
+    palStr += '</tr></table></div>';
+    $('paletteDiv').innerHTML = palStr;
 }
 
 // Called when the user selects a new palette in the palette selector
@@ -875,7 +883,7 @@ function paletteSelected(thePalette)
     paletteSelector.hide();
     // Change the colour scale bar on the main page
     $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398'
-        + '&PALETTE=' + thePalette;
+        + '&PALETTE=' + thePalette + '&NUMCOLORBANDS=' + $('numColorBands').value;
     updateMap();
 }
 
