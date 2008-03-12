@@ -77,11 +77,11 @@
             <!-- The mapOverlay will contain the animations -->
             <div class="map" id="mapOverlayDiv"><img id="mapOverlay" alt="map overlay" onload="javascript:animationLoaded();"/></div>
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
-            <img id="scaleBar" class="scaleBar" width="40" height="400" src="wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=400" alt="scale bar" title="Click to change the colour palette" onclick="javascript:showPaletteSelector();"/>
+            <img id="scaleBar" class="scaleBar" width="40" height="398" src="wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398" alt="scale bar" title="Click to change the colour palette" onclick="javascript:showPaletteSelector();"/>
             <div class="scaleMarkers">
                 <input id="scaleMax" class="scaleMax" type="text" size="6" onblur="javascript:validateScale()"/>
                 <span id="scaleTwoThirds"></span>
-                <span id="autoScale"><a href="#" title="Automatically stretch the colour scale range for maximum contrast" onclick="javascript:autoScale()">auto</a></span>
+                <span id="autoScale"><a href="#" title="Automatically stretch the colour scale range for maximum contrast" onclick="javascript:autoScale(false)">auto</a></span>
                 <span id="lockScale"><a href="#" title="Locks/Unlocks the colour scale range" onclick="javascript:toggleLockScale()">lock</a></span>
                 <span id="scaleOneThird"></span>
                 <input id="scaleMin" class="scaleMin" type="text" size="6" onblur="javascript:validateScale()"/>

@@ -385,7 +385,7 @@ public class ColorPalette
                 {
                     // Find the nearest index in the source palette
                     // (Multiplying by 1.0f converts integers to floats)
-                    int nearestIndex = Math.round(this.palette.length * i * 1.0f / targetPalette.length);
+                    int nearestIndex = Math.round(this.palette.length * i * 1.0f / (targetPalette.length - 1));
                     targetPalette[i] = this.palette[nearestIndex];
                 }
             }
@@ -398,7 +398,7 @@ public class ColorPalette
                 for (int i = 1; i < this.palette.length - 1; i++)
                 {
                     // Find the nearest index in the target palette
-                    int nearestIndex = Math.round(targetPalette.length * i * 1.0f / this.palette.length);
+                    int nearestIndex = Math.round(targetPalette.length * i * 1.0f / (this.palette.length - 1));
                     targetPalette[nearestIndex] = this.palette[i];
                     // Now interpolate all the values we missed
                     for (int j = lastIndex + 1; j < nearestIndex; j++)

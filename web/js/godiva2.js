@@ -11,7 +11,6 @@ var isoTValue = null; // The currently-selected t value (ISO8601)
 var isIE;
 var scaleMinVal;
 var scaleMaxVal;
-var newVariable = true;  // This will be true when we have chosen a new variable
 var gotScaleRange = false;
 var scaleLocked = false; // see toggleLockScale()
 var autoLoad = new Object(); // Will contain data for auto-loading data from a permalink
@@ -79,7 +78,7 @@ window.onload = function()
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);
     
-    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, seazone_wms/*, essi_wms*/]);
+    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms/*, seazone_wms, essi_wms*/]);
     
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
@@ -369,7 +368,6 @@ function popUp(url, width, height)
 function layerSelected(layerDetails)
 {
     activeLayer = layerDetails;
-    newVariable = true;
     gotScaleRange = false;
     resetAnimation();
     
@@ -602,7 +600,7 @@ function updateTimesteps(times)
         $('scaleMax').value = autoLoad.scaleMax;
         validateScale(); // this calls updateMap()
     } else if (!gotScaleRange && !scaleLocked) {// We didn't get a scale range from the layerDetails
-        autoScale();
+        autoScale(true);
     } else {
         updateMap(); // Update the map without changing the scale
     }
@@ -611,15 +609,15 @@ function updateTimesteps(times)
 // Calls the WMS to find the min and max data values, then rescales.
 // If this is a newly-selected variable the method gets the min and max values
 // for the whole layer.  If not, this gets the min and max values for the viewport.
-function autoScale()
+function autoScale(newVariable)
 {
-    var dataBounds = bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3];
+    var dataBounds;
     if ($('tValues')) {
         isoTValue = $('tValues').value;
     }
     if (newVariable) {
-        newVariable = false; // This will be set true when we click on a different variable name
-        gotScaleRange = true;
+        // We use the bounding box of the whole layer 
+        dataBounds = bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3];
     } else {
         // Use the intersection of the viewport and the layer's bounding box
         dataBounds = getIntersectionBBOX();
@@ -863,6 +861,7 @@ function updateMap()
 }
 
 // Shows a pop-up window with the available palettes for the user to select
+// This is called when the user clicks the colour scale bar
 function showPaletteSelector()
 {
     paletteSelector.render(document.body);
@@ -875,7 +874,7 @@ function paletteSelected(thePalette)
     paletteName = thePalette;
     paletteSelector.hide();
     // Change the colour scale bar on the main page
-    $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=400'
+    $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398'
         + '&PALETTE=' + thePalette;
     updateMap();
 }
@@ -890,7 +889,7 @@ function setVisibleLayer(animation)
         setLayerVisibility(animation_layer, true);
         setLayerVisibility(ncwms_tiled, false);
         setLayerVisibility(ncwms_untiled, false);
-    } else if (style == 'vector') {
+    } else if (style.toLowerCase() == 'vector') {
         setLayerVisibility(animation_layer, false);
         setLayerVisibility(ncwms_tiled, false);
         setLayerVisibility(ncwms_untiled, true);

@@ -183,6 +183,8 @@ img.scaleBar
     left: 510px;
     top: 25px;
     visibility: hidden;
+    border-style: solid;
+    border-width: 1px;
 }
 
 div.scaleMarkers
