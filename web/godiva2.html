@@ -81,8 +81,14 @@
             <div class="scaleMarkers">
                 <input id="scaleMax" class="scaleMax" type="text" size="6" onblur="javascript:validateScale()"/>
                 <span id="scaleTwoThirds"></span>
-                <span id="autoScale"><a href="#" title="Automatically stretch the colour scale range for maximum contrast" onclick="javascript:autoScale(false)">auto</a></span>
-                <span id="lockScale"><a href="#" title="Locks/Unlocks the colour scale range" onclick="javascript:toggleLockScale()">lock</a></span>
+                <div id="scaleControls">
+                    <select id="scaleSpacing" title="Sets the spacing of the colour scale" onchange="javascript:validateScale()">
+                        <option value="linear" selected>linear</option>
+                        <option value="logarithmic">log</option>
+                    </select><br />
+                    <span id="autoScale"><a href="#" title="Automatically stretch the colour scale range for maximum contrast" onclick="javascript:autoScale(false)">auto</a></span><br />
+                    <a id="lockScale" href="#" title="Locks/Unlocks the colour scale range" onclick="javascript:toggleLockScale()">lock</a>
+                </div>
                 <span id="scaleOneThird"></span>
                 <input id="scaleMin" class="scaleMin" type="text" size="6" onblur="javascript:validateScale()"/>
             </div>

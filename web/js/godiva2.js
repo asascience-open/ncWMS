@@ -431,8 +431,8 @@ function layerSelected(layerDetails)
     $('scaleBar').style.visibility = scaleVisibility;
     $('scaleMin').style.visibility = scaleVisibility;
     $('scaleMax').style.visibility = scaleVisibility;
+    $('scaleControls').style.visibility = scaleVisibility;
     $('autoScale').style.visibility = scaleLocked ? 'hidden' : scaleVisibility;
-    $('lockScale').style.visibility = scaleVisibility;
     
     // Set the scale value if this is present in the metadata
     if (typeof layerDetails.scaleRange != 'undefined' &&
@@ -613,17 +613,17 @@ function toggleLockScale()
     if (scaleLocked) {
         // We need to unlock the scale
         scaleLocked = false;
-        // TODO: not very neat!
-        $('lockScale').innerHTML = '<a href="#" onclick="javascript:toggleLockScale()">lock</a>';
+        $('lockScale').text = 'lock';
         $('autoScale').style.visibility = 'visible';
+        $('scaleSpacing').disabled = false;
         $('scaleMin').disabled = false;
         $('scaleMax').disabled = false;
     } else {
         // We need to lock the scale
         scaleLocked = true;
-        // TODO: not very neat!
-        $('lockScale').innerHTML = '<a href="#" onclick="javascript:toggleLockScale()">unlock</a>';
+        $('lockScale').text = 'unlock';
         $('autoScale').style.visibility = 'hidden';
+        $('scaleSpacing').disabled = true;
         $('scaleMin').disabled = true;
         $('scaleMax').disabled = true;
     }
@@ -655,6 +655,8 @@ function validateScale()
         // Reset to the old values
         $('scaleMin').value = scaleMinVal;
         $('scaleMax').value = scaleMaxVal;
+    } else if (fMin <= 0 && $('scaleSpacing').value == 'logarithmic') {
+        alert('Cannot use a logarithmic scale with negative or zero values');
     } else {
         $('scaleMin').value = fMin;
         $('scaleMax').value = fMax;
@@ -759,9 +761,14 @@ function hideAnimation()
 
 function updateMap()
 {
+    var logscale = $('scaleSpacing').value == 'logarithmic';
+    
     // Update the intermediate scale markers
-    var scaleOneThird = parseFloat(scaleMinVal) + ((scaleMaxVal - scaleMinVal) / 3);
-    var scaleTwoThirds = parseFloat(scaleMinVal) + (2 * (scaleMaxVal - scaleMinVal) / 3);
+    var min = logscale ? Math.log(parseFloat(scaleMinVal)) : parseFloat(scaleMinVal);
+    var max = logscale ? Math.log(parseFloat(scaleMaxVal)) : parseFloat(scaleMaxVal);
+    var third = (max - min) / 3;
+    var scaleOneThird = logscale ? Math.exp(min + third) : min + third;
+    var scaleTwoThirds = logscale ? Math.exp(min + 2 * third) : min + 2 * third;
     $('scaleOneThird').innerHTML = toNSigFigs(scaleOneThird, 4);
     $('scaleTwoThirds').innerHTML = toNSigFigs(scaleTwoThirds, 4);
     
@@ -799,7 +806,8 @@ function updateMap()
         styles: style,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
         opacity: opacity,
-        numcolorbands: $('numColorBands').value
+        numcolorbands: $('numColorBands').value,
+        logscale: logscale
     };
     if (ncwms == null) {
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",

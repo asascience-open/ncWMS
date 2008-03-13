@@ -48,6 +48,7 @@ public class GetMapStyleRequest
     private Color backgroundColour;
     private int opacity; // Opacity of the image in the range [0,100]
     private int numColourBands; // Number of colour bands to use in the image
+    private boolean logarithmic; // True if we're using a log scale
     // These are the data values that correspond with the extremes of the
     // colour scale
     private float colourScaleMin = 0.0f;
@@ -95,6 +96,8 @@ public class GetMapStyleRequest
         }
         
         this.numColourBands = getNumColourBands(params);
+        
+        this.logarithmic = isLogScale(params);
     }
     
     /**
@@ -150,6 +153,15 @@ public class GetMapStyleRequest
         if (numColourBands > 254) numColourBands = 254;
         return numColourBands;
     }
+    
+    /**
+     * Returns true if the client has requested a logarithmic scale, false
+     * otherwise.
+     */
+    static boolean isLogScale(RequestParams params)
+    {
+        return params.getString("logscale", "false").equalsIgnoreCase("true");
+    }
 
     /**
      * @return array of style names, or an empty array if the user specified
@@ -163,6 +175,11 @@ public class GetMapStyleRequest
     public String getImageFormat()
     {
         return imageFormat;
+    }
+
+    public boolean isScaleLogarithmic()
+    {
+        return this.logarithmic;
     }
 
     public boolean isTransparent()

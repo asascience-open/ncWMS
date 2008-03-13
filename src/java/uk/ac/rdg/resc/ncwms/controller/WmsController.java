@@ -215,14 +215,13 @@ public class WmsController extends AbstractController
                 // request: GetKML will give generally better results, but relies
                 // on callbacks to this server.  Requesting KMZ files from GetMap
                 // returns a standalone KMZ file.
-                return getKML(params, httpServletRequest, httpServletResponse,
-                    usageLogEntry);
+                return getKML(params, httpServletRequest);
             }
             else if (request.equals("GetKMLRegion"))
             {
                 // This is a request for a particular sub-region from Google Earth.
                 logUsage = false; // We don't log usage for this operation
-                return getKMLRegion(params, httpServletRequest, httpServletResponse);
+                return getKMLRegion(params, httpServletRequest);
             }
             else
             {
@@ -718,12 +717,13 @@ public class WmsController extends AbstractController
             String layerName = params.getMandatoryString("layer");
             Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
             float[] colourScaleRange = GetMapStyleRequest.getColourScaleRange(params);
+            boolean logarithmic = GetMapStyleRequest.isLogScale(params);
             // Get the legend graphic and write it to the client
             // The scale range will be [0,0] if the client has not specified one
             // explicitly.  In this case createLegend() will use the layer's
             // default scale range.
             legend = palette.createLegend(numColourBands, layer,
-                colourScaleRange[0], colourScaleRange[1]);
+                logarithmic, colourScaleRange[0], colourScaleRange[1]);
         }
         httpServletResponse.setContentType("image/png");
         ImageIO.write(legend, "png", httpServletResponse.getOutputStream());
@@ -732,9 +732,7 @@ public class WmsController extends AbstractController
     }
 
     private ModelAndView getKML(RequestParams params,
-        HttpServletRequest httpServletRequest,
-        HttpServletResponse httpServletResponse,
-        UsageLogEntry usageLogEntry) throws Exception
+        HttpServletRequest httpServletRequest) throws Exception
     {
         // Get the Layer objects that we are to include in the KML.  The layer
         // objects are bundled with information about the top-level tiles that
@@ -819,8 +817,7 @@ public class WmsController extends AbstractController
     }
     
     private ModelAndView getKMLRegion(RequestParams params,
-        HttpServletRequest httpServletRequest,
-        HttpServletResponse httpServletResponse) throws Exception
+        HttpServletRequest httpServletRequest) throws Exception
     {
         Layer layer = this.metadataStore.getLayerByUniqueName(params.getMandatoryString("layer"));
         double[] dbox = WmsUtils.parseBbox(params.getMandatoryString("dbox"));

@@ -68,6 +68,7 @@ public final class ImageProducer
     private boolean transparent;
     private int opacity;
     private int numColourBands;
+    private boolean logarithmic;  // True if the colour scale is to be logarithmic
     private Color bgColor;
     private ColorPalette colorPalette;
     
@@ -140,6 +141,7 @@ public final class ImageProducer
         this.opacity = styleRequest.getOpacity();
         this.scaleMin = styleRequest.getColourScaleMin();
         this.scaleMax = styleRequest.getColourScaleMax();
+        this.logarithmic = styleRequest.isScaleLogarithmic();
         this.picWidth = dataRequest.getWidth();
         this.picHeight = dataRequest.getHeight();
         this.numColourBands = styleRequest.getNumColourBands();
@@ -148,7 +150,7 @@ public final class ImageProducer
     public BufferedImage getLegend()
     {
         return this.colorPalette.createLegend(this.numColourBands, this.layer,
-            this.scaleMin, this.scaleMax);
+            this.logarithmic, this.scaleMin, this.scaleMax);
     }
     
     public int getPicWidth()
@@ -320,8 +322,10 @@ public final class ImageProducer
         }
         else
         {
-            // Calculate the fractional distance of the value between min and max
-            double frac = (value - this.scaleMin) / (this.scaleMax - this.scaleMin);
+            double min = this.logarithmic ? Math.log(this.scaleMin) : this.scaleMin;
+            double max = this.logarithmic ? Math.log(this.scaleMax) : this.scaleMax;
+            double val = this.logarithmic ? Math.log(value) : value;
+            double frac = (val - min) / (max - min);
             // Compute and return the index of the corresponding colour
             return (int)(frac * this.numColourBands);
         }

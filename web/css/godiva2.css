@@ -196,6 +196,13 @@ div.scaleMarkers
     font-size: 12px;
 }
 
+#scaleControls
+{
+    position: absolute;
+    top: 175px;
+    visibility: hidden;
+}
+
 input.scaleMax
 {
     position: absolute;
@@ -220,18 +227,4 @@ input.scaleMin
 {
     position: absolute;
     top: 121px;
-}
-
-#autoScale
-{
-    position: absolute;
-    top: 165px;
-    visibility: hidden;
-}
-
-#lockScale
-{
-    position: absolute;
-    top: 210px;
-    visibility: hidden;
 }

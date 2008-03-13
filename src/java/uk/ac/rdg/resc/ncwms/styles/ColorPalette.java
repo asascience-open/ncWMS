@@ -216,6 +216,7 @@ public class ColorPalette
      * palette
      * @param numColorBands The number of color bands to show in the legend
      * @param layer Layer for which the legend is being created
+     * @param logarithmic True if the scale is to be logarithmic: otherwise linear
      * @param colourScaleMin Data value corresponding to the bottom of the colour
      * scale.  If both this and colourScaleMax are zero then the default scale
      * range for the layer is used.
@@ -228,7 +229,7 @@ public class ColorPalette
      * is less than one or greater than 254.
      */
     public BufferedImage createLegend(int numColorBands, Layer layer,
-        float colourScaleMin, float colourScaleMax)
+        boolean logarithmic, float colourScaleMin, float colourScaleMax)
     {
         BufferedImage colourScale = new BufferedImage(LEGEND_WIDTH,
             LEGEND_HEIGHT, BufferedImage.TYPE_3BYTE_BGR);
@@ -248,17 +249,17 @@ public class ColorPalette
             colourScaleMin = layer.getScaleMin();
             colourScaleMax = layer.getScaleMax();
         }
-        double quarter = 0.25 * (colourScaleMax - colourScaleMin);
-        String scaleMinStr          = format(colourScaleMin);
-        String scaleQuarterStr      = format(colourScaleMin + quarter);
-        String scaleMidStr          = format(colourScaleMin + 2 * quarter);
-        String scaleThreeQuarterStr = format(colourScaleMin + 3 * quarter);
-        String scaleMaxStr          = format(colourScaleMax);        
-        gfx.drawString(scaleMaxStr, 27, 10);
-        gfx.drawString(scaleThreeQuarterStr, 27, 73);
-        gfx.drawString(scaleMidStr, 27, 137);
-        gfx.drawString(scaleQuarterStr, 27, 201);
-        gfx.drawString(scaleMinStr, 27, 264);
+        double min = logarithmic ? Math.log(colourScaleMin) : colourScaleMin;
+        double max = logarithmic ? Math.log(colourScaleMax) : colourScaleMax;
+        double quarter = 0.25 * (max - min);
+        double scaleQuarter = logarithmic ? Math.exp(min + quarter) : min + quarter;
+        double scaleMid = logarithmic ? Math.exp(min + 2 * quarter) : min + 2 * quarter;
+        double scaleThreeQuarter = logarithmic ? Math.exp(min + 3 * quarter) : min + 3 * quarter;
+        gfx.drawString(format(colourScaleMax), 27, 10);
+        gfx.drawString(format(scaleThreeQuarter), 27, 73);
+        gfx.drawString(format(scaleMid), 27, 137);
+        gfx.drawString(format(scaleQuarter), 27, 201);
+        gfx.drawString(format(colourScaleMin), 27, 264);
         
         // Add the title as rotated text
         String title = layer.getTitle();
