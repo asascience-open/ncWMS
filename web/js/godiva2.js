@@ -657,6 +657,7 @@ function validateScale()
         $('scaleMax').value = scaleMaxVal;
     } else if (fMin <= 0 && $('scaleSpacing').value == 'logarithmic') {
         alert('Cannot use a logarithmic scale with negative or zero values');
+        $('scaleSpacing').value = 'linear';
     } else {
         $('scaleMin').value = fMin;
         $('scaleMax').value = fMax;
