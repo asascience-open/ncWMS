@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import org.apache.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -680,6 +682,14 @@ public class WmsController extends AbstractController
             String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
             JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                 "Date / time", yLabel, xydataset, false, false, false);
+            
+            // Lines added by Dave Crossman: allows a single point to be plotted
+            // on a line chart
+            XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+            renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+            renderer.setSeriesShapesVisible(0, true);
+            chart.getXYPlot().setRenderer(renderer);
+            
             httpServletResponse.setContentType("image/png");
             ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(), chart, 400, 300);
             return null;
