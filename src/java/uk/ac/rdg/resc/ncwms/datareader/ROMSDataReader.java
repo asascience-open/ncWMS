@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import org.apache.log4j.Logger;
 import ucar.nc2.dataset.AxisType;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
@@ -46,8 +45,6 @@ import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
  */
 public class ROMSDataReader extends USGSDataReader
 {
-    private static final Logger logger = Logger.getLogger(ROMSDataReader.class);
-    
     @Override
     protected boolean includeGrid(GridDatatype grid)
     {

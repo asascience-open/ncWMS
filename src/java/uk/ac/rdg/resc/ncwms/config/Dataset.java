@@ -269,7 +269,7 @@ public class Dataset
      * method that reads from the metadata store.
      * @throws Exception if there was an error reading from the store.
      */
-    public Collection<Layer> getLayers() throws Exception
+    public Collection<? extends Layer> getLayers() throws Exception
     {
         return this.config.getMetadataStore().getLayersInDataset(this.id);
     }

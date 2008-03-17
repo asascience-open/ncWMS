@@ -215,7 +215,7 @@ public class NemoDataReader extends DefaultDataReader
      * @throws IOException if there was an error reading from the data source
      */
     @Override
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
         NetcdfDataset nc = null;

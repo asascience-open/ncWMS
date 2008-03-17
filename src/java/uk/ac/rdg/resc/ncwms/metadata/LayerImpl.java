@@ -478,7 +478,7 @@ public class LayerImpl implements Layer
     }
     
     /**
-     * @return a unique identifier string for thisLayerImpla object (used
+     * @return a unique identifier string for this LayerImpl object (used
      * in the display of Layers in a Capabilities document).
      */
     public String getLayerName()

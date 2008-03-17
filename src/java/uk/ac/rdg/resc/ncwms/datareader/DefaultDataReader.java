@@ -261,10 +261,10 @@ public class DefaultDataReader extends DataReader
      * expansion of a glob aggregation).
      * @param location Full path to the dataset. This will be passed to 
      * {@link NetcdfDataset#openDataset}.
-     * @param layers Map of Layer Ids to Layer objects to populate or update
+     * @param layers Map of Layer Ids to LayerImpl objects to populate or update
      * @throws IOException if there was an error reading from the data source
      */
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
         logger.debug("Finding layers in {}", location);
@@ -366,7 +366,7 @@ public class DefaultDataReader extends DataReader
                 {
                     if (this.includeGrid(grid))
                     {
-                        LayerImpl layer = (LayerImpl)layers.get(grid.getName());
+                        LayerImpl layer = layers.get(grid.getName());
                         for (TimestepInfo timestep : timesteps)
                         {
                             layer.addTimestepInfo(timestep);

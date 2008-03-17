@@ -91,7 +91,8 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @param location Full path to the individual file
      * @throws IOException if there was an error reading from the data source
      */
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    @Override
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
         LayerImpl layer = new LayerImpl();

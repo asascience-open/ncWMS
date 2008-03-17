@@ -47,8 +47,8 @@ public class InMemoryMetadataStore extends MetadataStore
     /**
      * Maps dataset IDs to maps of variable IDs to Layer objects
      */
-    private Map<String, Map<String, Layer>> layers =
-        new HashMap<String, Map<String, Layer>>();
+    private Map<String, Map<String, ? extends Layer>> layers =
+        new HashMap<String, Map<String, ? extends Layer>>();
     /**
      * Maps datasetIDs to times of last metadata updates (in ms since the epoch).
      */
@@ -65,7 +65,7 @@ public class InMemoryMetadataStore extends MetadataStore
     public Layer getLayer(String datasetId, String layerId)
         throws Exception
     {
-        Map<String, Layer> layersInDataset = this.layers.get(datasetId);
+        Map<String, ? extends Layer> layersInDataset = this.layers.get(datasetId);
         return layersInDataset == null ? null : layersInDataset.get(layerId);
     }
     
@@ -76,7 +76,7 @@ public class InMemoryMetadataStore extends MetadataStore
      * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public synchronized Collection<Layer> getLayersInDataset(String datasetId)
+    public synchronized Collection<? extends Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
         // TODO: handle case where datasetId is not a valid key
@@ -91,7 +91,7 @@ public class InMemoryMetadataStore extends MetadataStore
      * @param layers The Layers that belong to the dataset.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void setLayersInDataset(String datasetId, Map<String, Layer> layers)
+    public void setLayersInDataset(String datasetId, Map<String, ? extends Layer> layers)
     {
         this.layers.put(datasetId, layers);
         this.lastUpdateTimes.put(datasetId, new Date().getTime());

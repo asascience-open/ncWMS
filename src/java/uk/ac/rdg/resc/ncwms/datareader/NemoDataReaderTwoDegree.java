@@ -54,7 +54,7 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
     private static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegree.class);
     
     @Override
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
         NetcdfDataset nc = null;

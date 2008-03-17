@@ -78,6 +78,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      * @throws Exception if there was an error initializing the database
      * @todo can the environment be shared with the cache of image data?
      */
+    @Override
     public void init() throws Exception
     {
         // Set up the database environment
@@ -120,7 +121,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
             if (layer != null)
             {
                 Dataset ds = this.config.getDatasets().get(datasetId);
-                this.addDatasetProperty(layer, ds);
+                addDatasetProperty(layer, ds);
             }
             logger.debug("... found.");
             return layer;
@@ -137,7 +138,8 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      * if there is no dataset with the given ID.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public Collection<Layer> getLayersInDataset(String datasetId)
+    @Override
+    public Collection<? extends Layer> getLayersInDataset(String datasetId)
         throws Exception
     {
         logger.debug("Retrieving all layers from dataset {} from Berkeley DB...",
@@ -146,7 +148,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
         if (bds != null)
         {
             Dataset ds = this.config.getDatasets().get(datasetId);
-            Collection<Layer> layers = bds.getLayers().values();
+            Collection<? extends Layer> layers = bds.getLayers().values();
             for (Layer layer : layers)
             {
                 addDatasetProperty(layer, ds);
@@ -191,7 +193,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      * (unique within a dataset) to Layer objects.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void setLayersInDataset(String datasetId, Map<String, Layer> layers) throws Exception
+    public void setLayersInDataset(String datasetId, Map<String, ? extends Layer> layers) throws Exception
     {
         try
         {
@@ -221,6 +223,7 @@ public class BerkeleyDBMetadataStore extends MetadataStore
      * framework.
      * @throws DatabaseException if an error occurred
      */
+    @Override
     public void close() throws DatabaseException
     {
         if (this.store != null) this.store.close();

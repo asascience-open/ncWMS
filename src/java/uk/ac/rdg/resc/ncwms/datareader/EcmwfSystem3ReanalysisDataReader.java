@@ -38,7 +38,6 @@ import ucar.nc2.Variable;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.units.DateUnit;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 
 /**
@@ -58,14 +57,14 @@ public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
      * Corrects problem with reading bounding box in source data (use of latitude
      * values > +/- 90 degrees causes latitude portion of BBOX to be NaN)
      */
-    protected void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    @Override
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
         super.findAndUpdateLayers(location, layers);
-        for (Layer layer : layers.values())
+        for (LayerImpl layer : layers.values())
         {
-            // Must convert to a mutable Layer: we know this is safe
-            ((LayerImpl)layer).setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
+            layer.setBbox(new double[]{-180.0, -90.0, 180.0, 90.0});
         }
     }
     

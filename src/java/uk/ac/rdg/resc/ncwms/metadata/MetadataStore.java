@@ -114,7 +114,7 @@ public abstract class MetadataStore
      * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public abstract Collection<Layer> getLayersInDataset(String datasetId)
+    public abstract Collection<? extends Layer> getLayersInDataset(String datasetId)
         throws Exception;
     
     /**
@@ -126,7 +126,7 @@ public abstract class MetadataStore
      * (unique within a dataset) to Layer objects.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public abstract void setLayersInDataset(String datasetId, Map<String, Layer> layers)
+    public abstract void setLayersInDataset(String datasetId, Map<String, ? extends Layer> layers)
         throws Exception;
     
     /**

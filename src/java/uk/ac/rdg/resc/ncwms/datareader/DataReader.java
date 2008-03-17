@@ -35,10 +35,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
 import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -50,8 +50,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public abstract class DataReader
 {
-    private static final Logger logger = Logger.getLogger(DataReader.class);
-    
     /**
      * Maps class names to DataReader objects.  Only one DataReader object of
      * each class will ever be created.
@@ -120,10 +118,10 @@ public abstract class DataReader
      * Reads and returns the metadata for all the layers (i.e. variables) in the
      * given {@link Dataset}.
      * @param ds Object describing the Dataset to which the layer belongs
-     * @return Map of layer IDs mapped to {@link Layer} objects
+     * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws IOException if there was an error reading from the data source
      */
-    public Map<String, Layer> getAllLayers(Dataset ds)
+    public Map<String, LayerImpl> getAllLayers(Dataset ds)
         throws IOException
     {
         // A list of names of files resulting from glob expansion
@@ -161,7 +159,7 @@ public abstract class DataReader
             }
         }
         // Now extract the data for each individual file
-        Map<String, Layer> layers = new HashMap<String, Layer>();
+        Map<String, LayerImpl> layers = new HashMap<String, LayerImpl>();
         for (String filename : filenames)
         {
             // Read the metadata from the file and update the Map.
@@ -181,7 +179,7 @@ public abstract class DataReader
      * @param layers Map of Layer Ids to Layer objects to populate or update
      * @throws IOException if there was an error reading from the data source
      */
-    protected abstract void findAndUpdateLayers(String location, Map<String, Layer> layers)
+    protected abstract void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException;
     
 }

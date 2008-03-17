@@ -131,6 +131,7 @@ public class XmlMetadataStore  extends MetadataStore  {
      * @throws Exception if there was an error initializing the database
      * @todo can the environment be shared with the cache of image data?
      */
+    @Override
     public void init() throws Exception {
         
         //this should be similar to config
@@ -246,7 +247,7 @@ public class XmlMetadataStore  extends MetadataStore  {
         //layer.setBbox(new double[]{-180.0, -89.0, 180.0, 90.0});
         
         Dataset ds = this.config.getDatasets().get(datasetId);
-        this.addDatasetProperty(layer, ds);
+        addDatasetProperty(layer, ds);
         return layer;
     }
     
@@ -258,6 +259,7 @@ public class XmlMetadataStore  extends MetadataStore  {
      * @return a Collection of Layer objects that belong to this dataset
      * @throws Exception if an error occurs reading from the persistent store
      */
+    @Override
     public Collection<Layer> getLayersInDataset(String datasetId)
     throws Exception {
         
@@ -359,7 +361,7 @@ public class XmlMetadataStore  extends MetadataStore  {
      * (unique within a dataset) to Layer objects.
      * @throws Exception if an error occurs writing to the persistent store
      */
-    public void setLayersInDataset(String datasetId, Map<String, Layer> layers)
+    public void setLayersInDataset(String datasetId, Map<String, ? extends Layer> layers)
     throws Exception {
         
     }

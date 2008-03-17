@@ -49,7 +49,7 @@ class BerkeleyDBDataset
     @PrimaryKey
     private String id;
     private Date lastUpdate;
-    private Map<String, Layer> layers;
+    private Map<String, ? extends Layer> layers;
 
     public String getId()
     {
@@ -71,12 +71,12 @@ class BerkeleyDBDataset
         this.lastUpdate = lastUpdate;
     }
 
-    public Map<String, Layer> getLayers()
+    public Map<String, ? extends Layer> getLayers()
     {
         return layers;
     }
 
-    public void setLayers(Map<String, Layer> layers)
+    public void setLayers(Map<String, ? extends Layer> layers)
     {
         this.layers = layers;
     }

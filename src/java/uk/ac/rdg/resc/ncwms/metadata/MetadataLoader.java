@@ -163,7 +163,7 @@ public class MetadataLoader
             // Look for OPeNDAP datasets and update the credentials provider accordingly
             this.updateCredentialsProvider(ds);
             // Read the metadata
-            Map<String, Layer> layers = dr.getAllLayers(ds);
+            Map<String, LayerImpl> layers = dr.getAllLayers(ds);
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);
@@ -200,12 +200,12 @@ public class MetadataLoader
      * in-place.
      * @todo Only works for northward/eastward and x/y components so far
      */
-    private static void findVectorQuantities(Dataset ds, Map<String, Layer> layers)
+    private static void findVectorQuantities(Dataset ds, Map<String, LayerImpl> layers)
     {
         // This hashtable will store pairs of components in eastward-northward
         // order, keyed by the standard name for the vector quantity
-        Map<String, Layer[]> components = new HashMap<String, Layer[]>();
-        for (Layer layer : layers.values())
+        Map<String, LayerImpl[]> components = new HashMap<String, LayerImpl[]>();
+        for (LayerImpl layer : layers.values())
         {
             if (layer.getTitle().contains("eastward"))
             {
@@ -214,7 +214,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the northward component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[0] = layer;
             }
@@ -225,7 +225,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the eastward component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[1] = layer;
             }
@@ -236,7 +236,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the y component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[0] = layer;
             }
@@ -247,7 +247,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the x component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[1] = layer;
             }
@@ -258,7 +258,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the y component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[0] = layer;
             }
@@ -269,7 +269,7 @@ public class MetadataLoader
                 if (!components.containsKey(vectorKey))
                 {
                     // We haven't found the x component yet
-                    components.put(vectorKey, new Layer[2]);
+                    components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[1] = layer;
             }
@@ -278,11 +278,11 @@ public class MetadataLoader
         // Now add the vector quantities to the collection of Layer objects
         for (String key : components.keySet())
         {
-            Layer[] comps = components.get(key);
+            LayerImpl[] comps = components.get(key);
             if (comps[0] != null && comps[1] != null)
             {
-                ((LayerImpl)comps[0]).setDataset(ds);
-                ((LayerImpl)comps[1]).setDataset(ds);
+                comps[0].setDataset(ds);
+                comps[1].setDataset(ds);
                 // We've found both components.  Create a new Layer object
                 LayerImpl vec = new VectorLayerImpl(key, comps[0], comps[1]);
                 // Use the title as the unique ID for this variable
@@ -298,20 +298,19 @@ public class MetadataLoader
      * is an error reading the min-max from a layer, the layer will be removed
      * from the Map of layers: this is a side-effect of this function.
      */
-    private static void findMinMax(Dataset ds, Map<String, Layer> layers)
+    private static void findMinMax(Dataset ds, Map<String, LayerImpl> layers)
     {
         // If we get an error reading from the layer then we'll remove the layer
         // from the list
-        List<Layer> layersToRemove = new ArrayList<Layer>();
-        for (Layer layer : layers.values())
+        List<LayerImpl> layersToRemove = new ArrayList<LayerImpl>();
+        for (LayerImpl layer : layers.values())
         {
             try
             {
                 // Set the scale range for each variable by reading a 100x100
                 // chunk of data and finding the min and max values of this chunk.
                 HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, layer.getBbox());
-                LayerImpl layerImpl = (LayerImpl)layer;
-                layerImpl.setDataset(ds);
+                layer.setDataset(ds);
                 // Read from the first t and z indices
                 int tIndex = layer.isTaxisPresent() ? 0 : -1;
                 int zIndex = layer.isZaxisPresent() ? 0 : -1;
@@ -320,8 +319,8 @@ public class MetadataLoader
                 if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
                 {
                     // Just guess at a scale
-                    layerImpl.setScaleMin(-50.0f);
-                    layerImpl.setScaleMin(50.0f);
+                    layer.setScaleMin(-50.0f);
+                    layer.setScaleMin(50.0f);
                 }
                 else
                 {
@@ -329,8 +328,8 @@ public class MetadataLoader
                     // to deal with the fact that the sample data we read might
                     // not be representative
                     float diff = minMax[1] - minMax[0];
-                    layerImpl.setScaleMin(minMax[0] - 0.05f * diff);
-                    layerImpl.setScaleMax(minMax[1] + 0.05f * diff);
+                    layer.setScaleMin(minMax[0] - 0.05f * diff);
+                    layer.setScaleMax(minMax[1] + 0.05f * diff);
                 }
                 logger.debug("Set scale range for {} to {}, {}", new Object[]{
                     layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
@@ -343,7 +342,7 @@ public class MetadataLoader
             }
         }
         // Now remove the layers with errors
-        for (Layer layer : layersToRemove)
+        for (LayerImpl layer : layersToRemove)
         {
             layers.remove(layer.getId());
         }
