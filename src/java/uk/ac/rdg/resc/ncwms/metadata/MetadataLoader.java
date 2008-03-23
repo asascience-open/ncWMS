@@ -320,7 +320,7 @@ public class MetadataLoader
                 {
                     // Just guess at a scale
                     layer.setScaleMin(-50.0f);
-                    layer.setScaleMin(50.0f);
+                    layer.setScaleMax(50.0f);
                 }
                 else
                 {
