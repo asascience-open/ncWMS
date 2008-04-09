@@ -31,7 +31,6 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections15.map.ListOrderedMap;
@@ -83,7 +82,7 @@ public class Config implements ApplicationContextAware
     private Contact contact = new Contact();
     
     @Element(name="server")
-    private Server server;
+    private Server server = new Server();
     
     @Element(name="cache", required=false)
     private Cache cache = new Cache();
