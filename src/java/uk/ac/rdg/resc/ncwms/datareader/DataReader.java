@@ -97,8 +97,8 @@ public abstract class DataReader
     }
     
     /**
-     * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single timestep only.  This method knows
+     * Reads an array of data from a NetCDF file and projects onto the given
+     * {@link HorizontalGrid}.  Reads data for a single timestep only.  This method knows
      * nothing about aggregation: it simply reads data from the given file.
      * Missing values (e.g. land pixels in oceanography data) will be represented
      * by Float.NaN.
