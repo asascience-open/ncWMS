@@ -341,7 +341,7 @@ public class DefaultDataReader extends DataReader
                         logger.debug("Creating new Layer object for {}", grid.getName());
                         LayerImpl layer = new LayerImpl();
                         layer.setId(grid.getName());
-                        layer.setTitle(getStandardName(grid.getVariable()));
+                        layer.setTitle(getLayerTitle(grid.getVariable()));
                         layer.setAbstract(grid.getDescription());
                         layer.setUnits(grid.getUnitsString());
                         layer.setXaxis(xAxis);
@@ -476,13 +476,28 @@ public class DefaultDataReader extends DataReader
     
     /**
      * @return the value of the standard_name attribute of the variable,
-     * or the unique id if it does not exist
+     * or the long_name if it does not exist, or the unique id if neither of
+     * these attributes exist.
      */
-    protected static String getStandardName(VariableEnhanced var)
+    protected static String getLayerTitle(VariableEnhanced var)
     {
         Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
-        return (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
-            ? var.getName() : stdNameAtt.getStringValue();
+        if (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
+        {
+            Attribute longNameAtt = var.findAttributeIgnoreCase("long_name");
+            if (longNameAtt == null || longNameAtt.getStringValue().trim().equals(""))
+            {
+                return var.getName();
+            }
+            else
+            {
+                return longNameAtt.getStringValue();
+            }
+        }
+        else
+        {
+            return stdNameAtt.getStringValue();
+        }
     }
     
 }

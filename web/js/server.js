@@ -109,7 +109,7 @@ function getMenu(node, params) {
  *            (the server calculates the nearest point on the t axis to this time).
  */
 function getLayerDetails(url, params) {
-    this.makeAjaxRequest(url, {
+    makeAjaxRequest(url, {
         urlparams: {
             item: 'layerDetails',
             layerName : params.layerName,
@@ -137,7 +137,7 @@ function getLayerDetails(url, params) {
  *            format
  */
 function getTimesteps(url, params) {
-    this.makeAjaxRequest(url, {
+    makeAjaxRequest(url, {
         urlparams: {
             item: 'timesteps',
             layerName: params.layerName,
@@ -157,18 +157,19 @@ function getTimesteps(url, params) {
  *            from the call to the server (simple object with properties "min" and "max")
  *        layerName The unique ID for the displayable layer
  *        bbox Bounding box *string* (e.g. "-180,-90,180,90")
+ *        crs CRS *String* (not a Projection object)
  *        elevation Elevation value
  *        time Time value
  */
 function getMinMax(url, params) {
-    this.makeAjaxRequest(url, {
+    makeAjaxRequest(url, {
         urlparams: {
             item: 'minmax',
             layers: params.layerName,
             bbox: params.bbox,
             elevation: params.elevation,
             time: params.time,
-            crs: 'CRS:84', // TODO: should this be fixed like this?
+            crs: params.crs,
             width: 50, // Request only a small box to save extracting lots of data
             height: 50
         },

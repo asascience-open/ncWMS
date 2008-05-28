@@ -42,6 +42,7 @@ from usage_log where wms_operation = 'GetMap' group by client_referrer order by 
     <table border="1">
         <tr>
             <th>Client hostname/IP</th>
+            <th>Country of origin</th>
             <th>Number of GetMap requests</th>
             <th>Number of cache hits</th>
             <th>Percentage cache hits</th>
@@ -51,6 +52,11 @@ from usage_log where wms_operation = 'GetMap' group by client_referrer order by 
         <c:forEach var="row" items="${getMapRequestsByClient.rows}">
             <tr>
                 <td>${row.client_hostname}</td>
+                <td>
+                    <a href="http://www.hostip.info">
+                        <img height=15" src="http://api.hostip.info/flag.php?ip=${row.client_hostname}" alt="IP Address Lookup">
+                    </a>
+                </td>
                 <td>${row.count}</td>
                 <td>${row.used_cache}</td>
                 <td><fmt:formatNumber value="${row.used_cache / row.count}" type="percent" minFractionDigits="2"/></td>

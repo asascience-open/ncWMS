@@ -3,12 +3,15 @@ div
 {
     font-family: Helvetica, Arial, sans-serif;
     font-size: 12px;
+    text-align: left;
 }
 
 /* Style for the left-hand layer selector menu */
 #layerSelector
 {
     position: absolute;
+    left: 0px;
+    top: 0px;
     overflow: auto;
     margin: 8px;
     padding: 0px;

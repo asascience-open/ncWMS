@@ -55,17 +55,78 @@ window.onload = function()
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
     var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' }, { wrapDateLine: true} );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' },
+        { wrapDateLine: true, transitionEffect: 'resize'} );
     var bluemarble_wms = new OpenLayers.Layer.WMS( "Blue Marble", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' }, { wrapDateLine: true} );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' },
+        { wrapDateLine: true, transitionEffect: 'resize'} );
     var osm_wms = new OpenLayers.Layer.WMS( "Openstreetmap", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' }, { wrapDateLine: true} );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' },
+        { wrapDateLine: true, transitionEffect: 'resize'} );
     var human_wms = new OpenLayers.Layer.WMS( "Human Footprint", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' }, { wrapDateLine: true} );
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' },
+        { wrapDateLine: true, transitionEffect: 'resize'} );
     var demis_wms = new OpenLayers.Layer.WMS( "Demis WMS",
         "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE", {layers:
         'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'},
-        {wrapDateLine: true});
+        { wrapDateLine: true, transitionEffect: 'resize'} );
+        
+    // Now for the polar stereographic layers, one for each pole.  We do this
+    // as an Untiled layer because, for some reason, if we use a tiled layer
+    // this results in lots of spurious tiles being requested when switching
+    // from a lat-lon base layer to polar stereographic.
+    // The full extent of a polar stereographic projection is (-10700000, -10700000,
+    // 14700000, 14700000) but we don't use all of this range because we're only
+    // really interested in the stuff near the poles.  Therefore we set maxExtent
+    // so the user only sees a quarter of this range and maxResolution so that
+    // we can't zoom out too far.
+    var polarMaxExtent = new OpenLayers.Bounds(-10700000, -10700000, 14700000, 14700000);
+    var halfSideLength = (polarMaxExtent.top - polarMaxExtent.bottom) / (4 * 2);
+    var centre = ((polarMaxExtent.top - polarMaxExtent.bottom) / 2) + polarMaxExtent.bottom;
+    var low = centre - halfSideLength;
+    var high = centre + halfSideLength;
+    var polarMaxResolution = (high - low) / 256;
+    var windowLow = centre - 2 * halfSideLength;
+    var windowHigh = centre + 2 * halfSideLength;
+    var polarWindow = new OpenLayers.Bounds(windowLow, windowLow, windowHigh, windowHigh);
+    var northPoleBaseLayer = new OpenLayers.Layer.WMS.Untiled(
+        "North polar stereographic",
+        "http://nsidc.org/cgi-bin/atlas_north",
+        {
+            layers: 'country_borders,arctic_circle',
+            format: 'image/png'
+        },
+        {
+            wrapDateLine: false,
+            transitionEffect: 'resize',
+            /*/projection: 'EPSG:3408', // NSIDC EASE-Grid North
+            maxExtent: new OpenLayers.Bounds(-9036842.762, -9036842.762,
+                9036842.762, 9036842.762),
+            maxResolution: 2 * 9036842.762 / 256*/
+            projection: 'EPSG:32661',
+            maxExtent: polarWindow,
+            maxResolution: polarMaxResolution
+        }
+    );
+    var southPoleBaseLayer = new OpenLayers.Layer.WMS.Untiled(
+        "South polar stereographic",
+        "http://nsidc.org/cgi-bin/atlas_south",
+        {
+            layers: 'country_borders,antarctic_circle',
+            format: 'image/png'
+        },
+        {
+            wrapDateLine: false,
+            transitionEffect: 'resize',
+            /*/projection: 'EPSG:3409', // NSIDC EASE-Grid South
+            maxExtent: new OpenLayers.Bounds(-9036842.762, -9036842.762,
+                9036842.762, 9036842.762),
+            maxResolution: 2 * 9036842.762 / 256*/
+            projection: 'EPSG:32761',
+            maxExtent: polarWindow,
+            maxResolution: polarMaxResolution
+        }
+    );
 
     // ESSI WMS (see Stefano Nativi's email to me, Feb 15th)
     /*var essi_wms = new OpenLayers.Layer.WMS.Untiled( "ESSI WMS", 
@@ -74,16 +135,18 @@ window.onload = function()
     essi_wms.setVisibility(false);*/
             
     // The SeaZone Web Map server
-    var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
+    /*var seazone_wms = new OpenLayers.Layer.WMS1_3("SeaZone bathymetry", "http://ws.cadcorp.com/seazone/wms.exe?",
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
-    seazone_wms.setVisibility(false);
+    seazone_wms.setVisibility(false);*/
     
-    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms/*, seazone_wms, essi_wms*/]);
+    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
     
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
     map.events.register('moveend', map, setGEarthURL);
     map.events.register('moveend', map, setPermalinkURL);
+    // Register an event for when the base layer of the map is changed
+    map.events.register('changebaselayer', map, baseLayerChanged);
     
     // If we have loaded Google Maps and the browser is compatible, add it as a base layer
     if (typeof GBrowserIsCompatible == 'function' && GBrowserIsCompatible()) {
@@ -125,7 +188,6 @@ window.onload = function()
         draggable:true,
         modal:true
     });
-    //paletteSelector.setHeader('Click to choose a colour palette');
 }
 
 // Populates the autoLoad object from the given window location object
@@ -230,7 +292,7 @@ function treeNodeClicked(node)
 
         // Get the details of this layer from the server, calling layerSelected()
         // when we have the result
-        var layerDetails = getLayerDetails(node.data.server, {
+        getLayerDetails(node.data.server, {
             callback: layerSelected,
             layerName: node.data.id,
             time: isoTValue
@@ -283,39 +345,35 @@ function isDateDisabled(date, year, month, day)
 }
 
 // Event handler for when a user clicks on a map
-// TODO: how can we detect whether the click is off the map (i.e. |lat| > 90)?
 function getFeatureInfo(e)
 {
-    // Check we haven't clicked off-map
     var lonLat = map.getLonLatFromPixel(e.xy);
-    if (ncwms != null && Math.abs(lonLat.lat) <= 90)
+    // Check we haven't clicked off-map
+    // Could also check the bbox of the layer but this would only work in lat-lon
+    // projection...
+    if (ncwms != null && ncwms.maxExtent.containsLonLat(lonLat))
     {
-        // See if the click was within range of the currently-visible layer
-        var layerBounds = new OpenLayers.Bounds(activeLayer.bbox[0],
-            activeLayer.bbox[1], activeLayer.bbox[2], activeLayer.bbox[3]);
-        if (layerBounds.contains(lonLat.lon, lonLat.lat)) {
-            $('featureInfo').innerHTML = "Getting feature info...";
-            var params = {
-                REQUEST: "GetFeatureInfo",
-                BBOX: map.getExtent().toBBOX(),
-                I: e.xy.x,
-                J: e.xy.y,
-                INFO_FORMAT: 'text/xml',
-                QUERY_LAYERS: ncwms.params.LAYERS,
-                WIDTH: map.size.w,
-                HEIGHT: map.size.h
-            };
-            if (activeLayer.server != '') {
-                // This is the signal to the server to load the data from elsewhere
-                params.url = activeLayer.server;
-            }
-            featureInfoUrl = ncwms.getFullRequestString(
-                params,
-                'wms' // We must always load from the home server
-            );
-            OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
-            Event.stop(e);
+        $('featureInfo').innerHTML = "Getting feature info...";
+        var params = {
+            REQUEST: "GetFeatureInfo",
+            BBOX: map.getExtent().toBBOX(),
+            I: e.xy.x,
+            J: e.xy.y,
+            INFO_FORMAT: 'text/xml',
+            QUERY_LAYERS: ncwms.params.LAYERS,
+            WIDTH: map.size.w,
+            HEIGHT: map.size.h
+        };
+        if (activeLayer.server != '') {
+            // This is the signal to the server to load the data from elsewhere
+            params.url = activeLayer.server;
         }
+        featureInfoUrl = ncwms.getFullRequestString(
+            params,
+            'wms' // We must always load from the home server
+        );
+        OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
+        Event.stop(e);
     }
 }
 
@@ -402,7 +460,6 @@ function layerSelected(layerDetails)
         // Make z range selector invisible if there are no z values
         var zValues = zAxis.values;
         zPositive = zAxis.positive;
-        $('zValues').style.visibility = (zValues.length == 0) ? 'hidden' : 'visible';
         var zDiff = 1e10; // Set to some ridiculously-high value
         var nearestIndex = 0;
         for (var j = 0; j < zValues.length; j++) {
@@ -423,7 +480,6 @@ function layerSelected(layerDetails)
             }
         }
         $('zValues').selectedIndex = nearestIndex;
-        $('zValues').style.visibility = 'visible';
     }
     
     // Only show the scale bar if the data are coming from an ncWMS server
@@ -498,6 +554,9 @@ function layerSelected(layerDetails)
         // time, as calculated on the server
         calendar.setDate(layerDetails.nearestTime);
         calendar.refresh();
+        // N.B. For some reason the call to show() seems sometimes to toggle the
+        // visibility of the zValues selector.  Hence we set this visibility
+        // below, in updateMap()
         calendar.show();
         // Load the timesteps for this date
         loadTimesteps();
@@ -560,7 +619,7 @@ function updateTimesteps(times)
     // If we're autoloading, set the right time in the selection box
     if (autoLoad != null && autoLoad.isoTValue != null) {
         var timeSelect = $('tValues');
-        for (var i = 0; i < timeSelect.options.length; i++) {
+        for (i = 0; i < timeSelect.options.length; i++) {
             if (timeSelect.options[i].value == autoLoad.isoTValue) {
                 timeSelect.selectedIndex = i;
                 break;
@@ -600,6 +659,7 @@ function autoScale(newVariable)
         callback: gotMinMax,
         layerName: activeLayer.id,
         bbox: dataBounds,
+        crs: map.baseLayer.projection.toString(), // (projection is a Projection object)
         elevation: getZValue(),
         time: isoTValue
     });
@@ -696,8 +756,7 @@ function createAnimation()
     
     // Get a URL for a WMS request that covers the current map extent
     var urlEls = ncwms.getURL(getMapExtent()).split('&');
-    // Replace the parameters as needed.  We generate a map that is half the
-    // width and height of the viewport, otherwise it takes too long
+    // Replace the parameters as needed.
     var width = $('map').clientWidth;// / 2;
     var height = $('map').clientHeight;// / 2;
     var newURL = urlEls[0];
@@ -710,8 +769,7 @@ function createAnimation()
             newURL += '&WIDTH=' + width;
         } else if (urlEls[i].startsWith('HEIGHT')) {
             newURL += '&HEIGHT=' + height;
-        } else if (!urlEls[i].startsWith('OPACITY')) {
-            // We remove the OPACITY ARGUMENT as GIFs do not support partial transparency
+        } else {
             newURL += '&' + urlEls[i];
         }
     }
@@ -727,14 +785,16 @@ function createAnimation()
     $('mapOverlay').width = width;
     $('mapOverlay').height = height;
 }
-// Gets the current map extent, checking for out-of-range latitude values
+// Gets the current map extent, checking for out-of-range values
 function getMapExtent()
 {
     var bounds = map.getExtent();
-    // This assumes a lat-lon projection!
-    if (bounds.top > 90.0) bounds.top = 90.0;
-    if (bounds.bottom < -90.0) bounds.bottom = -90.0;
-    return bounds;
+    var maxBounds = map.maxExtent;
+    var top = Math.min(bounds.top, maxBounds.top);
+    var bottom = Math.max(bounds.bottom, maxBounds.bottom);
+    var left = Math.max(bounds.left, maxBounds.left);
+    var right = Math.min(bounds.right, maxBounds.right);
+    return new OpenLayers.Bounds(left, bottom, right, top);
 }
 function animationLoaded()
 {
@@ -746,7 +806,12 @@ function animationLoaded()
         $('mapOverlay').src, // URL to the image
         getMapExtent(), // Image bounds
         new OpenLayers.Size($('mapOverlay').width, $('mapOverlay').height), // Size of image
-        {isBaseLayer : false} // Other options
+        { // Other options
+            isBaseLayer : false,
+            maxResolution: map.baseLayer.maxResolution,
+            minResolution: map.baseLayer.minResolution,
+            resolutions: map.baseLayer.resolutions
+        }
     );
     setVisibleLayer(true);
     map.addLayers([animation_layer]);
@@ -760,8 +825,46 @@ function hideAnimation()
     $('mapOverlayDiv').style.visibility = 'hidden';
 }
 
+// Called when the user changes the base layer
+function baseLayerChanged(event)
+{
+    //alert("new base layer");
+    // Change the parameters of the map based on the new base layer
+    map.setOptions({
+       //projection: projCode,
+       maxExtent: map.baseLayer.maxExtent,
+       maxResolution: map.baseLayer.maxResolution
+    });
+    map.zoomToMaxExtent();
+    if (ncwms != null) {
+        ncwms_tiled.maxExtent = map.baseLayer.maxExtent;
+        ncwms_tiled.maxResolution = map.baseLayer.maxResolution;
+        ncwms_tiled.minResolution = map.baseLayer.minResolution;
+        ncwms_tiled.resolutions = map.baseLayer.resolutions;
+        // We only wrap the datelinein EPSG:4326
+        ncwms_tiled.wrapDateLine = map.baseLayer.projection == 'EPSG:4326';
+        ncwms_untiled.maxExtent = map.baseLayer.maxExtent;
+        ncwms_untiled.maxResolution = map.baseLayer.maxResolution;
+        ncwms_untiled.minResolution = map.baseLayer.minResolution;
+        ncwms_untiled.resolutions = map.baseLayer.resolutions;
+        ncwms_untiled.wrapDateLine = map.baseLayer.projection == 'EPSG:4326';
+        updateMap();
+    }
+}
+
+// Sets the opacity of the ncwms layer if it exists
+function setDataOpacity(value)
+{
+    if (ncwms != null) ncwms.setOpacity(value);
+}
+
 function updateMap()
 {
+    // Hide the z values selector if it contains no values.  We do this here
+    // because it seems that the calendar.show() method can change the visibility
+    // unexpectedly
+    $('zValues').style.visibility = $('zValues').options.length == 0 ? 'hidden' : 'visible';
+    
     var logscale = $('scaleSpacing').value == 'logarithmic';
     
     // Update the intermediate scale markers
@@ -776,8 +879,6 @@ function updateMap()
     if ($('tValues')) {
         isoTValue = $('tValues').value;
     }
-    
-    var opacity = $('opacityValue').value;
     
     // Set the map bounds automatically
     if (typeof autoLoad.bbox != 'undefined') {
@@ -797,29 +898,29 @@ function updateMap()
     // Notify the OpenLayers widget
     // TODO get the map projection from the base layer
     // TODO use a more informative title
-    // Buffer is set to 1 to avoid loading a large halo of tiles outside the
-    // current viewport
     var params = {
         layers: activeLayer.id,
         elevation: getZValue(),
         time: isoTValue,
         transparent: 'true',
         styles: style,
+        crs: map.baseLayer.projection,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
-        opacity: opacity,
         numcolorbands: $('numColorBands').value,
         logscale: logscale
     };
     if (ncwms == null) {
+        // Buffer is set to 1 to avoid loading a large halo of tiles outside the
+        // current viewport
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1, wrapDateLine: true}
+            {buffer: 1, wrapDateLine: true, transitionEffect: 'resize'}
         );
         ncwms_untiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: true}
+            {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: true, transitionEffect: 'resize'}
         );
         setVisibleLayer(false);
         map.addLayers([ncwms_tiled, ncwms_untiled]);
@@ -962,6 +1063,7 @@ function setPermalinkURL()
 }
 
 // Sets the URL for "Open in Google Earth"
+// TODO: does this screw up if we're looking in polar stereographic coords?
 function setGEarthURL()
 {
     if (ncwms != null) {
@@ -985,16 +1087,14 @@ function setGEarthURL()
                 gEarthURL += '&WIDTH=' + map.size.w;
             } else if (urlEls[i].startsWith('HEIGHT')) {
                 gEarthURL += '&HEIGHT=' + map.size.h;
-            } else if (!urlEls[i].startsWith('OPACITY')) {
-                // We remove the OPACITY argument as Google Earth allows opacity
-                // to be controlled in the client
+            } else {
                 gEarthURL += '&' + urlEls[i];
             }
         }
         if (timeSeriesSelected()) {
-            $('googleEarth').innerHTML = '<a href=\'' + gEarthURL + '\'>Open animation in Google Earth</a>';
+            $('googleEarth').innerHTML = '<a href="' + gEarthURL + '">Open animation in Google Earth</a>';
         } else {
-            $('googleEarth').innerHTML = '<a href=\'' + gEarthURL + '\'>Open in Google Earth</a>';
+            $('googleEarth').innerHTML = '<a href="' + gEarthURL + '">Open in Google Earth</a>';
         }
     }
 }
@@ -1004,14 +1104,19 @@ function setGEarthURL()
 // bounding box and the viewport's bounding box.
 function getIntersectionBBOX()
 {
-    var mapBounds = map.getExtent();
-    var mapBboxEls = mapBounds.toBBOX().split(',');
-    // bbox is the bounding box of the currently-visible layer
-    var newBBOX = Math.max(parseFloat(mapBboxEls[0]), bbox[0]) + ',';
-    newBBOX += Math.max(parseFloat(mapBboxEls[1]), bbox[1]) + ',';
-    newBBOX += Math.min(parseFloat(mapBboxEls[2]), bbox[2]) + ',';
-    newBBOX += Math.min(parseFloat(mapBboxEls[3]), bbox[3]);
-    return newBBOX;
+    if (map.baseLayer.projection == 'EPSG:4326') {
+        // We compute the intersection of the bounding box and the currently-
+        // visible map extent
+        var mapBboxEls = map.getExtent().toArray();
+        // bbox is the bounding box of the currently-visible layer
+        var newBBOX = Math.max(mapBboxEls[0], bbox[0]) + ',';
+        newBBOX += Math.max(mapBboxEls[1], bbox[1]) + ',';
+        newBBOX += Math.min(mapBboxEls[2], bbox[2]) + ',';
+        newBBOX += Math.min(mapBboxEls[3], bbox[3]);
+        return newBBOX;
+    } else {
+        return map.getExtent().toBBOX();
+    }
 }
 
 // Formats the given value to numSigFigs significant figures

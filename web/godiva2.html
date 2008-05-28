@@ -4,9 +4,14 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>GODIVA2 Data Visualization demo page</title>
+        
+        <!-- Resets the browser's CSS definitions. This should reduce the
+             problem of fonts appearing differently in different browsers. -->
+        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.1/build/reset-fonts-grids/reset-fonts-grids.css">
+        
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
         
-        <script type="text/javascript" src="js/OpenLayers-2.5.js"></script>
+        <script type="text/javascript" src="js/OpenLayers-2.6.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <!-- Comment out the line below to stop using Google Maps -->
         <!--<script type="text/javascript" src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAA7YuB_Hd5LuBiQ3-he19uDxTFRfqDGOwfXAlOK-54sJyR4NNS5RSdkyh_Ih5CfURmd5umFAKNKx8oJg"></script>-->
@@ -17,17 +22,17 @@
         <script type="text/javascript" src="js/calendar-en.js"></script>
         <script type="text/javascript" src="js/calendar-setup.js"></script>
         
-        <!-- For the tree control: TODO: download and serve locally --> 
-        <link type="text/css" rel="stylesheet" href="http://yui.yahooapis.com/2.5.0/build/treeview/assets/skins/sam/treeview.css">
-        <script src="http://yui.yahooapis.com/2.5.0/build/yahoo/yahoo-min.js"></script>
-        <script src="http://yui.yahooapis.com/2.5.0/build/event/event-min.js"></script>
-        <script src="http://yui.yahooapis.com/2.5.0/build/treeview/treeview-min.js"></script>
+        <!-- For the tree control --> 
+        <link type="text/css" rel="stylesheet" href="http://yui.yahooapis.com/2.5.1/build/treeview/assets/skins/sam/treeview.css">
+        <script src="http://yui.yahooapis.com/2.5.1/build/yahoo/yahoo-min.js"></script>
+        <script src="http://yui.yahooapis.com/2.5.1/build/event/event-min.js"></script>
+        <script src="http://yui.yahooapis.com/2.5.1/build/treeview/treeview-min.js"></script>
         
         <!-- For the pop-up panel (used in the palette selector) -->
-        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.0/build/container/assets/skins/sam/container.css">
-        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>
-        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/dragdrop/dragdrop-min.js"></script>
-        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.0/build/container/container-min.js"></script>
+        <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.5.1/build/container/assets/skins/sam/container.css">
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.1/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.1/build/dragdrop/dragdrop-min.js"></script>
+        <script type="text/javascript" src="http://yui.yahooapis.com/2.5.1/build/container/container-min.js"></script>
         
         <!-- Prototype is used only for Ajax requests in server.js - can we refactor
              to remove this dependency? -->
@@ -45,7 +50,7 @@
         <p><a href="info.html">More info</a></p>
     </div>
     
-    <a href="http://www.resc.reading.ac.uk/" target="_top"><img id="resclogo" src="http://www.resc.reading.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
+    <a href="http://www.resc.reading.ac.uk/" target="_blank"><img id="resclogo" src="http://www.resc.reading.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
     
     <div id="mainPanel" class="mainPanel">
         <div id="panelHeader">
@@ -69,7 +74,9 @@
         </div>
         
         <div id="imagePanel" class="imagePanel">
-            <div id="autoZoom" class="aboveMap"></div>
+            <div class="aboveMap">
+                <span id="autoZoom"></span>
+            </div>
             <div id="hideAnimation" class="aboveMap"><a href="#" onclick="javascript:hideAnimation()">Stop animation</a></div>
             <div id="map" class="map"></div>
             <!-- This holds the "loading animation..." image -->
@@ -79,7 +86,7 @@
             <!--<span id="pleaseWait">Loading, please wait...</span>-->
             <img id="scaleBar" class="scaleBar" width="40" height="398" src="wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398" alt="scale bar" title="Click to change the colour palette" onclick="javascript:showPaletteSelector();"/>
             <div class="scaleMarkers">
-                <input id="scaleMax" class="scaleMax" type="text" size="6" onblur="javascript:validateScale()"/>
+                <input id="scaleMax" class="scaleMax" type="text" size="11" onblur="javascript:validateScale()"/>
                 <span id="scaleTwoThirds"></span>
                 <div id="scaleControls">
                     <select id="scaleSpacing" title="Sets the spacing of the colour scale" onchange="javascript:validateScale()">
@@ -90,15 +97,15 @@
                     <a id="lockScale" href="#" title="Locks/Unlocks the colour scale range" onclick="javascript:toggleLockScale()">lock</a>
                 </div>
                 <span id="scaleOneThird"></span>
-                <input id="scaleMin" class="scaleMin" type="text" size="6" onblur="javascript:validateScale()"/>
+                <input id="scaleMin" class="scaleMin" type="text" size="11" onblur="javascript:validateScale()"/>
             </div>
             <div id="copyright"></div>
             <div class="underMap"><span id="testImage"></span>&nbsp;&nbsp;<span id="googleEarth"></span></div>
             <span id="opacityControl">Overlay opacity:
-                <select id="opacityValue" onchange="javascript:updateMap()">
-                    <option value="100" selected>100%</option>
-                    <option value="66">66%</option>
-                    <option value="33">33%</option>
+                <select id="opacityValue" onchange="javascript:setDataOpacity(this.value)">
+                    <option value="1" selected>100%</option>
+                    <option value="0.66">66%</option>
+                    <option value="0.33">33%</option>
                 </select>
             </span>
             <span id="poweredBy">Powered by <a href="http://www.openlayers.org" target="_blank">OpenLayers</a> and <a href="http://www.opengeospatial.org" target="_blank">OGC</a> standards</span>

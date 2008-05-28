@@ -324,10 +324,13 @@ public class WmsController extends AbstractController
         String[] supportedCrsCodes = new String[]{
             "EPSG:4326", "CRS:84", // Plate Carree
             "EPSG:41001",          // Mercator (~ Google Maps)
-            "EPSG:27700"           // British National Grid
-            // TODO: what is polar stereographic?
+            "EPSG:27700",          // British National Grid
+            // See http://nsidc.org/data/atlas/ogc_services.html for useful
+            // stuff about polar stereographic projections
+            "EPSG:3408",          // NSIDC EASE-Grid North
+            "EPSG:3409"           // NSIDC EASE-Grid South
         };
-        models.put("supportedCrsCodes", supportedCrsCodes); //HorizontalGrid.SUPPORTED_CRS_CODES);
+        models.put("supportedCrsCodes", /*supportedCrsCodes); //*/HorizontalGrid.SUPPORTED_CRS_CODES);
         models.put("supportedImageFormats", ImageFormat.getSupportedMimeTypes());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
