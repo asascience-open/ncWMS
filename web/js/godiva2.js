@@ -54,22 +54,17 @@ window.onload = function()
     
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
-    var ol_wms = new OpenLayers.Layer.WMS( "OpenLayers WMS", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic', format: 'image/png' },
-        { wrapDateLine: true, transitionEffect: 'resize'} );
-    var bluemarble_wms = new OpenLayers.Layer.WMS( "Blue Marble", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' },
-        { wrapDateLine: true, transitionEffect: 'resize'} );
-    var osm_wms = new OpenLayers.Layer.WMS( "Openstreetmap", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' },
-        { wrapDateLine: true, transitionEffect: 'resize'} );
-    var human_wms = new OpenLayers.Layer.WMS( "Human Footprint", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' },
-        { wrapDateLine: true, transitionEffect: 'resize'} );
-    var demis_wms = new OpenLayers.Layer.WMS( "Demis WMS",
+    var ol_wms = new OpenLayers.Layer.WMS1_1_1( "OpenLayers WMS", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic'});
+    var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' });
+    var osm_wms = new OpenLayers.Layer.WMS1_1_1( "Openstreetmap", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' });
+    var human_wms = new OpenLayers.Layer.WMS1_1_1( "Human Footprint", 
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' });
+    var demis_wms = new OpenLayers.Layer.WMS1_1_1( "Demis WMS",
         "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE", {layers:
-        'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'},
-        { wrapDateLine: true, transitionEffect: 'resize'} );
+        'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'});
         
     // Now for the polar stereographic layers, one for each pole.  We do this
     // as an Untiled layer because, for some reason, if we use a tiled layer
@@ -140,6 +135,8 @@ window.onload = function()
     seazone_wms.setVisibility(false);*/
     
     map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
+    
+    map.setBaseLayer(demis_wms); // Metacarta WMS seems unreliable at the moment
     
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
@@ -915,12 +912,12 @@ function updateMap()
         ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1, wrapDateLine: true, transitionEffect: 'resize'}
+            {buffer: 1, wrapDateLine: map.baseLayer.projection == 'EPSG:4326'}
         );
         ncwms_untiled = new OpenLayers.Layer.WMS1_3("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server, 
             params,
-            {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: true, transitionEffect: 'resize'}
+            {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: map.baseLayer.projection == 'EPSG:4326'}
         );
         setVisibleLayer(false);
         map.addLayers([ncwms_tiled, ncwms_untiled]);
