@@ -11,7 +11,8 @@
         
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
         
-        <script type="text/javascript" src="js/OpenLayers-2.6.js"></script>
+        <script type="text/javascript" src="http://www.openlayers.org/api/OpenLayers.js"></script>
+        <!--script type="text/javascript" src="js/OpenLayers-2.6.js"></script-->
         <script type="text/javascript" src="js/WMS1_1_1.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <!-- Comment out the line below to stop using Google Maps -->
@@ -64,7 +65,6 @@
                 <span id="setLastFrame"><a href="#" title="Set the current frame as the last frame of an animation" onclick="javascript:setLastAnimationFrame()">last frame</a></span></span><br />
                 <span id="animation"><span id="createAnimation"><a href="#" onclick="javascript:createAnimation()">Create animation</a></span> from 
                 <span id="firstFrame"></span>&nbsp;to&nbsp;<span id="lastFrame"></span></span><br /><br />
-                <span id="featureInfo"></span><br />
                 <!--<select id="otherGEarthDatasets" onchange="javascript:if(this.value != '') { window.open(this.value) }">
                     <option value="" selected>Other useful datasets...</option>
                     <option value="http://w3.jcommops.org/cgi-bin/WebObjects/Argo.woa/482/wo/Ej1NgzFtN3S024S2meG1733WzA9/0.0.56.9.2.1">ARGO float locations</option>

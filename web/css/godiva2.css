@@ -1,14 +1,12 @@
 /* Style for all fonts */
-div
-{
+div {
     font-family: Helvetica, Arial, sans-serif;
     font-size: 12px;
     text-align: left;
 }
 
 /* Style for the left-hand layer selector menu */
-#layerSelector
-{
+#layerSelector {
     position: absolute;
     left: 0px;
     top: 0px;
@@ -19,16 +17,14 @@ div
     height: 500px;
 }
 
-div.help
-{
+div.help {
     position: absolute;
     top: 520px;
     left: 20px;
     font-size: 11px;
 }
 
-#resclogo
-{
+#resclogo {
     position: absolute;
     top: 570px;
     left: 20px;
@@ -36,64 +32,50 @@ div.help
 }
 
 /* Style for the main panel */
-div.mainPanel
-{
+div.mainPanel {
     position: absolute;
     margin: 8px;
     padding: 0px;
     left: 330px;
 }
 
-#panelHeader
-{
+#panelHeader {
     position: absolute;
     top: 0px;
     left: 0px;
     width: 500px;
 }
 
-#panelText
-{
+#panelText {
     width: 390px;
 }
 
-#calendar
-{
+#calendar {
     position: absolute;
     top: 0px;
     left: 390px;
 }
 
-#zValues
-{
+#zValues {
     visibility: hidden;
 }
 
-#utc
-{
+#utc {
     visibility: hidden;
 }
 
-td
-{
+td {
     padding: 0;
 }
 
-#featureInfo
-{
-    visibility: hidden;
-}
-
-div.imagePanel
-{
+div.imagePanel {
     position: absolute;
     left: 0px;
     top: 160px;
     width: 600px;
 }
 
-#pleaseWait
-{
+#pleaseWait {
     position: absolute;
     left: 0px;
     top: 25px;
@@ -101,15 +83,13 @@ div.imagePanel
     /*visibility: hidden;*/
 }
 
-div.aboveMap
-{
+div.aboveMap {
     position: absolute;
     left: 0px;
     top: 0px;
 }
 
-div.map
-{
+div.map {
     position: absolute;
     left: 0px;
     top: 25px;
@@ -117,62 +97,52 @@ div.map
     height: 400px;
 }
 
-#mapOverlayDiv
-{
+#mapOverlayDiv {
     visibility: hidden;
 }
 
-#loadingAnimationDiv
-{
+#loadingAnimationDiv {
     visibility: hidden;
 }
 
-#setFrames
-{
+#setFrames {
     visibility: hidden;
 }
 
-#animation
-{
+#animation {
     visibility: hidden;
 }
 
-#hideAnimation
-{
+#hideAnimation {
     visibility: hidden;
 }
 
-#copyright
-{
+#copyright {
     position: absolute;
     top: 430px;
     font-style: italic;
 }
 
-div.underMap
-{
+div.underMap {
     position: absolute;
     top: 450px;
 }
 
-#opacityControl
-{
+#opacityControl {
     position: absolute;
     top: 450px;
     left: 350px;
     visibility: hidden; /* Will make visible when we load the page if we need this control */
 }
 
-#poweredBy
-{
+#poweredBy {
     position: absolute;
     top: 480px;
     left: 0px;
     font-size: 10px;
 }
 
-#permalink
-{
+#permalink {
     position: absolute;
     top: 480px;
     right: 50px;
@@ -180,8 +150,7 @@ div.underMap
     visibility: hidden;
 }
 
-img.scaleBar
-{
+img.scaleBar {
     position: absolute;
     left: 510px;
     top: 25px;
@@ -190,8 +159,7 @@ img.scaleBar
     border-width: 1px;
 }
 
-div.scaleMarkers
-{
+div.scaleMarkers {
     position: absolute;
     left: 555px;
     top: 25px;
@@ -199,35 +167,30 @@ div.scaleMarkers
     font-size: 12px;
 }
 
-#scaleControls
-{
+#scaleControls {
     position: absolute;
     top: 175px;
     visibility: hidden;
 }
 
-input.scaleMax
-{
+input.scaleMax {
     position: absolute;
     top: -10px;
     visibility: hidden;
 }
 
-input.scaleMin
-{
+input.scaleMin {
     position: absolute;
     top: 388px;
     visibility: hidden;
 }
 
-#scaleOneThird
-{
+#scaleOneThird {
     position: absolute;
     top: 255px;
 }
 
-#scaleTwoThirds
-{
+#scaleTwoThirds {
     position: absolute;
     top: 121px;
 }

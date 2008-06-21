@@ -35,6 +35,8 @@ var tree = null; // The tree control in the left-hand panel
 var paletteSelector = null; // Pop-up panel for selecting a new palette
 var paletteName = null; // Name of the currently-selected palette
 
+var popups = []; // Pop-ups (GetFeatureInfo results) shown on the map
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -350,7 +352,18 @@ function getFeatureInfo(e)
     // projection...
     if (ncwms != null && ncwms.maxExtent.containsLonLat(lonLat))
     {
-        $('featureInfo').innerHTML = "Getting feature info...";
+        // Immediately load popup saying "loading"
+        var tempPopup = new OpenLayers.Popup (
+            "temp", // TODO: does this need to be unique?
+            lonLat,
+            new OpenLayers.Size(100, 50),
+            "Loading...",
+            true, // Means "add a close box"
+            null  // Do nothing when popup is closed.
+        );
+        tempPopup.autoSize = true;
+        map.addPopup(tempPopup);
+        
         var params = {
             REQUEST: "GetFeatureInfo",
             BBOX: map.getExtent().toBBOX(),
@@ -369,44 +382,65 @@ function getFeatureInfo(e)
             params,
             'wms' // We must always load from the home server
         );
-        OpenLayers.loadURL(featureInfoUrl, '', this, gotFeatureInfo);
-        Event.stop(e);
-    }
-}
-
-// Called when we have received some feature info
-function gotFeatureInfo(response)
-{
-    var xmldoc = response.responseXML;
-    var lon = xmldoc.getElementsByTagName('longitude')[0];
-    var lat = xmldoc.getElementsByTagName('latitude')[0];
-    var val = xmldoc.getElementsByTagName('value')[0];
-    if (lon) {
-        $('featureInfo').innerHTML = "<b>Lon:</b> " + lon.firstChild.nodeValue + 
-            "&nbsp;&nbsp;<b>Lat:</b> " + lat.firstChild.nodeValue + "&nbsp;&nbsp;<b>Value:</b> " +
-            toNSigFigs(parseFloat(val.firstChild.nodeValue), 4);
-        if (timeSeriesSelected()) {
-            // Construct a GetFeatureInfo request for the timeseries plot
-            // Get a URL for a WMS request that covers the current map extent
-            var urlEls = featureInfoUrl.split('&');
-            // Replace the parameters as needed.  We generate a map that is half the
-            // width and height of the viewport, otherwise it takes too long
-            var newURL = urlEls[0];
-            for (var i = 1; i < urlEls.length; i++) {
-                if (urlEls[i].startsWith('TIME=')) {
-                    newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
-                } else if (urlEls[i].startsWith('INFO_FORMAT')) {
-                    newURL += '&INFO_FORMAT=image/png';
-                } else {
-                    newURL += '&' + urlEls[i];
+        // Now make the call to GetFeatureInfo
+        OpenLayers.loadURL(featureInfoUrl, '', this, function(response) {
+            var xmldoc = response.responseXML;
+            var lon = parseFloat(xmldoc.getElementsByTagName('longitude')[0].firstChild.nodeValue);
+            var lat = parseFloat(xmldoc.getElementsByTagName('latitude')[0].firstChild.nodeValue);
+            var val = parseFloat(xmldoc.getElementsByTagName('value')[0].firstChild.nodeValue);
+            var html = "";
+            if (lon) {
+                // We have a successful result
+                var truncVal = toNSigFigs(val, 4);
+                html = "<b>Lon:</b> " + lon + "<br /><b>Lat:</b> " + lat +
+                    "<br /><b>Value:</b> " + truncVal + "<br />"
+                // Add links to alter colour scale min/max
+                html += "<a href='#' onclick=setColourScaleMin(" + val + ") " +
+                    "title='Sets the minimum of the colour scale to " + truncVal + "'>" +
+                    "Set colour min</a><br />";
+                html += "<a href='#' onclick=setColourScaleMax(" + val + ") " +
+                    "title='Sets the maximum of the colour scale to " + truncVal + "'>" +
+                    "Set colour max</a>";
+                if (timeSeriesSelected()) {
+                    // Construct a GetFeatureInfo request for the timeseries plot
+                    // Get a URL for a WMS request that covers the current map extent
+                    var urlEls = featureInfoUrl.split('&');
+                    // Replace the parameters as needed.  We generate a map that is half the
+                    // width and height of the viewport, otherwise it takes too long
+                    var newURL = urlEls[0];
+                    for (var i = 1; i < urlEls.length; i++) {
+                        if (urlEls[i].startsWith('TIME=')) {
+                            newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+                        } else if (urlEls[i].startsWith('INFO_FORMAT')) {
+                            newURL += '&INFO_FORMAT=image/png';
+                        } else {
+                            newURL += '&' + urlEls[i];
+                        }
+                    }
+                    // Image will be 400x300, need to allow a little elbow room
+                    html += "<br /><a href='#' onclick=popUp('"
+                        + newURL + "',450,350) title='Creates a plot of the value"
+                        + " at this point over the selected time range'>Create timeseries plot</a>";
                 }
+            } else {
+                html = "Can't get feature info data for this layer <a href='javascript:popUp('whynot.html', 200, 200)'>(why not?)</a>";
             }
-            // Image will be 400x300, need to allow a little elbow room
-            $('featureInfo').innerHTML += "&nbsp;&nbsp;<a href='#' onclick=popUp('"
-                + newURL + "',450,350)>Create timeseries plot</a>";
-        }
-    } else {
-        $('featureInfo').innerHTML = "Can't get feature info data for this layer <a href=\"javascript:popUp('whynot.html', 200, 200)\">(why not?)</a>";
+            // Remove the "Loading..." popup
+            map.removePopup(tempPopup);
+            // Show the result in a popup
+            var popup = new OpenLayers.Popup (
+                "id", // TODO: does this need to be unique?
+                lonLat,
+                new OpenLayers.Size(100, 50),
+                html,
+                true, // Means "add a close box"
+                null  // Do nothing when popup is closed.
+            );
+            popup.autoSize = true;
+            popups.push(popup);
+            map.addPopup(popup);
+        });
+        Event.stop(e);
     }
 }
 
@@ -418,10 +452,19 @@ function popUp(url, width, height)
         + width + ',height=' + height + ',left = 300,top = 300');
 }
 
+// Clear the popups
+function clearPopups() {
+    for (var i = 0; i < popups.length; i++) {
+        map.removePopup(popups[i]);
+    }
+    popups.clear();
+}
+
 // Called when the user clicks on the name of a displayable layer in the left-hand menu
 // Gets the details (units, grid etc) of the given layer. 
 function layerSelected(layerDetails)
 {
+    clearPopups();
     activeLayer = layerDetails;
     gotScaleRange = false;
     resetAnimation();
@@ -636,6 +679,20 @@ function updateTimesteps(times)
     }
 }
 
+// Sets the minimum value of the colour scale
+function setColourScaleMin(scaleMin)
+{
+    $('scaleMin').value = scaleMin;
+    validateScale(); // This calls updateMap()
+}
+
+// Sets the minimum value of the colour scale
+function setColourScaleMax(scaleMax)
+{
+    $('scaleMax').value = scaleMax;
+    validateScale(); // This calls updateMap()
+}
+
 // Calls the WMS to find the min and max data values, then rescales.
 // If this is a newly-selected variable the method gets the min and max values
 // for the whole layer.  If not, this gets the min and max values for the viewport.
@@ -770,7 +827,6 @@ function createAnimation()
             newURL += '&' + urlEls[i];
         }
     }
-    $('featureInfo').style.visibility = 'hidden';
     $('autoZoom').style.visibility = 'hidden';
     $('hideAnimation').style.visibility = 'visible';
     // We show the "please wait" image then immediately load the animation
@@ -816,7 +872,6 @@ function animationLoaded()
 function hideAnimation()
 {
     setVisibleLayer(false);
-    $('featureInfo').style.visibility = 'visible';
     $('autoZoom').style.visibility = 'visible';
     $('hideAnimation').style.visibility = 'hidden';
     $('mapOverlayDiv').style.visibility = 'hidden';
@@ -825,7 +880,7 @@ function hideAnimation()
 // Called when the user changes the base layer
 function baseLayerChanged(event)
 {
-    //alert("new base layer");
+    clearPopups();
     // Change the parameters of the map based on the new base layer
     map.setOptions({
        //projection: projCode,
@@ -932,9 +987,6 @@ function updateMap()
         ncwms.url = activeLayer.server == '' ? 'wms' : activeLayer.server;
         ncwms.mergeNewParams(params);
     }
-    
-    $('featureInfo').innerHTML = "Click on the map to get more information";
-    $('featureInfo').style.visibility = 'visible';
     
     var imageURL = ncwms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
     $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">link to test image</a>';
