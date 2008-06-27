@@ -101,6 +101,7 @@ public class NemoDataReader extends DefaultDataReader
             // Now build the picture array
             nc = getDataset(filename);
             Variable var = nc.findVariable(layer.getId());
+            logger.debug("Is var object for layer {} null? {}", layer.getId(), var == null);
             
             float scaleFactor = 1.0f;
             float addOffset = 0.0f;

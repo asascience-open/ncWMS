@@ -75,6 +75,7 @@ public abstract class HorizontalProjection
                 // (Thanks to Marcos Hermida of Meteogalicia for helping to
                 // sort out thread safety issues here.)
                 // Apparently ProjectionImpls are not always thread-safe.
+                // TODO: is this a source of inefficiency?
                 synchronized(proj)
                 {
                     // We need to create a new object each time because
