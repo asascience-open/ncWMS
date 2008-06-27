@@ -20,7 +20,7 @@ OpenLayers.Layer.WMS1_1_1 = OpenLayers.Class(OpenLayers.Layer.WMS, {
                      },
     
     wrapDateLine: true,
-    transitionEffect: 'resize',
+    //transitionEffect: 'resize', // Seems to cause strange behaviour sometimes
     srsKey: 'SRS', // Can be overridden by subclasses
     
     /*
