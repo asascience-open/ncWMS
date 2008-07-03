@@ -30,11 +30,9 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -74,13 +72,6 @@ public class NSIDCSnowWaterDataReader extends DataReader
      */
     private static final double CELL_KM = 25.067525;
     
-    private static FilenameFilter FILENAME_FILTER = new FilenameFilter()
-    {
-        public boolean accept(File dir, String name)
-        {
-            return name.endsWith(".v01.NSIDC8");
-        }
-    };
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("'NL'yyyyMM'.v01.NSIDC8'");
     
     /**
@@ -95,35 +86,32 @@ public class NSIDCSnowWaterDataReader extends DataReader
     protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException
     {
-        LayerImpl layer = new LayerImpl();
-        layer.setId("swe");
-        layer.setTitle("snow_water_equivalent");
-        layer.setUnits("mm");
-        layer.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
+        // Look for this layer in the list
+        LayerImpl layer = layers.get("swe");
+        if (layer == null)
+        {
+            layer = new LayerImpl();
+            layer.setId("swe");
+            layer.setTitle("snow_water_equivalent");
+            layer.setUnits("mm");
+            layer.setBbox(new double[]{-180.0, 0.0, 180.0, 90.0});
+        }
         
+        String filename = new File(location).getName();
+        Date timestep;
         try
         {
-            String filename = new File(location).getName();
-            Date timestep = DATE_FORMAT.parse(filename);
-            layer.addTimestepInfo(new TimestepInfo(timestep, location, 0));
+            timestep = DATE_FORMAT.parse(filename);
         }
-        catch(ParseException pe)
+        catch(Exception e)
         {
-            logger.error("Error parsing filepath " + location, pe);
+            logger.error("Error parsing filepath " + location, e);
             // TODO: not really an IOException
             throw new IOException("Error parsing filepath " + location);
         }
+        layer.addTimestepInfo(new TimestepInfo(timestep, location, 0));
         
         layers.put(layer.getId(), layer);
-    }
-    
-    /**
-     * @return a list of filenames containing the data
-     */
-    private static String[] getFilenames(String location)
-    {
-        File dir = new File(location);
-        return dir.list(FILENAME_FILTER);
     }
     
     /**
