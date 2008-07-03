@@ -729,14 +729,32 @@ public class WmsController extends AbstractController
             // the colour scale range and the layer in question
             String layerName = params.getMandatoryString("layer");
             Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
-            float[] colourScaleRange = GetMapStyleRequest.getColourScaleRange(params);
+            ColorScaleRange colorScaleRange = GetMapStyleRequest.getColorScaleRange(params);
             boolean logarithmic = GetMapStyleRequest.isLogScale(params);
+            float scaleMin;
+            float scaleMax;
+            if (colorScaleRange.isDefault())
+            {
+                scaleMin = layer.getScaleMin();
+                scaleMax = layer.getScaleMax();
+            }
+            else if (colorScaleRange.isAuto())
+            {
+                throw new WmsException("Cannot automatically create a colour scale "
+                    + "for a legend graphic.  Use COLORSCALERANGE=default or specify "
+                    + "the scale extremes explicitly.");
+            }
+            else
+            {
+                scaleMin = colorScaleRange.getScaleMin();
+                scaleMax = colorScaleRange.getScaleMax();
+            }
             // Get the legend graphic and write it to the client
             // The scale range will be [0,0] if the client has not specified one
             // explicitly.  In this case createLegend() will use the layer's
             // default scale range.
             legend = palette.createLegend(numColourBands, layer,
-                logarithmic, colourScaleRange[0], colourScaleRange[1]);
+                logarithmic, scaleMin, scaleMax);
         }
         httpServletResponse.setContentType("image/png");
         ImageIO.write(legend, "png", httpServletResponse.getOutputStream());

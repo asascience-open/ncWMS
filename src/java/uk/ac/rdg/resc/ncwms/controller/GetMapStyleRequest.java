@@ -51,8 +51,7 @@ public class GetMapStyleRequest
     private boolean logarithmic; // True if we're using a log scale
     // These are the data values that correspond with the extremes of the
     // colour scale
-    private float colourScaleMin = 0.0f;
-    private float colourScaleMax = 0.0f;
+    private ColorScaleRange colorScaleRange;
     
     /**
      * Creates a new instance of GetMapStyleRequest from the given parameters
@@ -88,51 +87,17 @@ public class GetMapStyleRequest
         this.opacity = params.getPositiveInt("opacity", 100);
         if (this.opacity > 100) this.opacity = 100;
         
-        float[] colourScale = getColourScaleRange(params);
-        if (colourScale != null)
-        {
-            this.colourScaleMin = colourScale[0];
-            this.colourScaleMax = colourScale[1];
-        }
-        
+        this.colorScaleRange = getColorScaleRange(params);
         this.numColourBands = getNumColourBands(params);
-        
         this.logarithmic = isLogScale(params);
     }
     
     /**
-     * Gets the requested colour scale range as a pair of floats, [min,max]
-     * @param params The request parameters from the client
-     * @return an array of two floats ([min,max]).  If the colour scale range
-     * hasn't been set this returns an array of two zero-value floats
-     * @throws WmsException if the format of the scale range is invalid
+     * Gets the ColorScaleRange object requested by the client
      */
-    static float[] getColourScaleRange(RequestParams params)
-        throws WmsException
+    static ColorScaleRange getColorScaleRange(RequestParams params) throws WmsException
     {
-        String scaleStr = params.getString("colorscalerange");
-        if (scaleStr == null)
-        {
-            return new float[]{0.0f, 0.0f};
-        }
-        else
-        {
-            try
-            {
-                String[] scaleEls = scaleStr.split(",");
-                if (scaleEls.length != 2) throw new Exception();
-                float[] scale = new float[]{
-                    Float.parseFloat(scaleEls[0]),
-                    Float.parseFloat(scaleEls[1])
-                };
-                if (scale[0] > scale[1]) throw new Exception();
-                return scale;
-            }
-            catch(Exception e)
-            {
-                throw new WmsException("Invalid format for COLORSCALERANGE");
-            }
-        }
+        return new ColorScaleRange(params.getString("colorscalerange"));
     }
 
     /**
@@ -197,14 +162,9 @@ public class GetMapStyleRequest
         return opacity;
     }
 
-    public float getColourScaleMin()
+    public ColorScaleRange getColorScaleRange()
     {
-        return colourScaleMin;
-    }
-
-    public float getColourScaleMax()
-    {
-        return colourScaleMax;
+        return this.colorScaleRange;
     }
 
     public int getNumColourBands()

@@ -42,6 +42,7 @@ import java.awt.image.WritableRaster;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import uk.ac.rdg.resc.ncwms.controller.ColorScaleRange;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapStyleRequest;
@@ -72,7 +73,7 @@ public final class ImageProducer
     private Color bgColor;
     private ColorPalette colorPalette;
     
-    // Scale range of the picture
+    // Colour scale range of the picture
     private float scaleMin;
     private float scaleMax;
     
@@ -139,8 +140,25 @@ public final class ImageProducer
         this.transparent = styleRequest.isTransparent();
         this.bgColor = styleRequest.getBackgroundColour();
         this.opacity = styleRequest.getOpacity();
-        this.scaleMin = styleRequest.getColourScaleMin();
-        this.scaleMax = styleRequest.getColourScaleMax();
+        ColorScaleRange colorScaleRange = styleRequest.getColorScaleRange();
+        if (colorScaleRange.isDefault())
+        {
+            // Use the layer's default range
+            this.scaleMin = layer.getScaleMin();
+            this.scaleMax = layer.getScaleMax();
+        }
+        else if (colorScaleRange.isAuto())
+        {
+            this.scaleMin = 0.0f; // Setting both to zero is the signal to 
+            this.scaleMax = 0.0f; // generate a colour scale that maximizes the
+                                  // contrast of the image.  see isAutoScale()
+        }
+        else
+        {
+            // Use the range as specified by the user
+            this.scaleMin = colorScaleRange.getScaleMin();
+            this.scaleMax = colorScaleRange.getScaleMax();
+        }
         this.logarithmic = styleRequest.isScaleLogarithmic();
         this.picWidth = dataRequest.getWidth();
         this.picHeight = dataRequest.getHeight();
@@ -207,7 +225,7 @@ public final class ImageProducer
         float[] magnitudes = getMagnitude(data);
         for (int i = 0; i < pixels.length; i++)
         {
-            pixels[i] = (byte)getColourIndex(magnitudes[i]);
+            pixels[i] = (byte)this.getColourIndex(magnitudes[i]);
         }
         
         // Create a ColorModel for the image
@@ -222,7 +240,7 @@ public final class ImageProducer
         BufferedImage image = new BufferedImage(colorModel, raster, false, null);
         
         // Add the label to the image
-        // TODO: needs to change with different palettes!
+        // TODO: colour needs to change with different palettes!
         if (label != null && !label.equals(""))
         {
             Graphics2D gfx = (Graphics2D)image.getGraphics();
@@ -238,7 +256,7 @@ public final class ImageProducer
             Graphics2D g = image.createGraphics();
             // TODO: control the colour of the arrows with an attribute
             // Must be part of the colour palette (here we use the colour
-            // for out-of-range values
+            // for out-of-range values)
             g.setColor(Color.BLACK);
 
             logger.debug("Drawing vectors, length = {} pixels", this.arrowLength);

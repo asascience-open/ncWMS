@@ -211,12 +211,16 @@ public class MetadataController
     {
         Layer layer = this.getLayer(request);
         usageLogEntry.setLayer(layer);
+        
+        // Find the time the user has requested (this is the time that is
+        // currently displayed on the Godiva2 site).  If not time has been
+        // specified we use the current time
+        long targetTimeMs = System.currentTimeMillis();
         String targetDateIso = request.getParameter("time");
-        if (targetDateIso == null || targetDateIso.trim().equals(""))
+        if (targetDateIso != null && !targetDateIso.trim().equals(""))
         {
-            throw new Exception("Must provide a value for the time parameter");
+            targetTimeMs = WmsUtils.iso8601ToDate(targetDateIso).getTime();
         }
-        long targetTimeMs = WmsUtils.iso8601ToDate(targetDateIso).getTime();
         
         Map<Integer, Map<Integer, List<Integer>>> datesWithData =
             new HashMap<Integer, Map<Integer, List<Integer>>>();
@@ -396,7 +400,8 @@ public class MetadataController
      * @param usageLogEntry a UsageLogEntry that is used to collect information
      * about the usage of this WMS (may be null, if this method is called from
      * the MetadataLoader).
-     * @return Array of two floats: [min, max]
+     * @return Array of two floats: [min, max], or [NaN, NaN] if all values
+     * in the grid are missing
      * @throws Exception if there was an error reading the data
      */
     public static float[] findMinMax(Layer layer, int tIndex, int zIndex,
@@ -409,22 +414,20 @@ public class MetadataController
             grid, null, usageLogEntry);
         
         // Now find the minimum and maximum values: for a vector this is the magnitude
-        boolean allFillValue = true;
-        float min = Float.MAX_VALUE;
-        float max = -Float.MAX_VALUE;
+        float min = Float.NaN;
+        float max = Float.NaN;
         for (int i = 0; i < picData.get(0).length; i++)
         {
             float val = picData.get(0)[i];
             if (!Float.isNaN(val))
             {
-                allFillValue = false;
                 if (picData.size() == 2)
                 {
                     // This is a vector quantity: calculate the magnitude
                     val = (float)Math.sqrt(val * val + picData.get(1)[i] * picData.get(1)[i]);
                 }
-                if (val < min) min = val;
-                if (val > max) max = val;
+                if (Float.isNaN(min) || val < min) min = val;
+                if (Float.isNaN(max) || val > max) max = val;
             }
         }
         return new float[]{min, max};

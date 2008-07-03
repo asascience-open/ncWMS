@@ -218,11 +218,9 @@ public class ColorPalette
      * @param layer Layer for which the legend is being created
      * @param logarithmic True if the scale is to be logarithmic: otherwise linear
      * @param colourScaleMin Data value corresponding to the bottom of the colour
-     * scale.  If both this and colourScaleMax are zero then the default scale
-     * range for the layer is used.
+     * scale.
      * @param colourScaleMax Data value corresponding to the top of the colour
-     * scale.  If both this and colourScaleMin are zero then the default scale
-     * range for the layer is used.
+     * scale.
      * @return a BufferedImage object representing the legend.  This has a fixed
      * size (110 pixels wide, 264 pixels high)
      * @throws IllegalArgumentException if the requested number of colour bands
@@ -243,12 +241,6 @@ public class ColorPalette
         // Draw the text items
         gfx.setColor(Color.WHITE);
         // Add the scale values
-        // Test to see if we are auto-scaling
-        if (colourScaleMin == 0.0f && colourScaleMax == 0.0f)
-        {
-            colourScaleMin = layer.getScaleMin();
-            colourScaleMax = layer.getScaleMax();
-        }
         double min = logarithmic ? Math.log(colourScaleMin) : colourScaleMin;
         double max = logarithmic ? Math.log(colourScaleMax) : colourScaleMax;
         double quarter = 0.25 * (max - min);
