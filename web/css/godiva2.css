@@ -95,7 +95,7 @@ div.map {
     top: 25px;
     width: 512px;
     height: 400px;
-    z-index: -1; /* Ensure pop-ups appear above the map! */
+    z-index: 0; /* Ensure pop-ups appear above the map! */
 }
 
 #mapOverlayDiv {
