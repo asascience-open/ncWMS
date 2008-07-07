@@ -49,45 +49,120 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.ECOOP_TEST_CYPRUS}"/>
     </menu:folder>
 
-     <menu:folder label="Ocean Syntheses">
+     <menu:folder label="Ocean Hindcasts">
          <menu:dataset dataset="${datasets.CLIVAR_NASA_JPL_ECCO}"/>
          <menu:dataset dataset="${datasets.CLIVAR_SODA_POP}"/>
-         <menu:folder label="NEMO 1 degree global model control run">
-             <menu:dataset dataset="${datasets.ORCA1_R70_MONTHLY}" label="Monthly means"/>
-             <menu:dataset dataset="${datasets.ORCA1_R70_SEASONAL}" label="Seasonal means"/>
-             <menu:dataset dataset="${datasets.ORCA1_R70_ANNUAL}" label="Annual means"/>
+	
+	  <menu:folder label="With data assimilation">
+ 	  <menu:folder label="DRAKKAR 1/4 degree global S(T) reanalysis (ORCA025-R07)">
+         		<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day}" label="5 day means"/>
+		    	<menu:folder label="Monthly means">
+             			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_v}" label="V-GRID"/>
+       	    	</menu:folder>
+
+		    	<menu:folder label="Seasonal means">
+             			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_SEASONAL_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_SEASONAL_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_SEASONAL_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_SEASONAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+
+		    	<menu:folder label="Annual means">
+             			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+           	</menu:folder>
          </menu:folder>
-         <menu:folder label="NEMO 1/4 degree global model with T level assimilation">
-             <menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL}" label="Annual means"/>
+
+	  <menu:folder label="Without data assimilation">
+      	  	<menu:folder label="DRAKKAR 1 degree global model (ORCA1-R70)">
+     			<menu:dataset dataset="${datasets.ORCA1_R70_MONTHLY}" label="Monthly means"/>
+     			<menu:dataset dataset="${datasets.ORCA1_R70_SEASONAL}" label="Seasonal means"/>
+		    	<menu:folder label="Annual means">
+             			<menu:dataset dataset="${datasets.ORCA1_R70_ANNUAL_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA1_R70_ANNUAL_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA1_R70_ANNUAL_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA1_R70_ANNUAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+           	</menu:folder>
+
+      		<menu:folder label="DRAKKAR 1/4 degree global model (ORCA025-G70)">
+		    	<menu:folder label="Monthly means">
+             			<menu:dataset dataset="${datasets.ORCA025_G70_MONTHLY_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_G70_MONTHLY_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_G70_MONTHLY_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_G70_MONTHLY_v}" label="V-GRID"/>
+       	    	</menu:folder>
+
+		    	<menu:folder label="Seasonal means">
+         			<menu:dataset dataset="${datasets.ORCA025_G70_SEASONAL_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_G70_SEASONAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+
+		    	<menu:folder label="Annual means">
+           			<menu:dataset dataset="${datasets.ORCA025_G70_ANNUAL_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_G70_ANNUAL_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_G70_ANNUAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+     		</menu:folder>
          </menu:folder>
      </menu:folder>
+   
 
      <menu:folder label="Observations">
+         <menu:folder label="Ocean">
+         <menu:folder label="GODAE SST analyses">
+            <menu:dataset dataset="${datasets.OSTIA}" label="OSTIA (UKMO)"/>
+            <menu:dataset dataset="${datasets.EUR_ODYSSEA}" label="ODYSSEA (FR)"/>
+            <menu:dataset dataset="${datasets.NAVO_SST}" label="NAVO (US Navy)"/>
+            <menu:dataset dataset="${datasets.NCDC_AVHRR_AMSR_OI}" label="NCDC (Reynolds)"/>
+            <menu:dataset dataset="${datasets.REMSS_mw_ir_OI}" label="RemSS (Remote Sens. Sys.)"/>
+         </menu:folder>
          <menu:dataset dataset="${datasets.MERSEA_CORIOLIS_SAL}"/>
          <menu:dataset dataset="${datasets.MERSEA_CORIOLIS_TEMP}"/>
          <menu:dataset dataset="${datasets.MERSEA_CNR_SST}"/>
          <menu:dataset dataset="${datasets.OSTIA_OLD}"/>
          <menu:dataset dataset="${datasets.OSTIA}"/>
          <menu:dataset dataset="${datasets.MERSEA_NRTSLA}"/>
-         <menu:dataset dataset="${datasets.TEST_OZONE}"/>
+         </menu:folder>
+         <menu:folder label="Atmosphere">
+             <menu:dataset dataset="${datasets.TEST_OZONE}"/>
+         </menu:folder>
+         <menu:folder label="Land surface">
+             <menu:dataset dataset="${datasets.NSIDC}"/>
+             <menu:dataset dataset="${datasets.NSIDC_STDEV}"/>
+         </menu:folder>
      </menu:folder>
 
      <menu:folder label="Other">
-         <menu:folder label="DRAKKAR">
-             <menu:dataset dataset="${datasets.ORCA025_G70_ANNUAL}" label="Annual means"/>
-             <menu:dataset dataset="${datasets.ORCA025_G70_MONTHLY}" label="Monthly means"/>
-         </menu:folder>
+         <menu:dataset dataset="${datasets.GLOBMODEL}"/>
          <menu:dataset dataset="${datasets.GENIE}"/>
          <menu:dataset dataset="${datasets.HadCEM}"/>
          <menu:dataset dataset="${datasets.USGS_ADRIATIC_SED038}"/>
          <menu:folder label="MarQuest">
          	<menu:dataset dataset="${datasets.SEAW4}"/>
-               	<menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_GRIDT}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_GRIDT}"/>
         	<menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_A_GRID}"/>  
-                <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_PHYSICS}"/>
-                <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_BIO}"/>
-                <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_PHYSICS}"/>
-                <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_PHYSICS}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_DIAG}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_PHYSICS}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_BIO}"/>
+ 	      <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_DIAG}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_PHYSICS}"/>
+              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_BIOLOGY}"/>
+ 	      <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_DIAGNOSTICS}"/>
+              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_PHYS}"/>  
+              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_DIAD}"/>
+              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_PHYS}"/>  
+              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_DIAD}"/>
  	   </menu:folder>
       </menu:folder>
 
