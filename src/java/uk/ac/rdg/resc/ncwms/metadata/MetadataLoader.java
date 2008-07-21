@@ -163,7 +163,7 @@ public class MetadataLoader
             // Look for OPeNDAP datasets and update the credentials provider accordingly
             this.updateCredentialsProvider(ds);
             // Read the metadata
-            Map<String, LayerImpl> layers = dr.getAllLayers(ds);
+            Map<String, LayerImpl> layers = dr.getAllLayers(ds.getLocation());
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);

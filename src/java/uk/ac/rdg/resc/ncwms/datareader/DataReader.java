@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.oro.io.GlobFilenameFilter;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -118,31 +117,32 @@ public abstract class DataReader
     /**
      * Reads and returns the metadata for all the layers (i.e. variables) in the
      * given {@link Dataset}.
-     * @param ds Object describing the Dataset to which the layer belongs
+     * @param location Location of the dataset's files, as set in the admin
+     * application
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws Exception if there was an error reading from the data source
      */
-    public Map<String, LayerImpl> getAllLayers(Dataset ds)
+    public Map<String, LayerImpl> getAllLayers(String location)
         throws Exception
     {
         // A list of names of files resulting from glob expansion
         List<String> filenames = new ArrayList<String>();
-        if (WmsUtils.isOpendapLocation(ds.getLocation()))
+        if (WmsUtils.isOpendapLocation(location))
         {
             // We don't do the glob expansion
-            filenames.add(ds.getLocation());
+            filenames.add(location);
         }
         else
         {
             // Add all the matching filenames
-            for (File f : globFiles(ds.getLocation()))
+            for (File f : globFiles(location))
             {
                 filenames.add(f.getPath());
             }
         }
         if (filenames.size() == 0)
         {
-            throw new Exception(ds.getLocation() + " does not match any files");
+            throw new Exception(location + " does not match any files");
         }
         // Now extract the data for each individual file
         Map<String, LayerImpl> layers = new HashMap<String, LayerImpl>();
