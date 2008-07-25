@@ -172,7 +172,7 @@ public abstract class DataReader
     /**
      * Finds all files (and, optionally, directories, etc) matching
      * a glob pattern.  This method recursively searches directories, allowing
-     * for glob expressions like &quot;c:\\data\\200[6-7]\\*\\1*\\A*.nc&quot;.
+     * for glob expressions like {@code "c:\\data\\200[6-7]\\*\\1*\\A*.nc"}.
      * @param globExpression The glob expression
      * @return List of File objects matching the glob pattern.  This will never
      * be null but might be empty

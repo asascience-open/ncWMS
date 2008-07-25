@@ -84,7 +84,7 @@ public class Dataset
     @Attribute(name="updateInterval", required=false)
     private int updateInterval = -1; // The update interval in minutes. -1 means "never update automatically"
     
-    private State state;     // State of this dataset.  Will be set in Config.build()
+    private State state;     // State of this dataset.  Will be set in Config.readConfig()
     
     private Exception err;   // Set if there is an error loading the dataset
     private Config config;   // The Config object to which this belongs

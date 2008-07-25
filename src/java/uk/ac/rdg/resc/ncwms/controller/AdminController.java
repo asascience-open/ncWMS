@@ -28,9 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -143,17 +142,15 @@ public class AdminController extends MultiActionController
 
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.
-            List<Dataset> datasetsToRemove = new ArrayList<Dataset>();
             // Keeps track of dataset IDs that have been changed
             Map<String, String> changedIds = new HashMap<String, String>();
-            for (Dataset ds : this.config.getDatasets().values())
+            for (Iterator<Dataset> it = this.config.getDatasets().values().iterator(); it.hasNext(); )
             {
+                Dataset ds = it.next();
                 boolean refreshDataset = false;
                 if (request.getParameter("dataset." + ds.getId() + ".remove") != null)
                 {
-                    // We don't do the actual removal here because we get a
-                    // ConcurrentModificationException for the hashmap
-                    datasetsToRemove.add(ds);
+                    it.remove();
                 }
                 else
                 {
@@ -170,7 +167,13 @@ public class AdminController extends MultiActionController
                         refreshDataset = true;
                     }
                     ds.setDataReaderClass(newDataReaderClass);
-                    ds.setDisabled(request.getParameter("dataset." + ds.getId() + ".disabled") != null);
+                    boolean disabled = request.getParameter("dataset." + ds.getId() + ".disabled") != null;
+                    if (disabled == false && ds.isDisabled())
+                    {
+                        // We've re-enabled the dataset so need to reload it
+                        refreshDataset = true;
+                    }
+                    ds.setDisabled(disabled);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
                     ds.setCopyrightStatement(request.getParameter("dataset." + ds.getId() + ".copyright"));
@@ -192,11 +195,6 @@ public class AdminController extends MultiActionController
                 {
                     this.metadataLoader.forceReloadMetadata(ds);
                 }
-            }
-            // Now we can remove the datasets
-            for (Dataset ds : datasetsToRemove)
-            {
-                config.removeDataset(ds);
             }
             // Now we change the ids of the relevant datasets
             for (String oldId : changedIds.keySet())

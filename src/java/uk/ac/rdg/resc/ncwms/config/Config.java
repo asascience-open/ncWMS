@@ -355,10 +355,7 @@ public class Config implements ApplicationContextAware
      */
     public static String checkEmpty(String s)
     {
-        if (s == null)
-        {
-            return " ";
-        }
+        if (s == null) return " ";
         s = s.trim();
         return s.equals("") ? " " : s;
     }

@@ -138,7 +138,7 @@ window.onload = function()
     
     map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
     
-    map.setBaseLayer(demis_wms); // Metacarta WMS seems unreliable at the moment
+    map.setBaseLayer(bluemarble_wms);
     
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed

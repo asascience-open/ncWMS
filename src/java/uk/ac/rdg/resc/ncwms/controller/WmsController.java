@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.awt.Font;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -671,33 +672,34 @@ public class WmsController extends AbstractController
         else
         {
             // Must be PNG format: prepare and output the JFreeChart
-            // TODO: this is nasty: we're mixing presentation code in the controller
-            TimeSeries ts = new TimeSeries("Data", Millisecond.class);
-            for (Date date : featureData.keySet())
-            {
-                ts.add(new Millisecond(date), featureData.get(date));
-            }
-            TimeSeriesCollection xydataset = new TimeSeriesCollection();
-            xydataset.addSeries(ts);
-            
-            // Create a chart with no legend, tooltips or URLs
-            String title = "Lon: " + latLon.getLongitude() + ", Lat: " + latLon.getLatitude();
-            String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
-            JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
-                "Date / time", yLabel, xydataset, false, false, false);
-            
-            // Lines added by Dave Crossman: allows a single point to be plotted
-            // on a line chart
+           // TODO: this is nasty: we're mixing presentation code in the controller
+           TimeSeries ts = new TimeSeries("Data", Millisecond.class);
+           for (Date date : featureData.keySet())
+           {
+               ts.add(new Millisecond(date), featureData.get(date));
+           }
+           TimeSeriesCollection xydataset = new TimeSeriesCollection();
+           xydataset.addSeries(ts);
+
+           // Create a chart with no legend, tooltips or URLs
+           String title = "Lon: " + latLon.getLongitude() + ", Lat: " +
+               latLon.getLatitude();
+           String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
+           JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
+               "Date / time", yLabel, xydataset, false, false, false);
             XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-            renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
-            renderer.setSeriesShapesVisible(0, true);
-            chart.getXYPlot().setRenderer(renderer);
-            
-            httpServletResponse.setContentType("image/png");
-            ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(), chart, 400, 300);
-            return null;
-        }
-    }
+           renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+           renderer.setSeriesShapesVisible(0, true);
+           chart.getXYPlot().setRenderer(renderer);
+           chart.getXYPlot().setNoDataMessage("There is no data for your choice");
+           chart.getXYPlot().setNoDataMessageFont(new Font("sansserif", Font.BOLD, 32));
+           httpServletResponse.setContentType("image/png");
+
+            ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(),
+                chart, 400, 300);
+           return null;
+       }
+   }
 
     /**
      * Creates and returns a PNG image with the colour scale and range for 
