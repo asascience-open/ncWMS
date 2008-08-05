@@ -227,7 +227,9 @@ public abstract class DataReader
                 {
                     // Workaround for automounters that don't make filesystems
                     // appear unless they're poked
-                    dir.list();
+                    // do a listing on searchpath/pathcomponent whether or not
+                    // it exists, then discard the results
+                    new File(dir, pathComponents.get(i)).list();
                     
                     for (File match : dir.listFiles(globFilter))
                     {
