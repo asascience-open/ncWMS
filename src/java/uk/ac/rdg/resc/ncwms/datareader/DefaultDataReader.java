@@ -240,7 +240,6 @@ public class DefaultDataReader extends DataReader
             for (int i : pixelMap.getIIndices(j))
             {
                 float val = dataChunk.getValue(i - imin);
-                if (picData.length == 100) logger.debug("val = {}", val);
                 // We unpack and check for missing values just for
                 // the points we need to display.
                 val = (float)enhanced.convertScaleOffsetMissing(val);

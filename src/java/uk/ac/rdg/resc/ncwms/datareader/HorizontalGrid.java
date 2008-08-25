@@ -179,7 +179,7 @@ public class HorizontalGrid
     }
 
     /**
-     * @return a new array of points along the x axis in this coordinate
+     * @return array of points along the x axis in this coordinate
      * reference system
      */
     public double[] getXAxisValues()
@@ -188,7 +188,8 @@ public class HorizontalGrid
     }
 
     /**
-     * @return a new array of points along the latitude axis
+     * @return array of points along the y axis in this coordinate
+     * reference system
      */
     public double[] getYAxisValues()
     {

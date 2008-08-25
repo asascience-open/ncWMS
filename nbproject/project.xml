@@ -95,10 +95,6 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="1">
-                    <file>${file.reference.collections-generic-4.01.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="1">
                     <file>${file.reference.jsr108-0.01.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>

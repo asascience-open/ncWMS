@@ -31,9 +31,9 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections15.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
@@ -97,9 +97,9 @@ public class Config implements ApplicationContextAware
     
     /**
      * This contains the map of dataset IDs to Dataset objects.  We use a 
-     * ListOrderedMap so that the order of datasets in the Map is preserved.
+     * LinkedHashMap so that the order of datasets in the Map is preserved.
      */
-    private Map<String, Dataset> datasets = new ListOrderedMap<String, Dataset>();
+    private Map<String, Dataset> datasets = new LinkedHashMap<String, Dataset>();
     
     /**
      * Private constructor.  This prevents other classes from creating
