@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.NetcdfDatasetCache;
+import ucar.nc2.dataset.NetcdfDataset;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
@@ -72,8 +72,9 @@ public class MetadataLoader
      */
     public void init()
     {
-        // Initialize the cache of NetcdfDatasets
-        NetcdfDatasetCache.init();
+        // Initialize the cache of NetcdfDatasets.  Hold between 50 and 1000
+        // datasets, refresh cache every 5 minutes (Are these sensible values)?
+        NetcdfDataset.initNetcdfFileCache(50, 1000, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
         
         // Now start the regular TimerTask that periodically checks to see if
@@ -392,7 +393,7 @@ public class MetadataLoader
     {
         if (this.timer != null) this.timer.cancel();
         this.config = null;
-        NetcdfDatasetCache.exit();
+        NetcdfDataset.shutdown();
         logger.info("Cleaned up MetadataLoader");
     }
 

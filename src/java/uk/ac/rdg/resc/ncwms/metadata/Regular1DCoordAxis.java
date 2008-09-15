@@ -30,9 +30,7 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.AxisType;
-import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
+import ucar.nc2.constants.AxisType;
 
 /**
  * A regular, one-dimensional coordinate axis, whose values obey the rule

@@ -33,9 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.AxisType;
-import ucar.unidata.geoloc.LatLonPoint;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
+import ucar.nc2.constants.AxisType;
 
 /**
  * A one-dimensional coordinate axis, whose values are not equally spaced.

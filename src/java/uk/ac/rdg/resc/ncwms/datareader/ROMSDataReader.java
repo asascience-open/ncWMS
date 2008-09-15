@@ -29,7 +29,7 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.IOException;
-import ucar.nc2.dataset.AxisType;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;

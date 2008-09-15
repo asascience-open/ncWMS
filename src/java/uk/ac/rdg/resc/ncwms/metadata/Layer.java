@@ -203,4 +203,10 @@ public interface Layer
      */
     public boolean supportsStyle(String styleName);
     
+    /**
+     * Return a custom object that can be attached to this layer.
+     * @return
+     */
+    public Object getAttachment();
+    
 }

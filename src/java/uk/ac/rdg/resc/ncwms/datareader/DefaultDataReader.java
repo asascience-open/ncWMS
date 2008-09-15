@@ -32,17 +32,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import thredds.catalog.DataType;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
-import ucar.nc2.dataset.CoordSysBuilder;
+import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.NetcdfDatasetCache;
-import ucar.nc2.dataset.NetcdfDatasetFactory;
+import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.VariableEnhanced;
 import ucar.nc2.dt.GridCoordSystem;
@@ -50,7 +49,6 @@ import ucar.nc2.dt.GridDataset;
 import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
-import ucar.nc2.util.CancelTask;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
@@ -72,40 +70,6 @@ public class DefaultDataReader extends DataReader
     private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
     // We'll use this logger to output performance information
     private static final Logger benchmarkLogger = Logger.getLogger("ncwms.benchmark");
-    
-    /**
-     * A {@link DatasetFactory} that is used in {#getDataset} by
-     * {@link NetcdfDataset#acquire}
-     * to open a dataset without enhancement, then add the coordinate systems.
-     * This is used so that we can read data without conversion of scale factors
-     * and missing values (makes the reading of data from disk faster).  Calculations
-     * with scale factors and missing values are then performed by explicitly
-     * creating a {@link VariableDS}.
-     * @see #read
-     */
-    private static final NetcdfDatasetFactory DATASET_FACTORY = new NetcdfDatasetFactory()
-    {
-        public NetcdfDataset openDataset(String location, int buffer_size,
-            CancelTask cancelTask, Object spiObject) throws IOException
-        {
-            NetcdfDataset nc = NetcdfDataset.openDataset(location, false,
-                buffer_size, cancelTask, spiObject);
-            CoordSysBuilder.addCoordinateSystems(nc, null);
-            return nc;
-        }
-    };
-    
-    /**
-     * Gets the {@link NetcdfDataset} at the given location, reading from the cache
-     * if possible.
-     * @throws IOException if there was an error opening the dataset
-     */
-    protected static NetcdfDataset getDataset(String location) throws IOException
-    {
-        NetcdfDataset nc = NetcdfDatasetCache.acquire(location, null, DATASET_FACTORY);
-        logger.debug("Returning NetcdfDataset at {} from cache", location);
-        return nc;
-    }
     
     /**
      * <p>Reads an array of data from a NetCDF file and projects onto the given
@@ -152,12 +116,21 @@ public class DefaultDataReader extends DataReader
             long readMetadata = System.currentTimeMillis();
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
-            // Get the dataset from the cache, without enhancing it
-            nc = getDataset(filename);
+            // Get the dataset, from the cache if possible
+            nc = NetcdfDataset.acquireDataset(
+                null, // Use the default factory
+                filename,
+                // Read the coordinate systems but don't automatically process
+                // scale/missing.offset when reading data, for efficiency reasons
+                EnumSet.of(Enhance.ScaleMissingDefer, Enhance.CoordSystems),
+                -1, // use default buffer size
+                null, // no CancelTask
+                null // no iospMessage
+            );
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
             // Get a GridDataset object, since we know this is a grid
-            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID, nc, null, null);
             
             logger.debug("Getting GeoGrid with id {}", layer.getId());
             GridDatatype gridData = gd.findGridDatatype(layer.getId());
@@ -167,9 +140,9 @@ public class DefaultDataReader extends DataReader
             long before = System.currentTimeMillis();
             // Get an enhanced variable for doing the conversion of missing
             // values
-            VariableDS enhanced = new VariableDS(null, nc.findVariable(layer.getId()), true);
+            VariableDS var = (VariableDS)nc.findVariable(layer.getId());
             // The actual reading of data from the variable is done here
-            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, enhanced);
+            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, var);
             long after = System.currentTimeMillis();
             // Write to the benchmark logger (if enabled in log4j.properties)
             // Headings are written in NcwmsContext.init()
@@ -218,9 +191,8 @@ public class DefaultDataReader extends DataReader
      * @see PixelMap
      */
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
+        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
     {
-        DataChunk dataChunk = null;
         // Cycle through the y indices, extracting a scanline of
         // data each time from minX to maxX
         for (int j : pixelMap.getJIndices())
@@ -234,7 +206,7 @@ public class DefaultDataReader extends DataReader
             // checked for missing values yet
             GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
             // Read all of the x-y data in this subset
-            dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
+            DataChunk dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
             
             // Now copy the scanline's data to the picture array
             for (int i : pixelMap.getIIndices(j))
@@ -242,7 +214,7 @@ public class DefaultDataReader extends DataReader
                 float val = dataChunk.getValue(i - imin);
                 // We unpack and check for missing values just for
                 // the points we need to display.
-                val = (float)enhanced.convertScaleOffsetMissing(val);
+                val = (float)var.convertScaleOffsetMissing(val);
                 // Now we set the value of all the image pixels associated with
                 // this data point.
                 for (int p : pixelMap.getPixelIndices(i, j))
@@ -271,9 +243,11 @@ public class DefaultDataReader extends DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Get the dataset from the cache
-            nc = getDataset(location);
-            GridDataset gd = (GridDataset)TypedDatasetFactory.open(DataType.GRID, nc, null, null);
+            // Open the dataset.  We don't use the cache here to ensure we always
+            // have the up-to-date metadata.
+            nc = NetcdfDataset.openDataset(location);
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
+                nc, null, null);
             
             // Search through all coordinate systems, creating appropriate metadata
             // for each.  This allows metadata objects to be shared among Layer objects,

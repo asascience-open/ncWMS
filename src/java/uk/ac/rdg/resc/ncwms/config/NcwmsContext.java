@@ -52,8 +52,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class NcwmsContext implements ApplicationContextAware
 {
-    private static final Logger logger = Logger.getLogger(NcwmsContext.class);
-    
     /**
      * The name of the config file in the ncWMS working directory
      */

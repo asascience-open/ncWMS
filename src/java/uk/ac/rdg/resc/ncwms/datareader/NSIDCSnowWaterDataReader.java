@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -72,8 +73,6 @@ public class NSIDCSnowWaterDataReader extends DataReader
      */
     private static final double CELL_KM = 25.067525;
     
-    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("'NL'yyyyMM'.v01.NSIDC8'");
-    
     /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
@@ -101,7 +100,10 @@ public class NSIDCSnowWaterDataReader extends DataReader
         Date timestep;
         try
         {
-            timestep = DATE_FORMAT.parse(filename);
+            // SimpleDateFormats aren't thread safe so we have to keep creating
+            // new ones.
+            DateFormat df = new SimpleDateFormat("'NL'yyyyMM'.v01.NSIDC8'");
+            timestep = df.parse(filename);
         }
         catch(Exception e)
         {
@@ -148,7 +150,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
             data = ByteBuffer.allocate(ROWS * COLS * 2);
             data.order(ByteOrder.LITTLE_ENDIAN);
             // Read the whole of the file into memory
-            int numBytesRead = fin.getChannel().read(data);
+            fin.getChannel().read(data);
         }
         finally
         {

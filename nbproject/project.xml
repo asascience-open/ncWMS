@@ -71,10 +71,6 @@
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="1">
-                    <file>${file.reference.netcdfUI-2.2.22.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="1">
                     <file>${file.reference.opendap-2.1.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
@@ -84,10 +80,6 @@
                 </library>
                 <library files="1">
                     <file>${file.reference.commons-httpclient-3.1.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
-                </library>
-                <library files="1">
-                    <file>${file.reference.bufr-1.1.00.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library files="1">
@@ -132,7 +124,12 @@
                 </library>
                 <library files="1">
                     <file>${file.reference.gt2-referencing-2.4.3.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library files="1">
+                    <file>${file.reference.netcdf-4.0.jar}</file>
+                </library>
+                <library files="1">
+                    <file>${file.reference.bufr-1.4.jar}</file>
                 </library>
             </web-module-libraries>
             <web-module-additional-libraries/>

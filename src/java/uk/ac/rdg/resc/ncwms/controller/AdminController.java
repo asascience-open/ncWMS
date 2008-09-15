@@ -238,15 +238,7 @@ public class AdminController extends MultiActionController
             if (!config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
             {
                 config.setThreddsCatalogLocation(newThreddsCatalogLocation);
-                // Reload Thredds datasets in a new thread
-                new Thread()
-                {
-                    @Override
-                    public void run()
-                    {
-                        config.loadThreddsCatalog();
-                    }
-                }.start();
+                // Reload Thredds datasets in a new thread TODO
             }
 
             // Save the updated config information to disk

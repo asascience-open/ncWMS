@@ -30,7 +30,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import org.apache.log4j.Logger;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.VariableEnhanced;
+import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 
 /**
@@ -53,7 +53,7 @@ public class PixelByPixelDataReader extends DefaultDataReader
      */
     @Override
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
+        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
     {
         long start = System.currentTimeMillis();
 
@@ -67,7 +67,7 @@ public class PixelByPixelDataReader extends DefaultDataReader
                 GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
                 // Read all of the x-y data in this subset
                 DataChunk dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
-                float val = (float)enhanced.convertScaleOffsetMissing(dataChunk.getValue(0));
+                float val = (float)var.convertScaleOffsetMissing(dataChunk.getValue(0));
                 for (int pixelIndex : pixelMap.getPixelIndices(i, j))
                 {
                     picData[pixelIndex] = val;

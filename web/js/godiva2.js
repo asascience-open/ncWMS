@@ -727,7 +727,7 @@ function toggleLockScale()
     if (scaleLocked) {
         // We need to unlock the scale
         scaleLocked = false;
-        $('lockScale').text = 'lock';
+        $('lockScale').innerHTML = 'lock';
         $('autoScale').style.visibility = 'visible';
         $('scaleSpacing').disabled = false;
         $('scaleMin').disabled = false;
@@ -735,7 +735,7 @@ function toggleLockScale()
     } else {
         // We need to lock the scale
         scaleLocked = true;
-        $('lockScale').text = 'unlock';
+        $('lockScale').innerHTML = 'unlock';
         $('autoScale').style.visibility = 'hidden';
         $('scaleSpacing').disabled = true;
         $('scaleMin').disabled = true;

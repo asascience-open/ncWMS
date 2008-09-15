@@ -38,10 +38,12 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.cs.CoordinateSystemAxis;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
+import ucar.nc2.constants.AxisType;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
+import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
  * A Grid of points onto which data is to be projected.  This is the grid that
@@ -65,9 +67,13 @@ public class HorizontalGrid
     private String crsCode; // String representing the CRS
     private CoordinateReferenceSystem crs;
     private MathTransform transformToLatLon;
+    private MathTransform latLonToCrs;
     
     private double[] xAxisValues;
     private double[] yAxisValues;
+    
+    private Regular1DCoordAxis gridXAxis;
+    private Regular1DCoordAxis gridYAxis;
     
     static
     {
@@ -128,6 +134,15 @@ public class HorizontalGrid
             this.transformToLatLon = CRS.findMathTransform(
                 this.crs, PLATE_CARREE_CRS, true);
             logger.debug("Found transform to Plate Carree");
+            logger.debug("Finding transform from Plate Carree to CRS {}", crsCode);
+            // Get a converter to convert lat-lon to the grid's CRS
+            // The "true" means "lenient", i.e. ignore datum shifts.  This 
+            // is necessary to prevent "Bursa wolf parameters required"
+            // errors (Some CRSs, including British National Grid, fail if
+            // we are not "lenient".)
+            this.latLonToCrs = CRS.findMathTransform(
+                PLATE_CARREE_CRS, this.crs, true);
+            logger.debug("Found transform from Plate Carree");
         }
         catch (NoSuchAuthorityCodeException ex)
         {
@@ -152,6 +167,8 @@ public class HorizontalGrid
         {
             this.xAxisValues[i] = this.bbox[0] + (i + 0.5) * dx;
         }
+        this.gridXAxis = new Regular1DCoordAxis(this.bbox[0], dx, this.width,
+            this.isLatLon() ? AxisType.Lon : AxisType.GeoX);
         
         double dy = (this.bbox[3] - this.bbox[1]) / this.height;
         this.yAxisValues = new double[this.height];
@@ -160,6 +177,8 @@ public class HorizontalGrid
             // The y axis is flipped
             this.yAxisValues[i] = this.bbox[1] + (this.height - i - 0.5) * dy;
         }
+        this.gridYAxis = new Regular1DCoordAxis(this.bbox[1], dy, this.height,
+            this.isLatLon() ? AxisType.Lat : AxisType.GeoY);
         logger.debug("Created HorizontalGrid object for CRS {}", crsCode);
     }
 
@@ -239,9 +258,33 @@ public class HorizontalGrid
     }
     
     /**
+     * Transforms the given lat-lon point to a coordinate pair {x,y} within
+     * this grid.
+     * @param latLonPoint
+     * @return the coordinate pair, or null if this point is outside the grid.
+     */
+    public int[] latLonToGridCoords(double longitude, double latitude) throws TransformException {
+        double x, y;
+        if (this.isLatLon()) {
+            x = longitude;
+            y = latitude;
+        } else {
+            // Transform the lat-lon point into the CRS of this grid
+            double[] point = new double[]{longitude, latitude};
+            this.latLonToCrs.transform(point, 0, point, 0, 1);
+            x = point[0];
+            y = point[1];
+        }
+        int i = this.gridXAxis.getIndex(x);
+        int j = this.gridYAxis.getIndex(y);
+        if (i < 0 || j < 0) return null;
+        else return new int[]{i,j};
+    }
+    
+    /**
      * @return true if this grid is a lat-lon grid
      */
-    public boolean isLatLon()
+    public final boolean isLatLon()
     {
         return this.transformToLatLon.isIdentity();
     }

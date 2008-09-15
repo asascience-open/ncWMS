@@ -31,7 +31,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
-import ucar.nc2.dataset.VariableEnhanced;
+import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 
 /**
@@ -57,8 +57,9 @@ public class BoundingBoxDataReader extends DefaultDataReader
      * This often leads to a lot of data being read from disk, but only one
      * read operation is required.
      */
+    @Override
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableEnhanced enhanced) throws Exception
+        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
     {
         // Read the whole chunk of x-y data
         Range iRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
@@ -87,7 +88,7 @@ public class BoundingBoxDataReader extends DefaultDataReader
                         i - pixelMap.getMinIIndex());
                     // We unpack and check for missing values just for
                     // the points we need to display.
-                    val = (float)enhanced.convertScaleOffsetMissing(val);
+                    val = (float)var.convertScaleOffsetMissing(val);
                     for (int pixelIndex : pixelMap.getPixelIndices(i, j))
                     {
                         picData[pixelIndex] = val;

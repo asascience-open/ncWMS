@@ -31,14 +31,16 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
-import ucar.nc2.dataset.AxisType;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
@@ -96,8 +98,9 @@ public class USGSDataReader extends DefaultDataReader
             if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
             
-            // Now build the picture
-            nc = getDataset(filename);
+            // Now build the picture.  We don't need to enhance the dataset but
+            // we do want to use the cache if possible
+            nc = NetcdfDataset.acquireDataset(null, filename, EnumSet.noneOf(Enhance.class), -1, null, null);
             Variable var = nc.findVariable(layer.getId());
             
             float scaleFactor = 1.0f;

@@ -329,9 +329,11 @@ public class WmsController extends AbstractController
             // See http://nsidc.org/data/atlas/ogc_services.html for useful
             // stuff about polar stereographic projections
             "EPSG:3408",          // NSIDC EASE-Grid North
-            "EPSG:3409"           // NSIDC EASE-Grid South
+            "EPSG:3409",          // NSIDC EASE-Grid South
+            "EPSG:32661",         // North Polar stereographic
+            "EPSG:32761"          // South Polar stereographic
         };
-        models.put("supportedCrsCodes", /*supportedCrsCodes); //*/HorizontalGrid.SUPPORTED_CRS_CODES);
+        models.put("supportedCrsCodes", supportedCrsCodes); //*/HorizontalGrid.SUPPORTED_CRS_CODES);
         models.put("supportedImageFormats", ImageFormat.getSupportedMimeTypes());
         models.put("layerLimit", LAYER_LIMIT);
         models.put("featureInfoFormats", new String[]{FEATURE_INFO_PNG_FORMAT,
@@ -401,8 +403,9 @@ public class WmsController extends AbstractController
             throw new WmsException("You may only request a maximum of " +
                 WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
         }
-        // TODO: support more than one layer
+        // TODO: support more than one layer (superimposition, difference, mask)
         Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
+        
         usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
@@ -442,6 +445,7 @@ public class WmsController extends AbstractController
             // tIndex == -1 if there is no t axis present
             List<float[]> picData = readData(layer, tIndex, zIndex, grid,
                 this.tileCache, usageLogEntry);
+            
             // Only add a label if this is part of an animation
             String tValue = "";
             if (layer.isTaxisPresent() && tIndices.size() > 1)

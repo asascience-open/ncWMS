@@ -46,7 +46,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.config.thredds.ThreddsConfig;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.security.Users;
 
@@ -73,10 +72,9 @@ public class Config implements ApplicationContextAware
     @ElementList(name="datasets", type=Dataset.class)
     private ArrayList<Dataset> datasetList = new ArrayList<Dataset>();
     
+    // Nothing happens to this at the moment... TODO for the future
     @Element(name="threddsCatalog", required=false)
     private String threddsCatalogLocation = " ";    //location of the Thredds Catalog.xml (if there is one...)
-    // This will store the datasets we have read from the thredds catalog
-    private List<Dataset> threddsDatasets = new ArrayList<Dataset>();
     
     @Element(name="contact", required=false)
     private Contact contact = new Contact();
@@ -201,15 +199,6 @@ public class Config implements ApplicationContextAware
             }
             dsIds.add(dsId);
         }
-        for (Dataset ds : this.threddsDatasets)
-        {
-            String dsId = ds.getId();
-            if (dsIds.contains(dsId))
-            {
-                throw new PersistenceException("Duplicate dataset id %s", dsId);
-            }
-            dsIds.add(dsId);
-        }
     }
     
     /**
@@ -227,7 +216,6 @@ public class Config implements ApplicationContextAware
             // metadata store: see MetadataStore.init()
             this.datasets.put(ds.getId(), ds);
         }
-        this.loadThreddsCatalog();
     }
     
     public void setLastUpdateTime(Date date)
@@ -317,35 +305,6 @@ public class Config implements ApplicationContextAware
     MetadataStore getMetadataStore()
     {
         return this.metadataStore;
-    }
-    
-    public void loadThreddsCatalog()
-    {
-        // First remove the datasets that belonged to the THREDDS catalog.
-        for (Dataset ds : this.threddsDatasets)
-        {
-            this.removeDataset(ds);
-        }
-        if (this.threddsCatalogLocation != null && !this.threddsCatalogLocation.trim().equals(""))
-        {
-            logger.debug("Loading datasets from THREDDS catalog at " + this.threddsCatalogLocation);
-            try
-            {
-                this.threddsDatasets = ThreddsConfig.readThreddsDatasets(this.threddsCatalogLocation);
-
-                logger.debug("Number of thredds Datasets: " + this.threddsDatasets.size());
-
-                for(Dataset d : this.threddsDatasets)
-                {
-                    logger.debug("adding thredds dataset: " + d.getTitle() + " id: " + d.getId());
-                    this.addDataset(d);
-                }
-            }
-            catch(Exception e)
-            {
-                logger.error("Problems loading thredds catalog at " + this.threddsCatalogLocation, e);
-            }
-        }
     }
     
     /**

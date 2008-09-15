@@ -32,14 +32,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
-import ucar.nc2.dataset.AxisType;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.units.DateUnit;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
@@ -98,8 +100,9 @@ public class NemoDataReader extends DefaultDataReader
             if (pixelMap.isEmpty()) return picData;
             start = System.currentTimeMillis();
 
-            // Now build the picture array
-            nc = getDataset(filename);
+            // Now build the picture array.  We don't need any of the enhancements
+            // but we want to use the file cache if possible
+            nc = NetcdfDataset.acquireDataset(null, filename, EnumSet.noneOf(Enhance.class), -1, null, null);
             Variable var = nc.findVariable(layer.getId());
             logger.debug("Is var object for layer {} null? {}", layer.getId(), var == null);
             
@@ -152,7 +155,6 @@ public class NemoDataReader extends DefaultDataReader
                 int imin = pixelMap.getMinIIndexInRow(j);
                 int imax = pixelMap.getMaxIIndexInRow(j);
                 Range xRange = new Range(imin, imax);
-                logger.debug("GetYIndices : " + j +"::" +imin + ":::" + imax);
                 
                 ranges.set(xAxisIndex, xRange);
 
@@ -220,11 +222,10 @@ public class NemoDataReader extends DefaultDataReader
         throws IOException
     {
         NetcdfDataset nc = null;
-        
         try
         {
-            // Get the dataset from the cache
-            nc = getDataset(location);
+            // Get the dataset: we don't use the cache
+            nc = NetcdfDataset.openDataset(location);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
@@ -254,9 +255,8 @@ public class NemoDataReader extends DefaultDataReader
                 throw new IOException("Malformed time units string " + time.getUnitsString());
             }
 
-            for (Object varObj : nc.getVariables())
+            for (Variable var: nc.getVariables())
             {
-                Variable var = (Variable)varObj;
                 // We ignore the coordinate axes
                 if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
                     && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))

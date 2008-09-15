@@ -32,11 +32,14 @@ import ucar.ma2.Array;
 import ucar.ma2.Index;
 
 /**
- * A chunk of data, as read by DataLayer.getScanline().  The purpose of this
+ * <p>A chunk of data, wrapping an {@link Array}.  The purpose of this
  * class is to get around the annoying feature of Java that there is no
  * Array superclass (well, there is, but it's Object).  This means that there
- * is no general way to do arr[i] if you don't know the type of arr in advance.
- *
+ * is no general way to do arr[i] if you don't know the type of arr in advance.</p>
+ * <p>This class is not thread safe, so if this is to be shared between threads,
+ * it must be synchronized</p>
+ * @todo this class doesn't really do very much except hide the Index.  Remove
+ * altogether?
  * @author Jon Blower
  * $Revision$
  * $Date$
@@ -62,7 +65,7 @@ class DataChunk
      * need greater precision for making pictures.)
      * @param i the index of the required value in the chunk
      */
-    public synchronized float getValue(int i)
+    public float getValue(int i)
     {
         this.index.set(i);
         return this.array.getFloat(this.index);
@@ -74,7 +77,7 @@ class DataChunk
      * @param i the index of the required value in the chunk
      * @param j the index of the required value in the chunk
      */
-    public synchronized float getValue(int i, int j)
+    public float getValue(int i, int j)
     {
         this.index.set(i, j);
         return this.array.getFloat(this.index);

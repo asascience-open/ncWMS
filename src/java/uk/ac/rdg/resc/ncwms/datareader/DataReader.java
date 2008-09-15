@@ -33,6 +33,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.oro.io.GlobFilenameFilter;
@@ -59,9 +60,7 @@ public abstract class DataReader
     /**
      * This class can only be instantiated through getDataReader()
      */
-    protected DataReader()
-    {
-    }
+    protected DataReader(){}
     
     /**
      * Gets a DataReader object.  <b>Only one</b> object of each class will be
@@ -145,7 +144,8 @@ public abstract class DataReader
             throw new Exception(location + " does not match any files");
         }
         // Now extract the data for each individual file
-        Map<String, LayerImpl> layers = new HashMap<String, LayerImpl>();
+        // LinkedHashMaps preserve the order of insertion
+        Map<String, LayerImpl> layers = new LinkedHashMap<String, LayerImpl>();
         for (String filename : filenames)
         {
             // Read the metadata from the file and update the Map.
@@ -168,9 +168,8 @@ public abstract class DataReader
     protected abstract void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
         throws IOException;
 
-
     /**
-     * Finds all files (and, optionally, directories, etc) matching
+     * Finds all files matching
      * a glob pattern.  This method recursively searches directories, allowing
      * for glob expressions like {@code "c:\\data\\200[6-7]\\*\\1*\\A*.nc"}.
      * @param globExpression The glob expression

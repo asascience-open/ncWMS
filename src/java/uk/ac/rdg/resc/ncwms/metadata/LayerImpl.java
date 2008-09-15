@@ -73,6 +73,7 @@ public class LayerImpl implements Layer
     protected List<TimestepInfo> timesteps = new ArrayList<TimestepInfo>();
     // Stores the keys of the styles that this variable supports
     protected List<Style> supportedStyles = new ArrayList<Style>();
+    protected Object attachment;
     
     /**
      * Creates a new Layer using a default bounding box (covering the whole 
@@ -272,6 +273,7 @@ public class LayerImpl implements Layer
      */
     private int findTIndex(Date target)
     {
+        logger.debug("Looking for {} in layer {}", target, this.id);
         if (this.timesteps.size() == 0) return -1;
         // Check that the point is within range
         if (target.before(this.timesteps.get(0).getDate()) ||
@@ -297,6 +299,7 @@ public class LayerImpl implements Layer
         if (this.timesteps.get(low).getDate().equals(target)) return low;
         else if (this.timesteps.get(high).getDate().equals(target)) return high;
         // The given time doesn't match any axis value
+        logger.debug("{} not found", target);
         return -1;
     }
     
@@ -550,5 +553,13 @@ public class LayerImpl implements Layer
         }
         // Don't forget to escape dollar signs and backslashes in the regexp
         return copyright.replaceAll("\\$\\{year\\}", yearStr);
+    }
+
+    public Object getAttachment() {
+        return this.attachment;
+    }
+    
+    public void setAttachment(Object attachment) {
+        this.attachment = attachment;
     }
 }

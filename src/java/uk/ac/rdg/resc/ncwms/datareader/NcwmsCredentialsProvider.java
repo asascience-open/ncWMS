@@ -36,7 +36,7 @@ import org.apache.commons.httpclient.auth.AuthScheme;
 import org.apache.commons.httpclient.auth.CredentialsNotAvailableException;
 import org.apache.commons.httpclient.auth.CredentialsProvider;
 import org.apache.log4j.Logger;
-import ucar.nc2.dataset.HttpClientManager;
+import ucar.nc2.util.net.HttpClientManager;
 
 /**
  * Handles authentication with OPeNDAP servers.  This object is created by

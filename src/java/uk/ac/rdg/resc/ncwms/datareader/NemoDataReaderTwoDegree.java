@@ -33,11 +33,10 @@ import java.util.Date;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import ucar.nc2.Variable;
-import ucar.nc2.dataset.AxisType;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.units.DateUnit;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
@@ -61,7 +60,7 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
         
         try
         {
-            nc = getDataset(location);
+            nc = NetcdfDataset.openDataset(location);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
@@ -91,9 +90,8 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                 throw new IOException("Malformed time units string " + time.getUnitsString());
             }
 
-            for (Object varObj : nc.getVariables())
+            for (Variable var : nc.getVariables())
             {
-                Variable var = (Variable)varObj;
                 // We ignore the coordinate axes
                 if (!var.getName().equals("nav_lon") && !var.getName().equals("nav_lat")
                     && !var.getName().equals("deptht") && !var.getName().equals("time_counter"))
