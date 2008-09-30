@@ -156,6 +156,10 @@ window.onload = function()
     
     layerSwitcher = new OpenLayers.Control.LayerSwitcher()
     map.addControl(layerSwitcher);
+    
+    var loadingpanel = new OpenLayers.Control.LoadingPanel();
+    map.addControl(loadingpanel);
+
     //map.addControl(new OpenLayers.Control.MousePosition({prefix: 'Lon: ', separator: ' Lat:'}));
     map.zoomTo(1);
     

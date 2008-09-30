@@ -195,3 +195,9 @@ input.scaleMin {
     position: absolute;
     top: 121px;
 }
+
+.olControlLoadingPanel {
+    background-image:url(../theme/default/img/loading.gif);
+    background-position:center;
+    background-repeat:no-repeat;
+}
