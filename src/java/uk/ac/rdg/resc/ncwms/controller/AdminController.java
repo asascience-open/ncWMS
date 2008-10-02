@@ -28,8 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -142,15 +144,15 @@ public class AdminController extends MultiActionController
 
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.
+            List<Dataset> datasetsToRemove = new ArrayList<Dataset>(); 
             // Keeps track of dataset IDs that have been changed
             Map<String, String> changedIds = new HashMap<String, String>();
-            for (Iterator<Dataset> it = this.config.getDatasets().values().iterator(); it.hasNext(); )
+            for (Dataset ds : this.config.getDatasets().values())
             {
-                Dataset ds = it.next();
                 boolean refreshDataset = false;
                 if (request.getParameter("dataset." + ds.getId() + ".remove") != null)
                 {
-                    it.remove();
+                    datasetsToRemove.add(ds);
                 }
                 else
                 {
@@ -195,6 +197,11 @@ public class AdminController extends MultiActionController
                 {
                     this.metadataLoader.scheduleMetadataReload(ds);
                 }
+            }
+            // Now we can remove the datasets
+            for (Dataset ds : datasetsToRemove)
+            {
+                config.removeDataset(ds);
             }
             // Now we change the ids of the relevant datasets
             for (String oldId : changedIds.keySet())

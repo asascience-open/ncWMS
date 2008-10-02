@@ -66,7 +66,7 @@ public class MetadataLoader
     private NcwmsCredentialsProvider credentialsProvider; // Ditto
     
     // Controls the number of datasets that can be reloaded at any one time
-    private ExecutorService datasetReloader = Executors.newFixedThreadPool(2);
+    private ExecutorService datasetReloader = Executors.newFixedThreadPool(4);
     
     /**
      * Called by the Spring framework to initialize this object
@@ -353,6 +353,7 @@ public class MetadataLoader
             {
                 URL url = new URL(newLoc);
                 String userInfo = url.getUserInfo();
+                logger.debug("user info = {}", userInfo);
                 if (userInfo != null)
                 {
                     this.credentialsProvider.addCredentials(
