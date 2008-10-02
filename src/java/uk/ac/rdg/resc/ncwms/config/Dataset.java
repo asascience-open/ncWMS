@@ -51,13 +51,14 @@ public class Dataset
     
     /**
      * The state of a Dataset.
-     * TO_BE_LOADED: Dataset is new or has changed and needs to be loaded
+     * NEEDS_REFRESH: Dataset is new or has changed and needs to be loaded
+     * SCHEDULED: Needs to be loaded and is in the queue
      * LOADING: In the process of loading
      * READY: Ready for use
      * UPDATING: A previously-ready dataset is synchronizing with the disk
      * ERROR: An error occurred when loading the dataset.
      */
-    public static enum State { TO_BE_LOADED, LOADING, READY, UPDATING, ERROR };
+    public static enum State { NEEDS_REFRESH, SCHEDULED, LOADING, READY, UPDATING, ERROR  };
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
@@ -146,7 +147,9 @@ public class Dataset
     
     /**
      * @return true if the metadata from this dataset needs to be reloaded
-     * automatically via the periodic reloader in MetadataLoader
+     * automatically via the periodic reloader in MetadataLoader.  Note that this
+     * does something more sophisticated than simply checking that
+     * this.state == NEEDS_REFRESH!
      */
     public boolean needsRefresh()
     {
@@ -154,11 +157,12 @@ public class Dataset
         logger.debug("Last update time for dataset {} is {}", this.id, lastUpdate);
         logger.debug("State of dataset {} is {}", this.id, this.state);
         logger.debug("Disabled = {}", this.disabled);
-        if (this.disabled || this.state == State.LOADING || this.state == State.UPDATING)
+        if (this.disabled || this.state == State.SCHEDULED ||
+            this.state == State.LOADING || this.state == State.UPDATING)
         {
             return false;
         }
-        else if (this.state == State.ERROR || this.state == State.TO_BE_LOADED
+        else if (this.state == State.ERROR || this.state == State.NEEDS_REFRESH
             || lastUpdate == null)
         {
             return true;

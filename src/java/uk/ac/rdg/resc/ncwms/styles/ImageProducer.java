@@ -144,8 +144,9 @@ public final class ImageProducer
         if (colorScaleRange.isDefault())
         {
             // Use the layer's default range
-            this.scaleMin = layer.getScaleMin();
-            this.scaleMax = layer.getScaleMax();
+            float[] scaleRange = layer.getScaleRange();
+            this.scaleMin = scaleRange[0];
+            this.scaleMax = scaleRange[1];
         }
         else if (colorScaleRange.isAuto())
         {
@@ -253,6 +254,7 @@ public final class ImageProducer
         if (this.style == Style.VECTOR)
         {
             // We superimpose direction arrows on top of the background
+            // TODO: only do this for lat-lon projections!
             Graphics2D g = image.createGraphics();
             // TODO: control the colour of the arrows with an attribute
             // Must be part of the colour palette (here we use the colour

@@ -193,7 +193,7 @@ public class AdminController extends MultiActionController
                 }
                 if (refreshDataset)
                 {
-                    this.metadataLoader.forceReloadMetadata(ds);
+                    this.metadataLoader.scheduleMetadataReload(ds);
                 }
             }
             // Now we change the ids of the relevant datasets
@@ -221,7 +221,7 @@ public class AdminController extends MultiActionController
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
                     ds.setCopyrightStatement(request.getParameter("dataset.new" + i + ".copyright"));
                     config.addDataset(ds);
-                    this.metadataLoader.forceReloadMetadata(ds);
+                    this.metadataLoader.scheduleMetadataReload(ds);
                 }
                 i++;
             }

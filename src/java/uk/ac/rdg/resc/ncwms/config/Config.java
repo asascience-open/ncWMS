@@ -145,7 +145,7 @@ public class Config implements ApplicationContextAware
             if (lastUpdate == null)
             {
                 // The dataset has never been loaded
-                ds.setState(State.TO_BE_LOADED);
+                ds.setState(State.NEEDS_REFRESH);
             }
             else
             {

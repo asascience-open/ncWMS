@@ -30,12 +30,15 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import com.sleepycat.persist.model.Persistent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.controller.MetadataController;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.Style;
@@ -63,8 +66,7 @@ public class LayerImpl implements Layer
     protected double[] zValues;
     protected boolean zPositive;
     protected double[] bbox = new double[]{-180.0, -90.0, 180.0, 90.0}; // Bounding box : minx, miny, maxx, maxy
-    protected float scaleMin;
-    protected float scaleMax;
+    protected float[] scaleRange = null; // Will be loaded lazily
     protected CoordAxis xaxis;
     protected CoordAxis yaxis;
     private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
@@ -168,30 +170,50 @@ public class LayerImpl implements Layer
     {
         this.id = id;
     }
-
-    public float getScaleMin()
-    {
-        return scaleMin;
-    }
-
-    public void setScaleMin(float scaleMin)
-    {
-        this.scaleMin = scaleMin;
-    }
-
-    public float getScaleMax()
-    {
-        return scaleMax;
-    }
-
-    public void setScaleMax(float scaleMax)
-    {
-        this.scaleMax = scaleMax;
-    }
     
+    /**
+     * @return array of two doubles, representing the min and max of the scale range
+     * Note that this is not the same as a "valid_max" for the dataset.  This is
+     * simply a hint to visualization tools.
+     */
     public float[] getScaleRange()
     {
-        return new float[]{this.scaleMin, this.scaleMax};
+        if (this.scaleRange == null)
+        {
+            // We need to load the scale range from the data
+            try
+            {
+                // Set the scale range for each variable by reading a 100x100
+                // chunk of data and finding the min and max values of this chunk.
+                HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, this.bbox);
+                // Read from the first t and z indices
+                int tIndex = this.isTaxisPresent() ? 0 : -1;
+                int zIndex = this.isZaxisPresent() ? 0 : -1;
+                float[] minMax = MetadataController.findMinMax(this, tIndex,
+                    zIndex, grid, null);
+                if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+                {
+                    // Just guess at a scale  TODO: Using exception for control flow! Bad!
+                    throw new Exception();
+                }
+                else
+                {
+                    // Set the scale range of the layer, factoring in a 10% expansion
+                    // to deal with the fact that the sample data we read might
+                    // not be representative
+                    float diff = minMax[1] - minMax[0];
+                    this.scaleRange = new float[]{minMax[0] - 0.05f * diff,
+                        minMax[1] + 0.05f * diff};
+                }
+            }
+            catch(Exception e)
+            {
+                this.scaleRange = new float[]{-50.0f, 50.0f};
+            }
+            logger.debug("Set scale range for {} to {}", this.id, 
+                Arrays.toString(this.scaleRange));
+        }
+        return this.scaleRange;
     }
 
     public String getUnits()

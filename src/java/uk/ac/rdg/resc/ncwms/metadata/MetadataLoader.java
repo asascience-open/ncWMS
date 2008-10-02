@@ -30,22 +30,20 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
 import ucar.nc2.dataset.NetcdfDataset;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
-import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -61,100 +59,85 @@ public class MetadataLoader
 {
     private static final Logger logger = Logger.getLogger(MetadataLoader.class);
     
-    private Timer timer;
+    private Timer timer = new Timer("Dataset reloader", true);
     
     private Config config; // Will be injected by Spring
     private MetadataStore metadataStore; // Ditto
     private NcwmsCredentialsProvider credentialsProvider; // Ditto
+    
+    // Controls the number of datasets that can be reloaded at any one time
+    private ExecutorService datasetReloader = Executors.newFixedThreadPool(2);
     
     /**
      * Called by the Spring framework to initialize this object
      */
     public void init()
     {
-        // Initialize the cache of NetcdfDatasets.  Hold between 50 and 1000
+        // Initialize the cache of NetcdfDatasets.  Hold between 50 and 500
         // datasets, refresh cache every 5 minutes (Are these sensible values)?
-        NetcdfDataset.initNetcdfFileCache(50, 1000, 5 * 60);
+        // The length of the refresh period affects the metadata that will be
+        // loaded: a long refresh period might lead to a lag in updates to
+        // metadata).
+        NetcdfDataset.initNetcdfFileCache(50, 500, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
         
-        // Now start the regular TimerTask that periodically checks to see if
-        // the datasets need reloading
-        this.timer = new Timer("Dataset reloader", true);
-        // TODO: read this interval from an init-param
-        int intervalMs = 60 * 1000; // Check every minute
-        this.timer.schedule(new DatasetReloader(), 0, intervalMs);
+        /**
+         * Task that runs periodically, refreshing the metadata catalogue.
+         * Each dataset is loaded in a new thread
+         * @todo Use a thread pool to prevent server overload?
+         */
+        this.timer.schedule(new TimerTask() {
+            @Override
+            public void run()
+            {
+                for (Dataset ds : config.getDatasets().values())
+                {
+                    boolean needsRefresh = false;
+                    synchronized(ds)
+                    {
+                        if (ds.needsRefresh())
+                        {
+                            // Schedule this dataset for refreshing
+                            needsRefresh = true;
+                        }
+                    }
+                    if (needsRefresh) scheduleMetadataReload(ds);
+                }
+            }
+        }, 0, 60 * 1000); // Check every minute after no delay
+        
         logger.debug("Started periodic reloading of datasets");
     }
     
     /**
-     * Task that runs periodically, refreshing the metadata catalogue.
-     * Each dataset is loaded in a new thread
-     * @todo Use a thread pool to prevent server overload?
-     */
-    private class DatasetReloader extends TimerTask
-    {
-        public void run()
-        {
-            for (Dataset ds : config.getDatasets().values())
-            {
-                reloadMetadata(ds);
-            }
-        }
-    }
-    
-    /**
-     * Called by the
+     * Called by both the periodic reloader and the
      * {@link uk.ac.rdg.resc.ncwms.controller.AdminController AdminController}
-     * to force a reload of the given dataset
-     * in a new thread, without waiting for the periodic reloader.
+     * (to force a reload of the given dataset, without waiting for the periodic reloader).
      */
-    public void forceReloadMetadata(final Dataset ds)
+    public void scheduleMetadataReload(final Dataset ds)
     {
-        ds.setState(State.TO_BE_LOADED); // causes needsRefresh() to return true
-        reloadMetadata(ds);
-    }
-    
-    /**
-     * Reloads the metadata for a given dataset in a new thread
-     */
-    private void reloadMetadata(final Dataset ds)
-    {
-        new Thread("load-dataset-" + ds.getId())
-        {
-            @Override
-            public void run()
-            {
-                logger.debug("Loading metadata for {}", ds.getLocation());
-                boolean loaded = doReloadMetadata(ds);
-                String message = loaded ? "Loaded metadata for {}" :
-                    "Did not load metadata for {}";
-                logger.debug(message, ds.getLocation());
-            }
-        }.start();
-    }
-    
-    /**
-     * (Re)loads the metadata for the given dataset.
-     * @return true if the metadata were (re)loaded, false if no reload was
-     * necessary, or if there was an error loading the metadata.
-     */
-    private boolean doReloadMetadata(Dataset ds)
-    {
-        // We must make this part of the method thread-safe because more than
-        // one thread might be trying to update the metadata.
-        // TODO: re-examine this strategy
+        logger.debug("Scheduling reload of dataset {}", ds.getId());
         synchronized(ds)
         {
-            // needsRefresh() examines the last update time of the dataset from
-            // the MetadataStore
-            if (ds.needsRefresh())
-            {
-                ds.setState(ds.getState() == State.READY ? State.UPDATING : State.LOADING);
-            }
-            else
-            {
-                return false;
-            }
+            ds.setState(State.SCHEDULED);
+        }
+        
+        this.datasetReloader.execute(new Runnable() {
+            public void run() {
+                doReloadMetadata(ds);
+            }}
+        );
+    }
+        
+    private void doReloadMetadata(final Dataset ds)
+    {
+        // Include the id of the dataset in the thread for debugging purposes
+        Thread currentThread = Thread.currentThread();
+        currentThread.setName(currentThread.getName() + "-" + ds.getId());
+        logger.debug("Loading metadata for {}", ds.getId());
+        synchronized(ds)
+        {
+            ds.setState(ds.getState() == State.READY ? State.UPDATING : State.LOADING);
         }
         try
         {
@@ -165,20 +148,20 @@ public class MetadataLoader
             this.updateCredentialsProvider(ds);
             // Read the metadata
             Map<String, LayerImpl> layers = dr.getAllLayers(ds.getLocation());
+            for (LayerImpl layer: layers.values())
+            {
+                layer.setDataset(ds);
+            }
             logger.debug("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);
             logger.debug("found vector quantities");
-            // Find the min and max of each layer
-            findMinMax(ds, layers);
-            logger.debug("found min-max range for each layer");
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
-            Date lastUpdate = new Date();
             // TODO: set this when reading from database too.
-            this.config.setLastUpdateTime(lastUpdate);
-            return true;
+            this.config.setLastUpdateTime(new Date());
+            logger.debug("Loaded metadata for {}", ds.getId());
         }
         catch(Exception e)
         {
@@ -190,7 +173,7 @@ public class MetadataLoader
                 logger.error("Error loading metadata for dataset " + ds.getId(), e);
             }
             ds.setException(e);
-            return false;
+            logger.debug("Error loading metadata for {}", ds.getId());
         }
     }
     
@@ -230,7 +213,10 @@ public class MetadataLoader
                 }
                 components.get(vectorKey)[1] = layer;
             }
-            else if (layer.getTitle().contains("_x_"))
+            // We can only calculate vectors if the components are eastward
+            // and northward (otherwise we need to know the directions of the
+            // grid lines at each point - which isn't impossible but is hard).
+            /*else if (layer.getTitle().contains("_x_"))
             {
                 String vectorKey = layer.getTitle().replaceFirst("_x_", "_");
                 // Look to see if we've already found the y component
@@ -273,7 +259,7 @@ public class MetadataLoader
                     components.put(vectorKey, new LayerImpl[2]);
                 }
                 components.get(vectorKey)[1] = layer;
-            }
+            }*/
         }
         
         // Now add the vector quantities to the collection of Layer objects
@@ -299,7 +285,7 @@ public class MetadataLoader
      * is an error reading the min-max from a layer, the layer will be removed
      * from the Map of layers: this is a side-effect of this function.
      */
-    private static void findMinMax(Dataset ds, Map<String, LayerImpl> layers)
+    /*private static void findMinMax(Dataset ds, Map<String, LayerImpl> layers)
     {
         // If we get an error reading from the layer then we'll remove the layer
         // from the list
@@ -347,7 +333,7 @@ public class MetadataLoader
         {
             layers.remove(layer.getId());
         }
-    }
+    }*/
     
     /**
      * If the given dataset is an OPeNDAP location, this looks for
@@ -391,7 +377,8 @@ public class MetadataLoader
      */
     public void close()
     {
-        if (this.timer != null) this.timer.cancel();
+        this.timer.cancel();
+        this.datasetReloader.shutdown();
         this.config = null;
         NetcdfDataset.shutdown();
         logger.info("Cleaned up MetadataLoader");

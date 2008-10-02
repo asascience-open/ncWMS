@@ -741,8 +741,9 @@ public class WmsController extends AbstractController
             float scaleMax;
             if (colorScaleRange.isDefault())
             {
-                scaleMin = layer.getScaleMin();
-                scaleMax = layer.getScaleMax();
+                float[] scaleRange = layer.getScaleRange();
+                scaleMin = scaleRange[0];
+                scaleMax = scaleRange[1];
             }
             else if (colorScaleRange.isAuto())
             {

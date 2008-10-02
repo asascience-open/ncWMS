@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import org.apache.log4j.Logger;
+import ucar.ma2.Array;
+import ucar.ma2.Index;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
@@ -66,8 +68,10 @@ public class PixelByPixelDataReader extends DefaultDataReader
                 Range xRange = new Range(i, i);
                 GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
                 // Read all of the x-y data in this subset
-                DataChunk dataChunk = new DataChunk(subset.readDataSlice(0, 0, -1, -1).reduce());
-                float val = (float)var.convertScaleOffsetMissing(dataChunk.getValue(0));
+                Array xySlice = subset.readDataSlice(0, 0, -1, -1);
+                Index index = xySlice.getIndex();
+                float val = xySlice.getFloat(index.set(0, 0));
+                val = (float)var.convertScaleOffsetMissing(val);
                 for (int pixelIndex : pixelMap.getPixelIndices(i, j))
                 {
                     picData[pixelIndex] = val;

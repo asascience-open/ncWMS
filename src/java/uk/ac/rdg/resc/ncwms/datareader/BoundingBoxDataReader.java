@@ -28,8 +28,10 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
+import java.util.Arrays;
 import org.apache.log4j.Logger;
 import ucar.ma2.Array;
+import ucar.ma2.Index;
 import ucar.ma2.Range;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
@@ -62,30 +64,26 @@ public class BoundingBoxDataReader extends DefaultDataReader
         PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
     {
         // Read the whole chunk of x-y data
-        Range iRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
-        Range jRange = new Range(pixelMap.getMinJIndex(), pixelMap.getMaxJIndex());
+        Range xRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
+        Range yRange = new Range(pixelMap.getMinJIndex(), pixelMap.getMaxJIndex());
         long start = System.currentTimeMillis();
-        GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, jRange, iRange);
+        GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
         // Read all of the x-y data in this subset
-        Array arr = subset.readDataSlice(0, 0, -1, -1).reduce();
-        logger.debug("Rank of arr = {}", arr.getRank());
-        for (int i : arr.getShape())
-        {
-            logger.debug("Dimension size = {}", i);
-        }
-        DataChunk dataChunk = new DataChunk(arr);
+        Array xySlice = subset.readDataSlice(0, 0, -1, -1);
+        logger.debug("Shape of xySlice = {}", Arrays.toString(xySlice.getShape()));
         long readData = System.currentTimeMillis();
         logger.debug("Read data using bounding box algorithm in {} milliseconds", (readData - start));
 
         // Now create the picture from the data array
+        Index index = xySlice.getIndex(); // 2D index in y,x order
         for (int j : pixelMap.getJIndices())
         {
             for (int i : pixelMap.getIIndices(j))
             {
                 try
                 {
-                    float val = dataChunk.getValue(j - pixelMap.getMinJIndex(),
-                        i - pixelMap.getMinIIndex());
+                    float val = xySlice.getFloat(index.set(j - pixelMap.getMinJIndex(),
+                        i - pixelMap.getMinIIndex()));
                     // We unpack and check for missing values just for
                     // the points we need to display.
                     val = (float)var.convertScaleOffsetMissing(val);

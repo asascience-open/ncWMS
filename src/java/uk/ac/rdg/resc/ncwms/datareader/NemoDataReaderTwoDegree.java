@@ -60,7 +60,10 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
         
         try
         {
-            nc = NetcdfDataset.openDataset(location);
+            // Open the dataset.  We use the dataset cache here for the following
+            // reason: if the cache has swallowed all of our available file handles,
+            // we can't bypass the cache as there will be no file handles left.
+            nc = NetcdfDataset.acquireDataset(location, null);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");
