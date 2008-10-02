@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import uk.ac.rdg.resc.ncwms.styles.Style;
 
 /**
@@ -41,7 +40,6 @@ import uk.ac.rdg.resc.ncwms.styles.Style;
  * $Date$
  * $Log$
  */
-@Persistent
 public class VectorLayerImpl extends LayerImpl implements VectorLayer
 {
     private Layer northwardComponent;

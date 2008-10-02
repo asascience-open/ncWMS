@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import org.apache.log4j.Logger;
 import ucar.nc2.constants.AxisType;
 
@@ -44,7 +43,6 @@ import ucar.nc2.constants.AxisType;
  * $Date$
  * $Log$
  */
-@Persistent
 public class Regular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(Regular1DCoordAxis.class);

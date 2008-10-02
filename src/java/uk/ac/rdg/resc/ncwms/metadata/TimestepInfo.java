@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import java.util.Date;
 
 /**
@@ -41,7 +40,6 @@ import java.util.Date;
  * $Date$
  * $Log$
  */
-@Persistent
 public class TimestepInfo implements Comparable<TimestepInfo>
 {
     private Date timestep;

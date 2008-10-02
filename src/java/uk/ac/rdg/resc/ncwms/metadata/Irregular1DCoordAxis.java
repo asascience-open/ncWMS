@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +42,6 @@ import ucar.nc2.constants.AxisType;
  * $Date$
  * $Log$
  */
-@Persistent
 public class Irregular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(Irregular1DCoordAxis.class);

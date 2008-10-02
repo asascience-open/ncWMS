@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -53,7 +52,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * $Date$
  * $Log$
  */
-@Persistent // Berkeley DB code uses this
 public class LayerImpl implements Layer
 {
     private static final Logger logger = Logger.getLogger(LayerImpl.class);

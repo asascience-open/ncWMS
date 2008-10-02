@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import com.sleepycat.persist.model.Persistent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -51,7 +50,6 @@ import ucar.nc2.constants.AxisType;
  * $Date$
  * $Log$
  */
-@Persistent
 public class LUTCoordAxis extends TwoDCoordAxis
 {
     private static final Logger logger = Logger.getLogger(LUTCoordAxis.class);
