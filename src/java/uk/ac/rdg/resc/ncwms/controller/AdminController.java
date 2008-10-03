@@ -30,7 +30,6 @@ package uk.ac.rdg.resc.ncwms.controller;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -113,8 +112,7 @@ public class AdminController extends MultiActionController
         }
         H2UsageLogger h2logger = (H2UsageLogger)this.usageLogger;
         response.setContentType("application/excel");
-        response.setHeader("Content-Disposition",
-            "inline; filename=usageLog.csv");
+        response.setHeader("Content-Disposition", "inline; filename=usageLog.csv");
         h2logger.writeCsv(response.getOutputStream());
     }
     
