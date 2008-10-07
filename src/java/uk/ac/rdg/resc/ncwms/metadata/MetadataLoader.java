@@ -132,8 +132,8 @@ public class MetadataLoader
     private void doReloadMetadata(final Dataset ds)
     {
         // Include the id of the dataset in the thread for debugging purposes
-        Thread currentThread = Thread.currentThread();
-        currentThread.setName(currentThread.getName() + "-" + ds.getId());
+        // Comment this out to use the default thread names (e.g. "pool-2-thread-1")
+        Thread.currentThread().setName("load-metadata-" + ds.getId());
         logger.debug("Loading metadata for {}", ds.getId());
         synchronized(ds)
         {
