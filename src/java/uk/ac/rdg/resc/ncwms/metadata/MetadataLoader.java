@@ -79,7 +79,7 @@ public class MetadataLoader
         // The length of the refresh period affects the metadata that will be
         // loaded: a long refresh period might lead to a lag in updates to
         // metadata).
-        NetcdfDataset.initNetcdfFileCache(50, 500, 5 * 60);
+        NetcdfDataset.initNetcdfFileCache(50, 500, 500, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
         if (logger.isDebugEnabled())
         {
