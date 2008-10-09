@@ -95,6 +95,7 @@ public class H2UsageLogger implements UsageLogger
         // Exception if there was an error
         WmsUtils.createDirectory(usageLogDir);
         String databasePath = new File(usageLogDir, "usagelog").getCanonicalPath();
+        logger.debug("Usage logger database path = {}", databasePath);
         
         // Load the SQL script file that initializes the database.
         // This script file does nothing if the database is already populated

@@ -39,6 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.unidata.io.RandomAccessFile;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
@@ -80,6 +81,12 @@ public class MetadataLoader
         // metadata).
         NetcdfDataset.initNetcdfFileCache(50, 500, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
+        if (logger.isDebugEnabled())
+        {
+            // Allows us to see how many RAFs are in the NetcdfFileCache at
+            // any one time
+            RandomAccessFile.setDebugLeaks(true);
+        }
         
         /**
          * Task that runs periodically, refreshing the metadata catalogue.
@@ -161,7 +168,8 @@ public class MetadataLoader
             ds.setState(State.READY);
             // TODO: set this when reading from database too.
             this.config.setLastUpdateTime(new Date());
-            logger.debug("Loaded metadata for {}", ds.getId());
+            logger.debug("Loaded metadata for {}, num RAFs open = {}", ds.getId(),
+                RandomAccessFile.getOpenFiles().size());
         }
         catch(Exception e)
         {
@@ -170,10 +178,12 @@ public class MetadataLoader
             // type of exception.
             if (ds.getException() == null || ds.getException().getClass() != e.getClass())
             {
-                logger.error("Error loading metadata for dataset " + ds.getId(), e);
+                logger.error(e.getClass().getName() + " loading metadata for dataset {}"  + ds.getId(), e);
             }
             ds.setException(e);
-            logger.debug("Error loading metadata for {}", ds.getId());
+            logger.debug("{} loading metadata for {}, num RAFs open = {}",
+                new Object[]{e.getClass().getName(), ds.getId(),
+                RandomAccessFile.getOpenFiles().size()});
         }
     }
     

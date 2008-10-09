@@ -17,13 +17,12 @@
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
          workingDirectory property. -->
     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
-        <!--<property name="workingDirectory" value="/home/Jon/foo/.ncWMS/"/>-->
+        <!--<property name="workingDirectory" value="/users/resc/.ncWMS_debug"/>-->
     </bean>
           
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. Currently the
          InMemoryMetadataStore is the only one that works properly. -->
-    <!--<bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.berkeley.BerkeleyDBMetadataStore"-->
     <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"
             init-method="init" destroy-method="close">
         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
