@@ -18,5 +18,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     </menu:folder>
     <menu:folder label="Land surface">
         <menu:dataset dataset="${datasets.NSIDC}" label="NSIDC Snow Water Equivalent"/>
+        <menu:dataset dataset="${datasets.fasir}"/>
     </menu:folder>
 </menu:folder>
