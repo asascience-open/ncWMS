@@ -55,7 +55,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	
 	  <menu:folder label="With data assimilation">
  	  <menu:folder label="DRAKKAR 1/4 degree global S(T) reanalysis (ORCA025-R07)">
-         		<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day}" label="5 day means"/>
+
+		    	<menu:folder label="5 day means">
+             			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day_v}" label="V-GRID"/>
+       	    	</menu:folder>
+
 		    	<menu:folder label="Monthly means">
              			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_ice}" label="ICE"/>
            			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_MONTHLY_t}" label="T-GRID"/>
@@ -110,6 +117,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
            			<menu:dataset dataset="${datasets.ORCA025_G70_ANNUAL_v}" label="V-GRID"/>
        	    	</menu:folder>
      		</menu:folder>
+
+      		<menu:folder label="DRAKKAR 1/4 degree global model (ORCA025-R07)">
+		    	<menu:folder label="5 day means">
+             			<menu:dataset dataset="${datasets.ORCA025_R07_S_5day_ice}" label="ICE"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_S_5day_t}" label="T-GRID"/>
+         			<menu:dataset dataset="${datasets.ORCA025_R07_S_5day_u}" label="U-GRID"/>
+           			<menu:dataset dataset="${datasets.ORCA025_R07_S_5day_v}" label="V-GRID"/>
+       	    	</menu:folder>
+     		</menu:folder>
+
          </menu:folder>
      </menu:folder>
    
@@ -163,6 +180,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               <menu:dataset dataset="${datasets.NEMO_FULL_CONT_PHYS}"/>  
               <menu:dataset dataset="${datasets.NEMO_FULL_CONT_BIO}"/>
               <menu:dataset dataset="${datasets.NEMO_FULL_CONT_DIAD}"/>
+
+               <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_PHY}"/>  
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_DIAD}"/>
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_PHY}"/>  
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_DIAD}"/>
+             <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_PHY}"/>  
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_BIO}"/>
+              <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_DIAD}"/>
  	   </menu:folder>
       </menu:folder>
 
