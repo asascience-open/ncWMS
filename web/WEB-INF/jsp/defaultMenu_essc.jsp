@@ -43,6 +43,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      <menu:folder label="EU-ECOOP">
          <menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
          <menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
+    	  <menu:folder label="BSH Coastal Model Data">
+        	<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
+        	<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
+        	<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
+	  </menu:folder>
          <menu:dataset dataset="${datasets.ECOOP_CYCO}"/>
          <menu:dataset dataset="${datasets.ECOOP_ROMS_TEST}"/>
          <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
@@ -52,7 +57,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      <menu:folder label="Ocean Hindcasts">
          <menu:dataset dataset="${datasets.CLIVAR_NASA_JPL_ECCO}"/>
          <menu:dataset dataset="${datasets.CLIVAR_SODA_POP}"/>
-	
+	  <menu:dataset dataset="${datasets.HYCOM_PACIFIC_OCEAN_BASIN_SIMULATION}"/>
+
 	  <menu:folder label="With data assimilation">
  	  <menu:folder label="DRAKKAR 1/4 degree global S(T) reanalysis (ORCA025-R07)">
 
@@ -161,6 +167,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.GENIE}"/>
          <menu:dataset dataset="${datasets.HadCEM}"/>
          <menu:dataset dataset="${datasets.USGS_ADRIATIC_SED038}"/>
+         <menu:dataset dataset="${datasets.OFAM_TEST}"/>
          <menu:folder label="MarQuest">
          	<menu:dataset dataset="${datasets.SEAW4}"/>
               <menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_GRIDT}"/>
