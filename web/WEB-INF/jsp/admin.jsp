@@ -21,11 +21,20 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     <body>
 
     <h1>ncWMS Admin page</h1>
-    
+
+    <p><a href="../godiva2.html">Godiva2 interface</a></p>
+    <c:choose>
+        <c:when test="${config.server.allowGlobalCapabilities}">
+            <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0">WMS 1.3.0 Capabilities</a></p>
+            <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">WMS 1.1.1 Capabilities</a></p>
+        </c:when>
+        <c:otherwise>
+            <em>The generation of Capabilities documents that include all datasets
+            on this server is disabled: see Server Settings below.</em>
+        </c:otherwise>
+    </c:choose>
     <p><a href="usage.jsp">Usage monitor</a></p>
     <p><a href="../">ncWMS Front page</a></p>
-    <p><a href="../godiva2.html">Godiva2 interface</a></p>
-    <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities">Capabilities document</a></p>
     
     <form id="config" action="updateConfig" method="POST">
         
@@ -152,7 +161,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             </tr>
         </table>
         
-        <h2>Server metadata</h2>
+        <h2>Server settings</h2>
         <table border="1">
             <tr><th>Title</th><td><input type="text" name="server.title" value="${config.server.title}"/></td><td>Title for this WMS</td></tr>
             <!-- TODO: make the abstract field larger -->
@@ -163,6 +172,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <tr><th>Max image width</th><td><input type="text" name="server.maximagewidth" value="${config.server.maxImageWidth}"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Max image height</th><td><input type="text" name="server.maximageheight" value="${config.server.maxImageHeight}"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Allow GetFeatureInfo</th><td><input type="checkbox" name="server.allowfeatureinfo"<c:if test="${config.server.allowFeatureInfo}"> checked="checked"</c:if>/></td><td>Check this box to enable the GetFeatureInfo operation</td></tr>
+            <tr><th>Allow global Capabilities</th><td><input type="checkbox" name="server.allowglobalcapabilities"<c:if test="${config.server.allowGlobalCapabilities}"> checked="checked"</c:if>/></td><td>Check this box to allow clients to request a
+            WMS Capabilities document including all datasets on this server (not recommended if this server hosts a large number of datasets)</td></tr>
         </table>
         
         <h2>Contact information</h2>

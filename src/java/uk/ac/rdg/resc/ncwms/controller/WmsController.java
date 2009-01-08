@@ -300,8 +300,19 @@ public class WmsController extends AbstractController
         if (datasetId == null || datasetId.trim().equals(""))
         {
             // No specific dataset has been chosen so we create a Capabilities
-            // document including every dataset
-            datasets = this.config.getDatasets().values();
+            // document including every dataset.
+            // First we check to see that the system admin has allowed us to
+            // create a global Capabilities doc (this can be VERY large)
+            if (this.config.getServer().isAllowGlobalCapabilities())
+            {
+                datasets = this.config.getDatasets().values();
+            }
+            else
+            {
+                throw new WmsException("Cannot create a Capabilities document "
+                    + "that includes all datasets on this server. "
+                    + "You must specify a dataset identifier with &amp;DATASET=");
+            }
         }
         else
         {
@@ -614,7 +625,7 @@ public class WmsController extends AbstractController
         String layerName = dataRequest.getLayers()[0];
         Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
         usageLogEntry.setLayer(layer);
-        if (!layer.isQueryable())
+        if (!layer.isQueryable() || !this.config.getServer().isAllowFeatureInfo())
         {
             throw new LayerNotQueryableException(layerName);
         }

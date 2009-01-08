@@ -22,10 +22,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     <body>
 
     <h1>${config.server.title}</h1>
-    
-    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0">Capabilities document (WMS 1.3.0)</a></p>
-    <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">Capabilities document (WMS 1.1.1)</a></p>
+
     <p><a href="godiva2.html">Godiva2 interface</a></p>
+    <c:choose>
+        <c:when test="${config.server.allowGlobalCapabilities}">
+            <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0">WMS 1.3.0 Capabilities</a></p>
+            <p><a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">WMS 1.1.1 Capabilities</a></p>
+        </c:when>
+        <c:otherwise>
+            <em>Administrator has disabled the generation of Capabilities documents
+            that include all datasets on this server.</em>
+        </c:otherwise>
+    </c:choose>
     <p><a href="admin/">Admin interface (requires login)</a></p>
     
     <h2>Datasets:</h2>
@@ -43,7 +51,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <c:forEach var="dataset" items="${config.datasets}">
         <c:if test="${dataset.value.ready}">
         <tr>
-            <th>${dataset.value.title}</th>
+            <th>
+                ${dataset.value.title}<br />
+                <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0&amp;DATASET=${dataset.value.id}">WMS 1.3.0</a><br />
+                <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1&amp;DATASET=${dataset.value.id}">WMS 1.1.1</a>
+            </th>
             <c:set var="layers" value="${dataset.value.layers}"/>
             <c:forEach var="mimeType" items="${supportedImageFormats}">
             <c:set var="transparent" value="true"/>

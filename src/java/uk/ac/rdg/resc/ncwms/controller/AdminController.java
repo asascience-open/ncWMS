@@ -139,6 +139,8 @@ public class AdminController extends MultiActionController
             server.setUrl(request.getParameter("server.url"));
             server.setMaxImageWidth(Integer.parseInt(request.getParameter("server.maximagewidth")));
             server.setMaxImageHeight(Integer.parseInt(request.getParameter("server.maximageheight")));
+            server.setAllowFeatureInfo(request.getParameter("server.allowfeatureinfo") != null);
+            server.setAllowGlobalCapabilities(request.getParameter("server.allowglobalcapabilities") != null);
 
             // Save the dataset information, checking for removals
             // First look through the existing datasets for edits.

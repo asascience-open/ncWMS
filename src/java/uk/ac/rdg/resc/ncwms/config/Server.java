@@ -58,6 +58,8 @@ public class Server
     private String url = " ";
     @Element(name="adminpassword")
     private String adminPassword = "ncWMS";
+    @Element(name="allowglobalcapabilities", required=false)
+    private boolean allowGlobalCapabilities = true;
     
     public String getTitle()
     {
@@ -77,6 +79,14 @@ public class Server
     public void setAllowFeatureInfo(boolean allowFeatureInfo)
     {
         this.allowFeatureInfo = allowFeatureInfo;
+    }
+
+    public boolean isAllowGlobalCapabilities() {
+        return allowGlobalCapabilities;
+    }
+
+    public void setAllowGlobalCapabilities(boolean allowGlobalCapabilities) {
+        this.allowGlobalCapabilities = allowGlobalCapabilities;
     }
 
     public int getMaxImageWidth()
