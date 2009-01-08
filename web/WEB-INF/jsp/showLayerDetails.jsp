@@ -29,9 +29,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <json:object name="zaxis">
             <json:property name="units" value="${layer.zunits}"/>
             <json:property name="positive" value="${layer.zpositive}"/>
-            <json:array name="values" items="${layer.zvalues}" var="z">
-                ${utils:abs(z)}
-            </json:array>
+            <json:array name="values" items="${layer.zvalues}"/>
         </json:object>
     </c:if>
     <c:if test="${layer.taxisPresent}">

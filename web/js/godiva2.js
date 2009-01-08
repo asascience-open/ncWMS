@@ -3,7 +3,6 @@
 //
 
 var map = null;
-var zPositive = false; // Will be true if the selected z axis is positive
 var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
@@ -482,42 +481,33 @@ function layerSelected(layerDetails)
         $('units').innerHTML = '';
     }
 
-    // clear the list of z values
-    $('zValues').options.length = 0; 
-
     // Set the range selector objects
     var zValue = typeof autoLoad.zValue == 'undefined'
         ? getZValue()
         : parseFloat(autoLoad.zValue);
+
+    // clear the list of z values
+    $('zValues').options.length = 0;
 
     var zAxis = layerDetails.zaxis;
     if (zAxis == null) {
         $('zAxis').innerHTML = ''
         $('zValues').style.visibility = 'hidden';
     } else {
-        if (zAxis.positive) {
-            $('zAxis').innerHTML = '<b>Elevation (' + zAxis.units + '): </b>';
-        } else {
-            $('zAxis').innerHTML = '<b>Depth (' + zAxis.units + '): </b>';
-        }
+        var axisLabel = zAxis.positive ? 'Elevation' : 'Depth';
+        $('zAxis').innerHTML = '<b>' + axisLabel + ' (' + zAxis.units + '): </b>';
         // Populate the drop-down list of z values
         // Make z range selector invisible if there are no z values
         var zValues = zAxis.values;
-        zPositive = zAxis.positive;
         var zDiff = 1e10; // Set to some ridiculously-high value
         var nearestIndex = 0;
         for (var j = 0; j < zValues.length; j++) {
             // Create an item in the drop-down list for this z level
-            $('zValues').options[j] = new Option(zValues[j], j);
+            var zLabel = zAxis.positive ? zValues[j] : -zValues[j];
+            $('zValues').options[j] = new Option(zLabel, zValues[j]);
             // Find the nearest value to the currently-selected
             // depth level
-            var diff;
-            // This is nasty: improve!
-            if (zPositive) {
-                diff = Math.abs(parseFloat(zValues[j]) - zValue);
-            } else {
-                diff = Math.abs(parseFloat(zValues[j]) + zValue);
-            }
+            var diff = Math.abs(parseFloat(zValues[j]) - zValue);
             if (diff < zDiff) {
                 zDiff = diff;
                 nearestIndex = j;
@@ -1088,9 +1078,7 @@ function getZValue()
 {
     // If we have no depth information, assume we're at the surface.  This
     // will be ignored by the map server
-    var zIndex = $('zValues').selectedIndex;
-    var zValue = $('zValues').options.length == 0 ? 0 : $('zValues').options[zIndex].firstChild.nodeValue;
-    return zPositive ? zValue : -zValue;
+    return $('zValues').options.length == 0 ? 0 : $('zValues').value;
 }
 
 // Sets the permalink, i.e. the link back to this view of the page
