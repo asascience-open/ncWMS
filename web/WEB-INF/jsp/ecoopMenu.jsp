@@ -14,14 +14,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <menu:folder label="ECOOP data visualization">
 
 	<menu:folder label="Baltic Region">
-	    	<menu:folder label="BSH, Germany">
+	    	<menu:folder label="BSH Germany">
     			<menu:folder label="Coastal Model Data">
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
 	 		</menu:folder>
  		</menu:folder>
-    		<menu:folder label="DMI, Denmark">
+    		<menu:folder label="DMI Denmark">
        		<menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
         		<menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
     		</menu:folder>
@@ -30,7 +30,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	<menu:folder label="NW Shelves">
 	    	<menu:folder label="Met Office UK">
         		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
-        			<menu:folder label="POLCOMS MRCS (Biological)">
+        		<menu:folder label="POLCOMS MRCS (Biological)">
             			<%-- We have to add these layers manually because they are coming from a remote server --%>
             			<menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
@@ -44,22 +44,41 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p2c" label="Flagellate biomass" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
+        		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Forecast)"/>
     		</menu:folder>
-		<menu:folder label="Marine Institute, Ireland">
-        		<menu:dataset dataset="${datasets.ECOOP_ROMS_TEST}"/>
-    		</menu:folder>
+	    	<menu:folder label="BSH Germany">
+    			<menu:folder label="Coastal Model Data">
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
+	 		</menu:folder>
+ 		</menu:folder>
 	</menu:folder>
-
 	<menu:folder label="IBIROOS">
+	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS}" label="NE Atlantic ROMS Ireland"/>
+	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS_testagg}"/>
+	        	<menu:dataset dataset="${datasets.ECOOP_PREVIMER_MANGA}" label="PREVIMER Bay of Biscay forecasts France"/>
 	</menu:folder>
 
 	<menu:folder label="Mediterranean">
+              <menu:folder label="Mediterranean ocean analyses Italy">
+              	<menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
+              	<menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
+              	<menu:layer id="MERSEA_MED_T/ssh" label="sea_surface_height_above_sea_level"/>
+              	<menu:layer id="MERSEA_MED_T/mld" label="ocean_mixed_layer_thickness"/>
+              	<menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
+              	<menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
+	       </menu:folder>
 	    	<menu:folder label="University of Cyprus">
-        		<menu:dataset dataset="${datasets.ECOOP_CYCO}"/>
-         		<menu:dataset dataset="${datasets.ECOOP_TEST_CYPRUS}"/>
+ 			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_daily_inst}"/>
+			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_6h_avg}"/>
      		</menu:folder>
 	</menu:folder>
 
+	<menu:folder label="Test IOLR Israel">
+ 		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
+     	</menu:folder>
+	
 	<menu:folder label="Black Sea">
 	</menu:folder>
 </menu:folder>
