@@ -243,8 +243,6 @@ function setupTreeControl(menu)
             servers.length == 1 // Only show expanded if this is the only server
         );
         layerRootNode.multiExpand = false;
-        // The getMenu() function is asynchronous.  Once we have received
-        // the result from the server we shall pass it to the makeLayerMenu() function.
         getMenu(layerRootNode, {
             menu: menu,
             callback : function(layerRootNode, layers) {
@@ -260,12 +258,20 @@ function setupTreeControl(menu)
                     if (node == null) {
                         alert("Layer " + autoLoad.layer + " not found");
                     } else {
-                        if (node.parent != null) node.parent.expand();
+                        expandParents(node);
                         treeNodeClicked(node); // act as if we have clicked this node
                     }
                 }
             }
         });
+    }
+}
+
+function expandParents(node)
+{
+    if (node.parent != null) {
+        node.parent.expand();
+        expandParents(node.parent);
     }
 }
 

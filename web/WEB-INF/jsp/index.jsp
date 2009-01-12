@@ -41,8 +41,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     <table border="1">
         <tr>
             <th>Dataset</th>
+            <th>Godiva2 links</th>
             <c:forEach var="mimeType" items="${supportedImageFormats}">
-                <th>${mimeType}</th>
+                <th>Test image: ${mimeType}</th>
             </c:forEach>
             <c:if test="${config.server.allowFeatureInfo}">
                 <th>FeatureInfo</th>
@@ -57,17 +58,24 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1&amp;DATASET=${dataset.value.id}">WMS 1.1.1</a>
             </th>
             <c:set var="layers" value="${dataset.value.layers}"/>
-            <c:forEach var="mimeType" items="${supportedImageFormats}">
-            <c:set var="transparent" value="true"/>
-            <c:if test="${mimeType == 'image/jpeg'}">
-                <c:set var="transparent" value="false"/>
-            </c:if>
             <td>
+                <!-- Direct links to the Godiva2 site -->
                 <c:forEach var="layer" items="${layers}">
-                <c:set var="bbox" value="${layer.bbox}"/>
-                <a href="wms?REQUEST=GetMap&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=${transparent}&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
+                    <c:set var="bbox" value="${layer.bbox}"/>
+                    <a href="godiva2.html?layer=${layer.layerName}&amp;bbox=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
                 </c:forEach>
             </td>
+            <c:forEach var="mimeType" items="${supportedImageFormats}">
+                <c:set var="transparent" value="true"/>
+                <c:if test="${mimeType == 'image/jpeg'}">
+                    <c:set var="transparent" value="false"/>
+                </c:if>
+                <td>
+                    <c:forEach var="layer" items="${layers}">
+                    <c:set var="bbox" value="${layer.bbox}"/>
+                    <a href="wms?REQUEST=GetMap&amp;VERSION=1.3.0&amp;STYLES=&amp;CRS=CRS:84&amp;WIDTH=256&amp;HEIGHT=256&amp;FORMAT=${mimeType}&amp;TRANSPARENT=${transparent}&amp;LAYERS=${layer.layerName}&amp;BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}">${layer.title}</a><br />
+                    </c:forEach>
+                </td>
             </c:forEach>
             <c:if test="${config.server.allowFeatureInfo}">
             <td>
