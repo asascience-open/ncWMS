@@ -197,6 +197,7 @@ public class DefaultDataReader extends DataReader
     {
         // Cycle through the y indices, extracting a scanline of
         // data each time from minX to maxX
+        logger.debug("Shape of grid: {}", Arrays.toString(grid.getShape()));
         for (int j : pixelMap.getJIndices())
         {
             Range yRange = new Range(j, j);
@@ -206,6 +207,8 @@ public class DefaultDataReader extends DataReader
             Range xRange = new Range(imin, imax);
             // Read a chunk of data - values will not be unpacked or
             // checked for missing values yet
+            logger.debug("tRange: {}, zRange: {}, yRange: {}, xRange: {}", new
+                Object[] {tRange, zRange, yRange, xRange});
             GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
             logger.debug("Subset shape = {}", Arrays.toString(subset.getShape()));
             // Read all of the x-y data in this subset

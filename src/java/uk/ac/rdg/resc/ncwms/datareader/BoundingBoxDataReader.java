@@ -66,6 +66,9 @@ public class BoundingBoxDataReader extends DefaultDataReader
         // Read the whole chunk of x-y data
         Range xRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
         Range yRange = new Range(pixelMap.getMinJIndex(), pixelMap.getMaxJIndex());
+        logger.debug("Shape of grid: {}", Arrays.toString(grid.getShape()));
+        logger.debug("tRange: {}, zRange: {}, yRange: {}, xRange: {}", new
+            Object[] {tRange, zRange, yRange, xRange});
         long start = System.currentTimeMillis();
         GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
         // Read all of the x-y data in this subset
