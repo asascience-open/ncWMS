@@ -13,12 +13,15 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
 <menu:folder label="ECOOP data visualization">
 
-	<menu:folder label="Baltic Region">
+	<menu:folder label="Baltic Region BOOS">
 	    	<menu:folder label="BSH Germany">
     			<menu:folder label="Coastal Model Data">
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_TS_hindcast}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV_hindcast}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_ice_hindcast}"/>
 	 		</menu:folder>
  		</menu:folder>
     		<menu:folder label="DMI Denmark">
@@ -27,7 +30,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     		</menu:folder>
 	</menu:folder>
 
-	<menu:folder label="NW Shelves">
+	<menu:folder label="NW Shelves NOOS">
 	    	<menu:folder label="Met Office UK">
         		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
         		<menu:folder label="POLCOMS MRCS (Biological)">
@@ -51,16 +54,19 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_TS_hindcast}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV_hindcast}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_BSH_ice_hindcast}"/>
 	 		</menu:folder>
  		</menu:folder>
 	</menu:folder>
-	<menu:folder label="IBIROOS">
+	<menu:folder label="Iberian IBIROOS">
 	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS}" label="NE Atlantic ROMS Ireland"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS_testagg}"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_PREVIMER_MANGA}" label="PREVIMER Bay of Biscay forecasts France"/>
 	</menu:folder>
 
-	<menu:folder label="Mediterranean">
+	<menu:folder label="Mediterranean MOON">
               <menu:folder label="Mediterranean ocean analyses Italy">
               	<menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
               	<menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
@@ -73,12 +79,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
  			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_daily_inst}"/>
 			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_6h_avg}"/>
      		</menu:folder>
+ 		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
 	</menu:folder>
 
-	<menu:folder label="Test IOLR Israel">
- 		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
-     	</menu:folder>
-	
 	<menu:folder label="Black Sea">
 	</menu:folder>
 </menu:folder>

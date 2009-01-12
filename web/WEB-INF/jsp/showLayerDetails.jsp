@@ -46,6 +46,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              selected on the web interface, in ISO8601 format --%>
         <json:property name="nearestTimeIso" value="${nearestTimeIso}"/>
     </c:if>
+    <json:property name="moreInfo" value="${layer.moreInfo}"/>
     <json:property name="copyright" value="${layer.copyrightStatement}"/>
     <json:array name="palettes" items="${paletteNames}"/>
 </json:object>

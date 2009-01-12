@@ -43,7 +43,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <th>Dataset</th>
             <th>Godiva2 links</th>
             <c:forEach var="mimeType" items="${supportedImageFormats}">
-                <th>Test image: ${mimeType}</th>
+                <th>Test GetMap: ${mimeType}</th>
             </c:forEach>
             <c:if test="${config.server.allowFeatureInfo}">
                 <th>FeatureInfo</th>

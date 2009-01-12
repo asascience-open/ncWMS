@@ -575,6 +575,10 @@ public class LayerImpl implements Layer
         return copyright.replaceAll("\\$\\{year\\}", yearStr);
     }
 
+    public String getMoreInfo() {
+        return this.dataset.getMoreInfo();
+    }
+
     public Object getAttachment() {
         return this.attachment;
     }

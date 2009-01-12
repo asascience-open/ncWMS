@@ -42,7 +42,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         
         <h2>Datasets</h2>
         <table border="1">
-        <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Copyright statement</th></tr>
+        <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
             
             <c:forEach var="dataset" items="${config.datasets}">
                 <tr<c:if test="${dataset.value.disabled}"> bgcolor="lightgrey"</c:if>>
@@ -82,6 +82,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.queryable"<c:if test="${dataset.value.queryable}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.value.id}.remove"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.reader" value="${dataset.value.dataReaderClass}"/></td>
+                    <td><input type="text" name="dataset.${dataset.value.id}.moreinfo" value="${dataset.value.moreInfo}"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.copyright" value="${dataset.value.copyrightStatement}"/></td>
                 </tr>
             </c:forEach>
@@ -110,6 +111,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td><input type="checkbox" name="dataset.new${i}.queryable" checked="checked"/></td>
                     <td>N/A</td>
                     <td><input type="text" name="dataset.new${i}.reader" value=""/></td>
+                    <td><input type="text" name="dataset.new${i}.moreinfo" value=""/></td>
                     <td><input type="text" name="dataset.new${i}.copyright" value=""/></td>
                 </tr>
             </c:forEach>

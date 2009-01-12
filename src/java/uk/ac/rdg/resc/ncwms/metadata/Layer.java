@@ -183,6 +183,11 @@ public interface Layer
     boolean isZpositive();
     
     String getCopyrightStatement();
+
+    /**
+     * Link to more information about this variable
+     */
+    String getMoreInfo();
     
     /**
      * @return true if this Layer can be rendered in the style with the 

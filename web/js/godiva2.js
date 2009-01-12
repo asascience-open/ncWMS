@@ -553,6 +553,15 @@ function layerSelected(layerDetails)
     $('autoZoom').innerHTML = '<a href="#" onclick="map.zoomToExtent(new OpenLayers.Bounds(' +
         bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
         '));\">Fit layer to window</a>';
+
+    // Set the link to more details about this dataset
+    if (typeof layerDetails.moreInfo != 'undefined' &&
+            layerDetails.moreInfo != '') {
+        $('moreInfo').innerHTML = '<a target="_blank" href="' + layerDetails.moreInfo +
+            '">More information</a>';
+    } else {
+        $('moreInfo').innerHTML = '';
+    }
     
     // Set up the copyright statement
     $('copyright').innerHTML = layerDetails.copyright;

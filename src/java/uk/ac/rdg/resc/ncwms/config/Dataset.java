@@ -75,6 +75,9 @@ public class Dataset
     
     @Attribute(name="copyrightStatement", required=false)
     private String copyrightStatement = "";
+
+    @Attribute(name="moreInfo", required=false)
+    private String moreInfo = "";
     
     @Attribute(name="disabled", required=false)
     private boolean disabled = false; // Set true to disable the dataset without removing it completely
@@ -296,5 +299,15 @@ public class Dataset
     public void setCopyrightStatement(String copyrightStatement)
     {
         this.copyrightStatement = copyrightStatement;
+    }
+
+    public String getMoreInfo()
+    {
+        return moreInfo;
+    }
+
+    public void setMoreInfo(String moreInfo)
+    {
+        this.moreInfo = moreInfo;
     }
 }
