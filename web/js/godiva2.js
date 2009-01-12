@@ -1102,8 +1102,9 @@ function setPermalinkURL()
     if (activeLayer != null) {
         // Note that we must use window.top to get the containing page, in case
         // the Godiva2 page is embedded in an iframe
-        // Watch out for trailing hashes, which screw the permalink up
-        var url = window.top.location.toString().replace('#', '');
+        // Get the window location, minus any query string or hash
+        var loc = window.top.location;
+        var url = loc.protocol + '//' + loc.host + loc.pathname;
         url +=
             '?menu=' + menu +
             '&layer=' + activeLayer.id +
