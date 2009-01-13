@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.utils;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
@@ -36,7 +37,9 @@ import ucar.nc2.units.DateFormatter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.TimeZone;
+import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 
 /**
@@ -236,6 +239,93 @@ public class WmsUtils
     public static boolean isNcmlAggregation(String location)
     {
         return location.endsWith(".xml") || location.endsWith(".ncml");
+    }
+
+
+
+    /**
+     * Finds all files matching
+     * a glob pattern.  This method recursively searches directories, allowing
+     * for glob expressions like {@code "c:\\data\\200[6-7]\\*\\1*\\A*.nc"}.
+     * @param globExpression The glob expression
+     * @return List of File objects matching the glob pattern.  This will never
+     * be null but might be empty
+     * @throws Exception if the glob expression does not represent an absolute
+     * path
+     * @author Mike Grant, Plymouth Marine Labs; Jon Blower
+     */
+    public static List<File> globFiles(String globExpression) throws Exception
+    {
+        // Check that the glob expression is an absolute path.  Relative paths
+        // would cause unpredictable and platform-dependent behaviour so
+        // we disallow them.
+        // If ds.getLocation() is a glob expression this test will still work
+        // because we are not attempting to resolve the string to a real path.
+        File globFile = new File(globExpression);
+        if (!globFile.isAbsolute())
+        {
+            throw new Exception("Dataset location must be an absolute path");
+        }
+
+        // Break glob pattern into path components.  To do this in a reliable
+        // and platform-independent way we use methods of the File class, rather
+        // than String.split().
+        List<String> pathComponents = new ArrayList<String>();
+        while (globFile != null)
+        {
+            // We "pop off" the last component of the glob pattern and place
+            // it in the first component of the pathComponents List.  We therefore
+            // ensure that the pathComponents end up in the right order.
+            File parent = globFile.getParentFile();
+            // For a top-level directory, getName() returns an empty string,
+            // hence we use getPath() in this case
+            String pathComponent = parent == null ? globFile.getPath() : globFile.getName();
+            pathComponents.add(0, pathComponent);
+            globFile = parent;
+        }
+
+        // We must have at least two path components: one directory and one
+        // filename or glob expression
+        List<File> searchPaths = new ArrayList<File>();
+        searchPaths.add(new File(pathComponents.get(0)));
+        int i = 1; // Index of the glob path component
+
+        while(i < pathComponents.size())
+        {
+            FilenameFilter globFilter = new GlobFilenameFilter(pathComponents.get(i));
+            List<File> newSearchPaths = new ArrayList<File>();
+            // Look for matches in all the current search paths
+            for (File dir : searchPaths)
+            {
+                if (dir.isDirectory())
+                {
+                    // Workaround for automounters that don't make filesystems
+                    // appear unless they're poked
+                    // do a listing on searchpath/pathcomponent whether or not
+                    // it exists, then discard the results
+                    new File(dir, pathComponents.get(i)).list();
+
+                    for (File match : dir.listFiles(globFilter))
+                    {
+                        newSearchPaths.add(match);
+                    }
+                }
+            }
+            // Next time we'll search based on these new matches and will use
+            // the next globComponent
+            searchPaths = newSearchPaths;
+            i++;
+        }
+
+        // Now we've done all our searching, we'll only retain the files from
+        // the list of search paths
+        List<File> filesToReturn = new ArrayList<File>();
+        for (File path : searchPaths)
+        {
+            if (path.isFile()) filesToReturn.add(path);
+        }
+
+        return filesToReturn;
     }
     
 }

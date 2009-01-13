@@ -544,12 +544,13 @@ public class WmsController extends AbstractController
         }
         else
         {
-            // There is no time axis
-            // TODO: this fails if there is a layer in the dataset which 
-            // has no time axis but the dataset is still a glob aggregation
-            // (e.g. a bathymetry layer that is present in every file in the glob
-            // aggregation, but has no time dependence).
-            filename = layer.getDataset().getLocation();
+            // There is no time axis.  If this is a glob aggregation we must make
+            // sure that we use a valid filename, so we pick the first file
+            // in the aggregation.  (If this is not a glob aggregation then this
+            // should still work.)  If we don't do the glob expansion then we
+            // might end up passing an invalid filename such as "/path/to/*.nc"
+            // to DataReader.read().
+            filename = WmsUtils.globFiles(layer.getDataset().getLocation()).get(0).getName();
             tIndexInFile = tIndex;
         }
         float[] data = null;
