@@ -550,7 +550,7 @@ public class WmsController extends AbstractController
             // should still work.)  If we don't do the glob expansion then we
             // might end up passing an invalid filename such as "/path/to/*.nc"
             // to DataReader.read().
-            filename = WmsUtils.globFiles(layer.getDataset().getLocation()).get(0).getName();
+            filename = WmsUtils.globFiles(layer.getDataset().getLocation()).get(0).getPath();
             tIndexInFile = tIndex;
         }
         float[] data = null;
