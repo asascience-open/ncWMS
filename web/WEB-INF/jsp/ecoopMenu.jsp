@@ -28,6 +28,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
        		<menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
         		<menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
     		</menu:folder>
+    		<menu:folder label="FMI Finland">
+       		<menu:dataset dataset="${datasets.ECOOP_FMI_s_forecast}"/>
+        		<menu:dataset dataset="${datasets.ECOOP_FMI_t_forecast}"/>
+	      		<menu:dataset dataset="${datasets.ECOOP_FMI_u_forecast}"/>
+        		<menu:dataset dataset="${datasets.ECOOP_FMI_v_forecast}"/>
+      			<menu:dataset dataset="${datasets.ECOOP_FMI_w_forecast}"/>
+        		<menu:dataset dataset="${datasets.ECOOP_FMI_s_hindcast}"/>
+      			<menu:dataset dataset="${datasets.ECOOP_FMI_t_hindcast}"/>
+        		<menu:dataset dataset="${datasets.ECOOP_FMI_u_hindcast}"/>
+        		<menu:dataset dataset="${datasets.ECOOP_FMI_v_hindcast}"/>
+      			<menu:dataset dataset="${datasets.ECOOP_FMI_w_hindcast}"/>
+    		</menu:folder>
 	</menu:folder>
 
 	<menu:folder label="NW Shelves NOOS">
@@ -62,7 +74,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	</menu:folder>
 	<menu:folder label="Iberian IBIROOS">
 	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS}" label="NE Atlantic ROMS Ireland"/>
-	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS_testagg}"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_PREVIMER_MANGA}" label="PREVIMER Bay of Biscay forecasts France"/>
 	</menu:folder>
 
@@ -80,10 +91,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_6h_avg}"/>
      		</menu:folder>
  		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
+        	<menu:dataset dataset="${datasets.ECOOP_IMEDEA}"/>
 	</menu:folder>
 
 	<menu:folder label="Black Sea">
+  		<menu:dataset dataset="${datasets.ECOOP_BULGARIA}"/>
+ 		<menu:dataset dataset="${datasets.ECOOP_ROMANIA}"/>
+		<menu:dataset dataset="${datasets.MHI_BLACKSEA_CRIMEA_FOR}"/>
 	</menu:folder>
+
+
 </menu:folder>
 
 
