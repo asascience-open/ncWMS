@@ -25,7 +25,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	 		</menu:folder>
  		</menu:folder>
     		<menu:folder label="DMI Denmark">
-       		<menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
+     		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
+        		<menu:dataset dataset="${datasets.BALTIC_BEST_EST}"/>
         		<menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
     		</menu:folder>
     		<menu:folder label="FMI Finland">
@@ -60,9 +61,21 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
         		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Forecast)"/>
+        		<menu:dataset dataset="${datasets.Met_Office_MRCS_fmrc}"/>
+        		<menu:dataset dataset="${datasets.Met_Office_MRCS_best}"/>
+    		</menu:folder>
+
+	    	<menu:folder label="Met Office MRCS ECOOP TOP UK">
+         		<menu:dataset dataset="${datasets.Met_Office_MRCS_ECOOP_TOP_fmrc}"/>
+        		<menu:dataset dataset="${datasets.Met_Office_MRCS_ECOOP_TOP_best}"/>
+    		</menu:folder>
+
+    		<menu:folder label="DMI Denmark">
+     		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
     		</menu:folder>
 	    	<menu:folder label="BSH Germany">
     			<menu:folder label="Coastal Model Data">
+            			<menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
