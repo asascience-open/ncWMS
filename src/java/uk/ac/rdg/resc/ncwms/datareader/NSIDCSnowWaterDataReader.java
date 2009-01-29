@@ -38,7 +38,8 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
@@ -54,7 +55,7 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
  */
 public class NSIDCSnowWaterDataReader extends DataReader
 {
-    private static final Logger logger = Logger.getLogger(NSIDCSnowWaterDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(NSIDCSnowWaterDataReader.class);
     
     /**
      * The number of rows of data in the grid

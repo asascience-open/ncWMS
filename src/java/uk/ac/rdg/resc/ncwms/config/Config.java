@@ -34,7 +34,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
@@ -61,7 +62,7 @@ import uk.ac.rdg.resc.ncwms.security.Users;
 @Root(name="config")
 public class Config implements ApplicationContextAware
 {
-    private static final Logger logger = Logger.getLogger(Config.class);
+    private static final Logger logger = LoggerFactory.getLogger(Config.class);
     
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",

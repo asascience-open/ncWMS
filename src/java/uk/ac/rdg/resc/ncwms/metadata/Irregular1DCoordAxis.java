@@ -31,7 +31,8 @@ package uk.ac.rdg.resc.ncwms.metadata;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.nc2.constants.AxisType;
 
 /**
@@ -44,7 +45,7 @@ import ucar.nc2.constants.AxisType;
  */
 public class Irregular1DCoordAxis extends OneDCoordAxis
 {
-    private static final Logger logger = Logger.getLogger(Irregular1DCoordAxis.class);
+    private static final Logger logger = LoggerFactory.getLogger(Irregular1DCoordAxis.class);
     
     /**
      * Maps axis values to their indices along the axis, sorted in ascending order

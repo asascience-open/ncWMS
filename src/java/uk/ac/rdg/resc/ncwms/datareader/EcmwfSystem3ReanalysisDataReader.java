@@ -31,7 +31,8 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.nc2.Variable;
@@ -51,7 +52,7 @@ import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
  */
 public class EcmwfSystem3ReanalysisDataReader extends DefaultDataReader
 {
-    private static final Logger logger = Logger.getLogger(EcmwfSystem3ReanalysisDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(EcmwfSystem3ReanalysisDataReader.class);
     
     /**
      * Corrects problem with reading bounding box in source data (use of latitude

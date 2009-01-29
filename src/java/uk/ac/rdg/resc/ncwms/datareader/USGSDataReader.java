@@ -33,7 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
@@ -57,7 +58,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
  */
 public class USGSDataReader extends DefaultDataReader
 {
-    private static final Logger logger = Logger.getLogger(USGSDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(USGSDataReader.class);
     
     /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular

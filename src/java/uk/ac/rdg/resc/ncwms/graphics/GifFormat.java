@@ -34,7 +34,8 @@ import java.awt.image.IndexColorModel;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Creates (possibly animated) GIFs.  Only one instance of this class
@@ -48,7 +49,7 @@ import org.apache.log4j.Logger;
  */
 public class GifFormat extends SimpleFormat
 {
-    private static final Logger logger = Logger.getLogger(GifFormat.class);
+    private static final Logger logger = LoggerFactory.getLogger(GifFormat.class);
     
     protected GifFormat() {}
 

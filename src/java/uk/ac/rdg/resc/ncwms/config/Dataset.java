@@ -31,7 +31,8 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
@@ -47,7 +48,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 @Root(name="dataset")
 public class Dataset
 {
-    private static final Logger logger = Logger.getLogger(Dataset.class);
+    private static final Logger logger = LoggerFactory.getLogger(Dataset.class);
     
     /**
      * The state of a Dataset.

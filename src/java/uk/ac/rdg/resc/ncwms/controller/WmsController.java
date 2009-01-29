@@ -43,7 +43,8 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
@@ -103,7 +104,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class WmsController extends AbstractController
 {
-    private static final Logger log = Logger.getLogger(WmsController.class);
+    private static final Logger log = LoggerFactory.getLogger(WmsController.class);
     
     /**
      * The maximum number of layers that can be requested in a single GetMap

@@ -43,7 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
@@ -53,7 +54,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
  */
 public class ColorPalette
 {
-    private static final Logger logger = Logger.getLogger(ColorPalette.class);
+    private static final Logger logger = LoggerFactory.getLogger(ColorPalette.class);
     
     private static final Map<String, ColorPalette> palettes =
         new HashMap<String, ColorPalette>();

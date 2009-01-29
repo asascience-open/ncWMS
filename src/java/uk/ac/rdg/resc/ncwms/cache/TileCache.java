@@ -36,7 +36,8 @@ import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.DiskStoreConfiguration;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 
@@ -93,7 +94,7 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
  */
 public class TileCache
 {
-    private static final Logger logger = Logger.getLogger(TileCache.class);
+    private static final Logger logger = LoggerFactory.getLogger(TileCache.class);
     
     private static final String CACHE_NAME = "tilecache";
     private CacheManager cacheManager;

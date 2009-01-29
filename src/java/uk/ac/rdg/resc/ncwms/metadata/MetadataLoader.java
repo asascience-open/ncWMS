@@ -37,7 +37,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.unidata.io.RandomAccessFile;
 import uk.ac.rdg.resc.ncwms.config.Config;
@@ -58,7 +59,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class MetadataLoader
 {
-    private static final Logger logger = Logger.getLogger(MetadataLoader.class);
+    private static final Logger logger = LoggerFactory.getLogger(MetadataLoader.class);
     
     private Timer timer = new Timer("Dataset reloader", true);
     

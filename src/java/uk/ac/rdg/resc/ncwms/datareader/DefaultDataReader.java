@@ -35,7 +35,8 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.Range;
@@ -69,9 +70,9 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  */
 public class DefaultDataReader extends DataReader
 {
-    private static final Logger logger = Logger.getLogger(DefaultDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDataReader.class);
     // We'll use this logger to output performance information
-    private static final Logger benchmarkLogger = Logger.getLogger("ncwms.benchmark");
+    private static final Logger benchmarkLogger = LoggerFactory.getLogger("ncwms.benchmark");
     
     /**
      * <p>Reads an array of data from a NetCDF file and projects onto the given

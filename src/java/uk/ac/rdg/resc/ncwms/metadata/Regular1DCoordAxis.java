@@ -28,7 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.nc2.constants.AxisType;
 
 /**
@@ -45,7 +46,7 @@ import ucar.nc2.constants.AxisType;
  */
 public class Regular1DCoordAxis extends OneDCoordAxis
 {
-    private static final Logger logger = Logger.getLogger(Regular1DCoordAxis.class);
+    private static final Logger logger = LoggerFactory.getLogger(Regular1DCoordAxis.class);
     
     private double start;  // The first value along the axis
     private double stride; // The stride length along the axis

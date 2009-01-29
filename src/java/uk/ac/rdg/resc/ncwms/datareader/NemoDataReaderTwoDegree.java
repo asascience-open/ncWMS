@@ -31,7 +31,8 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.nc2.Variable;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -50,7 +51,7 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
  */
 public class NemoDataReaderTwoDegree extends NemoDataReader
 {
-    private static final Logger logger = Logger.getLogger(NemoDataReaderTwoDegree.class);
+    private static final Logger logger = LoggerFactory.getLogger(NemoDataReaderTwoDegree.class);
     
     @Override
     protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)

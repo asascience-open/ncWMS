@@ -36,7 +36,8 @@ import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthScheme;
 import org.apache.commons.httpclient.auth.CredentialsNotAvailableException;
 import org.apache.commons.httpclient.auth.CredentialsProvider;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles authentication with OPeNDAP servers.  This object is created by
@@ -53,7 +54,7 @@ import org.apache.log4j.Logger;
  */
 public class NcwmsCredentialsProvider implements CredentialsProvider
 {
-    private static final Logger logger = Logger.getLogger(NcwmsCredentialsProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(NcwmsCredentialsProvider.class);
     
     // Maps "host:port" to a Credentials object
     private Map<String, Credentials> creds = new HashMap<String, Credentials>();

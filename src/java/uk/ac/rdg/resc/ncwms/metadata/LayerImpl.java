@@ -34,7 +34,8 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
@@ -54,7 +55,7 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class LayerImpl implements Layer
 {
-    private static final Logger logger = Logger.getLogger(LayerImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(LayerImpl.class);
     
     protected String id;
     protected String title = null;

@@ -41,7 +41,8 @@ import java.awt.image.SinglePixelPackedSampleModel;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.controller.ColorScaleRange;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapRequest;
@@ -59,7 +60,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
  */
 public final class ImageProducer
 {
-    private static final Logger logger = Logger.getLogger(ImageProducer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ImageProducer.class);
     
     private Layer layer;
     private Style style;

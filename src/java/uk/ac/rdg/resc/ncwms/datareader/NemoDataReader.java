@@ -35,7 +35,8 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Variable;
@@ -58,7 +59,7 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
  */
 public class NemoDataReader extends DefaultDataReader
 {
-    private static final Logger logger = Logger.getLogger(NemoDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(NemoDataReader.class);
     
     /**
      * Reads an array of data from a NetCDF file and projects onto a rectangular

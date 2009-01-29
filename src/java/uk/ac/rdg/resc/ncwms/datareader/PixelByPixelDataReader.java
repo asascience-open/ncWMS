@@ -28,7 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.Range;
@@ -46,7 +47,7 @@ import ucar.nc2.dt.GridDatatype;
  */
 public class PixelByPixelDataReader extends DefaultDataReader
 {
-    private static final Logger logger = Logger.getLogger(PixelByPixelDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(PixelByPixelDataReader.class);
     
     /**
      * Reads data from the given GeoGrid and populates the given pixel array.

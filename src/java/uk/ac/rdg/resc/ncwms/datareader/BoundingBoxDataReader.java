@@ -29,7 +29,8 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.util.Arrays;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.Range;
@@ -50,7 +51,7 @@ import ucar.nc2.dt.GridDatatype;
  */
 public class BoundingBoxDataReader extends DefaultDataReader
 {
-    private static final Logger logger = Logger.getLogger(BoundingBoxDataReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(BoundingBoxDataReader.class);
     
     /**
      * Reads data from the given GridDatatype and populates the given pixel array.

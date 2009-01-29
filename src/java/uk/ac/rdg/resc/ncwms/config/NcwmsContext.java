@@ -30,13 +30,13 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.util.Properties;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import org.slf4j.LoggerFactory;
+import org.apache.log4j.PropertyConfigurator;
 
 /**
  * Contains information about the context of the ncWMS application, in particular
@@ -102,7 +102,7 @@ public class NcwmsContext implements ApplicationContextAware
         
         // Set the headings for the benchmark logger
         // Matches up with code in DefaultDataReader.read()
-        Logger.getLogger("ncwms.benchmark").info
+        LoggerFactory.getLogger("ncwms.benchmark").info
         (
             "Dataset," +
             "Variable," +

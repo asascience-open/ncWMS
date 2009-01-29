@@ -33,7 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
@@ -118,7 +119,7 @@ import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
  */
 public class PixelMap
 {
-    private static final Logger logger = Logger.getLogger(PixelMap.class);
+    private static final Logger logger = LoggerFactory.getLogger(PixelMap.class);
     
     // These define the bounding box (in terms of axis indices) of the data
     // to extract from the source files

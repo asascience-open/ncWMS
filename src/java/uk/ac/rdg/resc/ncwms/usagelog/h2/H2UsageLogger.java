@@ -42,7 +42,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import javax.sql.DataSource;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.h2.tools.Csv;
 import org.h2.tools.RunScript;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
@@ -66,7 +67,7 @@ public class H2UsageLogger implements UsageLogger
     /**
      * The log4j logging system
      */
-    private static final Logger logger = Logger.getLogger(H2UsageLogger.class);
+    private static final Logger logger = LoggerFactory.getLogger(H2UsageLogger.class);
     
     private static final String INSERT_COMMAND = "INSERT INTO usage_log(request_time, client_ip, " +
             "client_hostname, client_referrer, client_user_agent, http_method, wms_version," +
