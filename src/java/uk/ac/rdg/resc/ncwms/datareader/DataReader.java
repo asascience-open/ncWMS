@@ -49,7 +49,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public abstract class DataReader
 {
-
     /**
      * Maps class names to DataReader objects.  Only one DataReader object of
      * each class will ever be created.
@@ -84,6 +83,8 @@ public abstract class DataReader
         {
             clazz = className;
         }
+        // TODO make this thread safe.  Can this be done without explicit locking?
+        // See Bloch, Effective Java.
         if (!readers.containsKey(clazz))
         {
             // Create the DataReader object

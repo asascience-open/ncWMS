@@ -137,8 +137,8 @@ window.onload = function()
     
     map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
     
-    map.setBaseLayer(bluemarble_wms);
-    
+    map.setBaseLayer(demis_wms);
+
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
     map.events.register('moveend', map, setGEarthURL);
@@ -295,7 +295,9 @@ function treeNodeClicked(node)
         }
         if (isoTValue == null ) {
             // Set to the present time if we don't already have a time selected
-            isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
+            // Set milliseconds to zero (don't know how to create a format string
+            // that includes milliseconds).
+            isoTValue = new Date().print('%Y-%m-%dT%H:%M:%S.000Z');
         }
 
         // Get the details of this layer from the server, calling layerSelected()
@@ -632,7 +634,8 @@ function loadTimesteps()
     getTimesteps(activeLayer.server, {
         callback: updateTimesteps,
         layerName: activeLayer.id,
-        day: makeIsoDate(calendar.date)
+        // TODO: Hack! Use date only and adjust server-side logic
+        day: makeIsoDate(calendar.date) + 'T00:00:00.000Z'
     });
 }
 
@@ -657,8 +660,19 @@ function updateTimesteps(times)
     var s = '<select id="tValues" onchange="javascript:updateMap()">';
     for (var i = 0; i < times.length; i++) {
         // Construct the full ISO Date-time
-        var isoDateTime = makeIsoDate(calendar.date) + 'T' + times[i] + 'Z';
-        s += '<option value="' + isoDateTime + '">' + times[i] + '</option>';
+        var isoDateTime = makeIsoDate(calendar.date) + 'T' + times[i];// + 'Z';
+        // Strip off the trailing "Z" and any zero-length milliseconds
+        var stopIndex = times[i].length;
+        if (times[i].endsWith('.000Z')) {
+            stopIndex -= 5;
+        } else if (times[i].endsWith('.00Z')) {
+            stopIndex -= 4;
+        } else if (times[i].endsWith('.0Z')) {
+            stopIndex -= 3;
+        } else if (times[i].endsWith('Z')) {
+            stopIndex -= 1;
+        }
+        s += '<option value="' + isoDateTime + '">' + times[i].substring(0, stopIndex) + '</option>';
     }
     s += '</select>';
 

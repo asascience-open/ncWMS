@@ -30,16 +30,16 @@ package uk.ac.rdg.resc.ncwms.utils;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
-import ucar.nc2.units.DateFormatter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.TimeZone;
 import org.apache.oro.io.GlobFilenameFilter;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 
 /**
@@ -63,12 +63,21 @@ public class WmsUtils
      * The versions of the WMS standard that this server supports
      */
     public static final Collection<String> SUPPORTED_VERSIONS = new ArrayList<String>();
+
+    private static DateTimeFormatter ISO_DATE_TIME_FORMATTER =
+        ISODateTimeFormat.dateTime().withZone(DateTimeZone.UTC);
+
+    private static DateTimeFormatter ISO_TIME_FORMATTER =
+        ISODateTimeFormat.time().withZone(DateTimeZone.UTC);
     
     static
     {
         SUPPORTED_VERSIONS.add("1.1.1");
         SUPPORTED_VERSIONS.add("1.3.0");
     }
+
+    /** Private constructor to prevent direct instantiation */
+    private WmsUtils() { throw new AssertionError(); }
     
     /**
      * Time zone representing Greenwich Mean Time
@@ -81,7 +90,7 @@ public class WmsUtils
      */
     public static String millisecondsToISO8601(long millisecondsSinceEpoch)
     {
-        return dateToISO8601(new Date(millisecondsSinceEpoch));
+        return ISO_DATE_TIME_FORMATTER.print(millisecondsSinceEpoch);
     }
 
     /**
@@ -89,7 +98,7 @@ public class WmsUtils
      */
     public static String dateToISO8601(Date date)
     {
-        return new DateFormatter().toDateTimeStringISO(date);
+        return millisecondsToISO8601(date.getTime());
     }
 
     /**
@@ -97,7 +106,7 @@ public class WmsUtils
      */
     public static Date iso8601ToDate(String isoDateTime)
     {
-        return new DateFormatter().getISODate(isoDateTime);
+        return ISO_DATE_TIME_FORMATTER.parseDateTime(isoDateTime).toDate();
     }
     
     /**
@@ -116,10 +125,7 @@ public class WmsUtils
      */
     public static String formatUTCTimeOnly(long millisecondsSinceEpoch)
     {
-        DateFormat df = new SimpleDateFormat("HH:mm:ss");
-        // Must set the time zone to avoid problems with daylight saving
-        df.setTimeZone(GMT);
-        return df.format(new Date(millisecondsSinceEpoch));
+        return ISO_TIME_FORMATTER.print(millisecondsSinceEpoch);
     }
     
     /**
