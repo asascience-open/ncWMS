@@ -173,7 +173,7 @@ public class Config implements ApplicationContextAware
      * @throws IllegalStateException if the config file has not previously been
      * saved.
      */
-    public void save() throws Exception
+    public synchronized void save() throws Exception
     {
         if (this.configFile == null)
         {

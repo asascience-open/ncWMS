@@ -55,7 +55,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <th>
                 ${dataset.value.title}<br />
                 <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0&amp;DATASET=${dataset.value.id}">WMS 1.3.0</a><br />
-                <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1&amp;DATASET=${dataset.value.id}">WMS 1.1.1</a>
+                <a href="wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1&amp;DATASET=${dataset.value.id}">WMS 1.1.1</a><br />
+                <a href="admin/editVariables?dataset=${dataset.value.id}">Edit variables</a> (requires login)
             </th>
             <c:set var="layers" value="${dataset.value.layers}"/>
             <td>

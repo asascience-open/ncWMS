@@ -35,7 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.jfree.data.general.Dataset;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -121,9 +121,10 @@ public abstract class DataReader
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws Exception if there was an error reading from the data source
      */
-    public Map<String, LayerImpl> getAllLayers(String location)
+    public Map<String, LayerImpl> getAllLayers(Dataset dataset)
         throws Exception
     {
+        String location = dataset.getLocation();
         // A list of names of files resulting from glob expansion
         List<String> filenames = new ArrayList<String>();
         if (WmsUtils.isOpendapLocation(location))

@@ -114,6 +114,8 @@
                 /usage.jsp = displayUsagePage
                 /updateConfig = updateConfig
                 /downloadUsageLog = downloadUsageLog
+                /editVariables = displayEditVariablesPage
+                /updateVariables = updateVariables
             </value>
         </property>
     </bean>

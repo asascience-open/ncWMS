@@ -28,13 +28,21 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Attribute;
+import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
+import org.simpleframework.xml.load.Commit;
+import org.simpleframework.xml.load.PersistenceException;
+import org.simpleframework.xml.load.Validate;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
@@ -88,11 +96,63 @@ public class Dataset
     
     @Attribute(name="updateInterval", required=false)
     private int updateInterval = -1; // The update interval in minutes. -1 means "never update automatically"
+
+    // We don't do "private List<Variable> variable..." here because if we do,
+    // the config file will contain "<variable class="java.util.ArrayList>",
+    // presumably because the definition doesn't clarify what sort of List should
+    // be used.
+    // This allows the admin to override certain auto-detected parameters of
+    // the variables within the dataset (e.g. title, min and max values)
+    // This is a temporary store of variables that are read from the config file.
+    // The real set of all variables is in the variables Map.
+    @ElementList(name="variables", type=Variable.class, required=false)
+    private ArrayList<Variable> variableList = new ArrayList<Variable>();
     
     private State state;     // State of this dataset.  Will be set in Config.readConfig()
     
     private Exception err;   // Set if there is an error loading the dataset
     private Config config;   // The Config object to which this belongs
+
+    /**
+     * This contains the map of dataset IDs to Dataset objects.  We use a
+     * LinkedHashMap so that the order of datasets in the Map is preserved.
+     */
+    private Map<String, Variable> variables = new LinkedHashMap<String, Variable>();
+
+    /**
+     * Checks that the data we have read are valid.  Checks that there are no
+     * duplicate variable IDs.
+     */
+    @Validate
+    public void validate() throws PersistenceException
+    {
+        List<String> varIds = new ArrayList<String>();
+        for (Variable var : this.variableList)
+        {
+            String varId = var.getId();
+            if (varIds.contains(varId))
+            {
+                throw new PersistenceException("Duplicate dataset id %s", varId);
+            }
+            varIds.add(varId);
+        }
+    }
+
+    /**
+     * Called when we have checked that the configuration is valid.  Populates
+     * the variables hashmap.
+     */
+    @Commit
+    public void build()
+    {
+        // We already know from validate() that there are no duplicate variable
+        // IDs
+        for (Variable var : this.variableList)
+        {
+            var.setDataset(this);
+            this.variables.put(var.getId(), var);
+        }
+    }
 
     public String getId()
     {
@@ -310,5 +370,25 @@ public class Dataset
     public void setMoreInfo(String moreInfo)
     {
         this.moreInfo = moreInfo;
+    }
+
+    /**
+     * Gets the configuration information for all the {@link Variable}s in this
+     * dataset.  This information allows the system administrator to manually
+     * set certain properties that would otherwise be auto-detected.
+     * @return A {@link Map} of variable IDs to {@link Variable} objects.  The
+     * variable ID is unique within a dataset and corresponds with the {@link Layer#getId()}.
+     * @see Variable
+     */
+    public Map<String, Variable> getVariables()
+    {
+        return variables;
+    }
+
+    public void addVariable(Variable var)
+    {
+        var.setDataset(this);
+        this.variableList.add(var);
+        this.variables.put(var.getId(), var);
     }
 }

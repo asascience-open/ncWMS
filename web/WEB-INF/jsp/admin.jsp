@@ -42,10 +42,15 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         
         <h2>Datasets</h2>
         <table border="1">
-        <tr><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
-            
+        <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
+
             <c:forEach var="dataset" items="${config.datasets}">
                 <tr<c:if test="${dataset.value.disabled}"> bgcolor="lightgrey"</c:if>>
+                    <td>
+                        <c:if test="${dataset.value.ready}">
+                            <a href="editVariables?dataset=${dataset.value.id}">edit</a>
+                        </c:if>
+                    </td>
                     <td><input type="text" name="dataset.${dataset.value.id}.id" value="${dataset.value.id}"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.title" value="${dataset.value.title}"/></td>
                     <td><input type="text" name="dataset.${dataset.value.id}.location" value="${dataset.value.location}"/></td>

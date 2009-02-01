@@ -44,7 +44,10 @@ import ucar.unidata.io.RandomAccessFile;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
+import uk.ac.rdg.resc.ncwms.config.Variable;
+import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -155,8 +158,8 @@ public class MetadataLoader
             // Look for OPeNDAP datasets and update the credentials provider accordingly
             this.updateCredentialsProvider(ds);
             // Read the metadata
-            Map<String, LayerImpl> layers = dr.getAllLayers(ds.getLocation());
-            for (LayerImpl layer: layers.values())
+            Map<String, LayerImpl> layers = dr.getAllLayers(ds);
+            for (LayerImpl layer : layers.values())
             {
                 layer.setDataset(ds);
             }
@@ -164,11 +167,16 @@ public class MetadataLoader
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);
             logger.debug("found vector quantities");
+            // Look for overriding attributes in the configuration
+            checkAttributeOverrides(ds, layers);
+            logger.debug("attributes overridden");
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
             // TODO: set this when reading from database too.
             this.config.setLastUpdateTime(new Date());
+            // Save the config information to the file
+            this.config.save();
             logger.debug("Loaded metadata for {}, num RAFs open = {}", ds.getId(),
                 RandomAccessFile.getOpenFiles().size());
         }
@@ -289,62 +297,84 @@ public class MetadataLoader
             }
         }
     }
-    
+
     /**
-     * Finds (estimates) a minimum and maximum value for each layer, for the
-     * benefit of visualization tools (sets scaleRange on each layer).  If there
-     * is an error reading the min-max from a layer, the layer will be removed
-     * from the Map of layers: this is a side-effect of this function.
+     * Looks in the configuration of the server and overrides the auto-detected
+     * attributes of the variables accordingly.  For example, the sysadmin
+     * can change the displayed Title of each layer, and the min and max values
+     * of the default colour scale.
+     * @param layers
      */
-    /*private static void findMinMax(Dataset ds, Map<String, LayerImpl> layers)
+    private static void checkAttributeOverrides(Dataset dataset, Map<String, LayerImpl> layers)
     {
-        // If we get an error reading from the layer then we'll remove the layer
-        // from the list
-        List<LayerImpl> layersToRemove = new ArrayList<LayerImpl>();
         for (LayerImpl layer : layers.values())
         {
-            try
+            // Load the Variable object from the config file or create a new
+            // one if it doesn't exist.
+            Variable var = dataset.getVariables().get(layer.getId());
+            if (var == null)
             {
-                // Set the scale range for each variable by reading a 100x100
-                // chunk of data and finding the min and max values of this chunk.
-                HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, layer.getBbox());
-                layer.setDataset(ds);
-                // Read from the first t and z indices
-                int tIndex = layer.isTaxisPresent() ? 0 : -1;
-                int zIndex = layer.isZaxisPresent() ? 0 : -1;
-                float[] minMax = MetadataController.findMinMax(layer, tIndex,
-                    zIndex, grid, null);
-                if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
-                {
-                    // Just guess at a scale
-                    layer.setScaleMin(-50.0f);
-                    layer.setScaleMax(50.0f);
-                }
-                else
-                {
-                    // Set the scale range of the layer, factoring in a 10% expansion
-                    // to deal with the fact that the sample data we read might
-                    // not be representative
-                    float diff = minMax[1] - minMax[0];
-                    layer.setScaleMin(minMax[0] - 0.05f * diff);
-                    layer.setScaleMax(minMax[1] + 0.05f * diff);
-                }
-                logger.debug("Set scale range for {} to {}, {}", new Object[]{
-                    layer.getId(), layer.getScaleMin(), layer.getScaleMax()});
+                var = new Variable();
+                var.setId(layer.getId());
+                dataset.addVariable(var);
             }
-            catch(Exception e)
+
+            // Set the title of the layer based on the config information
+            if (var.getTitle() == null)
             {
-                logger.warn("Error reading from layer " + layer.getId() + 
-                    " in dataset " + ds.getId(), e);
-                layersToRemove.add(layer);
+                var.setTitle(layer.getTitle());
             }
+            layer.setTitle(var.getTitle());
+
+            // Set the colour scale range.  If this isn't specified in the
+            // config information, load an "educated guess" at the scale range
+            // from the source data.
+            if (var.getColorScaleRange() == null)
+            {
+                float[] minMax;
+                try
+                {
+                    // Set the scale range for each variable by reading a 100x100
+                    // chunk of data and finding the min and max values of this chunk.
+                    HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, layer.getBbox());
+                    // Read from the first t and z indices
+                    int tIndex = layer.isTaxisPresent() ? 0 : -1;
+                    int zIndex = layer.isZaxisPresent() ? 0 : -1;
+                    minMax = MetadataController.findMinMax(layer, tIndex,
+                        zIndex, grid, null);
+                    if (Float.isNaN(minMax[0]) || Float.isNaN(minMax[1]))
+                    {
+                        // Just guess at a scale
+                        minMax = new float[]{-50.0f, 50.0f};
+                    }
+                    else if (minMax[0] == minMax[1])
+                    {
+                        // This happens occasionally if the above algorithm happens
+                        // to hit an area of uniform data.  We make sure that
+                        // the max is greater than the min.
+                        minMax[1] = minMax[0] + 1.0f;
+                    }
+                    else
+                    {
+                        // Set the scale range of the layer, factoring in a 10% expansion
+                        // to deal with the fact that the sample data we read might
+                        // not be representative
+                        float diff = minMax[1] - minMax[0];
+                        minMax = new float[]{minMax[0] - 0.05f * diff,
+                            minMax[1] + 0.05f * diff};
+                    }
+                }
+                catch(Exception e)
+                {
+                    logger.error("Error reading min-max from layer " + layer.getId()
+                        + " in dataset " + dataset.getId(), e);
+                    minMax = new float[]{-50.0f, 50.0f};
+                }
+                var.setColorScaleRange(minMax);
+            }
+            layer.setScaleRange(var.getColorScaleRange());
         }
-        // Now remove the layers with errors
-        for (LayerImpl layer : layersToRemove)
-        {
-            layers.remove(layer.getId());
-        }
-    }*/
+    }
     
     /**
      * If the given dataset is an OPeNDAP location, this looks for
