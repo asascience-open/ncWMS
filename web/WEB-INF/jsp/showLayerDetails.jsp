@@ -23,7 +23,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <json:object>
     <json:property name="units" value="${layer.units}"/>
     <json:array name="bbox" items="${layer.bbox}"/>
-    <json:array name="scaleRange" items="${layer.scaleRange}"/>
+    <json:array name="scaleRange" items="${layer.colorScaleRange}"/>
     <json:array name="supportedStyles" items="${layer.supportedStyles}"/>
     <c:if test="${layer.zaxisPresent}">
         <json:object name="zaxis">
@@ -49,4 +49,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     <json:property name="moreInfo" value="${layer.moreInfo}"/>
     <json:property name="copyright" value="${layer.copyrightStatement}"/>
     <json:array name="palettes" items="${paletteNames}"/>
+    <json:property name="defaultPalette" value="${layer.defaultPaletteName}"/>
+    <json:property name="logScaling" value="${layer.logScaling}"/>
 </json:object>

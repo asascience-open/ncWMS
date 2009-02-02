@@ -36,6 +36,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.config.Variable;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.Style;
@@ -62,7 +64,6 @@ public class LayerImpl implements Layer
     protected double[] zValues;
     protected boolean zPositive;
     protected double[] bbox = new double[]{-180.0, -90.0, 180.0, 90.0}; // Bounding box : minx, miny, maxx, maxy
-    protected float[] scaleRange = null; // Will be loaded lazily
     protected CoordAxis xaxis;
     protected CoordAxis yaxis;
     private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
@@ -82,9 +83,18 @@ public class LayerImpl implements Layer
         this.supportedStyles.add(Style.BOXFILL);
     }
 
+    /**
+     * Gets the human-readable Title of this Layer.  If the sysadmin has set a
+     * title for this layer in the config file, this title will be returned.
+     * If not, the title that was read in the relevant {@link DataReader} will
+     * be used.
+     * @return
+     */
     public String getTitle()
     {
-        return title;
+        Variable var = this.getVariable();
+        if (var != null && var.getTitle() != null) return var.getTitle();
+        else return this.title;
     }
 
     public void setTitle(String title)
@@ -170,23 +180,12 @@ public class LayerImpl implements Layer
     /**
      * @return array of two doubles, representing the min and max of the scale range
      * Note that this is not the same as a "valid_max" for the dataset.  This is
-     * simply a hint to visualization tools.
+     * simply a hint to visualization tools.  This implementation reads from
+     * the Config information (via the Dataset object).
      */
-    public float[] getScaleRange()
+    public float[] getColorScaleRange()
     {
-        return this.scaleRange;
-    }
-
-    public void setScaleRange(float[] scaleRange)
-    {
-        if (scaleRange == null ||
-            scaleRange.length != 2 ||
-            scaleRange[0] >= scaleRange[1])
-        {
-            String message = String.format("Invalid scale range: %s", scaleRange);
-            throw new IllegalArgumentException(message);
-        }
-        this.scaleRange = scaleRange;
+        return this.getVariable().getColorScaleRange();
     }
 
     public String getUnits()
@@ -560,5 +559,34 @@ public class LayerImpl implements Layer
     
     public void setAttachment(Object attachment) {
         this.attachment = attachment;
+    }
+
+    /**
+     * Get the name of the default palette that should be used to render this
+     * layer.
+     * @return
+     */
+    public String getDefaultPaletteName()
+    {
+        return this.getVariable().getPaletteName();
+    }
+
+    /**
+     * Return true if we are to use logarithmic colour scaling by default for
+     * this layer.
+     * @return
+     */
+    public boolean isLogScaling()
+    {
+        return this.getVariable().isLogScaling();
+    }
+
+    /**
+     * Gets the {@link Variable} object that is associated with this Layer.
+     * The Variable object allows the sysadmin to override certain properties.
+     */
+    private Variable getVariable()
+    {
+        return this.dataset.getVariables().get(this.id);
     }
 }

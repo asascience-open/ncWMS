@@ -568,6 +568,18 @@ function layerSelected(layerDetails)
     // Set up the copyright statement
     $('copyright').innerHTML = layerDetails.copyright;
 
+    // Set the palette for this variable
+    if (paletteName == null || !scaleLocked) {
+        if (typeof layerDetails.defaultPalette != 'undefined') {
+            paletteName = layerDetails.defaultPalette;
+        }
+        updateScaleBar();
+    }
+
+    if (!scaleLocked && typeof layerDetails.logScaling != 'undefined') {
+        $('scaleSpacing').value = layerDetails.logScaling ? 'logarithmic' : 'linear';
+    }
+
     // Now set up the calendar control
     if (layerDetails.datesWithData == null) {
         // There is no calendar data.  Just update the map
@@ -1064,9 +1076,15 @@ function paletteSelected(thePalette)
     paletteName = thePalette;
     paletteSelector.hide();
     // Change the colour scale bar on the main page
-    $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398'
-        + '&PALETTE=' + thePalette + '&NUMCOLORBANDS=' + $('numColorBands').value;
+    updateScaleBar();
     updateMap();
+}
+
+// Updates the colour scale bar URL
+function updateScaleBar()
+{
+    $('scaleBar').src = 'wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398'
+        + '&PALETTE=' + paletteName + '&NUMCOLORBANDS=' + $('numColorBands').value;
 }
 
 // Decides whether to display the animation, or the tiled or untiled

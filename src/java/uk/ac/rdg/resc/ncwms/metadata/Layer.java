@@ -149,7 +149,7 @@ public interface Layer
      * Note that this is not the same as a "valid_max" for the dataset.  This is
      * simply a hint to visualization tools.
      */
-    float[] getScaleRange();
+    float[] getColorScaleRange();
 
     CoordAxis getXaxis();
 
@@ -200,5 +200,19 @@ public interface Layer
      * @return
      */
     public Object getAttachment();
+
+    /**
+     * Get the name of the default palette that should be used to render this
+     * layer.
+     * @return
+     */
+    public String getDefaultPaletteName();
+
+    /**
+     * Return true if we are to use logarithmic colour scaling by default for
+     * this layer.
+     * @return
+     */
+    public boolean isLogScaling();
     
 }

@@ -726,11 +726,11 @@ public class WmsController extends AbstractController
         HttpServletResponse httpServletResponse) throws Exception
     {
         BufferedImage legend;
-        
-        // Find the requested colour palette, or use the default if not set
-        ColorPalette palette = ColorPalette.get(params.getString("palette"));
+
         // numColourBands defaults to 254 (the maximum) if not set
         int numColourBands = GetMapStyleRequest.getNumColourBands(params);
+
+        String paletteName = params.getString("palette");
         
         // Find out if we just want the colour bar with no supporting text
         String colorBarOnly = params.getString("colorbaronly", "false");
@@ -740,6 +740,8 @@ public class WmsController extends AbstractController
             // and height
             int width = params.getPositiveInt("width", 50);
             int height = params.getPositiveInt("height", 200);
+            // Find the requested colour palette, or use the default if not set
+            ColorPalette palette = ColorPalette.get(paletteName);
             legend = palette.createColorBar(width, height, numColourBands);
         }
         else
@@ -748,13 +750,23 @@ public class WmsController extends AbstractController
             // the colour scale range and the layer in question
             String layerName = params.getMandatoryString("layer");
             Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
-            ColorScaleRange colorScaleRange = GetMapStyleRequest.getColorScaleRange(params);
-            boolean logarithmic = GetMapStyleRequest.isLogScale(params);
+
+            // We default to the layer's default palette if none is specified
+            if (paletteName == null) paletteName = layer.getDefaultPaletteName();
+            ColorPalette palette = ColorPalette.get(paletteName);
+
+            // See if the client has specified a logarithmic scaling, defaulting
+            // to the layer's default
+            Boolean isLogScale = GetMapStyleRequest.isLogScale(params);
+            boolean logarithmic = isLogScale == null ? layer.isLogScaling() : isLogScale.booleanValue();
+
+            // Now get the colour scale range
             float scaleMin;
             float scaleMax;
+            ColorScaleRange colorScaleRange = GetMapStyleRequest.getColorScaleRange(params);
             if (colorScaleRange.isDefault())
             {
-                float[] scaleRange = layer.getScaleRange();
+                float[] scaleRange = layer.getColorScaleRange();
                 scaleMin = scaleRange[0];
                 scaleMax = scaleRange[1];
             }
@@ -769,12 +781,9 @@ public class WmsController extends AbstractController
                 scaleMin = colorScaleRange.getScaleMin();
                 scaleMax = colorScaleRange.getScaleMax();
             }
-            // Get the legend graphic and write it to the client
-            // The scale range will be [0,0] if the client has not specified one
-            // explicitly.  In this case createLegend() will use the layer's
-            // default scale range.
-            legend = palette.createLegend(numColourBands, layer,
-                logarithmic, scaleMin, scaleMax);
+
+            // Now create the legend image
+            legend = palette.createLegend(numColourBands, layer, logarithmic, scaleMin, scaleMax);
         }
         httpServletResponse.setContentType("image/png");
         ImageIO.write(legend, "png", httpServletResponse.getOutputStream());

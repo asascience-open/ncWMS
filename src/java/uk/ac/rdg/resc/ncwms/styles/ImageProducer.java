@@ -70,7 +70,8 @@ public final class ImageProducer
     private boolean transparent;
     private int opacity;
     private int numColourBands;
-    private boolean logarithmic;  // True if the colour scale is to be logarithmic
+    private boolean logarithmic;  // True if the colour scale is to be logarithmic,
+                                  // false if linear
     private Color bgColor;
     private ColorPalette colorPalette;
     
@@ -107,7 +108,7 @@ public final class ImageProducer
         {
             // Use the default style and colour palette for this layer
             this.style = this.layer.getDefaultStyle();
-            this.colorPalette = ColorPalette.get(null);
+            this.colorPalette = ColorPalette.get(this.layer.getDefaultPaletteName());
         }
         else
         {
@@ -145,7 +146,7 @@ public final class ImageProducer
         if (colorScaleRange.isDefault())
         {
             // Use the layer's default range
-            float[] scaleRange = layer.getScaleRange();
+            float[] scaleRange = layer.getColorScaleRange();
             this.scaleMin = scaleRange[0];
             this.scaleMax = scaleRange[1];
         }
@@ -161,7 +162,11 @@ public final class ImageProducer
             this.scaleMin = colorScaleRange.getScaleMin();
             this.scaleMax = colorScaleRange.getScaleMax();
         }
-        this.logarithmic = styleRequest.isScaleLogarithmic();
+
+        // If the client does not specify a scaling, we use the layer's default
+        Boolean logRequest = styleRequest.isScaleLogarithmic();
+        this.logarithmic = logRequest == null ? layer.isLogScaling() : logRequest.booleanValue();
+
         this.picWidth = dataRequest.getWidth();
         this.picHeight = dataRequest.getHeight();
         this.numColourBands = styleRequest.getNumColourBands();
@@ -378,35 +383,6 @@ public final class ImageProducer
             }
         }
     }
-    
-    // http://forum.java.sun.com/thread.jspa?threadID=378460&tstart=135
-    /*private static void drawArrow(Graphics2D g2d, int xCentre, int yCentre, int x, int y, float stroke)
-    {
-        double aDir = Math.atan2(xCentre - x, yCentre - y);
-        g2d.setStroke(new BasicStroke(stroke));
-        g2d.drawLine(x, y, xCentre, yCentre);
-        g2d.setStroke(new BasicStroke(1.0f));
-        Polygon tmpPoly = new Polygon();
-        int i1 = 12 + (int)(stroke * 2);
-        int i2 = 6 + (int)stroke;
-        tmpPoly.addPoint(x, y);
-        tmpPoly.addPoint(x + xCor(i1, aDir + 0.5), y + yCor(i1, aDir + 0.5));
-        tmpPoly.addPoint(x + xCor(i2, aDir), y + yCor(i2, aDir));
-        tmpPoly.addPoint(x + xCor(i1, aDir - 0.5), y + yCor(i1, aDir - 0.5));
-        tmpPoly.addPoint(x, y);
-        g2d.drawPolygon(tmpPoly);
-        g2d.fillPolygon(tmpPoly);
-    }
-    
-    private static int yCor(int len, double dir)
-    {
-        return (int)(len * Math.cos(dir));
-    }
-    
-    private static int xCor(int len, double dir)
-    {
-        return (int)(len * Math.sin(dir));
-    }*/
     
     /**
      * Gets the frames as BufferedImages, ready to be turned into a picture or

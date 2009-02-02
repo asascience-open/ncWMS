@@ -64,7 +64,7 @@ public class ColorPalette
      * request a specific palette.
      * @see DEFAULT_PALETTE
      */
-    private static final String DEFAULT_PALETTE_NAME = "rainbow";
+    public static final String DEFAULT_PALETTE_NAME = "rainbow";
     
     /**
      * The width of the legend in pixels that will be created by createLegend()

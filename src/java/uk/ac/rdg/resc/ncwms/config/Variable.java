@@ -33,6 +33,7 @@ import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 
 /**
  * Contains fields that can be filled in to override automatically-detected
@@ -50,18 +51,28 @@ public class Variable
 
     @Attribute(name="colorScaleRange", required=false)
     private String colorScaleRangeStr = null; // comma-separated pair of floats
+    
+    @Attribute(name="palette", required=false)
+    private String paletteName = ColorPalette.DEFAULT_PALETTE_NAME;
+
+    @Attribute(name="scaling", required=false)
+    private String scaling = "linear";  // TODO Should be an enum really
 
     private Dataset dataset;
 
     private float[] colorScaleRange = null;
 
+    private boolean logScaling = false;
+
     /**
      * Checks that the information in the XML is valid: specifically, checks
-     * the colorScaleRange attribute.
+     * the colorScaleRange attribute.  Also checks to see if the colour palette
+     * is loaded: if not, reverts to the default palette.
      */
     @Validate
     public void validate() throws PersistenceException
     {
+        // Check the colour scale range
         if (colorScaleRangeStr != null)
         {
             String[] els = colorScaleRangeStr.split(",");
@@ -83,6 +94,24 @@ public class Variable
             {
                 throw new PersistenceException("Invalid colorScaleRange attribute for variable " + this.id);
             }
+        }
+
+        // Check that the required colour palette exists
+        if (!ColorPalette.getAvailablePaletteNames().contains(this.paletteName))
+        {
+            this.paletteName = ColorPalette.DEFAULT_PALETTE_NAME;
+        }
+
+        // Set the scaling of this variable
+        // TODO: it's a bit nasty to catch the runtime exception, but this at
+        // least allows us to reuse the code in setScaling().
+        try
+        {
+            this.setScaling(this.scaling);
+        }
+        catch(IllegalArgumentException iae)
+        {
+            throw new PersistenceException(iae.getMessage());
         }
     }
 
@@ -149,6 +178,48 @@ public class Variable
         {
             this.colorScaleRange = colorScaleRange;
             this.colorScaleRangeStr = colorScaleRange[0] + "," + colorScaleRange[1];
+        }
+    }
+
+    public String getPaletteName()
+    {
+        return this.paletteName;
+    }
+
+    public void setPaletteName(String paletteName)
+    {
+        this.paletteName = paletteName;
+    }
+
+    /**
+     * Return true if this variable is to use logarithmic scaling by default
+     */
+    public boolean isLogScaling()
+    {
+        return this.logScaling;
+    }
+
+    /**
+     * scaling must be "linear" or "logarithmic" or this will throw an
+     * IllegalArgumentException
+     * @throws IllegalArgumentException
+     */
+    public void setScaling(String scaling)
+    {
+        // Get whether we want to use linear or log scaling by default
+        if (scaling.equalsIgnoreCase("linear"))
+        {
+            this.logScaling = false;
+            this.scaling = scaling;
+        }
+        else if (scaling.equalsIgnoreCase("logarithmic"))
+        {
+            this.logScaling = true;
+            this.scaling = scaling;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Scaling must be \"linear\" or \"logarithmic\"");
         }
     }
 

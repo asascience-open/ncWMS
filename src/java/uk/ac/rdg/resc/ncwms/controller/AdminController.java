@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +43,8 @@ import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Server;
 import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
+import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger;
 
@@ -287,7 +286,10 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("Dataset must be ready before its variables can be edited");
         }
-        return new ModelAndView("editVariables", "dataset", ds);
+        Map<String, Object> models = new HashMap<String, Object>();
+        models.put("dataset", ds);
+        models.put("paletteNames", ColorPalette.getAvailablePaletteNames());
+        return new ModelAndView("editVariables", models);
     }
 
     /**
@@ -300,45 +302,25 @@ public class AdminController extends MultiActionController
         if (request.getParameter("save") != null)
         {
             Dataset ds = this.config.getDatasets().get(request.getParameter("dataset.id"));
-            boolean datasetUpdated = false;
             for (Layer layer : ds.getLayers())
             {
-                // TODO: nasty hack - in theory we can't be sure that this is a
-                // LayerImpl, although currently there are no other possibilities.
-                LayerImpl layerImpl = (LayerImpl)layer;
-                // Look for updated information.  This means that we'll only create
-                // new <variable> tags in the config file if a variable has been
-                // updated with new information.
-                boolean layerUpdated = false;
                 String newTitle = request.getParameter(layer.getId() + ".title").trim();
                 // Find the min and max colour scale range for this variable
                 // TODO: nicer error handling
                 float min = Float.parseFloat(request.getParameter(layer.getId() + ".scaleMin").trim());
                 float max = Float.parseFloat(request.getParameter(layer.getId() + ".scaleMax").trim());
                 float[] colorScaleRange = new float[]{min, max};
-                if (!layer.getTitle().equals(newTitle))
-                {
-                    layerImpl.setTitle(newTitle);
-                    layerUpdated = true;
-                }
-                if (!Arrays.equals(layer.getScaleRange(), colorScaleRange))
-                {
-                    layerImpl.setScaleRange(colorScaleRange);
-                    layerUpdated = true;
-                }
-                if (layerUpdated)
-                {
-                    datasetUpdated = true;
-                    // Get the variable config info. This should not be null,
-                    // as we will have created it in MetadataLoader.checkAttributeOverrides()
-                    // if it wasn't in the config file itself.
-                    Variable var = ds.getVariables().get(layer.getId());
-                    var.setTitle(newTitle);
-                    var.setColorScaleRange(colorScaleRange);
-                }
+                // Get the variable config info. This should not be null,
+                // as we will have created it in MetadataLoader.checkAttributeOverrides()
+                // if it wasn't in the config file itself.
+                Variable var = ds.getVariables().get(layer.getId());
+                var.setTitle(newTitle);
+                var.setColorScaleRange(colorScaleRange);
+                var.setPaletteName(request.getParameter(layer.getId() + ".palette"));
+                var.setScaling(request.getParameter(layer.getId() + ".scaling"));
             }
             // Saves the new configuration information to disk
-            if (datasetUpdated) this.config.save();
+            this.config.save();
         }
         // This causes a client-side redirect, meaning that the user can safely
         // press refresh in their browser without resubmitting the new config information.

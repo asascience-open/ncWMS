@@ -48,7 +48,7 @@ public class GetMapStyleRequest
     private Color backgroundColour;
     private int opacity; // Opacity of the image in the range [0,100]
     private int numColourBands; // Number of colour bands to use in the image
-    private boolean logarithmic; // True if we're using a log scale
+    private Boolean logarithmic; // True if we're using a log scale, false if linear and null if not specified
     // These are the data values that correspond with the extremes of the
     // colour scale
     private ColorScaleRange colorScaleRange;
@@ -120,12 +120,19 @@ public class GetMapStyleRequest
     }
     
     /**
-     * Returns true if the client has requested a logarithmic scale, false
-     * otherwise.
+     * Returns {@link Boolean#TRUE} if the client has requested a logarithmic scale,
+     * {@link Boolean#FALSE} if the client has requested a linear scale,
+     * or null if the client did not specify.
+     * @throws WmsException if the client specified a value that is not
+     * "true" or "false" (case not important).
      */
-    static boolean isLogScale(RequestParams params)
+    static Boolean isLogScale(RequestParams params) throws WmsException
     {
-        return params.getString("logscale", "false").equalsIgnoreCase("true");
+        String logScaleStr = params.getString("logscale");
+        if (logScaleStr == null) return null;
+        else if (logScaleStr.equalsIgnoreCase("true")) return Boolean.TRUE;
+        else if (logScaleStr.equalsIgnoreCase("false")) return Boolean.FALSE;
+        else throw new WmsException("The value of LOGSCALE must be TRUE or FALSE (or can be omitted");
     }
 
     /**
@@ -142,7 +149,14 @@ public class GetMapStyleRequest
         return imageFormat;
     }
 
-    public boolean isScaleLogarithmic()
+    /**
+     * Returns {@link Boolean#TRUE} if the client has requested a logarithmic scale,
+     * {@link Boolean#FALSE} if the client has requested a linear scale,
+     * or null if the client did not specify.
+     * @throws WmsException if the client specified a value that is not
+     * "true" or "false" (case not important).
+     */
+    public Boolean isScaleLogarithmic()
     {
         return this.logarithmic;
     }

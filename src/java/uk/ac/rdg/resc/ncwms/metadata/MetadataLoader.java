@@ -168,7 +168,7 @@ public class MetadataLoader
             findVectorQuantities(ds, layers);
             logger.debug("found vector quantities");
             // Look for overriding attributes in the configuration
-            checkAttributeOverrides(ds, layers);
+            readLayerConfig(ds, layers);
             logger.debug("attributes overridden");
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
@@ -299,13 +299,10 @@ public class MetadataLoader
     }
 
     /**
-     * Looks in the configuration of the server and overrides the auto-detected
-     * attributes of the variables accordingly.  For example, the sysadmin
-     * can change the displayed Title of each layer, and the min and max values
-     * of the default colour scale.
-     * @param layers
+     * Read the configuration information from individual layers from the
+     * config file.
      */
-    private static void checkAttributeOverrides(Dataset dataset, Map<String, LayerImpl> layers)
+    private static void readLayerConfig(Dataset dataset, Map<String, LayerImpl> layers)
     {
         for (LayerImpl layer : layers.values())
         {
@@ -319,12 +316,9 @@ public class MetadataLoader
                 dataset.addVariable(var);
             }
 
-            // Set the title of the layer based on the config information
-            if (var.getTitle() == null)
-            {
-                var.setTitle(layer.getTitle());
-            }
-            layer.setTitle(var.getTitle());
+            // If there is no title set for this layer in the config file, we
+            // use the title that was read by the DataReader.
+            if (var.getTitle() == null) var.setTitle(layer.getTitle());
 
             // Set the colour scale range.  If this isn't specified in the
             // config information, load an "educated guess" at the scale range
@@ -372,7 +366,6 @@ public class MetadataLoader
                 }
                 var.setColorScaleRange(minMax);
             }
-            layer.setScaleRange(var.getColorScaleRange());
         }
     }
     
