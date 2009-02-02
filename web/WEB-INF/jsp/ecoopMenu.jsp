@@ -69,8 +69,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
       	  		<menu:dataset dataset="${datasets.MRCS_ECOOP_TOP_best}"/>
     		</menu:folder>
 
-   		<menu:dataset dataset="${datasets.RSG_MERIS}"/>
-     
     		<menu:folder label="DMI Denmark">
      		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
     		</menu:folder>
