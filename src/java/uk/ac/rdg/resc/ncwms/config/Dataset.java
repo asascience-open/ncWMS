@@ -132,7 +132,7 @@ public class Dataset
             String varId = var.getId();
             if (varIds.contains(varId))
             {
-                throw new PersistenceException("Duplicate dataset id %s", varId);
+                throw new PersistenceException("Duplicate variable id %s", varId);
             }
             varIds.add(varId);
         }

@@ -342,6 +342,8 @@ public class MetadataController
      */
     private static boolean onSameDay(long s1, long s2)
     {
+        if (s1 == s2) return true;
+        
         Calendar cal1 = getGMTCalendar(s1);
         Calendar cal2 = getGMTCalendar(s2);
         // Set hours, minutes, seconds and milliseconds to zero for both

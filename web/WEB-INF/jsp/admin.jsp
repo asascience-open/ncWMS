@@ -94,6 +94,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <%-- Now add lines for the user to add new datasets --%>
             <c:forEach var="i" begin="0" end="2">
                 <tr>
+                    <td></td><%-- Corresponds with "Edit variables" --%>
                     <td><input type="text" name="dataset.new${i}.id" value=""/></td>
                     <td><input type="text" name="dataset.new${i}.title" value=""/></td>
                     <td><input type="text" name="dataset.new${i}.location" value=""/></td>
