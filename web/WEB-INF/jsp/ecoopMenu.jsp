@@ -46,8 +46,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	<menu:folder label="NW Shelves NOOS">
 	    	<menu:folder label="Met Office UK">
         		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
-        		<menu:folder label="POLCOMS MRCS (Biological)">
-            			<%-- We have to add these layers manually because they are coming from a remote server --%>
+        		<%-- 
+			<menu:folder label="POLCOMS MRCS (Biological)">
+            			We have to add these layers manually because they are coming from a remote server 
             			<menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/no3" label="Nitrate Concentration" server="${pmlServer}"/>
@@ -60,16 +61,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p2c" label="Flagellate biomass" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
+			--%>
         		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Forecast)"/>
-        		<menu:dataset dataset="${datasets.Met_Office_MRCS_fmrc}"/>
-        		<menu:dataset dataset="${datasets.Met_Office_MRCS_best}"/>
+
+    	  		<menu:dataset dataset="${datasets.MRCS_best}"/>
+      	  		<menu:dataset dataset="${datasets.MRCS_SPM_PAR_BEST}"/>
+      	  		<menu:dataset dataset="${datasets.MRCS_ECOOP_TOP_best}"/>
     		</menu:folder>
 
-	    	<menu:folder label="Met Office MRCS ECOOP TOP UK">
-         		<menu:dataset dataset="${datasets.Met_Office_MRCS_ECOOP_TOP_fmrc}"/>
-        		<menu:dataset dataset="${datasets.Met_Office_MRCS_ECOOP_TOP_best}"/>
-    		</menu:folder>
-
+   		<menu:dataset dataset="${datasets.RSG_MERIS}"/>
+     
     		<menu:folder label="DMI Denmark">
      		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
     		</menu:folder>
