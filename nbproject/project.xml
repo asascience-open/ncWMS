@@ -112,12 +112,15 @@
                 </library>
                 <library>
                     <file>${file.reference.gt2-referencing-2.4.3.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library>
                     <file>${file.reference.netcdf-4.0.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library>
                     <file>${file.reference.bufr-1.4.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library>
                     <file>${file.reference.backport-util-concurrent-3.0.jar}</file>
@@ -125,6 +128,10 @@
                 </library>
                 <library>
                     <file>${file.reference.nlog4j-1.2.25.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library>
+                    <file>${file.reference.joda-time-1.6.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>

@@ -32,12 +32,13 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 
 /**
- * Contains fields that can be filled in to override automatically-detected
- * values.
+ * Contains fields that can be filled in to override values that are
+ * automatically detected by {@link DataReader}s.
  * @author Jon
  */
 @Root(name="variable")
