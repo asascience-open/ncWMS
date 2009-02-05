@@ -46,7 +46,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	<menu:folder label="NW Shelves NOOS">
 	    	<menu:folder label="Met Office UK">
         		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
-        	
+        	       <%--
 			<menu:folder label="POLCOMS MRCS (Biological)">
             			We have to add these layers manually because they are coming from a remote server 
             			<menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
@@ -61,7 +61,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p2c" label="Flagellate biomass" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
-		
+		       --%>
         		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Forecast)"/>
 
       	  		<menu:dataset dataset="${datasets.MRCS_ECOOP_TOP_best}"/>
