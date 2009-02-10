@@ -187,7 +187,7 @@ public class MetadataLoader
             // type of exception.
             if (ds.getException() == null || ds.getException().getClass() != e.getClass())
             {
-                logger.error(e.getClass().getName() + " loading metadata for dataset {}"  + ds.getId(), e);
+                logger.error(e.getClass().getName() + " loading metadata for dataset "  + ds.getId(), e);
             }
             ds.setException(e);
             logger.debug("{} loading metadata for {}, num RAFs open = {}",

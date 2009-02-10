@@ -270,7 +270,8 @@ public class WmsUtils
         File globFile = new File(globExpression);
         if (!globFile.isAbsolute())
         {
-            throw new Exception("Dataset location must be an absolute path");
+            throw new Exception("Dataset location " + globExpression +
+                " must be an absolute path");
         }
 
         // Break glob pattern into path components.  To do this in a reliable
