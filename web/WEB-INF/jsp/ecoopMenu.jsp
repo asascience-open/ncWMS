@@ -15,7 +15,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
 	<menu:folder label="Baltic Region BOOS">
 	    	<menu:folder label="BSH Germany">
-    			<menu:folder label="Coastal Model Data">
+    			<menu:folder label="Coastal Model Data (Physical)">
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
@@ -23,6 +23,10 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV_hindcast}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice_hindcast}"/>
 	 		</menu:folder>
+	 		<menu:folder label="Coastal Model Data (Biology)">
+        			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalForecast}"/>
+	      			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalBestEstimate}"/>
+			</menu:folder>
  		</menu:folder>
     		<menu:folder label="DMI Denmark">
      		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
@@ -71,7 +75,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      		       <menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
     		</menu:folder>
 	    	<menu:folder label="BSH Germany">
-    			<menu:folder label="Coastal Model Data">
+    			<menu:folder label="Coastal Model Data (Physical)">
             			<menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
@@ -80,6 +84,10 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV_hindcast}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice_hindcast}"/>
 	 		</menu:folder>
+	 		<menu:folder label="Coastal Model Data (Biology)">
+        			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalForecast}"/>
+	      			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalBestEstimate}"/>
+			</menu:folder>
  		</menu:folder>
 	</menu:folder>
 	<menu:folder label="Iberian IBIROOS">
