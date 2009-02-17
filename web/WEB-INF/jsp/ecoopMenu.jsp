@@ -85,8 +85,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice_hindcast}"/>
 	 		</menu:folder>
 	 		<menu:folder label="Coastal Model Data (Biology)">
-        			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalForecast}"/>
-	      			<menu:dataset dataset="${datasets.ECOOP_BSEcologicalBestEstimate}"/>
+        			<menu:dataset dataset="${datasets.ECOOP_NSEcologicalForecast}"/>
 			</menu:folder>
  		</menu:folder>
 	</menu:folder>
@@ -110,6 +109,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      		</menu:folder>
  		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
         	<menu:dataset dataset="${datasets.ECOOP_IMEDEA}"/>
+        	<menu:dataset dataset="${datasets.ECOOP_MALTA_ROSARIO2}"/>
 	</menu:folder>
 
 	<menu:folder label="Black Sea">
