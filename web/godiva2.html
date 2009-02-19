@@ -12,7 +12,6 @@
         <link rel="stylesheet" type="text/css" href="css/godiva2.css">
         
         <script type="text/javascript" src="js/OpenLayers-2.7.js"></script>
-        <script type="text/javascript" src="js/LoadingPanel.js"></script>
         <script type="text/javascript" src="js/WMS1_1_1.js"></script>
         <script type="text/javascript" src="js/WMS1_3.js"></script>
         <!-- Comment out the line below to stop using Google Maps -->
@@ -84,7 +83,8 @@
             <div class="map" id="loadingAnimationDiv"><img id="loadingAnimation" src="images/loading_animation.png" alt="loading animation"/></div>
             <!-- The mapOverlay will contain the animations -->
             <div class="map" id="mapOverlayDiv"><img id="mapOverlay" alt="map overlay" onload="javascript:animationLoaded();"/></div>
-            <!--<span id="pleaseWait">Loading, please wait...</span>-->
+            <!-- Contains the animated gif throbber representing data that are loading -->
+            <img id="throbber" alt="throbber" height="32" width="32" src="images/ajax-loader.gif"/>
             <img id="scaleBar" class="scaleBar" width="40" height="398" src="wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=1&HEIGHT=398" alt="scale bar" title="Click to change the colour palette" onclick="javascript:showPaletteSelector();"/>
             <div class="scaleMarkers">
                 <input id="scaleMax" class="scaleMax" type="text" size="11" onblur="javascript:validateScale()"/>

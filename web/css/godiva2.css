@@ -75,12 +75,12 @@ div.imagePanel {
     width: 600px;
 }
 
-#pleaseWait {
+#throbber {
     position: absolute;
-    left: 0px;
-    top: 25px;
-    background-color: red;
+    left: 240px;
+    top: 209px;
     /*visibility: hidden;*/
+    z-index: 100; /* Must appear on top */
 }
 
 div.aboveMap {

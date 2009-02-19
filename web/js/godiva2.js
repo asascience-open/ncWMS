@@ -36,6 +36,8 @@ var paletteName = null; // Name of the currently-selected palette
 
 var popups = []; // Pop-ups (GetFeatureInfo results) shown on the map
 
+var layersLoading = 0;
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -55,6 +57,27 @@ window.onload = function()
     
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
+
+    // Set up the throbber (acts as progress indicator)
+    map.events.register('preaddlayer', map, function(evt) {
+        if (evt.layer) {
+            evt.layer.events.register('loadstart', this, function() {
+                layersLoading++;
+                if (layersLoading > 0) {
+                    $('throbber').style.visibility = 'visible';
+                }
+            });
+            evt.layer.events.register('loadend', this, function() {
+                if (layersLoading > 0) {
+                    layersLoading--;
+                }
+                if (layersLoading == 0) {
+                    $('throbber').style.visibility = 'hidden';
+                }
+            });
+        }
+    });
+
     var ol_wms = new OpenLayers.Layer.WMS1_1_1( "OpenLayers WMS", 
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic'});
     var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble", 
@@ -155,9 +178,6 @@ window.onload = function()
     
     layerSwitcher = new OpenLayers.Control.LayerSwitcher()
     map.addControl(layerSwitcher);
-    
-    var loadingpanel = new OpenLayers.Control.LoadingPanel();
-    map.addControl(loadingpanel);
 
     //map.addControl(new OpenLayers.Control.MousePosition({prefix: 'Lon: ', separator: ' Lat:'}));
     map.zoomTo(1);
@@ -865,7 +885,7 @@ function createAnimation()
     $('autoZoom').style.visibility = 'hidden';
     $('hideAnimation').style.visibility = 'visible';
     // We show the "please wait" image then immediately load the animation
-    $('loadingAnimationDiv').style.visibility = 'visible'; // This will be hidden by animationLoaded()
+    $('throbber').style.visibility = 'visible'; // This will be hidden by animationLoaded()
     
     // When the mapOverlay has been loaded we call animationLoaded() and place the image correctly
     // on the map
@@ -886,7 +906,7 @@ function getMapExtent()
 }
 function animationLoaded()
 {
-    $('loadingAnimationDiv').style.visibility = 'hidden';
+    $('throbber').style.visibility = 'hidden';
     //$('mapOverlayDiv').style.visibility = 'visible';
     // Load the image into a new layer on the map
     animation_layer = new OpenLayers.Layer.Image(

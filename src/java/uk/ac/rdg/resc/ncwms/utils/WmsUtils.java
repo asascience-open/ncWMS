@@ -247,8 +247,6 @@ public class WmsUtils
         return location.endsWith(".xml") || location.endsWith(".ncml");
     }
 
-
-
     /**
      * Finds all files matching
      * a glob pattern.  This method recursively searches directories, allowing
