@@ -85,6 +85,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	 		</menu:folder>
 	 		<menu:folder label="Coastal Model Data (Biology)">
         			<menu:dataset dataset="${datasets.ECOOP_NSEcologicalForecast}"/>
+	      			<menu:dataset dataset="${datasets.ECOOP_NSEcologicalBestEstimate}"/>
 			</menu:folder>
  		</menu:folder>
 	</menu:folder>
