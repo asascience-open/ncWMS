@@ -76,8 +76,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     		</menu:folder>
 	    	<menu:folder label="BSH Germany">
     			<menu:folder label="Coastal Model Data (Physical)">
-            			<menu:dataset dataset="${datasets.ECOOP_NSBS}"/>
-        			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
+            			<menu:dataset dataset="${datasets.ECOOP_BSH_TS}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_etaV}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_ice}"/>
         			<menu:dataset dataset="${datasets.ECOOP_BSH_TS_hindcast}"/>
@@ -92,6 +91,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	<menu:folder label="Iberian IBIROOS">
 	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS}" label="NE Atlantic ROMS Ireland"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_PREVIMER_MANGA}" label="PREVIMER Bay of Biscay forecasts France"/>
+	        	<menu:dataset dataset="${datasets.ECOOP_ODYSSEA_SST}"/>
 	</menu:folder>
 
 	<menu:folder label="Mediterranean MOON">
