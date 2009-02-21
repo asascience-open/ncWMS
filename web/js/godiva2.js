@@ -59,6 +59,7 @@ window.onload = function()
     map = new OpenLayers.Map('map');
 
     // Set up the throbber (acts as progress indicator)
+    // Adapted from LoadingPanel.js
     map.events.register('preaddlayer', map, function(evt) {
         if (evt.layer) {
             evt.layer.events.register('loadstart', this, function() {
@@ -317,7 +318,7 @@ function treeNodeClicked(node)
             // Set to the present time if we don't already have a time selected
             // Set milliseconds to zero (don't know how to create a format string
             // that includes milliseconds).
-            isoTValue = new Date().print('%Y-%m-%dT%H:%M:%S.000Z');
+            isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
         }
 
         // Get the details of this layer from the server, calling layerSelected()
@@ -667,7 +668,7 @@ function loadTimesteps()
         callback: updateTimesteps,
         layerName: activeLayer.id,
         // TODO: Hack! Use date only and adjust server-side logic
-        day: makeIsoDate(calendar.date) + 'T00:00:00.000Z'
+        day: makeIsoDate(calendar.date) + 'T00:00:00Z'
     });
 }
 

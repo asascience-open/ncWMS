@@ -67,6 +67,9 @@ public class WmsUtils
     private static DateTimeFormatter ISO_DATE_TIME_FORMATTER =
         ISODateTimeFormat.dateTime().withZone(DateTimeZone.UTC);
 
+    private static DateTimeFormatter ISO_DATE_TIME_PARSER =
+        ISODateTimeFormat.dateTimeParser().withZone(DateTimeZone.UTC);
+
     private static DateTimeFormatter ISO_TIME_FORMATTER =
         ISODateTimeFormat.time().withZone(DateTimeZone.UTC);
     
@@ -106,7 +109,7 @@ public class WmsUtils
      */
     public static Date iso8601ToDate(String isoDateTime)
     {
-        return ISO_DATE_TIME_FORMATTER.parseDateTime(isoDateTime).toDate();
+        return ISO_DATE_TIME_PARSER.parseDateTime(isoDateTime).toDate();
     }
     
     /**
