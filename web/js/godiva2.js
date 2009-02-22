@@ -7,7 +7,6 @@ var calendar = null; // The calendar object
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
 var isoTValue = null; // The currently-selected t value (ISO8601)
-var isIE;
 var scaleMinVal;
 var scaleMaxVal;
 var gotScaleRange = false;
@@ -44,13 +43,6 @@ window.onload = function()
     // reset the scale markers
     $('scaleMax').value = '';
     $('scaleMin').value = '';
-
-    // Make sure 100% opacity is selected
-    $('opacityValue').value = '100';
-
-    // Detect the browser (IE6 doesn't render PNGs properly so we don't provide
-    // the option to have partial overlay opacity)
-    isIE = navigator.appVersion.indexOf('MSIE') >= 0;
 
     // Stop the pink tiles appearing on error
     OpenLayers.Util.onImageLoadError = function() {  this.style.display = ""; this.src="./images/blank.png"; }
@@ -564,11 +556,6 @@ function layerSelected(layerDetails)
         $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
         $('scaleMax').value = toNSigFigs(scaleMaxVal, 4);
         gotScaleRange = true;
-    }
-    
-    if (!isIE) {
-        // Only show this control if we can use PNGs properly (i.e. not on Internet Explorer)
-        $('opacityControl').style.visibility = 'visible';
     }
 
     // Set the auto-zoom box
