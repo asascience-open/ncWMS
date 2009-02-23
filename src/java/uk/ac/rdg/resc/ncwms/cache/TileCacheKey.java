@@ -108,7 +108,7 @@ public class TileCacheKey implements Serializable
         {
             // This is an OPeNDAP dataset or NcML aggregation, so we need
             // to store the last-modified time of the relevant Dataset
-            this.datasetLastModified = layer.getDataset().getLastUpdate().getTime();
+            this.datasetLastModified = layer.getDataset().getLastUpdate().getMillis();
         }
         this.tIndex = tIndex;
         this.zIndex = zIndex;

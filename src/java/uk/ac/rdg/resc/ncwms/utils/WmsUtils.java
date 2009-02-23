@@ -31,12 +31,11 @@ package uk.ac.rdg.resc.ncwms.utils;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
-import java.util.Date;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.TimeZone;
 import org.apache.oro.io.GlobFilenameFilter;
+import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -81,54 +80,30 @@ public class WmsUtils
 
     /** Private constructor to prevent direct instantiation */
     private WmsUtils() { throw new AssertionError(); }
-    
-    /**
-     * Time zone representing Greenwich Mean Time
-     */
-    public static final TimeZone GMT = TimeZone.getTimeZone("GMT+0");
 
     /**
-     * Converts a number of milliseconds since the epoch into an ISO8601-formatted
-     * String.
+     * Converts a {@link DateTime} object into an ISO8601-formatted String.
      */
-    public static String millisecondsToISO8601(long millisecondsSinceEpoch)
+    public static String dateTimeToISO8601(DateTime dateTime)
     {
-        return ISO_DATE_TIME_FORMATTER.print(millisecondsSinceEpoch);
+        return ISO_DATE_TIME_FORMATTER.print(dateTime);
     }
 
     /**
-     * Converts a Date object into an ISO8601-formatted String.
+     * Converts an ISO8601-formatted String into a {@link DateTime} object
      */
-    public static String dateToISO8601(Date date)
+    public static DateTime iso8601ToDateTime(String isoDateTime)
     {
-        return millisecondsToISO8601(date.getTime());
-    }
-
-    /**
-     * Converts an ISO8601-formatted String into a Date
-     */
-    public static Date iso8601ToDate(String isoDateTime)
-    {
-        return ISO_DATE_TIME_PARSER.parseDateTime(isoDateTime).toDate();
+        return ISO_DATE_TIME_PARSER.parseDateTime(isoDateTime);
     }
     
     /**
-     * Converts an ISO8601-formatted time into a number of milliseconds since the
-     * epoch
-     * @todo shouldn't this throw a parse error?
-     */
-    public static long iso8601ToMilliseconds(String isoDateTime)
-    {
-        return iso8601ToDate(isoDateTime).getTime();
-    }
-    
-    /**
-     * Formats a date (in milliseconds since the epoch) as the time only
+     * Formats a DateTime as the time only
      * in the format "HH:mm:ss", e.g. "14:53:03".  Time zone offset is zero (UTC).
      */
-    public static String formatUTCTimeOnly(long millisecondsSinceEpoch)
+    public static String formatUTCTimeOnly(DateTime dateTime)
     {
-        return ISO_TIME_FORMATTER.print(millisecondsSinceEpoch);
+        return ISO_TIME_FORMATTER.print(dateTime);
     }
     
     /**

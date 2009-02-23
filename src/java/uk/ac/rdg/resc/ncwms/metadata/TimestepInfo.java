@@ -28,7 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.metadata;
 
-import java.util.Date;
+import org.joda.time.DateTime;
 
 /**
  * Simple class that holds information about which files in an aggregation
@@ -42,7 +42,7 @@ import java.util.Date;
  */
 public class TimestepInfo implements Comparable<TimestepInfo>
 {
-    private Date timestep;
+    private DateTime timestep;
     private String filename;
     private int indexInFile;
 
@@ -52,8 +52,12 @@ public class TimestepInfo implements Comparable<TimestepInfo>
      * @param filename The filename containing this timestep
      * @param indexInFile The index of this timestep in the file
      */
-    public TimestepInfo(Date timestep, String filename, int indexInFile)
+    public TimestepInfo(DateTime timestep, String filename, int indexInFile)
     {
+        if (timestep == null || filename == null)
+        {
+            throw new NullPointerException();
+        }
         this.timestep = timestep;
         this.filename = filename;
         this.indexInFile = indexInFile;
@@ -79,7 +83,7 @@ public class TimestepInfo implements Comparable<TimestepInfo>
     /**
      * @return the date-time that this timestep represents
      */
-    public Date getDate()
+    public DateTime getDateTime()
     {
         return this.timestep;
     }
@@ -95,6 +99,7 @@ public class TimestepInfo implements Comparable<TimestepInfo>
     /**
      * Compares all fields for equality
      */
+    @Override
     public boolean equals(Object obj)
     {
         if (this == obj) return true;
@@ -103,5 +108,14 @@ public class TimestepInfo implements Comparable<TimestepInfo>
         return this.timestep.equals(otherTstep.timestep) &&
                this.indexInFile == otherTstep.indexInFile &&
                this.filename.equals(otherTstep.filename);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 41 * hash + this.timestep.hashCode();
+        hash = 41 * hash + this.filename.hashCode();
+        hash = 41 * hash + this.indexInFile;
+        return hash;
     }
 }

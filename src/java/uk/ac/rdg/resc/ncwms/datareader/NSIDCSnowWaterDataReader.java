@@ -38,6 +38,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -112,7 +113,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
             // TODO: not really an IOException
             throw new IOException("Error parsing filepath " + location);
         }
-        layer.addTimestepInfo(new TimestepInfo(timestep, location, 0));
+        layer.addTimestepInfo(new TimestepInfo(new DateTime(timestep), location, 0));
         
         layers.put(layer.getId(), layer);
     }

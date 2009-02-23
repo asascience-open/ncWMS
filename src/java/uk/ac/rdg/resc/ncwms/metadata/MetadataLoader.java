@@ -30,13 +30,13 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -174,7 +174,7 @@ public class MetadataLoader
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
             // TODO: set this when reading from database too.
-            this.config.setLastUpdateTime(new Date());
+            this.config.setLastUpdateTime(new DateTime());
             // Save the config information to the file
             this.config.save();
             logger.debug("Loaded metadata for {}, num RAFs open = {}", ds.getId(),

@@ -108,8 +108,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:set var="tvalues" value="${layer.tvalues}"/>
                     <c:if test="${layer.taxisPresent}">
-                    <Dimension name="time" units="ISO8601" multipleValues="true" current="true" default="${utils:millisecondsToISO8601(layer.defaultTValue)}">
-                        <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:millisecondsToISO8601(tval)}</c:forEach>
+                        <Dimension name="time" units="ISO8601" multipleValues="true" current="true" default="${utils:dateTimeToISO8601(layer.defaultTValue)}">
+                        <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
                     </Dimension>
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyles}">

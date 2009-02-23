@@ -29,8 +29,8 @@
 package uk.ac.rdg.resc.ncwms.usagelog;
 
 import java.awt.Color;
-import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
+import org.joda.time.DateTime;
 import uk.ac.rdg.resc.ncwms.controller.GetFeatureInfoDataRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetFeatureInfoRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
@@ -51,7 +51,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 public class UsageLogEntry
 {
     // These fields appear in every log entry
-    private Date requestTime = new Date(); // The time at which the request was received
+    private DateTime requestTime = new DateTime(); // The time at which the request was received
     private String clientIpAddress = null;
     private String clientHost = null;
     private String clientReferrer = null;
@@ -197,7 +197,7 @@ public class UsageLogEntry
         this.menu = menu;
     }
 
-    public Date getRequestTime()
+    public DateTime getRequestTime()
     {
         return requestTime;
     }

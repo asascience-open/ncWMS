@@ -67,7 +67,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td>
                         <c:choose>
                             <c:when test="${empty dataset.value.lastUpdate}">never</c:when>
-                            <c:otherwise>${utils:dateToISO8601(dataset.value.lastUpdate)}</c:otherwise>
+                            <c:otherwise>${utils:dateTimeToISO8601(dataset.value.lastUpdate)}</c:otherwise>
                         </c:choose>
                     </td>
                     <td>

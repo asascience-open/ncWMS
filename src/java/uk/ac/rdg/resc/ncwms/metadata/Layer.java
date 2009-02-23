@@ -29,6 +29,7 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.List;
+import org.joda.time.DateTime;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
@@ -93,11 +94,9 @@ public interface Layer
 
     /**
      * @return the default value of the t axis (i.e. the t value that will be
-     * used if the user does not specify an explicit t value in a GetMap request),
-     * in milliseconds since the epoch.  This currently returns the last value along
-     * the time axis, but should probably return the value closest to now.
+     * used if the user does not specify an explicit t value in a GetMap request).
      */
-    long getDefaultTValue();
+    DateTime getDefaultTValue();
 
     /**
      * @return the index of the default value on the z axis (i.e. the index of
@@ -138,9 +137,9 @@ public interface Layer
     String getTitle();
 
     /**
-     * @return array of timestep values in milliseconds since the epoch
+     * @return list of date/time values for this layer
      */
-    long[] getTvalues();
+    List<DateTime> getTvalues();
 
     String getUnits();
     

@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
@@ -456,7 +457,8 @@ public class DefaultDataReader extends DataReader
             Date[] dates = coordSys.getTimeAxis1D().getTimeDates();
             for (int i = 0; i < dates.length; i++)
             {
-                TimestepInfo tInfo = new TimestepInfo(dates[i], filename, i);
+                DateTime dt = new DateTime(dates[i]);
+                TimestepInfo tInfo = new TimestepInfo(dt, filename, i);
                 timesteps.add(tInfo);
             }
         }

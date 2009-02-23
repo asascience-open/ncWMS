@@ -32,10 +32,10 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.DateTime;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
@@ -271,7 +271,7 @@ public abstract class MetadataStore
      * error occurs loading the last update time (which should be unlikely)
      * implementing classes should log the error and return null.
      */
-    public abstract Date getLastUpdateTime(String datasetId);
+    public abstract DateTime getLastUpdateTime(String datasetId);
     
     /**
      * Sets the Dataset property on the given layer.  Checks for Vector

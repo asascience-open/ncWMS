@@ -30,10 +30,10 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Element;
@@ -87,8 +87,8 @@ public class Config implements ApplicationContextAware
     private Cache cache = new Cache();
     
     // Time of the last update to this configuration or any of the contained
-    // metadata, in milliseconds since the epoch
-    private long lastUpdateTime = new Date().getTime(); 
+    // metadata
+    private DateTime lastUpdateTime = new DateTime();
     
     private File configFile; // Location of the file from which this information has been read
     
@@ -142,7 +142,7 @@ public class Config implements ApplicationContextAware
         {
             // Read the time at which this dataset was last updated from the
             // metadata store
-            Date lastUpdate = metadataStore.getLastUpdateTime(ds.getId());
+            DateTime lastUpdate = metadataStore.getLastUpdateTime(ds.getId());
             if (lastUpdate == null)
             {
                 // The dataset has never been loaded
@@ -219,28 +219,18 @@ public class Config implements ApplicationContextAware
         }
     }
     
-    public void setLastUpdateTime(Date date)
+    public void setLastUpdateTime(DateTime date)
     {
-        if (date.after(new Date(this.lastUpdateTime)))
+        if (date.isAfter(this.lastUpdateTime))
         {
-            this.lastUpdateTime = date.getTime();
+            this.lastUpdateTime = date;
         }
     }
     
     /**
-     * @return a newly-created Date object representing the time at which this
-     * configuration was last updated
+     * @return the time at which this configuration was last updated
      */
-    public Date getLastUpdateTime()
-    {
-        return new Date(this.lastUpdateTime);
-    }
-    
-    /**
-     * @return the time of the last change to the configuration or metadata,
-     * in milliseconds since the epoch
-     */
-    public long getLastUpdateTimeMilliseconds()
+    public DateTime getLastUpdateTime()
     {
         return this.lastUpdateTime;
     }

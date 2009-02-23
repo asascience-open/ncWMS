@@ -361,7 +361,9 @@ function isDateDisabled(date, year, month, day)
     // Cycle through the array of days for this month, looking for the one we want
     var numDays = datesWithData[year][month].length;
     for (var d = 0; d < numDays; d++) {
-        if (datesWithData[year][month][d] == day) return false; // We have data for this day
+        if (datesWithData[year][month][d] == day) {
+            return false; // We have data for this day
+        }
     }
     // If we've got this far, we've found no data
     return true;

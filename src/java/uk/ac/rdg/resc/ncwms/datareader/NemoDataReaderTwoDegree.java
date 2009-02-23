@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.Variable;
@@ -131,7 +132,7 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
                     for (int i = 0; i < ftVals.length; i++)
                     {
                         Date timestep = dateUnit.makeDate(ftVals[i]);
-                        layer.addTimestepInfo(new TimestepInfo(timestep, location, i));
+                        layer.addTimestepInfo(new TimestepInfo(new DateTime(timestep), location, i));
                     }
                 }
             }

@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
@@ -311,7 +312,7 @@ public class NemoDataReader extends DefaultDataReader
                     for (int i = 0; i < ftVals.length; i++)
                     {
                         Date timestep = dateUnit.makeDate(ftVals[i]);
-                        layer.addTimestepInfo(new TimestepInfo(timestep, location, i));
+                        layer.addTimestepInfo(new TimestepInfo(new DateTime(timestep), location, i));
                     }
                 }
             }

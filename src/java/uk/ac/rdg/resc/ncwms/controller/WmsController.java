@@ -34,7 +34,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +51,7 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -462,7 +462,7 @@ public class WmsController extends AbstractController
             String tValue = "";
             if (layer.isTaxisPresent() && tIndices.size() > 1)
             {
-                tValue = WmsUtils.dateToISO8601(layer.getTimesteps().get(tIndex).getDate());
+                tValue = WmsUtils.dateTimeToISO8601(layer.getTimesteps().get(tIndex).getDateTime());
             }
             tValues.add(tValue);
             imageProducer.addFrame(picData, tValue); // the tValue is the label for the image
@@ -651,10 +651,10 @@ public class WmsController extends AbstractController
         
         // Now read the data, mapping date-times to data values
         // The map is sorted in order of ascending time
-        SortedMap<Date, Float> featureData = new TreeMap<Date, Float>();
+        SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
         for (int tIndex : tIndices)
         {
-            Date date = tIndex < 0 ? null : layer.getTimesteps().get(tIndex).getDate();
+            DateTime dateTime = tIndex < 0 ? null : layer.getTimesteps().get(tIndex).getDateTime();
             
             // Create a trivial Grid for reading a single point of data.
             // We use the same coordinate reference system as the original request
@@ -677,7 +677,7 @@ public class WmsController extends AbstractController
                 val = readDataArray(layer, tIndex, zIndex, singlePointGrid, null,
                     usageLogEntry)[0];
             }
-            featureData.put(date, Float.isNaN(val) ? null : val);
+            featureData.put(dateTime, Float.isNaN(val) ? null : val);
         }
         
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT))
@@ -693,9 +693,9 @@ public class WmsController extends AbstractController
             // Must be PNG format: prepare and output the JFreeChart
            // TODO: this is nasty: we're mixing presentation code in the controller
            TimeSeries ts = new TimeSeries("Data", Millisecond.class);
-           for (Date date : featureData.keySet())
+           for (DateTime dateTime : featureData.keySet())
            {
-               ts.add(new Millisecond(date), featureData.get(date));
+               ts.add(new Millisecond(dateTime.toDate()), featureData.get(dateTime));
            }
            TimeSeriesCollection xydataset = new TimeSeriesCollection();
            xydataset.addSeries(ts);

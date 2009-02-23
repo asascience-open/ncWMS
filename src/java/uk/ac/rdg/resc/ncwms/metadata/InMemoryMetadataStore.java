@@ -29,9 +29,9 @@
 package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import org.joda.time.DateTime;
 
 /**
  * A MetadataStore that stores metadata in memory.  This is likely to be fast
@@ -50,9 +50,9 @@ public class InMemoryMetadataStore extends MetadataStore
     private Map<String, Map<String, ? extends Layer>> layers =
         new HashMap<String, Map<String, ? extends Layer>>();
     /**
-     * Maps datasetIDs to times of last metadata updates (in ms since the epoch).
+     * Maps datasetIDs to times of last metadata updates.
      */
-    private Map<String, Long> lastUpdateTimes = new HashMap<String, Long>();
+    private Map<String, DateTime> lastUpdateTimes = new HashMap<String, DateTime>();
     
     /**
      * Gets a Layer object from a dataset
@@ -94,7 +94,7 @@ public class InMemoryMetadataStore extends MetadataStore
     public void setLayersInDataset(String datasetId, Map<String, ? extends Layer> layers)
     {
         this.layers.put(datasetId, layers);
-        this.lastUpdateTimes.put(datasetId, new Date().getTime());
+        this.lastUpdateTimes.put(datasetId, new DateTime());
     }
 
     /**
@@ -102,10 +102,10 @@ public class InMemoryMetadataStore extends MetadataStore
      * or null if the dataset has not yet been loaded into this store.  Returns
      * a new Date object with every invocation.
      */
-    public Date getLastUpdateTime(String datasetId)
+    @Override
+    public DateTime getLastUpdateTime(String datasetId)
     {
-        Long lastUpdateTime = this.lastUpdateTimes.get(datasetId);
-        return lastUpdateTime == null ? null : new Date(lastUpdateTime);
+        return this.lastUpdateTimes.get(datasetId);
     }
     
 }

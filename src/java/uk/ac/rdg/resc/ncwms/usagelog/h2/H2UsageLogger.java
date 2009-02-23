@@ -150,7 +150,7 @@ public class H2UsageLogger implements UsageLogger
     {
         long startLog = System.currentTimeMillis();
         // Calculate the time to process the request
-        long timeToProcessRequest = startLog - logEntry.getRequestTime().getTime();
+        long timeToProcessRequest = startLog - logEntry.getRequestTime().getMillis();
         try
         {
             // Use of setObject allows entries to be null

@@ -29,12 +29,11 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Attribute;
@@ -217,7 +216,7 @@ public class Dataset
      */
     public boolean needsRefresh()
     {
-        Date lastUpdate = this.getLastUpdate();
+        DateTime lastUpdate = this.getLastUpdate();
         logger.debug("Last update time for dataset {} is {}", this.id, lastUpdate);
         logger.debug("State of dataset {} is {}", this.id, this.state);
         logger.debug("Disabled = {}", this.disabled);
@@ -238,11 +237,8 @@ public class Dataset
         else
         {
             // State = READY.  Check the age of the metadata
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(lastUpdate);
-            cal.add(Calendar.MINUTE, this.updateInterval);
             // Return true if we are after the next scheduled update
-            return new Date().after(cal.getTime());
+            return new DateTime().isAfter(lastUpdate.plusMinutes(this.updateInterval));
         }
     }
     
@@ -327,7 +323,7 @@ public class Dataset
      * stored with the metadata - which may or may not be persistent across
      * server reboots, depending on the type of MetadataStore).
      */
-    public Date getLastUpdate()
+    public DateTime getLastUpdate()
     {
         return this.config.getMetadataStore().getLastUpdateTime(this.id);
     }
