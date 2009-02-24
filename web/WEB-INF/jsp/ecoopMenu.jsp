@@ -93,8 +93,13 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	        	<menu:dataset dataset="${datasets.ECOOP_Rectilinear_ROMS}" label="NE Atlantic ROMS Ireland"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_PREVIMER_MANGA}" label="PREVIMER Bay of Biscay forecasts France"/>
 	        	<menu:dataset dataset="${datasets.ECOOP_ODYSSEA_SST}"/>
+	 		<menu:folder label="Mercator psy2v3">
+        			<menu:dataset dataset="${datasets.ECOOP_MERCATOR_psy2v3_best_estimate}" label="Best Estimate"/>
+	      			<menu:dataset dataset="${datasets.ECOOP_MERCATOR_psy2v3_1week_forecast}" label="One Week Forecast"/>
+			</menu:folder>
+	        	<menu:dataset dataset="${datasets.ECOOP_PCOMS}"/>
 	</menu:folder>
-
+ 
 	<menu:folder label="Mediterranean MOON">
               <menu:folder label="Mediterranean ocean analyses Italy">
               	<menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
