@@ -36,6 +36,7 @@ var paletteName = null; // Name of the currently-selected palette
 var popups = []; // Pop-ups (GetFeatureInfo results) shown on the map
 
 var layersLoading = 0;
+var animationSelector = null; // Pop-up panel for selecting the time resolution of an animation
 
 // Called when the page has loaded
 window.onload = function()
@@ -195,6 +196,18 @@ window.onload = function()
     // Set up the palette selector pop-up
     paletteSelector = new YAHOO.widget.Panel("paletteSelector", { 
         width:"400px",
+        constraintoviewport: true,
+        fixedcenter: true,
+        underlay:"shadow",
+        close:true,
+        visible:false,
+        draggable:true,
+        modal:true
+    });
+
+    // Set up the animation selector pop-up
+    animationSelector = new YAHOO.widget.Panel("animationSelector", {
+        width:"300px",
         constraintoviewport: true,
         fixedcenter: true,
         underlay:"shadow",
@@ -852,7 +865,34 @@ function createAnimation()
         alert("Must select a first and last frame for the animation");
         return;
     }
-    
+
+    getAnimationTimesteps(activeLayer.server, {
+        callback: gotAnimationTimesteps,
+        layerName: activeLayer.id,
+        startTime: $('firstFrame').innerHTML,
+        endTime: $('lastFrame').innerHTML
+    });
+}
+
+function gotAnimationTimesteps(timesteps)
+{
+    // Look in the timesteps object and generate the list of options
+    $('animationResolution').options.length = 0;
+    for (var i = 0; i < timesteps.length; i++) {
+        var timestep = timesteps[i];
+        $('animationResolution').options[i] = new Option(timestep.title, timestep.timeString);
+    }
+    // Select the last item by default (this has the smallest number of frames,
+    // so if the user clicks "OK" by mistake the load on the server will be
+    // minimized)
+    $('animationResolution').selectedIndex = $('animationResolution').options.length - 1;
+    animationSelector.render(document.body);
+    animationSelector.show();
+}
+// Called when the user clicks "OK" in the animation selector
+function loadAnimation()
+{
+    animationSelector.hide();
     // Get a URL for a WMS request that covers the current map extent
     var urlEls = ncwms.getURL(getMapExtent()).split('&');
     // Replace the parameters as needed.
@@ -861,7 +901,7 @@ function createAnimation()
     var newURL = urlEls[0];
     for (var i = 1; i < urlEls.length; i++) {
         if (urlEls[i].startsWith('TIME=')) {
-            newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
+            newURL += '&TIME=' + $('animationResolution').value
         } else if (urlEls[i].startsWith('FORMAT')) {
             newURL += '&FORMAT=image/gif';
         } else if (urlEls[i].startsWith('WIDTH')) {
@@ -1176,6 +1216,8 @@ function setGEarthURL()
                 gEarthURL += '&FORMAT=application/vnd.google-earth.kmz';
             } else if (urlEls[i].startsWith('TIME') && timeSeriesSelected()) {
                 // If we can make an animation, do so
+                // TODO: this makes a full-temporal-resolution animation!
+                // Need to have more control over this.
                 gEarthURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
             } else if (urlEls[i].startsWith('BBOX')) {
                 // Set the bounding box so that there are no transparent pixels around

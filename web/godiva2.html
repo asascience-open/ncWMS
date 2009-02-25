@@ -131,6 +131,17 @@
         </div>
     </div>
 
+    <!-- The animation resolution pop-up window.  Initially invisible. -->
+    <div id="animationSelector" style="visibility: hidden">
+        <div class="hd">Select the time resolution of your animation</div>
+        <p style="background-color: #ffffff; padding: 1em">The more frames you choose the longer your animation will take to
+        load.  Please choose the smallest number you think you need!</p>
+        <div class="bd">
+            <select id="animationResolution"></select>
+            <button type="button" onclick="loadAnimation()">OK</button>
+        </div>
+    </div>
+
     <!-- Google Analytics tracking code -->
     <script src="http://www.google-analytics.com/urchin.js" type="text/javascript"></script>
     <script type="text/javascript">

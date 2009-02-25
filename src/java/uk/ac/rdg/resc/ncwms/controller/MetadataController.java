@@ -34,12 +34,14 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
@@ -106,6 +108,10 @@ public class MetadataController
             else if (item.equals("minmax"))
             {
                 return this.showMinMax(request, usageLogEntry);
+            }
+            else if (item.equals("animationTimesteps"))
+            {
+                return this.showAnimationTimesteps(request);
             }
             else
             {
@@ -406,6 +412,86 @@ public class MetadataController
             }
         }
         return new float[]{min, max};
+    }
+
+    /**
+     * Calculates the TIME strings necessary to generate animations for the
+     * given layer at hourly, daily, weekly, monthly and yearly resolution.
+     * @param request
+     * @return
+     * @throws java.lang.Exception
+     */
+    private ModelAndView showAnimationTimesteps(HttpServletRequest request)
+        throws Exception
+    {
+        Layer layer = this.getLayer(request);
+        String startStr = request.getParameter("start");
+        String endStr = request.getParameter("end");
+        if (startStr == null || endStr == null)
+        {
+            throw new Exception("Must provide values for start and end");
+        }
+
+        // Find the start and end indices along the time axis
+        int startIndex = layer.findTIndex(startStr);
+        int endIndex = layer.findTIndex(endStr);
+        List<DateTime> tValues = layer.getTvalues();
+
+        // E.g.: {
+        //  "Full" : "start/end",
+        //  "Hourly" : "t1,t2,t3,t4",
+        //  "Daily" : "ta,tb,tc,td"
+        //  etc
+        //  }
+        Map<String, String> timeStrings = new LinkedHashMap<String, String>();
+
+        timeStrings.put("Full (" + (endIndex - startIndex + 1) + " frames)", startStr + "/" + endStr);
+        addTimeString("Daily", timeStrings, tValues, startIndex, endIndex, new Period().withDays(1));
+        addTimeString("Weekly", timeStrings, tValues, startIndex, endIndex, new Period().withWeeks(1));
+        addTimeString("Monthly", timeStrings, tValues, startIndex, endIndex, new Period().withMonths(1));
+        addTimeString("Yearly", timeStrings, tValues, startIndex, endIndex, new Period().withYears(1));
+
+        return new ModelAndView("showAnimationTimesteps", "timeStrings", timeStrings);
+    }
+
+    private static void addTimeString(String label, Map<String, String> timeStrings,
+        List<DateTime> tValues, int startIndex, int endIndex, Period resolution)
+    {
+        List<DateTime> timesteps = getAnimationTimesteps(tValues, startIndex, endIndex, resolution);
+        // We filter out all the animations with less than one timestep
+        if (timesteps.size() > 1)
+        {
+            String timeString = getTimeString(timesteps);
+            timeStrings.put(label + " (" + timesteps.size() + " frames)", timeString);
+        }
+    }
+
+    private static List<DateTime> getAnimationTimesteps(List<DateTime> tValues, int startIndex,
+        int endIndex, Period resolution)
+    {
+        List<DateTime> times = new ArrayList<DateTime>();
+        times.add(tValues.get(startIndex));
+        for (int i = startIndex + 1; i <= endIndex; i++)
+        {
+            DateTime lastdt = times.get(times.size() - 1);
+            DateTime thisdt = tValues.get(i);
+            if (!thisdt.isBefore(lastdt.plus(resolution)))
+            {
+                times.add(thisdt);
+            }
+        }
+        return times;
+    }
+
+    private static String getTimeString(List<DateTime> timesteps)
+    {
+        if (timesteps.size() == 0) return "";
+        StringBuilder builder = new StringBuilder(WmsUtils.dateTimeToISO8601(timesteps.get(0)));
+        for (int i = 1; i < timesteps.size(); i++)
+        {
+            builder.append("," + WmsUtils.dateTimeToISO8601(timesteps.get(i)));
+        }
+        return builder.toString();
     }
 
     /**

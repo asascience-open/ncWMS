@@ -176,3 +176,26 @@ function getMinMax(url, params) {
         onSuccess: params.callback
     });
 }
+
+/**
+ * Gets the list of animation timesteps from the given layer ncWMS layers only.
+ * @param Object containing parameters, which must include:
+ *        callback the function to be called with the object that is returned
+ *            from the call to the server (simple object with properties "min" and "max")
+ *        layerName The unique ID for the displayable layer
+ *        start Start time for the animation in ISO8601
+ *        start End time for the animation in ISO8601
+ */
+function getAnimationTimesteps(url, params) {
+    makeAjaxRequest(url, {
+        urlparams: {
+            item: 'animationTimesteps',
+            layerName: params.layerName,
+            start: params.startTime,
+            end: params.endTime
+        },
+        onSuccess: function(timestrings) {
+            params.callback(timestrings.timeStrings);
+        }
+    });
+}
