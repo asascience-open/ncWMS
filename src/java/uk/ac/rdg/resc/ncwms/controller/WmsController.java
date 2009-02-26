@@ -282,8 +282,8 @@ public class WmsController extends AbstractController
         }
         
         // Check the VERSION parameter (not compulsory for GetCapabilities)
-        String version = params.getWmsVersion();
-        usageLogEntry.setWmsVersion(version);
+        String versionStr = params.getWmsVersion();
+        usageLogEntry.setWmsVersion(versionStr);
         
         // Check the FORMAT parameter
         String format = params.getString("format");
@@ -353,18 +353,26 @@ public class WmsController extends AbstractController
         models.put("legendWidth", ColorPalette.LEGEND_WIDTH);
         models.put("legendHeight", ColorPalette.LEGEND_HEIGHT);
         models.put("paletteNames", ColorPalette.getAvailablePaletteNames());
-        if (version == null || version.equals("1.3.0"))
+
+        // Do WMS version negotiation.  From the WMS 1.3.0 spec:
+        // * If a version unknown to the server and higher than the lowest
+        //   supported version is requested, the server shall send the highest
+        //   version it supports that is less than the requested version.
+        // * If a version lower than any of those known to the server is requested,
+        //   then the server shall send the lowest version it supports.
+        // We take the version to be 1.3.0 if not specified
+        WmsVersion wmsVersion = versionStr == null
+            ? WmsVersion.VERSION_1_3_0
+            : new WmsVersion(versionStr);
+        if (wmsVersion.compareTo(WmsVersion.VERSION_1_3_0) >= 0)
         {
+            // version is >= 1.3.0. Send 1.3.0 Capabilities
             return new ModelAndView("capabilities_xml", models);
-        }
-        else if (version.equals("1.1.1"))
-        {
-            return new ModelAndView("capabilities_xml_1_1_1", models);
         }
         else
         {
-            // TODO: do version negotiation properly
-            throw new WmsException("Version " + version + " is not supported by this server");
+            // version is < 1.3.0. Send 1.1.1 Capabilities
+            return new ModelAndView("capabilities_xml_1_1_1", models);
         }
     }
     
@@ -1038,83 +1046,89 @@ public class WmsController extends AbstractController
     {
         this.tileCache = tileCache;
     }
-}
 
-/**
- * Represents a WMS version number.  Not used in the current code, but preserved
- * for future use in version negotiation.
- */
-class WmsVersion implements Comparable<WmsVersion>
-{
-    private int x,y,z; // The three components of the version number
-    
-    public static final WmsVersion VERSION_1_1_1 = new WmsVersion("1.1.1");
-    public static final WmsVersion VERSION_1_3_0 = new WmsVersion("1.3.0");
-    
     /**
-     * Creates a new WmsVersion object based on the given String
-     * (e.g. "1.3.0")
-     * @throws IllegalArgumentException if the given String does not represent
-     * a valid WMS version number
+     * Represents a WMS version number.  Not used in the current code, but preserved
+     * for future use in version negotiation.
      */
-    public WmsVersion(String versionStr)
+    private static final class WmsVersion implements Comparable<WmsVersion>
     {
-        String[] els = versionStr.split(".");
-        if (els.length != 3)
+        private Integer value; // Numerical value of the version number,
+                                     // used for comparisons
+        private String str;
+        private int hashCode;
+
+        public static final WmsVersion VERSION_1_1_1 = new WmsVersion("1.1.1");
+        public static final WmsVersion VERSION_1_3_0 = new WmsVersion("1.3.0");
+
+        /**
+         * Creates a new WmsVersion object based on the given String
+         * (e.g. "1.3.0")
+         * @throws IllegalArgumentException if the given String does not represent
+         * a valid WMS version number
+         */
+        public WmsVersion(String versionStr)
         {
-            throw new IllegalArgumentException(versionStr +
-                " is not a valid WMS version number");
-        }
-        try
-        {
-            this.x = Integer.parseInt(els[0]);
-            this.y = Integer.parseInt(els[1]);
-            this.z = Integer.parseInt(els[2]);
-        }
-        catch(NumberFormatException nfe)
-        {
-            throw new IllegalArgumentException(versionStr +
-                " is not a valid WMS version number");
-        }
-        if (this.y > 99 || this.z > 99)
-        {
-            throw new IllegalArgumentException(versionStr +
-                " is not a valid WMS version number");
-        }
-    }
-    
-    /**
-     * Compares this WmsVersion with the specified Version for order.  Returns a
-     * negative integer, zero, or a positive integer as this Version is less
-     * than, equal to, or greater than the specified Version.
-     */
-    public int compareTo(WmsVersion otherVersion)
-    {
-        // Could also do this by calculating a single integer value for the
-        // version: 100*100*x + 100*y + z
-        if (this.x == otherVersion.x)
-        {
-            if (this.y == otherVersion.y)
+            String[] els = versionStr.split("\\.");  // regex: split on full stops
+            if (els.length != 3)
             {
-                return new Integer(this.z).compareTo(otherVersion.z);
+                throw new IllegalArgumentException(versionStr +
+                    " is not a valid WMS version number");
             }
-            else
+            int x, y, z;
+            try
             {
-                return new Integer(this.y).compareTo(otherVersion.y);
+                x = Integer.parseInt(els[0]);
+                y = Integer.parseInt(els[1]);
+                z = Integer.parseInt(els[2]);
             }
+            catch(NumberFormatException nfe)
+            {
+                throw new IllegalArgumentException(versionStr +
+                    " is not a valid WMS version number");
+            }
+            if (y > 99 || z > 99)
+            {
+                throw new IllegalArgumentException(versionStr +
+                    " is not a valid WMS version number");
+            }
+            // We can calculate all these values up-front as this object is
+            // immutable
+            this.str = x + "." + y + "." + z;
+            this.value = (100 * 100 * x) + (100 * y) + z;
+            this.hashCode = 7 + 79 * this.value.hashCode();
         }
-        else
+
+        /**
+         * Compares this WmsVersion with the specified Version for order.  Returns a
+         * negative integer, zero, or a positive integer as this Version is less
+         * than, equal to, or greater than the specified Version.
+         */
+        public int compareTo(WmsVersion otherVersion)
         {
-            return new Integer(this.x).compareTo(otherVersion.x);
+            return this.value.compareTo(otherVersion.value);
         }
-    }
-    
-    /**
-     * @return String representation of this version, e.g. "1.3.0"
-     */
-    @Override
-    public String toString()
-    {
-        return this.x + "." + this.y + "." + this.z;
+
+        /**
+         * @return String representation of this version, e.g. "1.3.0"
+         */
+        @Override
+        public String toString() { return this.str; }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (obj == null) {
+                return false;
+            }
+            if (obj instanceof WmsVersion) {
+                final WmsVersion other = (WmsVersion) obj;
+                return this.value.equals(other.value);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() { return this.hashCode; }
     }
 }
