@@ -10,6 +10,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      Data (models) passed in to this page:
          config     = Configuration of this server (uk.ac.rdg.resc.ncwms.config.Config)
          datasets   = collection of datasets to display in this Capabilities document (Collection<Dataset>)
+         lastUpdate = Last update time of the dataset(s) displayed in this document (org.joda.time.DateTime)
          wmsBaseUrl = Base URL of this server (java.lang.String)
          supportedCrsCodes = List of Strings of supported Coordinate Reference System codes
          supportedImageFormats = Set of Strings representing MIME types of supported image formats
@@ -20,7 +21,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      --%>
 <WMS_Capabilities
         version="1.3.0"
-        <%-- TODO: do UpdateSequence properly --%>
+        updateSequence="${utils:dateTimeToISO8601(lastUpdate)}"
         xmlns="http://www.opengis.net/wms"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -76,19 +77,19 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <Format>XML</Format>
         </Exception>
         <Layer>
-            <Title>${config.server.title}</Title>
+            <Title><c:out value="${config.server.title}"/></Title><%-- Use of c:out escapes XML --%>
             <c:forEach var="crsCode" items="${supportedCrsCodes}">
             <CRS>${crsCode}</CRS>
             </c:forEach>
             <c:forEach var="dataset" items="${datasets}">
             <c:if test="${dataset.ready}">
             <Layer>
-                <Title>${dataset.title}</Title>
+                <Title><c:out value="${dataset.title}"/></Title>
                 <c:forEach var="layer" items="${dataset.layers}">
                 <Layer<c:if test="${config.server.allowFeatureInfo} and ${layer.queryable}"> queryable="1"</c:if>>
                     <Name>${layer.layerName}</Name>
-                    <Title>${layer.title}</Title>
-                    <Abstract>${layer.abstract}</Abstract>
+                    <Title><c:out value="${layer.title}"/></Title>
+                    <Abstract><c:out value="${layer.abstract}"/></Abstract>
                     <c:set var="bbox" value="${layer.bbox}"/>
                     <EX_GeographicBoundingBox>
                         <westBoundLongitude>${bbox[0]}</westBoundLongitude>

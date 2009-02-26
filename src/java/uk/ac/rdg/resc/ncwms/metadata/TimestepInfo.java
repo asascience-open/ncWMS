@@ -105,7 +105,7 @@ public class TimestepInfo implements Comparable<TimestepInfo>
         if (this == obj) return true;
         if (!(obj instanceof TimestepInfo)) return false;
         TimestepInfo otherTstep = (TimestepInfo)obj;
-        return this.timestep.equals(otherTstep.timestep) &&
+        return this.timestep.isEqual(otherTstep.timestep) && // Compares based on millisecond value only
                this.indexInFile == otherTstep.indexInFile &&
                this.filename.equals(otherTstep.filename);
     }

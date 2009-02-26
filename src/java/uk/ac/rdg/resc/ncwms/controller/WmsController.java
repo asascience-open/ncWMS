@@ -61,8 +61,10 @@ import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
 import uk.ac.rdg.resc.ncwms.exceptions.Wms1_1_1Exception;
@@ -292,12 +294,11 @@ public class WmsController extends AbstractController
         // format if the client has requested an unknown format.  Hence we do
         // nothing here.
         
-        // TODO: check the UPDATESEQUENCE parameter
-        
         // The DATASET parameter is an optional parameter that allows a 
         // Capabilities document to be generated for a single dataset only
         String datasetId = params.getString("dataset");
         Collection<Dataset> datasets;
+        DateTime lastUpdate;
         if (datasetId == null || datasetId.trim().equals(""))
         {
             // No specific dataset has been chosen so we create a Capabilities
@@ -314,6 +315,9 @@ public class WmsController extends AbstractController
                     + "that includes all datasets on this server. "
                     + "You must specify a dataset identifier with &amp;DATASET=");
             }
+            // The last update time for the Capabilities doc is the last time
+            // any of the datasets were updated
+            lastUpdate = this.config.getLastUpdateTime();
         }
         else
         {
@@ -325,11 +329,46 @@ public class WmsController extends AbstractController
             }
             datasets = new ArrayList<Dataset>(1);
             datasets.add(ds);
+            // The last update time for the Capabilities doc is the last time
+            // this particular dataset was updated
+            lastUpdate = ds.getLastUpdate();
+        }
+
+        // Do UPDATESEQUENCE negotiation according to WMS 1.3.0 spec (sec 7.2.3.5)
+        String updateSeqStr = params.getString("updatesequence");
+        if (updateSeqStr != null)
+        {
+            DateTime updateSequence;
+            try
+            {
+                updateSequence = WmsUtils.iso8601ToDateTime(updateSeqStr);
+            }
+            catch (IllegalArgumentException iae)
+            {
+                throw new InvalidUpdateSequence(updateSeqStr +
+                    " is not a valid ISO date-time");
+            }
+            // We use isEqual(), which compares dates based on millisecond values
+            // only, because we know that the calendar system will be
+            // the same in each case (ISO).  Comparisons using equals() may return false
+            // because updateSequence is read using UTC, whereas lastUpdate is
+            // created in the server's time zone, meaning that the Chronologies
+            // are different.
+            if (updateSequence.isEqual(lastUpdate))
+            {
+                throw new CurrentUpdateSequence(updateSeqStr);
+            }
+            else if (updateSequence.isAfter(lastUpdate))
+            {
+                throw new InvalidUpdateSequence(updateSeqStr +
+                    " is later than the current server updatesequence value");
+            }
         }
         
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.config);
         models.put("datasets", datasets);
+        models.put("lastUpdate", lastUpdate);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         // Show only a subset of the CRS codes that we are likely to use.
         // Otherwise Capabilities doc gets very large indeed.

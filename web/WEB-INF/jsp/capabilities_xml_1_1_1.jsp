@@ -21,7 +21,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/capabilities_1_1_1.dtd">
 <WMT_MS_Capabilities
         version="1.1.1"
-        xmlns:xlink="http://www.w3.org/1999/xlink"><%-- TODO: do UpdateSequence properly --%>
+        updateSequence="${utils:dateTimeToISO8601(lastUpdate)}"
+        xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Service Metadata -->
     <Service>
         <!-- The WMT-defined name for this type of service -->
@@ -96,19 +97,19 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         </Exception>
         
         <Layer>
-            <Title>${config.server.title}</Title>
+            <Title><c:out value="${config.server.title}"/></Title><%-- Use of c:out escapes XML --%>
             <c:forEach var="crsCode" items="${supportedCrsCodes}">
             <SRS>${crsCode}</SRS>
             </c:forEach>
             <c:forEach var="dataset" items="${datasets}">
             <c:if test="${dataset.ready}">
             <Layer>
-                <Title>${dataset.title}</Title>
+                <Title><c:out value="${dataset.title}"/></Title>
                 <c:forEach var="layer" items="${dataset.layers}">
                 <Layer<c:if test="${config.server.allowFeatureInfo} and ${layer.queryable}"> queryable="1"</c:if>>
                     <Name>${layer.layerName}</Name>
-                    <Title>${layer.title}</Title>
-                    <Abstract>${layer.abstract}</Abstract>
+                    <Title><c:out value="${layer.title}"/></Title>
+                    <Abstract><c:out value="${layer.abstract}"/></Abstract>
                     <c:set var="bbox" value="${layer.bbox}"/>
                     <LatLonBoundingBox minx="${bbox[0]}" maxx="${bbox[2]}" miny="${bbox[1]}" maxy="${bbox[3]}"/>
                     <BoundingBox SRS="EPSG:4326" minx="${bbox[0]}" maxx="${bbox[2]}" miny="${bbox[1]}" maxy="${bbox[3]}"/>

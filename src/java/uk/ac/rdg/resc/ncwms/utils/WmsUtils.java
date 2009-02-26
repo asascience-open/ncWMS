@@ -91,6 +91,7 @@ public class WmsUtils
 
     /**
      * Converts an ISO8601-formatted String into a {@link DateTime} object
+     * @throws IllegalArgumentException if the string is not a valid ISO date-time
      */
     public static DateTime iso8601ToDateTime(String isoDateTime)
     {
