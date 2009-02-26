@@ -155,7 +155,7 @@ public class H2UsageLogger implements UsageLogger
         {
             // Use of setObject allows entries to be null
             PreparedStatement ps = this.conn.prepareStatement(INSERT_COMMAND);
-            ps.setObject(1, logEntry.getRequestTime());
+            ps.setObject(1, logEntry.getRequestTime().toDate());
             ps.setObject(2, logEntry.getClientIpAddress());
             ps.setObject(3, logEntry.getClientHost());
             ps.setObject(4, logEntry.getClientReferrer());
