@@ -11,18 +11,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
  <menu:folder label="MERSEA Dynamic Quick View">
      <menu:folder label="Global Oceans">
          <menu:folder label="MERCATOR">
-             <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1}" label="Global Ocean forecast (degraded resolution)"/>
+             <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2}" label="Global Ocean forecast (degraded resolution)"/>
              <menu:folder label="Global ocean forecast by region (full resolution)">
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_NAT}" label="North Atlantic"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_SAT}" label="South Atlantic"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_TAT}" label="Tropical Atlantic"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_MED}" label="Mediterranean"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_NPA}" label="North Pacific"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_SPA}" label="South Pacific"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_TPA}" label="Tropical Pacific"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_ARC}" label="Arctic Ocean"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_ACC}" label="Circumpolar Antarctic"/>
-                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v1R1_IND}" label="Indian Ocean"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_NAT}" label="North Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_SAT}" label="South Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_TAT}" label="Tropical Atlantic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_MED}" label="Mediterranean"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_NPA}" label="North Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_SPA}" label="South Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_TPA}" label="Tropical Pacific"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_ARC}" label="Arctic Ocean"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_ACC}" label="Circumpolar Antarctic"/>
+                 <menu:dataset dataset="${datasets.MERSEA_GLOBAL_Psy3v2_IND}" label="Indian Ocean"/>
              </menu:folder>
          </menu:folder>
          <menu:dataset dataset="${datasets.MERSEA_NRTSLA}"/>
