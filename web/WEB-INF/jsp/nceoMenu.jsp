@@ -15,6 +15,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     </menu:folder>
     <menu:folder label="Ocean">
         <menu:dataset dataset="${datasets.OSTIA}" label="OSTIA analysis"/>
+        <menu:dataset dataset="${datasets.KRIGED_TOPEX}"/>
     </menu:folder>
     <menu:folder label="Land surface">
         <menu:dataset dataset="${datasets.NSIDC}" label="NSIDC Snow Water Equivalent"/>
