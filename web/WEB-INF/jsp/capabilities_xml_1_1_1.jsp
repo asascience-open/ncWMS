@@ -1,4 +1,4 @@
-<%@page contentType="application/vnd.ogc.wms_xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<%@page contentType="text/xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="/WEB-INF/taglib/wmsUtils" prefix="utils"%> <%-- tag library for useful utility functions --%>
 <%
@@ -28,9 +28,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <!-- The WMT-defined name for this type of service -->
         <Name>OGC:WMS</Name>
         <!-- Human-readable title for pick lists -->
-        <Title>${config.server.title}</Title>
+        <Title><c:out value="${config.server.title}"/></Title>
         <!-- Narrative description providing additional information -->
-        <Abstract>${config.server.abstract}</Abstract>
+        <Abstract><c:out value="${config.server.abstract}"/></Abstract>
         <KeywordList>
             <%-- forEach recognizes that keywords is a comma-delimited String --%>
             <c:forEach var="keyword" items="${config.server.keywords}">
@@ -39,15 +39,15 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         </KeywordList>
         <!-- Top-level web address of service or service provider. See also OnlineResource
         elements under <DCPType>. -->
-        <OnlineResource xlink:type="simple" xlink:href="${config.server.url}" />
+        <OnlineResource xlink:type="simple" xlink:href="<c:out value="${config.server.url}"/>"/>
         <!-- Contact information -->
         <ContactInformation>
             <ContactPersonPrimary>
-                <ContactPerson>${config.contact.name}</ContactPerson>
-                <ContactOrganization>${config.contact.org}</ContactOrganization>
+                <ContactPerson><c:out value="${config.contact.name}"/></ContactPerson>
+                <ContactOrganization><c:out value="${config.contact.org}"/></ContactOrganization>
             </ContactPersonPrimary>
-            <ContactVoiceTelephone>${config.contact.tel}</ContactVoiceTelephone>
-            <ContactElectronicMailAddress>${config.contact.email}</ContactElectronicMailAddress>
+            <ContactVoiceTelephone><c:out value="${config.contact.tel}"/></ContactVoiceTelephone>
+            <ContactElectronicMailAddress><c:out value="${config.contact.email}"/></ContactElectronicMailAddress>
         </ContactInformation>
         <!-- Fees or access constraints imposed. -->
         <Fees>none</Fees>
@@ -60,7 +60,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="<c:out value="${wmsBaseUrl}"/>" />
                         </Get>
                     </HTTP>
                 </DCPType>
@@ -72,7 +72,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="<c:out value="${wmsBaseUrl}"/>" />
                         </Get>
                     </HTTP>
                 </DCPType>
@@ -84,7 +84,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <DCPType>
                     <HTTP>
                         <Get>
-                            <OnlineResource xlink:type="simple" xlink:href="${wmsBaseUrl}" />
+                            <OnlineResource xlink:type="simple" xlink:href="<c:out value="${wmsBaseUrl}"/>" />
                         </Get>
                     </HTTP>
                 </DCPType>
