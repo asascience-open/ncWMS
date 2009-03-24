@@ -60,7 +60,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	  <menu:dataset dataset="${datasets.HYCOM_PACIFIC_OCEAN_BASIN_SIMULATION}"/>
 
 	  <menu:folder label="With data assimilation">
- 	  <menu:folder label="DRAKKAR 1/4 degree global S(T) reanalysis (ORCA025-R07)">
+
+ 	     <menu:folder label="DRAKKAR 1/4 degree global S(T) reanalysis (ORCA025-R07)">
 
 		    	<menu:folder label="5 day means">
              			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_5day_ice}" label="ICE"/>
@@ -88,6 +89,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
            			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_t}" label="T-GRID"/>
          			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_u}" label="U-GRID"/>
            			<menu:dataset dataset="${datasets.ORCA025_R07_Exp4_ANNUAL_v}" label="V-GRID"/>
+       	    	</menu:folder>
+           	</menu:folder>
+       	<menu:folder label="1/4 degree Global S(T) Reanalysis with DFS4 Forcing (ORCA025-R07/Exp5)">
+
+		    	<menu:folder label="Monthly means">
+           			<menu:dataset dataset="${datasets.DFS4_ORCA025_R07_gridT_Monthly}" label="T-GRID"/>
+       	    	</menu:folder>
+		    	<menu:folder label="Seasonal means">
+           			<menu:dataset dataset="${datasets.DFS4_ORCA025_R07_gridT_Annual}" label="T-GRID"/>
+       	    	</menu:folder>
+		    	<menu:folder label="Annual means">
+           			<menu:dataset dataset="${datasets.DFS4_ORCA025_R07_gridT_Seasonal}" label="T-GRID"/>
        	    	</menu:folder>
            	</menu:folder>
          </menu:folder>
