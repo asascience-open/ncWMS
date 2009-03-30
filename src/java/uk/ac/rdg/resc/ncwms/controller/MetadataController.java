@@ -40,6 +40,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.springframework.web.servlet.ModelAndView;
@@ -240,6 +241,9 @@ public class MetadataController
         // to the time we're currently displaying on the web interface.
         for (DateTime dateTime : layer.getTvalues())
         {
+            // We must make sure that dateTime() is in UTC or getDayOfMonth() etc
+            // might return unexpected results
+            dateTime = dateTime.withZone(DateTimeZone.UTC);
             // See whether this dateTime is closer to the target dateTime than
             // the current closest value
             long d1 = new Duration(dateTime, targetDateTime).getMillis();
@@ -334,6 +338,10 @@ public class MetadataController
      */
     private static boolean onSameDay(DateTime dt1, DateTime dt2)
     {
+        // We must make sure that the DateTimes are both in UTC or the field
+        // comparisons will not do what we expect
+        dt1 = dt1.withZone(DateTimeZone.UTC);
+        dt2 = dt2.withZone(DateTimeZone.UTC);
         return dt1.getYear() == dt2.getYear()
             && dt1.getMonthOfYear() == dt2.getMonthOfYear()
             && dt1.getDayOfMonth() == dt2.getDayOfMonth();
