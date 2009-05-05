@@ -220,7 +220,7 @@ public class PixelMap
                         }
                         else
                         {
-                            // Shouldn't happen'
+                            // Shouldn't happen
                             throw new IllegalStateException("x and y axes are of different types!");
                         }
                         this.put(i, j, pixelIndex); // Ignores negative indices

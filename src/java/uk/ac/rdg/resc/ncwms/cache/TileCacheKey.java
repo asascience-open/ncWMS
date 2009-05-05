@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.Arrays;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.Longitude;
@@ -176,7 +177,6 @@ public class TileCacheKey implements Serializable
     @Override
     public boolean equals(Object o)
     {
-        if (o == null) return false;
         if (this == o) return true;
         if (!(o instanceof TileCacheKey)) return false;
         
@@ -184,27 +184,18 @@ public class TileCacheKey implements Serializable
         
         // For speed we start with the cheap comparisons (i.e. not the string
         // comparisons) and the things that are most likely to be different.
-        if (this.tIndex == other.tIndex &&
-            this.zIndex == other.zIndex &&
-            this.fileSize == other.fileSize &&
-            this.lastModified == other.lastModified &&
-            this.datasetLastModified == other.datasetLastModified &&
-            this.width == other.width &&
-            this.height == other.height &&
-            this.crsCode.equals(other.crsCode) &&
-            this.filepath.equals(other.filepath) &&
-            this.layerId.equals(other.layerId) &&
-            this.bbox.length == other.bbox.length)
-        {
-            // Now we can compare the bboxes
-            for (int i = 0; i < this.bbox.length; i++)
-            {
-                if (Double.compare(this.bbox[i], other.bbox[i]) != 0) return false;
-            }
-            // If we've got this far they are equal
-            return true;
-        }
-        return false;
+        return this.tIndex == other.tIndex &&
+               this.zIndex == other.zIndex &&
+               this.fileSize == other.fileSize &&
+               this.lastModified == other.lastModified &&
+               this.datasetLastModified == other.datasetLastModified &&
+               this.width == other.width &&
+               this.height == other.height &&
+               this.crsCode.equals(other.crsCode) &&
+               this.filepath.equals(other.filepath) &&
+               this.layerId.equals(other.layerId) &&
+               this.bbox.length == other.bbox.length &&
+               Arrays.equals(this.bbox, other.bbox);
     }
     
     /**

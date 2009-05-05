@@ -50,6 +50,7 @@ window.onload = function()
     
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map('map');
+    map.fractionalZoom = true;
 
     // Set up the throbber (acts as progress indicator)
     // Adapted from LoadingPanel.js

@@ -54,7 +54,7 @@ public abstract class CoordAxis
      * 
      * @param axis The {@link CoordinateAxis} to wrap, which must be a 
      * one-dimensional axis (in the current implementation).
-     * @return an CoordAxis
+     * @return a CoordAxis
      * @throws IllegalArgumentException if the provided axis cannot be turned into
      * an CoordAxis
      */
