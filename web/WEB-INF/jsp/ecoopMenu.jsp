@@ -49,9 +49,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
 	<menu:folder label="NW Shelves NOOS">
 	    	<menu:folder label="Met Office UK">
-        		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
-        	       <%--
-			<menu:folder label="POLCOMS MRCS (Biological)">
+        		<%--
+			<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
+        	       <menu:folder label="POLCOMS MRCS (Biological)">
             			We have to add these layers manually because they are coming from a remote server 
             			<menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
@@ -66,7 +66,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
 		       --%>
-        		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Forecast)"/>
+        		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Physical)"/>
 
       	  		<menu:dataset dataset="${datasets.MRCS_ECOOP_TOP_best}"/>
     		</menu:folder>
@@ -109,14 +109,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               	<menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
               	<menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
 	       </menu:folder>
+	    	<menu:folder label="University of Athens">
+ 			<menu:dataset dataset="${datasets.ECOOP_ALERMO}"/>
+     		</menu:folder>
 	    	<menu:folder label="University of Cyprus">
  			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_daily_inst}"/>
 			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_6h_avg}"/>
-     		</menu:folder>
+    		</menu:folder>
  		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
         	<menu:dataset dataset="${datasets.ECOOP_IMEDEA}"/>
         	<menu:dataset dataset="${datasets.ECOOP_MALTA_ROSARIO2}"/>
-	</menu:folder>
+		<menu:dataset dataset="${datasets.AFS_Forecast_Last}"/>
+ 	</menu:folder>
 
 	<menu:folder label="Black Sea">
   		<menu:dataset dataset="${datasets.ECOOP_BULGARIA}"/>
