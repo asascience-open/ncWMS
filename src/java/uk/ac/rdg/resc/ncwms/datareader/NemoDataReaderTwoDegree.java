@@ -41,6 +41,7 @@ import ucar.nc2.units.DateUnit;
 import uk.ac.rdg.resc.ncwms.metadata.LUTCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Description of NemoDataReader
@@ -62,10 +63,8 @@ public class NemoDataReaderTwoDegree extends NemoDataReader
         
         try
         {
-            // Open the dataset.  We use the dataset cache here for the following
-            // reason: if the cache has swallowed all of our available file handles,
-            // we can't bypass the cache as there will be no file handles left.
-            nc = NetcdfDataset.acquireDataset(location, null);
+            // Open the dataset, using the cache if appropriate
+            nc = WmsUtils.openDataset(location);
             
             // Get the depth values and units
             Variable depth = nc.findVariable("deptht");

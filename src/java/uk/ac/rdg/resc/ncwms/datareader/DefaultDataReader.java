@@ -60,6 +60,7 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Default data reading class for CF-compliant NetCDF datasets.
@@ -256,13 +257,8 @@ public class DefaultDataReader extends DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Open the dataset.  We use the dataset cache here for the following
-            // reason: if the cache has swallowed all of our available file handles,
-            // we can't bypass the cache as there will be no file handles left.
-            // The metadata might be a little out of date, depending on how long
-            // the cache clear-out time is set to in MetadataLoader.init()
-            // (should be around 5 minutes).
-            nc = NetcdfDataset.acquireDataset(location, null);
+            // Open the dataset, using the cache if appropriate
+            nc = WmsUtils.openDataset(location);
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
                 nc, null, null);
             
