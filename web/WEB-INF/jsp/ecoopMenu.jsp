@@ -34,6 +34,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         		<menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
     		</menu:folder>
     		<menu:folder label="FMI Finland">
+       		<menu:dataset dataset="${datasets.FMI_FORECAST}"/>
+       		<menu:dataset dataset="${datasets.FMI_BEST}"/>
+        		<%--
        		<menu:dataset dataset="${datasets.ECOOP_FMI_s_forecast}"/>
         		<menu:dataset dataset="${datasets.ECOOP_FMI_t_forecast}"/>
 	      		<menu:dataset dataset="${datasets.ECOOP_FMI_u_forecast}"/>
@@ -44,6 +47,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         		<menu:dataset dataset="${datasets.ECOOP_FMI_u_hindcast}"/>
         		<menu:dataset dataset="${datasets.ECOOP_FMI_v_hindcast}"/>
       			<menu:dataset dataset="${datasets.ECOOP_FMI_w_hindcast}"/>
+		       --%>
     		</menu:folder>
 	</menu:folder>
 
@@ -102,13 +106,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
  
 	<menu:folder label="Mediterranean MOON">
               <menu:folder label="Mediterranean ocean analyses Italy">
+			<menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
+			<%--
               	<menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
               	<menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
               	<menu:layer id="MERSEA_MED_T/ssh" label="sea_surface_height_above_sea_level"/>
               	<menu:layer id="MERSEA_MED_T/mld" label="ocean_mixed_layer_thickness"/>
               	<menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
               	<menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
-	       </menu:folder>
+		       --%>
+ 	       </menu:folder>
 	    	<menu:folder label="University of Athens">
  			<menu:dataset dataset="${datasets.ECOOP_ALERMO}"/>
      		</menu:folder>
