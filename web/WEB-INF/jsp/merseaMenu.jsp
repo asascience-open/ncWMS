@@ -39,14 +39,17 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      <menu:folder label="Mediterranean Sea">
          <%-- The Mediterranean data come from three different datasets so we
               manually aggregate them in a single folder --%>
-          <menu:folder label="Mediterranean ocean analyses">
+		<menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
+    	    <%--
+	    <menu:folder label="Mediterranean ocean analyses">
               <menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
               <menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
               <menu:layer id="MERSEA_MED_T/ssh" label="sea_surface_height_above_sea_level"/>
               <menu:layer id="MERSEA_MED_T/mld" label="ocean_mixed_layer_thickness"/>
               <menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
               <menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
-          </menu:folder>
+	   </menu:folder>
+          --%>
      </menu:folder>
      <menu:folder label="Arctic Ocean">
          <menu:dataset dataset="${datasets.MERSEA_ARCTIC_TOPAZ}" label="Arctic Ocean analyses and forecasts"/>
