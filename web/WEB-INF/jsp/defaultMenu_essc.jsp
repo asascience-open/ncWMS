@@ -24,8 +24,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.MERSEA_NATL}"/>
  	 <menu:dataset dataset="${datasets.NCOF_FOAM_ONE}"/>
  	 <menu:dataset dataset="${datasets.NCOF_AMM}"/>
-         <menu:dataset dataset="${datasets.NCOF_IRISH}"/>
-         <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
+       <menu:dataset dataset="${datasets.NCOF_IRISH}"/>
+  	<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Physical)"/>
 	 <menu:dataset dataset="${datasets.NCOF_WAVES}"/>
      </menu:folder>
 
@@ -34,9 +34,12 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
          <menu:dataset dataset="${datasets.MERSEA_NATL}"/>
          <menu:dataset dataset="${datasets.MERSEA_GLOBAL}"/>
+   	  <menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
+	  <%--	
          <menu:dataset dataset="${datasets.MERSEA_MED_V}"/>
          <menu:dataset dataset="${datasets.MERSEA_MED_U}"/>
          <menu:dataset dataset="${datasets.MERSEA_MED_T}"/>
+	  --%>
          <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
      </menu:folder>
 
@@ -183,33 +186,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.OFAM_TEST}"/>
          <menu:folder label="MarQuest">
          	<menu:dataset dataset="${datasets.SEAW4}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_GRIDT}"/>
-        	<menu:dataset dataset="${datasets.NEMO_BIO2_ASSIMILATION_A_GRID}"/>  
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_PHYSICS}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_CONT_DIAG}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_PHYSICS}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_BIO}"/>
- 	      <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_DIAG}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_PHYSICS}"/>
-              <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_BIOLOGY}"/>
- 	      <menu:dataset dataset="${datasets.NEMO_BIO_FULL_ASSIM_TLEV_DIAGNOSTICS}"/>
-              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_PHYS}"/>  
-              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_FULL_ASSIM_TLEV_DIAD}"/>
-              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_PHYS}"/>  
-              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_FULL_CONT_DIAD}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_CONT_PHYS}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_ASSIM_PHYS}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_INC_PHYS}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_CONT_BIO}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_ASSIM_BIO}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_INC_BIO}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_CONT_DIAD}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_ASSIM_DIAD}"/>
+                <menu:dataset dataset="${datasets.NEWRUN3_INC_DIAD}"/>
 
-               <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_PHY}"/>  
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_CONT_DIAD}"/>
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_PHY}"/>  
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_ASSIM_DIAD}"/>
-             <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_PHY}"/>  
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_BIO}"/>
-              <menu:dataset dataset="${datasets.NEMO_NEWRUN_NINSIT_DIAD}"/>
  	   </menu:folder>
       </menu:folder>
 
