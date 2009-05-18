@@ -37,6 +37,7 @@ var popups = []; // Pop-ups (GetFeatureInfo results) shown on the map
 
 var layersLoading = 0;
 var animationSelector = null; // Pop-up panel for selecting the time resolution of an animation
+var projectionCode = null; // Projection code for map baselayer
 
 // Called when the page has loaded
 window.onload = function()
@@ -156,6 +157,7 @@ window.onload = function()
     map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
     
     map.setBaseLayer(demis_wms);
+    projectionCode = map.baseLayer.projection.getCode();
 
     // Make sure the Google Earth and Permalink links are kept up to date when
     // the map is moved or zoomed
@@ -973,7 +975,11 @@ function baseLayerChanged(event)
        maxExtent: map.baseLayer.maxExtent,
        maxResolution: map.baseLayer.maxResolution
     });
-    map.zoomToMaxExtent();
+    if (projectionCode != map.baseLayer.projection.getCode()) {
+        // We've changed the projection of the base layer
+        projectionCode = map.baseLayer.projection.getCode();
+        map.zoomToMaxExtent();
+    }
     if (ncwms != null) {
         ncwms_tiled.maxExtent = map.baseLayer.maxExtent;
         ncwms_tiled.maxResolution = map.baseLayer.maxResolution;
