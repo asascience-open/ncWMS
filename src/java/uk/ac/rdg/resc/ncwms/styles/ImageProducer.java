@@ -37,7 +37,6 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
-import java.awt.image.SinglePixelPackedSampleModel;
 import java.awt.image.WritableRaster;
 import java.util.ArrayList;
 import java.util.List;
@@ -241,8 +240,7 @@ public final class ImageProducer
         
         // Create the Image
         DataBuffer buf = new DataBufferByte(pixels, pixels.length);
-        SampleModel sampleModel = new SinglePixelPackedSampleModel(
-            DataBuffer.TYPE_BYTE, this.picWidth, this.picHeight, new int[]{0xff});
+        SampleModel sampleModel = colorModel.createCompatibleSampleModel(this.picWidth, this.picHeight);
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
         BufferedImage image = new BufferedImage(colorModel, raster, false, null);
         
