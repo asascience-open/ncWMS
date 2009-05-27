@@ -44,15 +44,21 @@
     
     <body class="yui-skin-sam">
 
-    <!-- This is the left menu bar that will contain the layer selector -->
-    <div id="layerSelector" class="yui-skin-sam"></div>
+    <div id="leftPanel">
 
-    <div id="help" class="help">
-        <p><a href="http://www.resc.rdg.ac.uk/trac/ncWMS/wiki/GodivaTwoUserGuide">User guide</a></p>
+        <div style="padding:10px"><input id="zoomOnSelect" type="checkbox" checked="checked" title="Check this box to automatically zoom to a layer's maximum extent when it is loaded"/> Auto-zoom on select</div>
+
+        <!-- This is the left menu bar that will contain the layer selector -->
+        <div id="layerSelector" class="yui-skin-sam"></div>
+
+        <div id="help" class="help">
+            <p><a href="http://www.resc.rdg.ac.uk/trac/ncWMS/wiki/GodivaTwoUserGuide">User guide</a></p>
+        </div>
+
+        <a href="http://www.resc.reading.ac.uk/" target="_blank"><img id="resclogo" src="http://www.resc.reading.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
+
     </div>
-    
-    <a href="http://www.resc.reading.ac.uk/" target="_blank"><img id="resclogo" src="http://www.resc.reading.ac.uk/images/new_logo_72dpi_web.png" alt="ReSC logo"></a>
-    
+
     <div id="mainPanel" class="mainPanel">
         <div id="panelHeader">
             <div id="panelText">

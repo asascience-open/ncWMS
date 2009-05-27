@@ -582,6 +582,11 @@ function layerSelected(layerDetails)
         bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3] +
         '));\">Fit layer to window</a>';
 
+    // Automatically zoom to the max extent of the layer if selected
+    if ($('zoomOnSelect').checked) {
+        map.zoomToExtent(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
+    }
+
     // Set the link to more details about this dataset
     if (typeof layerDetails.moreInfo != 'undefined' &&
             layerDetails.moreInfo != '') {
