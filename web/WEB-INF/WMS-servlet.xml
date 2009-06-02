@@ -102,10 +102,10 @@
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
         <property name="tileCache"><ref local="tileCache"/></property>
-        <property name="methodNameResolver"><ref local="methodNameResolver"/></property>
+        <property name="methodNameResolver"><ref local="adminMethodNameResolver"/></property>
     </bean>
     <!-- This maps URL patterns to the methods of the admin controller -->
-    <bean id="methodNameResolver" class="org.springframework.web.servlet.mvc.multiaction.PropertiesMethodNameResolver">
+    <bean id="adminMethodNameResolver" class="org.springframework.web.servlet.mvc.multiaction.PropertiesMethodNameResolver">
         <property name="mappings">
             <value>
                 / = displayAdminPage
@@ -119,6 +119,23 @@
             </value>
         </property>
     </bean>
+
+    <!-- This Controller is used to generate screenshots -->
+    <bean id="screenshotController" class="uk.ac.rdg.resc.ncwms.controller.ScreenshotController"
+            init-method="init">
+        <property name="supportedMethods" value="GET,POST"/>
+        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="methodNameResolver"><ref local="screenshotMethodNameResolver"/></property>
+    </bean>
+    <!-- This maps URL patterns to the methods of the screenshot controller -->
+    <bean id="screenshotMethodNameResolver" class="org.springframework.web.servlet.mvc.multiaction.PropertiesMethodNameResolver">
+        <property name="mappings">
+            <value>
+                /createScreenshot = createScreenshot
+                /getScreenshot = getScreenshot
+            </value>
+        </property>
+    </bean>
     
     <!-- This mapping ensures that all requests to "/wms" are mapped to the WmsController
          and "index.jsp" results in the display of the front page -->
@@ -129,6 +146,7 @@
             <value>
                 /admin/* = adminController
                 /wms = wmsController
+                /screenshots/* = screenshotController
                 /index.jsp = frontPageController
                 / = frontPageController
             </value>

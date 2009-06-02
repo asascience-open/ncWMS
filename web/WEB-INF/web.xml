@@ -28,6 +28,10 @@
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>WMS</servlet-name>
+        <url-pattern>/screenshots/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WMS</servlet-name>
         <url-pattern>/index.jsp</url-pattern>
     </servlet-mapping>
     <servlet-mapping>

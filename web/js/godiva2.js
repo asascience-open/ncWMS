@@ -1252,6 +1252,104 @@ function setGEarthURL()
     }
 }
 
+// Loads a screenshot
+function loadScreenshot() {
+    if (ncwms == null) {
+        alert('Data not yet loaded');
+    } else {
+        var bounds = map.getExtent();
+        var urlBG = encodeURIComponent(map.baseLayer.getURL(bounds));
+        var urlFG = encodeURIComponent(ncwms.getURL(bounds));
+
+        var paletteSrc = $('scaleBar').src
+        var urlPalette = encodeURIComponent(paletteSrc);
+        var title = $('layerPath').innerHTML;
+        var time = isoTValue;
+        var elevation = getZValue();
+        var upperValue = scaleMaxVal;
+        var twoThirds = $('scaleTwoThirds').innerHTML;
+        var oneThird = $('scaleOneThird').innerHTML;
+        var lowerValue = scaleMinVal;
+        var params = "urlBG=" + urlBG + "&urlFG=" + urlFG + "&urlPalette=" + urlPalette + "&title=" + title + "&time=" + time + "&elevation=" + elevation +
+                     "&upperValue=" + upperValue + "&twoThirds=" + twoThirds + "&oneThird=" + oneThird + "&lowerValue=" + lowerValue;
+        this.makePOSTRequest("screenshots/createScreenshot", params)
+    }
+}
+
+   function makePOSTRequest(url, parameters) {
+      http_request = false;
+
+      if (window.XMLHttpRequest) { // Mozilla, Safari,...
+         http_request = new XMLHttpRequest();
+         if (http_request.overrideMimeType) {
+         	// set type accordingly to anticipated content type
+            //http_request.overrideMimeType('text/xml');
+            http_request.overrideMimeType('text/html');
+         }
+      } else if (window.ActiveXObject) { // IE
+         try {
+            http_request = new ActiveXObject("Msxml2.XMLHTTP");
+         } catch (e) {
+            try {
+               http_request = new ActiveXObject("Microsoft.XMLHTTP");
+            } catch (e) {}
+         }
+      }
+      if (!http_request) {
+         alert('Cannot create XMLHTTP instance');
+         return false;
+      }
+
+      http_request.onreadystatechange = alertContents;
+      http_request.open('POST', url, true);
+      http_request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      http_request.setRequestHeader("Content-length", parameters.length);
+      http_request.setRequestHeader("Connection", "close");
+      http_request.send(parameters);
+   }
+
+   function alertContents() {
+      if (http_request.readyState == 4) {
+         if (http_request.status == 200) {
+
+            result = http_request.responseText;
+            popUp(result, 800, 500);
+            //alert(result);
+            //document.getElementById('screenshot').innerHTML = result;
+         } else {
+            alert('There was a problem with the request.');
+         }
+      }
+    }
+
+function encodeUrl(url)
+{
+    if (url.indexOf("?")>0)
+    {
+        encodedParams = "?";
+        parts = url.split("?");
+        params = parts[1].split("&");
+        for(i = 0; i < params.length; i++)
+        {
+            if (i > 0)
+            {
+                encodedParams += "&";
+            }
+            if (params[i].indexOf("=")>0) //Avoid null values
+            {
+                p = params[i].split("=");
+                encodedParams += (p[0] + "=" + escape(encodeURI(p[1])));
+            }
+            else
+            {
+                encodedParams += params[i];
+            }
+        }
+        url = parts[0] + encodedParams;
+    }
+    return url;
+}
+
 // Returns a bounding box as a string in format "minlon,minlat,maxlon,maxlat"
 // that represents the intersection of the currently-visible map layer's 
 // bounding box and the viewport's bounding box.
