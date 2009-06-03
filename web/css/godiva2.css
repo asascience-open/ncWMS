@@ -134,7 +134,7 @@ div.map {
     font-style: italic;
 }
 
-div.underMap {
+#underMap {
     position: absolute;
     top: 450px;
 }

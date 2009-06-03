@@ -57,6 +57,9 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 			<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
         	       <menu:folder label="POLCOMS MRCS (Biological)">
             			We have to add these layers manually because they are coming from a remote server 
+                        ******************************************************************************************************
+                        *** TODO: the layer tag has changed.  If these layers are re-enabled we need to update the syntax. ***
+                        ******************************************************************************************************
             			<menu:layer id ="ECOVARSALL/po4" label="Phosphate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/si" label="Silicate Concentration" server="${pmlServer}"/>
             			<menu:layer id ="ECOVARSALL/no3" label="Nitrate Concentration" server="${pmlServer}"/>
@@ -108,12 +111,12 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               <menu:folder label="Mediterranean ocean analyses Italy">
 			<menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
 			<%--
-              	<menu:layer id="MERSEA_MED_T/temperature" label="sea_water_potential_temperature"/>
-              	<menu:layer id="MERSEA_MED_T/salinity" label="sea_water_salinity"/>
-              	<menu:layer id="MERSEA_MED_T/ssh" label="sea_surface_height_above_sea_level"/>
-              	<menu:layer id="MERSEA_MED_T/mld" label="ocean_mixed_layer_thickness"/>
-              	<menu:layer id="MERSEA_MED_U/u" label="eastward_sea_water_velocity"/>
-              	<menu:layer id="MERSEA_MED_V/v" label="northward_sea_water_velocity"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_T}" id="temperature" label="sea_water_potential_temperature"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_T}" id="salinity" label="sea_water_salinity"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_T}" id="ssh" label="sea_surface_height_above_sea_level"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_T}" id="mld" label="ocean_mixed_layer_thickness"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_U}" id="u" label="eastward_sea_water_velocity"/>
+              	<menu:layer dataset="${datasets.MERSEA_MED_V}" id ="v" label="northward_sea_water_velocity"/>
 		       --%>
  	       </menu:folder>
 	    	<menu:folder label="University of Athens">

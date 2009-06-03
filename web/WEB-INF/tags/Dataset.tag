@@ -3,16 +3,23 @@
 <%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
 <%@attribute name="dataset" required="true" type="uk.ac.rdg.resc.ncwms.config.Dataset" description="The dataset object to display"%>
 <%@attribute name="label" description="Optional: can be used to override the title of the dataset"%>
-<%-- We only display the dataset if it is ready, otherwise the call to dataset.layers
-     will fail --%>
 <c:set var="title" value="${dataset.title}"/>
 <c:if test="${not empty label}">
     <c:set var="title" value="${label}"/>
 </c:if>
+<c:if test="${empty dataset}">
+    <menu:folder label="Dataset does not exist"/>
+</c:if>
 <c:if test="${dataset.ready}">
     <menu:folder label="${title}">
         <c:forEach items="${dataset.layers}" var="layer">
-            <menu:layer id="${layer.layerName}" label="${layer.title}"/>
+            <menu:layer dataset="${dataset}" id="${layer.id}" label="${layer.title}"/>
         </c:forEach>
     </menu:folder>
+</c:if>
+<c:if test="${dataset.loading}">
+    <menu:folder label="${title} (loading)"/>
+</c:if>
+<c:if test="${dataset.error}">
+    <menu:folder label="${title} (error)"/>
 </c:if>

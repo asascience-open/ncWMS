@@ -181,6 +181,18 @@ public class Dataset
         return this.disabled == false &&
             (this.state == State.READY || this.state == State.UPDATING);
     }
+
+    /**
+     * @return true if this dataset is in the process of being loaded
+     */
+    public synchronized boolean isLoading()
+    {
+        return !this.isDisabled() &&
+               (this.state == State.NEEDS_REFRESH ||
+                this.state == State.SCHEDULED ||
+                this.state == State.LOADING ||
+                this.state == State.UPDATING);
+    }
     
     /**
      * @return true if this dataset can be queried using GetFeatureInfo
