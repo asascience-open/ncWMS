@@ -644,9 +644,29 @@ function layerSelected(layerDetails)
             }
         }
         calendar.setRange(minYear, maxYear);
+
         // Get the time on the t axis that is nearest to the currently-selected
         // time, as calculated on the server
-        calendar.setDate(layerDetails.nearestTime);
+        // NOTE: the calendar displays times in the local time zone.  We must
+        // work around this by 'correcting' nearestTime (which is in UTC) by
+        // adding the current time zone offset.
+        // The calendar is only used to select a year, month and day.  If we
+        // are in the Eastern US then the time zone offset will be 5 hours.
+        // If layerDetails.nearestTime = 2007-05-04T00:00:00Z, this corresponds
+        // with 2007-05-03T19:00:00 local time, hence the calendar will display
+        // the 3rd May instead of the 4th.  We need to artificially add 5 hours
+        // to the date so that the local time will be 2007-05-04T00:00:00 and
+        // the calendar will display correctly.  Hence in the code elsewhere
+        // in this file (getIsoDate() and anywhere dates are printed) we use the
+        // calendar's *local* date, not the UTC date.
+
+        var tzOffsetMs = new Date().getTimezoneOffset() * 60 * 1000; // Time zone offset in mins
+        var theDateMs = layerDetails.nearestTime.getTime() + tzOffsetMs;
+        var theDate = new Date();
+        theDate.setTime(theDateMs);
+
+        calendar.setDate(theDate);
+
         calendar.refresh();
         // N.B. For some reason the call to show() seems sometimes to toggle the
         // visibility of the zValues selector.  Hence we set this visibility
@@ -692,7 +712,7 @@ function makeIsoDate(date)
     if (year < 10) prefix = '000';
     else if (year < 100) prefix = '00';
     else if (year < 1000) prefix = '0';
-    return prefix + date.print('%Y-%m-%d'); // Date only (no time) in ISO format
+    return prefix + date.print('%Y-%m-%d');
 }
 
 // Called when we have received the timesteps from the server
