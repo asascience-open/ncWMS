@@ -326,6 +326,9 @@ function treeNodeClicked(node)
             // Set to the present time if we don't already have a time selected
             // Set milliseconds to zero (don't know how to create a format string
             // that includes milliseconds).
+            // TODO: this only works correctly in GMT time zone!  Need to take
+            // time zone into accout to do this correctly, but error is not
+            // very important.
             isoTValue = new Date().print('%Y-%m-%dT%H:%M:%SZ');
         }
 
