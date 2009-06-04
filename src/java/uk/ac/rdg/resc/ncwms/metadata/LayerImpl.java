@@ -57,7 +57,7 @@ public class LayerImpl implements Layer
     
     protected String id;
     protected String title = null;
-    protected String abstr = null; // "abstract" is a reserved word
+    protected String abstr = null; // "abstract" is a reserved word in Java
     protected String units;
     protected String zUnits;
     protected double[] zValues;
@@ -233,26 +233,26 @@ public class LayerImpl implements Layer
      */
     public synchronized void addTimestepInfo(TimestepInfo tInfo)
     {
-        // See if we already have a TimestepInfo object for this date
-        int tIndex = this.findTIndex(tInfo.getDateTime());
-        if (tIndex < 0)
-        {
-            // We don't have an info for this date, so we add the new info
-            // and make sure the List is sorted correctly (TODO: could do a
-            // simple insertion into the correct locaion?)
-            this.timesteps.add(tInfo);
-            Collections.sort(this.timesteps);
-        }
-        else
+        // Find the insertion point in the List of timesteps
+        int index = Collections.binarySearch(this.timesteps, tInfo);
+        if (index >= 0)
         {
             // We already have a timestep for this time
-            TimestepInfo existingTStep = this.timesteps.get(tIndex);
+            TimestepInfo existingTStep = this.timesteps.get(index);
             if (tInfo.getIndexInFile() < existingTStep.getIndexInFile())
             {
                 // The new info probably has a shorter forecast time and so we
                 // replace the existing version with this one
                 existingTStep = tInfo;
             }
+        }
+        else
+        {
+            // We need to insert the TimestepInfo object into the list at the
+            // correct location to ensure that the list is sorted in ascending
+            // order of time.
+            int insertionPoint = -(index + 1); // see docs for Collections.binarySearch()
+            this.timesteps.add(insertionPoint, tInfo);
         }
     }
     
