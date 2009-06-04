@@ -719,6 +719,12 @@ function makeIsoDate(date)
 function updateTimesteps(times)
 {
     // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
+    // First we load the currently-selected time (if there is one)
+    var timeSelect = $('tValues');
+    var selectedTimeStr = null;
+    if (timeSelect) {
+        selectedTimeStr = timeSelect.options[timeSelect.selectedIndex].text;
+    }
     // Build the select box
     var s = '<select id="tValues" onchange="javascript:updateMap()">';
     for (var i = 0; i < times.length; i++) {
@@ -735,16 +741,29 @@ function updateTimesteps(times)
         } else if (times[i].endsWith('Z')) {
             stopIndex -= 1;
         }
-        s += '<option value="' + isoDateTime + '">' + times[i].substring(0, stopIndex) + '</option>';
+        var text = times[i].substring(0, stopIndex);
+        s += '<option value="' + isoDateTime + '"'
+        if (selectedTimeStr && selectedTimeStr == text) {
+            s += ' selected="selected"';
+        }
+        s += '>' + text + '</option>';
     }
     s += '</select>';
-
     $('time').innerHTML = s;
-    $('utc').style.visibility = 'visible';
+    
+    timeSelect = $('tValues');
+    // If there was a previously-selected time, select it
+    if (selectedTimeStr) {
+        for (i = 0; i < timeSelect.options.length; i++) {
+            if (timeSelect.options[i].text == selectedTimeStr) {
+                timeSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
 
     // If we're autoloading, set the right time in the selection box
     if (autoLoad != null && autoLoad.isoTValue != null) {
-        var timeSelect = $('tValues');
         for (i = 0; i < timeSelect.options.length; i++) {
             if (timeSelect.options[i].value == autoLoad.isoTValue) {
                 timeSelect.selectedIndex = i;
@@ -752,6 +771,7 @@ function updateTimesteps(times)
             }
         }
     }
+    $('utc').style.visibility = 'visible';
     $('setFrames').style.visibility = 'visible';
 
     if (typeof autoLoad.scaleMin != 'undefined' && typeof autoLoad.scaleMax != 'undefined') {
@@ -1106,7 +1126,7 @@ function updateMap()
     }
     
     var imageURL = ncwms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
-    $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">link to test image</a>';
+    $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">test image</a>';
     //$('screenshot').style.visibility = 'visible'; // TODO: enable this when working properly
     setGEarthURL();
     setPermalinkURL();
