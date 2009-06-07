@@ -270,6 +270,7 @@ public class DefaultDataReader extends DataReader
                 GridCoordSystem coordSys = gridset.getGeoCoordSystem();
                 
                 // Compute TimestepInfo objects for this file
+                logger.debug("Computing TimestepInfo objects");
                 List<TimestepInfo> timesteps = getTimesteps(location, coordSys);
                 
                 // Look for new variables in this coordinate system.
@@ -282,7 +283,12 @@ public class DefaultDataReader extends DataReader
                     {
                         // We haven't seen this variable before so we must create
                         // a Layer object later
+                        logger.debug("{} is a new grid", grid.getName());
                         newGrids.add(grid);
+                    }
+                    else
+                    {
+                        logger.debug("We already have data for {}", grid.getName());
                     }
                 }
                 
@@ -290,6 +296,7 @@ public class DefaultDataReader extends DataReader
                 // new Layers to create
                 if (newGrids.size() > 0)
                 {
+                    logger.debug("Creating coordinate system objects");
                     CoordAxis xAxis = this.getXAxis(coordSys);
                     CoordAxis yAxis = this.getYAxis(coordSys);
                     HorizontalProjection proj = HorizontalProjection.create(coordSys.getProjection());
@@ -352,6 +359,7 @@ public class DefaultDataReader extends DataReader
                 {
                     if (this.includeGrid(grid))
                     {
+                        logger.debug("Adding timestep info to {}", grid.getName());
                         LayerImpl layer = layers.get(grid.getName());
                         for (TimestepInfo timestep : timesteps)
                         {
@@ -368,7 +376,6 @@ public class DefaultDataReader extends DataReader
             {
                 try
                 {
-                    logger.debug("Closing NetCDF file");
                     nc.close();
                     logger.debug("NetCDF file closed");
                 }
@@ -485,6 +492,20 @@ public class DefaultDataReader extends DataReader
         {
             return stdNameAtt.getStringValue();
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        //NetcdfDataset nc = NetcdfDataset.openDataset("http://topaz.nersc.no/thredds/dodsC/topaz/mersea-ipv2/arctic/tmipv2a-class1-b-be");
+        NetcdfDataset nc = NetcdfDataset.openDataset("c:\\documents and settings\\jon\\desktop\\topaz.ncml");
+        GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
+            nc, null, null);
+        GridDatatype tmp = gd.findGridDatatype("temperature");
+        GridCoordSystem coordSys = tmp.getCoordinateSystem();
+        System.out.println("X axis type: " + coordSys.getXHorizAxis().getAxisType());
+        System.out.println("Y axis type: " + coordSys.getYHorizAxis().getAxisType());
+        System.out.println("Z axis type: " + coordSys.getVerticalAxis().getAxisType());
+        System.out.println("T axis type: " + coordSys.getTimeAxis().getAxisType());
+        nc.close();
     }
     
 }

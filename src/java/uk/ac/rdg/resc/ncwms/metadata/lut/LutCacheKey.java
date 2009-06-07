@@ -28,20 +28,18 @@
 
 package uk.ac.rdg.resc.ncwms.metadata.lut;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.Array;
-import ucar.ma2.IndexIterator;
 import ucar.nc2.Dimension;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
@@ -63,33 +61,30 @@ public final class LutCacheKey implements Serializable
     // into 1D arrays.
     private double[] longitudes;
     private double[] latitudes;
-    private boolean[] missing;
+    private boolean[] missing; // TODO: do we really need this?  This array may
+                               // be different for each elevation value.
     // ni and nj define the dimensions of the 2D grid.  longitudes.length == ni * nj
-    private int ni;
-    private int nj;
+    int ni;
+    int nj;
 
     // These define the look-up table itself: the lat-lon bounding box and the
     // number of points in each direction.
-    private double lonMin;
-    private double lonMax;
-    private double latMin;
-    private double latMax;
-    private int nLon;
-    private int nLat;
+    double lonMin;
+    double lonMax;
+    double latMin;
+    double latMax;
+    int nLon;
+    int nLat;
 
     /**
-     * Creates and returns a {@link LutCacheKey} from the given variable from
-     * a NetCDF dataset.
-     * @param var a variable (expresses as a {@link GridDatatype} that contains
-     * the coordinate system for which the LUT is to be created.  We need a
-     * variable to find the locations of missing values, which are not held
-     * within a coordinate system.
+     * Creates and returns a {@link LutCacheKey} from the given coordinate system
+     * from a NetCDF dataset.
+     * @param coordSys the coordinate system (must have 2D horizontal axes)
      * @param resolutionMultiplier Approximate resolution multiplier for the
      * look-up table.  The LUT will usually have a higher resolution
      * than the original data grid.  If this parameter has a value of 3 (a
      * sensible default) then the final look-up table will have approximately
      * 9 times the number of points in the original grid.
-     * @throws IOException if there was an error reading data from the variable
      * @throws IllegalArgumentException if the given {@link GridDatatype} does
      * not use two-dimensional horizontal axes, or if the axes are not longitude
      * and latitude.
@@ -99,14 +94,13 @@ public final class LutCacheKey implements Serializable
      * @todo does the variable need to be "enhanced" to read missing values
      * properly?
      */
-    public static LutCacheKey fromVariable(GridDatatype var, int resolutionMultiplier) throws IOException
+    public static LutCacheKey fromCoordSys(GridCoordSystem coordSys, int resolutionMultiplier)
     {
-        logger.debug("Creating LutCacheKey from variable {} with resolution multiplier {}",
-            var.getName(), resolutionMultiplier);
+        logger.debug("Creating LutCacheKey with resolution multiplier {}", resolutionMultiplier);
 
         // Check the types of the coordinate axes
-        CoordinateAxis xAxis = var.getCoordinateSystem().getXHorizAxis();
-        CoordinateAxis yAxis = var.getCoordinateSystem().getYHorizAxis();
+        CoordinateAxis xAxis = coordSys.getXHorizAxis();
+        CoordinateAxis yAxis = coordSys.getYHorizAxis();
         if (!(xAxis instanceof CoordinateAxis2D && yAxis instanceof CoordinateAxis2D))
         {
             throw new IllegalArgumentException("X and Y axes must be two-dimensional");
@@ -115,8 +109,8 @@ public final class LutCacheKey implements Serializable
         {
             throw new IllegalArgumentException("X and Y axes must be longitude and latitude");
         }
-        CoordinateAxis2D xAxis2D = (CoordinateAxis2D)xAxis;
-        CoordinateAxis2D yAxis2D = (CoordinateAxis2D)yAxis;
+        CoordinateAxis2D lonAxis = (CoordinateAxis2D)xAxis;
+        CoordinateAxis2D latAxis = (CoordinateAxis2D)yAxis;
 
         // Create a new key
         LutCacheKey key = new LutCacheKey();
@@ -127,23 +121,12 @@ public final class LutCacheKey implements Serializable
         key.ni = dimList.get(1).getLength();
 
         // Load the longitude and latitude values
-        key.longitudes = xAxis2D.getCoordValues();
-        key.latitudes  = yAxis2D.getCoordValues();
-
-        // Find the missing values: read data from the first t and z level
-        // TODO will this work in all cases, even 3D/5D data?
-        Array arr = var.readDataSlice(0, 0, -1, -1);
-        key.missing = new boolean[(int)arr.getSize()];
-        int i = 0;
-        for (IndexIterator it = arr.getIndexIterator(); it.hasNext(); )
-        {
-            key.missing[i] = var.isMissingData(it.getDoubleNext());
-            i++;
-        }
+        key.longitudes = lonAxis.getCoordValues();
+        key.latitudes  = latAxis.getCoordValues();
 
         // Find the latitude-longitude bounding box of the data.  These will
         // define the bounds of the look-up table
-        LatLonRect bbox = var.getCoordinateSystem().getLatLonBoundingBox();
+        LatLonRect bbox = coordSys.getLatLonBoundingBox();
         key.lonMin = bbox.getLonMin();
         key.lonMax = bbox.getLonMax();
         key.latMin = bbox.getLatMin();
@@ -158,8 +141,8 @@ public final class LutCacheKey implements Serializable
         // Check that the data in the key is self-consistent
         key.validate();
 
-        logger.debug("Created LutCacheKey from variable {}. Resulting LUT will have {} points",
-            var.getName(), key.nLon * key.nLat);
+        logger.debug("Created LutCacheKey. Resulting LUT will have {} points",
+            key.nLon * key.nLat);
         return key;
     }
     
@@ -195,6 +178,30 @@ public final class LutCacheKey implements Serializable
         {
             throw new IllegalStateException("nLon and nLat must be positive");
         }
+    }
+
+    /**
+     * Returns the longitude at the given i-j point in the source data's coordinate
+     * system.
+     */
+    public double getLongitude(int i, int j)
+    {
+        return this.longitudes[this.getIndex(i, j)];
+    }
+
+    /**
+     * Returns the latitude at the given i-j point in the source data's coordinate
+     * system.
+     */
+    public double getLatitude(int i, int j)
+    {
+        return this.latitudes[this.getIndex(i, j)];
+    }
+
+    /** Gets the index in the collapsed 1D arrays of the point with the given i-j coordinates */
+    private int getIndex(int i, int j)
+    {
+        return (j * this.ni) + i;
     }
 
     @Override public int hashCode()
@@ -245,7 +252,7 @@ public final class LutCacheKey implements Serializable
 
         GridDatatype grid = gd.findGridDatatype(varId);
 
-        LutCacheKey key = LutCacheKey.fromVariable(grid, 3);
+        LutCacheKey key = LutCacheKey.fromCoordSys(grid.getCoordinateSystem(), 3);
         System.out.printf("%d,%d : %d,%d%n", key.ni, key.nj, key.nLon, key.nLat);
     }
 

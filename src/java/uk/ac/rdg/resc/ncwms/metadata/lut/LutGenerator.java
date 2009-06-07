@@ -40,6 +40,8 @@ public interface LutGenerator
      * @param key An {@link LutCacheKey} that contains all the information needed
      * to generate a look-up table.
      * @return A newly-created {@link LookUpTable} object.
+     * @throws Exception if the LUT could not be generated
+     * @todo more appropriate error handling
      */
-    public LookUpTable generateLut(LutCacheKey key);
+    public LookUpTable generateLut(LutCacheKey key) throws Exception;
 }
