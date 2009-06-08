@@ -37,7 +37,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.constants.AxisType;
-import ucar.nc2.dt.GridCoordSystem;
+import ucar.nc2.dataset.CoordinateAxis2D;
 import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
@@ -61,13 +61,12 @@ public final class LookUpTable implements Serializable
     private short[] jIndices;
 
     // These fields are used to define the axes of the LUT.
-    // They are package-private to make them accessible to the LUT generator.
-    double lonMin;
-    double lonStride;
-    int nLon;
-    double latMin;
-    double latStride;
-    int nLat;
+    private double lonMin;
+    private double lonStride;
+    private int nLon;
+    private double latMin;
+    private double latStride;
+    private int nLat;
 
     // The axes of the look-up table, generated on the fly from the values above.
     // These are not serialized: upon deserialization they are regenerated in the
@@ -88,10 +87,10 @@ public final class LookUpTable implements Serializable
      * @return a LookUpTable for the given coordinate system
      * @throws Exception if there was an error generating the LUT
      */
-    public static LookUpTable fromCoordSys(GridCoordSystem coordSys)
+    public static LookUpTable fromCoordSys(CoordinateAxis2D lonAxis, CoordinateAxis2D latAxis)
         throws Exception
     {
-        LutCacheKey key = LutCacheKey.fromCoordSys(coordSys, 3); // resolution multiplier is 3
+        LutCacheKey key = LutCacheKey.fromCoordSys(lonAxis, latAxis, 3); // resolution multiplier is 3
         LookUpTable lut = LUTS.get(key);
         if (lut == null)
         {
@@ -115,14 +114,20 @@ public final class LookUpTable implements Serializable
      */
     public LookUpTable(LutCacheKey key)
     {
-        this.lonMin = key.lonMin;
-        this.nLon = key.nLon;
-        this.latMin = key.latMin;
-        this.nLat = key.nLat;
-        this.lonStride = (key.lonMax - key.lonMin) / (key.nLon - 1);
-        this.latStride = (key.latMax - key.latMin) / (key.nLat - 1);
+        this.lonAxis = key.getLutLonAxis();
+        this.lonMin = this.lonAxis.getStart();
+        this.lonStride = this.lonAxis.getStride();
+        this.nLon = this.lonAxis.getSize();
+
+        this.latAxis = key.getLutLatAxis();
+        this.latMin = this.latAxis.getStart();
+        this.latStride = this.latAxis.getStride();
+        this.nLat = this.latAxis.getSize();
+
         this.iIndices = new short[nLon * nLat];
         this.jIndices = new short[nLon * nLat];
+        Arrays.fill(this.iIndices, (short)-1);
+        Arrays.fill(this.jIndices, (short)-1);
     }
 
     /**
@@ -167,26 +172,19 @@ public final class LookUpTable implements Serializable
      */
     void setGridCoordinates(int lonIndex, int latIndex, int[] dataIndices)
     {
-        if (dataIndices != null && dataIndices.length != 2)
+        if (dataIndices == null) return;
+        if (dataIndices.length != 2)
         {
             throw new IllegalArgumentException("dataIndices must be a two-element array, or null");
         }
         int index = (latIndex * this.nLon) + lonIndex;
-        if (dataIndices == null)
+        if (dataIndices[0] > Short.MAX_VALUE ||
+            dataIndices[1] > Short.MAX_VALUE)
         {
-            this.iIndices[index] = -1;
-            this.jIndices[index] = -1;
+            throw new IllegalArgumentException("data indices out of range for this look-up table");
         }
-        else
-        {
-            if (dataIndices[0] > Short.MAX_VALUE ||
-                dataIndices[1] > Short.MAX_VALUE)
-            {
-                throw new IllegalArgumentException("data indices out of range for this look-up table");
-            }
-            this.iIndices[index] = (short)dataIndices[0];
-            this.jIndices[index] = (short)dataIndices[1];
-        }
+        this.iIndices[index] = (short)dataIndices[0];
+        this.jIndices[index] = (short)dataIndices[1];
     }
 
     /** Ensures that the transient fields are populated upon deserialization */

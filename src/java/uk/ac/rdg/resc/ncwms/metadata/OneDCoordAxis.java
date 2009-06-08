@@ -96,6 +96,16 @@ public abstract class OneDCoordAxis extends CoordAxis
      */
     public abstract int getIndex(double coordValue);
 
+    /**
+     * Gets the <i>i</i>th coordinate value along this axis.  This default
+     * implementation checks the validity of the argument, then calls
+     * {@link #doGetCoordValue(int)}.
+     * @param index the index along the axis
+     * @return the <i>i</i>th coordinate value along this axis
+     * @throws IndexOutOfBoundsException if {@code index < 0 || index >= this.getSize()}
+     */
+    public abstract double getCoordValue(int index);
+
     public int getSize()
     {
         return size;

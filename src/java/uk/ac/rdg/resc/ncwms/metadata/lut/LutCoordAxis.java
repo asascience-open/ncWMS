@@ -29,7 +29,7 @@
 package uk.ac.rdg.resc.ncwms.metadata.lut;
 
 import ucar.nc2.constants.AxisType;
-import ucar.nc2.dt.GridCoordSystem;
+import ucar.nc2.dataset.CoordinateAxis2D;
 import uk.ac.rdg.resc.ncwms.metadata.TwoDCoordAxis;
 
 /**
@@ -47,10 +47,10 @@ public class LutCoordAxis extends TwoDCoordAxis
 {
     private LookUpTable lut;
 
-    public static LutCoordAxis fromCoordSys(GridCoordSystem coordSys, AxisType type)
-        throws Exception
+    public static LutCoordAxis fromCoordSys(CoordinateAxis2D lonAxis,
+        CoordinateAxis2D latAxis, AxisType type) throws Exception
     {
-        return new LutCoordAxis(LookUpTable.fromCoordSys(coordSys), type);
+        return new LutCoordAxis(LookUpTable.fromCoordSys(lonAxis, latAxis), type);
     }
 
     private LutCoordAxis(LookUpTable lut, AxisType type)
@@ -62,7 +62,7 @@ public class LutCoordAxis extends TwoDCoordAxis
     @Override
     public int getIndex(double x, double y) {
         // We return one or other grid coordinate from the look-up table depending
-        // on whether this is an X or Y axis.  I.e. the same LUT is used for
+        // on whether this is an X or Y axis, i.e. the same LUT is used for
         // both axes.
         int[] coords = this.lut.getGridCoordinates(x, y);
         if (coords == null) return -1;

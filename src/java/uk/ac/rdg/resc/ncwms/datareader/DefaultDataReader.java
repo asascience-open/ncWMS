@@ -42,8 +42,10 @@ import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis1D;
+import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.dataset.VariableDS;
@@ -59,6 +61,7 @@ import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
+import uk.ac.rdg.resc.ncwms.metadata.lut.LutCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -247,10 +250,10 @@ public class DefaultDataReader extends DataReader
      * @param location Full path to the dataset. This will be passed to 
      * {@link NetcdfDataset#openDataset}.
      * @param layers Map of Layer Ids to LayerImpl objects to populate or update
-     * @throws IOException if there was an error reading from the data source
+     * @throws Exception if there was an error reading from the data source
      */
     protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
-        throws IOException
+        throws Exception
     {
         logger.debug("Finding layers in {}", location);
         
@@ -400,16 +403,34 @@ public class DefaultDataReader extends DataReader
     /**
      * Gets the X axis from the given coordinate system
      */
-    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws IOException
+    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws Exception
     {
+        if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
+            coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
+        {
+            return LutCoordAxis.fromCoordSys(
+                (CoordinateAxis2D)coordSys.getXHorizAxis(),
+                (CoordinateAxis2D)coordSys.getYHorizAxis(),
+                AxisType.GeoX
+            );
+        }
         return CoordAxis.create(coordSys.getXHorizAxis());
     }
     
     /**
      * Gets the Y axis from the given coordinate system
      */
-    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws IOException
+    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws Exception
     {
+        if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
+            coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
+        {
+            return LutCoordAxis.fromCoordSys(
+                (CoordinateAxis2D)coordSys.getXHorizAxis(),
+                (CoordinateAxis2D)coordSys.getYHorizAxis(),
+                AxisType.GeoY
+            );
+        }
         return CoordAxis.create(coordSys.getYHorizAxis());
     }
     

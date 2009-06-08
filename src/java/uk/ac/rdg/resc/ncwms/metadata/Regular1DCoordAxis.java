@@ -128,6 +128,38 @@ public class Regular1DCoordAxis extends OneDCoordAxis
             return index;
         }
     }
+
+    /**
+     * Returns the first value on the axis
+     */
+    public double getStart()
+    {
+        return this.start;
+    }
+
+    /**
+     * Returns the spacing of values along this axis
+     */
+    public double getStride()
+    {
+        return this.stride;
+    }
+
+    /**
+     * Gets the <i>i</i>th coordinate value along this axis. The index will
+     * already have been checked for validity
+     * @param index the index along the axis
+     * @return the <i>i</i>th coordinate value along this axis
+     */
+    public double getCoordValue(int index)
+    {
+        if (index < 0 || index >= this.size)
+        {
+            throw new IndexOutOfBoundsException("Index " + index +
+                " out of range for this axis");
+        }
+        return this.start + (index * this.stride);
+    }
     
     public boolean equals(Object obj)
     {

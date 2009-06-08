@@ -28,22 +28,15 @@
 
 package uk.ac.rdg.resc.ncwms.metadata.lut;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.nc2.Dimension;
 import ucar.nc2.constants.AxisType;
-import ucar.nc2.constants.FeatureType;
-import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dt.GridCoordSystem;
-import ucar.nc2.dt.GridDataset;
-import ucar.nc2.dt.GridDatatype;
-import ucar.nc2.dt.TypedDatasetFactory;
-import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
  * Key for an {@link LutCache}.  This contains all the information needed to
@@ -57,151 +50,179 @@ public final class LutCacheKey implements Serializable
     private static final Logger logger = LoggerFactory.getLogger(LutCacheKey.class);
 
     // These define the source grid: each point on the 2D grid has a longitude
-    // and latitude value and a "missing" attribute.  These 2D arrays are flattened
-    // into 1D arrays.
+    // and latitude value. These 2D arrays are flattened into 1D arrays.
     private double[] longitudes;
     private double[] latitudes;
-    private boolean[] missing; // TODO: do we really need this?  This array may
-                               // be different for each elevation value.
     // ni and nj define the dimensions of the 2D grid.  longitudes.length == ni * nj
-    int ni;
-    int nj;
+    private int ni;
+    private int nj;
+    private int resolutionMultiplier;
 
+    // The following fields are not serialized as they contain redundant information
     // These define the look-up table itself: the lat-lon bounding box and the
     // number of points in each direction.
-    double lonMin;
-    double lonMax;
-    double latMin;
-    double latMax;
-    int nLon;
-    int nLat;
+    private transient double lonMin; // TODO these are redundant and could be calculated from the
+    private transient double lonMax; // lon and lat arrays
+    private transient double latMin;
+    private transient double latMax;
+    private transient int nLon;
+    private transient int nLat;
+    private transient CurvilinearGrid grid; // Contains a more convenient data structure for the grid
 
     /**
      * Creates and returns a {@link LutCacheKey} from the given coordinate system
      * from a NetCDF dataset.
-     * @param coordSys the coordinate system (must have 2D horizontal axes)
+     * @param lonAxis The longitude axis
+     * @param latAxis The latitude axis
      * @param resolutionMultiplier Approximate resolution multiplier for the
      * look-up table.  The LUT will usually have a higher resolution
      * than the original data grid.  If this parameter has a value of 3 (a
      * sensible default) then the final look-up table will have approximately
      * 9 times the number of points in the original grid.
-     * @throws IllegalArgumentException if the given {@link GridDatatype} does
-     * not use two-dimensional horizontal axes, or if the axes are not longitude
-     * and latitude.
+     * @throws IllegalArgumentException if the axes are not longitude
+     * and latitude and if they are not of the same size in the i and j directions
      * @todo Do we need to take a parameter that gives the index of the correct
      * z level to use? If the z axis is "upside down" we could end up with a lot
      * of spurious missing values.
      * @todo does the variable need to be "enhanced" to read missing values
      * properly?
      */
-    public static LutCacheKey fromCoordSys(GridCoordSystem coordSys, int resolutionMultiplier)
+    public static LutCacheKey fromCoordSys(CoordinateAxis2D lonAxis,
+        CoordinateAxis2D latAxis, int resolutionMultiplier)
     {
         logger.debug("Creating LutCacheKey with resolution multiplier {}", resolutionMultiplier);
 
         // Check the types of the coordinate axes
-        CoordinateAxis xAxis = coordSys.getXHorizAxis();
-        CoordinateAxis yAxis = coordSys.getYHorizAxis();
-        if (!(xAxis instanceof CoordinateAxis2D && yAxis instanceof CoordinateAxis2D))
-        {
-            throw new IllegalArgumentException("X and Y axes must be two-dimensional");
-        }
-        if (!(xAxis.getAxisType() == AxisType.Lon && yAxis.getAxisType() == AxisType.Lat))
+        if (!(lonAxis.getAxisType() == AxisType.Lon && latAxis.getAxisType() == AxisType.Lat))
         {
             throw new IllegalArgumentException("X and Y axes must be longitude and latitude");
         }
-        CoordinateAxis2D lonAxis = (CoordinateAxis2D)xAxis;
-        CoordinateAxis2D latAxis = (CoordinateAxis2D)yAxis;
+        // Check that the latitude axis has the same shape
+        if (!Arrays.equals(lonAxis.getShape(), latAxis.getShape()))
+        {
+            throw new IllegalArgumentException("Axes are not of the same shape");
+        }
 
         // Create a new key
         LutCacheKey key = new LutCacheKey();
 
+        key.resolutionMultiplier = resolutionMultiplier;
+
         // Find the number of points in each direction in the lon and lat 2D arrays
-        List<Dimension> dimList = xAxis.getDimensions();
-        key.nj = dimList.get(0).getLength();
-        key.ni = dimList.get(1).getLength();
+        key.nj = lonAxis.getShape(0);
+        key.ni = lonAxis.getShape(1);
+        if (key.ni <= 0 || key.nj <= 0)
+        {
+            String msg = String.format("ni (=%d) and nj (=%d) must be positive and > 0", key.ni, key.nj);
+            throw new IllegalStateException(msg);
+        }
 
         // Load the longitude and latitude values
         key.longitudes = lonAxis.getCoordValues();
         key.latitudes  = latAxis.getCoordValues();
+        // Check that the arrays are of the right length
+        if (key.longitudes.length != key.latitudes.length ||
+            key.longitudes.length != key.ni * key.nj)
+        {
+            throw new IllegalStateException("Longitudes, latitudes and "
+                + "ni*nj not same length");
+        }
 
-        // Find the latitude-longitude bounding box of the data.  These will
-        // define the bounds of the look-up table
-        LatLonRect bbox = coordSys.getLatLonBoundingBox();
-        key.lonMin = bbox.getLonMin();
-        key.lonMax = bbox.getLonMax();
-        key.latMin = bbox.getLatMin();
-        key.latMax = bbox.getLatMax();
+        // Now set the redundant fields (that won't be serialized)
+        key.populateTransientFields();
+
+        logger.debug("Created LutCacheKey: {}", key.toString());
+
+        return key;
+    }
+
+    /**
+     * Populate those fields in this key that are not serialized.  These contain
+     * redundant information.
+     */
+    private void populateTransientFields()
+    {
+        this.setLutBoundingBox();
 
         // Now calculate the number of points in the LUT along the longitude
         // and latitude directions
-        double ratio = (key.lonMax - key.lonMin) / (key.latMax - key.latMin);
-        key.nLat = (int) (Math.sqrt((resolutionMultiplier * resolutionMultiplier * key.ni * key.nj) / ratio));
-        key.nLon = (int) (ratio * key.nLat);
-
-        // Check that the data in the key is self-consistent
-        key.validate();
-
-        logger.debug("Created LutCacheKey. Resulting LUT will have {} points",
-            key.nLon * key.nLat);
-        return key;
-    }
-    
-    /**
-     * Checks this object to make sure it appears sane.  The purpose of this method
-     * is to help catch errors early, before the key is used.
-     * @throws IllegalStateException if there are errors in the key
-     */
-    private void validate()
-    {
-        // Check that the arrays are of the right length
-        if (this.longitudes.length != this.latitudes.length ||
-            this.longitudes.length != this.missing.length   ||
-            this.longitudes.length != this.ni * this.nj)
+        double ratio = (this.lonMax - this.lonMin) / (this.latMax - this.latMin);
+        this.nLat = (int) (Math.sqrt((this.resolutionMultiplier * this.resolutionMultiplier * this.ni * this.nj) / ratio));
+        this.nLon = (int) (ratio * this.nLat);
+        if (this.nLon <= 0 || this.nLat <= 0)
         {
-            throw new IllegalStateException("Longitudes, latitudes, missing and "
-                + "ni+nj not same length");
+            String msg = String.format("nLon (=%d) and nLat (=%d) must be positive and > 0", this.nLon, this.nLat);
+            throw new IllegalStateException(msg);
         }
-        
-        if (this.lonMin > this.lonMax || this.latMin > this.latMax)
+
+        this.grid = new CurvilinearGrid(this.ni, this.nj, this.longitudes, this.latitudes);
+    }
+
+    /**
+     * Sets the lat-lon bounding box of the LUT that will be generated from this
+     * key.
+     */
+    private void setLutBoundingBox()
+    {
+        // Set the bounding box of the
+        this.lonMin = this.longitudes[0];
+        this.lonMax = this.longitudes[0];
+        for (int i = 1; i < this.longitudes.length; i++)
         {
-            String msg = String.format("Invalid bounding box for LUT: %f,%f, %f, %f",
+            double lon = this.longitudes[i];
+            if (lon < this.lonMin) this.lonMin = lon;
+            if (lon > this.lonMax) this.lonMax = lon;
+        }
+        this.latMin = this.latitudes[0];
+        this.latMax = this.latitudes[0];
+        for (int i = 1; i < this.latitudes.length; i++)
+        {
+            double lat = this.latitudes[i];
+            if (lat < this.latMin) this.latMin = lat;
+            if (lat > this.latMax) this.latMax = lat;
+        }
+        if (this.lonMin >= this.lonMax || this.latMin >= this.latMax)
+        {
+            String msg = String.format("Invalid bounding box for LUT: %f, %f, %f, %f",
                 this.lonMin, this.latMin, this.lonMax, this.latMax);
             throw new IllegalStateException(msg);
         }
-        
-        if (this.ni <= 0 || this.nj <= 0)
-        {
-            throw new IllegalStateException("ni and nj must be positive");
-        }
-        
-        if (this.nLon <= 0 || this.nLat <= 0)
-        {
-            throw new IllegalStateException("nLon and nLat must be positive");
-        }
     }
 
     /**
-     * Returns the longitude at the given i-j point in the source data's coordinate
-     * system.
+     * Returns the longitude axis for the look-up table that will be generated
+     * from this key
      */
-    public double getLongitude(int i, int j)
+    public Regular1DCoordAxis getLutLonAxis()
     {
-        return this.longitudes[this.getIndex(i, j)];
+        double lonStride = (this.lonMax - this.lonMin) / (this.nLon - 1);
+        return new Regular1DCoordAxis(this.lonMin, lonStride, this.nLon, AxisType.Lon);
     }
 
     /**
-     * Returns the latitude at the given i-j point in the source data's coordinate
-     * system.
+     * Returns the latitude axis for the look-up table that will be generated
+     * from this key
      */
-    public double getLatitude(int i, int j)
+    public Regular1DCoordAxis getLutLatAxis()
     {
-        return this.latitudes[this.getIndex(i, j)];
+        double latStride = (this.latMax - this.latMin) / (this.nLat - 1);
+        return new Regular1DCoordAxis(this.latMin, latStride, this.nLat, AxisType.Lat);
     }
 
-    /** Gets the index in the collapsed 1D arrays of the point with the given i-j coordinates */
-    private int getIndex(int i, int j)
+    /**
+     * Returns a representation of the source grid from which the LUT will be
+     * generated.
+     */
+    public CurvilinearGrid getSourceGrid()
     {
-        return (j * this.ni) + i;
+        return this.grid;
+    }
+
+    /** Ensures that the transient fields are populated upon deserialization */
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        this.populateTransientFields();
     }
 
     @Override public int hashCode()
@@ -209,15 +230,9 @@ public final class LutCacheKey implements Serializable
         int result = 17;
         result = 31 * result + Arrays.hashCode(this.longitudes);
         result = 31 * result + Arrays.hashCode(this.latitudes);
-        result = 31 * result + Arrays.hashCode(this.missing);
         result = 31 * result + this.ni;
         result = 31 * result + this.nj;
-        result = 31 * result + new Double(this.lonMin).hashCode();
-        result = 31 * result + new Double(this.lonMax).hashCode();
-        result = 31 * result + new Double(this.latMin).hashCode();
-        result = 31 * result + new Double(this.latMax).hashCode();
-        result = 31 * result + this.nLon;
-        result = 31 * result + this.nLat;
+        result = 31 * result + this.resolutionMultiplier;
         return result;
     }
 
@@ -230,30 +245,15 @@ public final class LutCacheKey implements Serializable
         // We do the cheap comparisons first
         return this.ni == other.ni &&
                this.nj == other.nj &&
-               this.nLon == other.nLon &&
-               this.nLat == other.nLat &&
-               this.lonMin == other.lonMin &&
-               this.lonMax == other.lonMax &&
-               this.latMin == other.latMin &&
-               this.latMax == other.latMax &&
+               this.resolutionMultiplier == other.resolutionMultiplier &&
                Arrays.equals(this.longitudes, other.longitudes) &&
-               Arrays.equals(this.latitudes, other.latitudes) &&
-               Arrays.equals(this.missing, other.missing);
+               Arrays.equals(this.latitudes, other.latitudes);
     }
 
-    public static void main(String[] args) throws Exception
+    @Override public String toString()
     {
-        String filename = "C:\\Documents and Settings\\Jon\\Desktop\\adriatic.ncml";
-        String varId = "temp";
-        NetcdfDataset nc = NetcdfDataset.openDataset(filename, true, null);
-
-        GridDataset gd = (GridDataset) TypedDatasetFactory.open(FeatureType.GRID,
-                nc, null, null);
-
-        GridDatatype grid = gd.findGridDatatype(varId);
-
-        LutCacheKey key = LutCacheKey.fromCoordSys(grid.getCoordinateSystem(), 3);
-        System.out.printf("%d,%d : %d,%d%n", key.ni, key.nj, key.nLon, key.nLat);
+        return String.format("Source grid size: %d, LUT size: %d, BBOX: %f, %f, %f, %f",
+            ni*nj, nLon*nLat, lonMin, latMin, lonMax, latMax);
     }
 
 }

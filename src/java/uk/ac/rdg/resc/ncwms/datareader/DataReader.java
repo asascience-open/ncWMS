@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.datareader;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -164,8 +163,8 @@ public abstract class DataReader
      * expansion of a glob aggregation).
      * @param location Full path to the dataset
      * @param layers Map of Layer Ids to Layer objects to populate or update
-     * @throws IOException if there was an error reading from the data source
+     * @throws Exception if there was an error reading from the data source
      */
     protected abstract void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
-        throws IOException;
+        throws Exception;
 }

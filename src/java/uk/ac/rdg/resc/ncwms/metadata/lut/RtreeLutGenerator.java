@@ -43,6 +43,8 @@ import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
+import uk.ac.rdg.resc.ncwms.metadata.lut.CurvilinearGrid.Cell;
 
 /**
  * A look-up table generator that uses an Rtree spatial data index to find
@@ -80,44 +82,44 @@ public final class RtreeLutGenerator implements LutGenerator
         // Add the points from the source coordinate system to the Rtrees.
         long nanoTime = System.nanoTime();
         logger.debug("Building rTrees...");
-        for (int j = 0; j < key.nj; j++)
+        for (Cell cell : key.getSourceGrid())
         {
-            for (int i = 0; i < key.ni; i++)
+            // Add this point to each of the RTrees: the rTrees will ignore
+            // any points that are outside of their latitude ranges
+            for (RtreeWrapper rTree : rTrees)
             {
-                double lon = key.getLongitude(i, j);
-                double lat = key.getLatitude(i, j);
-                // Add this point to each of the RTrees: the rTrees will ignore
-                // any points that are outside of their latitude ranges
-                for (RtreeWrapper rTree : rTrees)
-                {
-                    rTree.addPoint(lon, lat, i, j);
-                }
+                rTree.addCell(cell);
             }
         }
-        logger.debug("Built rTrees in {} seconds", (System.nanoTime() - nanoTime) * 1000000000);
+        logger.debug("Built rTrees in {} seconds", (System.nanoTime() - nanoTime) / 1000000000.0);
         
         // Now we build up the look-up table.
         // Create a LUT based upon the key
         LookUpTable lut = new LookUpTable(key);
         nanoTime = System.nanoTime();
-        for (int latIndex = 0; latIndex < lut.nLat; latIndex++)
+        Regular1DCoordAxis lonAxis = key.getLutLonAxis();
+        Regular1DCoordAxis latAxis = key.getLutLatAxis();
+        for (int latIndex = 0; latIndex < latAxis.getSize(); latIndex++)
         {
-            double lat = lut.latMin + (latIndex * lut.latStride);
-            for (int lonIndex = 0; lonIndex < lut.nLon; lonIndex++)
+            double lat = latAxis.getCoordValue(latIndex);
+            for (int lonIndex = 0; lonIndex < lonAxis.getSize(); lonIndex++)
             {
-                double lon = lut.lonMin + (lonIndex * lut.lonStride);
+                double lon = lonAxis.getCoordValue(lonIndex);
                 // Look through each of the RTrees till we find a match
-                int[] coords = null;
                 for (RtreeWrapper rTree : rTrees)
                 {
-                    coords = rTree.findNearestPoint(lon, lat);
-                    if (coords != null) break;
+                    Cell containingCell = rTree.findContainingCell(lon, lat);
+                    if (containingCell != null)
+                    {
+                        // TODO: check that the lat-lon point falls in the grid cell
+                        // Add these coordinates to the look-up table.
+                        lut.setGridCoordinates(lonIndex, latIndex, containingCell.getGridCoords());
+                        break;
+                    }
                 }
-                // Add these coordinates to the look-up table.
-                lut.setGridCoordinates(lonIndex, latIndex, coords);
             }
         }
-        logger.debug("Built look-up table in {} seconds", (System.nanoTime() - nanoTime) * 1000000000);
+        logger.debug("Built look-up table in {} seconds", (System.nanoTime() - nanoTime) / 1000000000.0);
 
         return lut;
     }
@@ -148,8 +150,8 @@ public final class RtreeLutGenerator implements LutGenerator
         private double maxLat;
         // The Rtree that will hold the longitude-latitude points
         private RTree rTree;
-        // Maps indices in the Rtree to i-j points in the source data
-        private List<int[]> indices;
+        // Maps indices in the Rtree to cells in the source data grid
+        private List<Cell> cells;
         // Transformation from longitude-latitude to the CRS used by this Rtree
         private MathTransform lonLatToCrs;
         // Callback object for retrieving nearest-neighbour indices
@@ -170,7 +172,7 @@ public final class RtreeLutGenerator implements LutGenerator
             this.maxLat = maxLat;
             this.rTree = new RTree();
             this.rTree.init(new Properties()); // If we don't initialize the RTree it doesn't work
-            this.indices = new ArrayList<int[]>();
+            this.cells = new ArrayList<Cell>();
             if (crsCode == null)
             {
                 this.lonLatToCrs = null;
@@ -185,16 +187,18 @@ public final class RtreeLutGenerator implements LutGenerator
         }
 
         /**
-         * Adds a point to this Rtree.  Does nothing if the latitude is outside
-         * the range.
+         * Adds a cell from the source grid to this Rtree.  Does nothing if the
+         * cell is outside the latitude range.
          * @param longitude The longitude of the point
          * @param latitude The latitude of the point
          * @param i The i index of the point in the source data
          * @param j The j index of the point in the source data
          */
-        public void addPoint(double longitude, double latitude, int i, int j)
+        public void addCell(Cell cell)
             throws TransformException
         {
+            double longitude = cell.getCentrePoint().getLongitude();
+            double latitude = cell.getCentrePoint().getLatitude();
             if (latitude < this.minLat || latitude > this.maxLat) return;
             // Convert the longitude-latitude point to this CRS
             double[] coords = this.lonLatToCrs(longitude, latitude);
@@ -204,27 +208,22 @@ public final class RtreeLutGenerator implements LutGenerator
             // Add to the Rtree, using the current size of the rTree as the
             // index.
             this.rTree.add(rect, this.rTree.size());
-            // Remember the i and j indices of this point
-            // TODO: should remember the bounding rectangle of this point for
-            // more precise checks later.
-            this.indices.add(new int[]{i, j});
+            // Add the cell to the list so we can find it later
+            this.cells.add(cell);
             
             // Record that the furthestDistance parameter must be re-estimated
             this.cachedEstimatedFurthestDistance = Float.NaN;
         }
 
         /**
-         * Finds the nearest point in the source data to the given longitude-
-         * latitude point.  Returns null if the point is not within the domain
-         * of this RTree.
+         * Finds the grid cell that contains the given longitude-latitude point,
+         * or null if no cell contains the point.
          * @param longitude The longitude of the point to find
          * @param latitude The latitude of the point to find
-         * @return an integer array with two members: the first member is the
-         * i index of the point; the second member is the j index.  Or null if
-         * the longitude-latitude point is not within the domain of this
-         * Rtree.
+         * @return the grid cell that contains the given longitude-latitude point,
+         * or null if no cell contains the point.
          */
-        public int[] findNearestPoint(double longitude, double latitude)
+        public Cell findContainingCell(double longitude, double latitude)
             throws TransformException
         {
             if (latitude < this.minLat || latitude > this.maxLat) return null;
@@ -238,8 +237,25 @@ public final class RtreeLutGenerator implements LutGenerator
             // See if we got a hit
             if (this.callback.nearest >= 0)
             {
-                // TODO: check that this point is actually within the grid cell
-                return this.indices.get(this.callback.nearest);
+                // Check that this point is actually within the grid cell
+                Cell cell = this.cells.get(this.callback.nearest);
+                if (cell.containsPoint(longitude, latitude))
+                {
+                    return cell;
+                }
+                else
+                {
+                    // Check the neigbouring grid points in case the "nearest"
+                    // grid cell doesn't actually contain the point (this happens
+                    // quite frequently)
+                    for (Cell neighbour : cell.getEdgeNeighbours())
+                    {
+                        if (neighbour.containsPoint(longitude, latitude))
+                        {
+                            return neighbour;
+                        }
+                    }
+                }
             }
             // We didn't get a hit
             return null;

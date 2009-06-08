@@ -232,53 +232,6 @@ public class MetadataLoader
                 }
                 components.get(vectorKey)[1] = layer;
             }
-            // We can only calculate vectors if the components are eastward
-            // and northward (otherwise we need to know the directions of the
-            // grid lines at each point - which isn't impossible but is hard).
-            /*else if (layer.getTitle().contains("_x_"))
-            {
-                String vectorKey = layer.getTitle().replaceFirst("_x_", "_");
-                // Look to see if we've already found the y component
-                if (!components.containsKey(vectorKey))
-                {
-                    // We haven't found the y component yet
-                    components.put(vectorKey, new LayerImpl[2]);
-                }
-                components.get(vectorKey)[0] = layer;
-            }
-            else if (layer.getTitle().contains("_y_"))
-            {
-                String vectorKey = layer.getTitle().replaceFirst("_y_", "_");
-                // Look to see if we've already found the x component
-                if (!components.containsKey(vectorKey))
-                {
-                    // We haven't found the x component yet
-                    components.put(vectorKey, new LayerImpl[2]);
-                }
-                components.get(vectorKey)[1] = layer;
-            }
-            else if (layer.getTitle().startsWith("x_"))
-            {
-                String vectorKey = layer.getTitle().replaceFirst("x_", "");
-                // Look to see if we've already found the y component
-                if (!components.containsKey(vectorKey))
-                {
-                    // We haven't found the y component yet
-                    components.put(vectorKey, new LayerImpl[2]);
-                }
-                components.get(vectorKey)[0] = layer;
-            }
-            else if (layer.getTitle().startsWith("y_"))
-            {
-                String vectorKey = layer.getTitle().replaceFirst("y_", "");
-                // Look to see if we've already found the x component
-                if (!components.containsKey(vectorKey))
-                {
-                    // We haven't found the x component yet
-                    components.put(vectorKey, new LayerImpl[2]);
-                }
-                components.get(vectorKey)[1] = layer;
-            }*/
         }
         
         // Now add the vector quantities to the collection of Layer objects
@@ -325,6 +278,7 @@ public class MetadataLoader
             // from the source data.
             if (var.getColorScaleRange() == null)
             {
+                logger.debug("Reading min-max data for layer {}", layer.getLayerName());
                 float[] minMax;
                 try
                 {

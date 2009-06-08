@@ -202,6 +202,18 @@ public class Irregular1DCoordAxis extends OneDCoordAxis
         return (Math.abs(target - lowVal.value) < 
                 Math.abs(target - highVal.value)) ? lowVal.index : highVal.index;
     }
+
+    /**
+     * Gets the <i>i</i>th coordinate value along this axis. The index will
+     * already have been checked for validity
+     * @param index the index along the axis
+     * @return the <i>i</i>th coordinate value along this axis
+     * @throws IndexOutOfBoundsException if {@code index < 0 || index >= this.getSize()}
+     */
+    public double getCoordValue(int index)
+    {
+        return this.axisVals.get(index).value;
+    }
     
     public boolean equals(Object obj)
     {
