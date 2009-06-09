@@ -725,7 +725,7 @@ function updateTimesteps(times)
     // First we load the currently-selected time (if there is one)
     var timeSelect = $('tValues');
     var selectedTimeStr = null;
-    if (timeSelect) {
+    if (timeSelect && timeSelect.selectedIndex >= 0) {
         selectedTimeStr = timeSelect.options[timeSelect.selectedIndex].text;
     }
     // Build the select box
