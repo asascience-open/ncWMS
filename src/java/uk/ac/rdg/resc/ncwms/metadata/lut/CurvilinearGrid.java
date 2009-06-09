@@ -39,7 +39,7 @@ import uk.ac.rdg.resc.ncwms.metadata.lut.CurvilinearGrid.Cell;
 
 /**
  * A horizontal (2D) grid that is defined by explicitly specifying the longitude and
- * latitude coordinates of its cells.
+ * latitude coordinates of its cells.  We assume the WGS84 lat-lon coordinate system.
  * @author Jon
  */
 public final class CurvilinearGrid implements Iterable<Cell>
@@ -246,10 +246,10 @@ public final class CurvilinearGrid implements Iterable<Cell>
         public List<Cell> getEdgeNeighbours()
         {
             List<Cell> neighbours = new ArrayList<Cell>(4);
-            if (i > 0) neighbours.add(new Cell(this.i - 1, this.j));
-            if (i < CurvilinearGrid.this.ni - 1) neighbours.add(new Cell(this.i + 1, this.j));
-            if (j > 0) neighbours.add(new Cell(this.i, this.j - 1));
-            if (j < CurvilinearGrid.this.nj - 1) neighbours.add(new Cell(this.i, this.j + 1));
+            if (this.i > 0) neighbours.add(new Cell(this.i - 1, this.j));
+            if (this.i < CurvilinearGrid.this.ni - 1) neighbours.add(new Cell(this.i + 1, this.j));
+            if (this.j > 0) neighbours.add(new Cell(this.i, this.j - 1));
+            if (this.j < CurvilinearGrid.this.nj - 1) neighbours.add(new Cell(this.i, this.j + 1));
             return neighbours;
         }
     }
