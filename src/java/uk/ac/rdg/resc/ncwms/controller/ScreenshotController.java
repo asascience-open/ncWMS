@@ -38,7 +38,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Random;
@@ -103,14 +102,12 @@ public class ScreenshotController extends MultiActionController
         }
     }
 
-    /** Simple class to hold a bounding box */
     private static final class BoundingBox
     {
-        private float minX, maxX, minY, maxY;
-        @Override public String toString()
-        {
-            return minX + "," + minY + "," + maxX + "," + maxY;
-        }
+        float minXValue;
+        float maxXValue;
+        float minYValue;
+        float maxYValue;
     }
 
     /**
@@ -124,10 +121,14 @@ public class ScreenshotController extends MultiActionController
     public void createScreenshot(HttpServletRequest request, HttpServletResponse response) throws Exception
     {
         log.debug("Called createScreenshot");
-        
+
+        response.setContentType("image/png");
         ServletOutputStream out = response.getOutputStream();
 
+        String imageName = "snapshot" + RANDOM.nextLong() + System.currentTimeMillis() + ".png";
+
         try {
+            // TODO output your page here
 
 		String title = request.getParameter("title"); //"Hello World";
 		String time = request.getParameter("time"); //"null";
@@ -137,33 +138,44 @@ public class ScreenshotController extends MultiActionController
         String oneThird = request.getParameter("oneThird");
 		String lowerValue = request.getParameter("lowerValue"); //-0.9546131;
 
+		/*String[] path =
+		{
+		        "http://webmapping.mgis.psu.edu/geoserver/wms?version=1.1.1&request=getmap&layers=topp:states&styles=population&SRS=EPSG:4326&bbox=-125,24,-67,50&width=400&height=200&format=image/png",
+		        "http://cwcgom.aoml.noaa.gov/erddap/wms/miamiSST/request?service=WMS&version=1.3.0&request=GetMap&bbox=-110,7,-56,46&crs=EPSG:4326&width=360&height=300&bgcolor=0x808080&layers=miamiSST:sst&styles=&format=image/png&transparent=TRUE",
+		        "http://behemoth.nerc-essc.ac.uk/ncWMS/wms?REQUEST=GetLegendGraphic&COLORBARONLY=true&WIDTH=45&HEIGHT=398&PALETTE=rainbow&NUMCOLORBANDS=254",
+		        "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE&LAYERS=Bathymetry%2CTopography%2CHillshading%2CCoastlines%2CBuiltup%2Bareas%2CWaterbodies%2CRivers%2CStreams%2CRailroads%2CHighways%2CRoads%2CTrails%2CBorders%2CCities%2CAirports&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&STYLES=&EXCEPTIONS=application%2Fvnd.ogc.se_inimage&FORMAT=image%2Fpng&SRS=EPSG%3A4326&BBOX=-300.234375,-144.140625,59.765625,137.109375&WIDTH=256&HEIGHT=256",
+                "http://localhost:8084/ncWMS/wms?LAYERS=OSTIA%2Fanalysed_sst&ELEVATION=0&TIME=2009-04-26T12%3A00%3A00.000Z&TRANSPARENT=true&STYLES=BOXFILL%2Frainbow&CRS=EPSG%3A4326&COLORSCALERANGE=268.48398%2C305.79602&NUMCOLORBANDS=254&LOGSCALE=false&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&EXCEPTIONS=XML&FORMAT=image%2Fpng&BBOX=-300.234375,-144.140625,59.765625,137.109375&WIDTH=512&HEIGHT=384"
+		};*/
 
 		String BGparam = request.getParameter("urlBG");
         String FGparam = request.getParameter("urlFG"); //"http://localhost:8084/ncWMS/wms?LAYERS=OSTIA%2Fanalysed_sst&ELEVATION=0&TIME=2009-04-26T12%3A00%3A00.000Z&TRANSPARENT=true&STYLES=BOXFILL%2Frainbow&CRS=EPSG%3A4326&COLORSCALERANGE=268.48398%2C305.79602&NUMCOLORBANDS=254&LOGSCALE=false&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&EXCEPTIONS=XML&FORMAT=image%2Fpng&BBOX=-180,-90,0,90&WIDTH=256&HEIGHT=256";
         String Paletteparam = request.getParameter("urlPalette");
 
-        if(BGparam == null || FGparam == null || Paletteparam == null) return; // TODO
+        if(BGparam == null || FGparam == null || Paletteparam == null) return;
 
         String urlStringBG = URLDecoder.decode(BGparam, "UTF-8");
+  		//out.println("URL: " + urlString);
+        //out.println("");
         String urlStringFG = "http://localhost:8084/ncWMS/" + URLDecoder.decode(FGparam, "UTF-8");
+        //out.println("URL: " + urlStringFG);
 
-        // Find the bounding box of the image
-        BoundingBox bbox = getBoundingBox(urlStringBG);
-
+        BoundingBox BBOX = new BoundingBox();
         String[] serverName = urlStringBG.split("\\?");
-        StringBuffer result = buildURL(serverName[1], serverName[0]);
+        StringBuffer result = buildURL(serverName[1], serverName[0], "BG", BBOX);
         serverName = urlStringFG.split("\\?");
-        StringBuffer resultFG = buildURL(serverName[1], serverName[0]);
+        StringBuffer resultFG = buildURL(serverName[1], serverName[0], "FG", BBOX);
 
         float minX1 = 0;
         float minX2 = 0;
         float maxX1 = 0;
         float maxX2 = 0;
-        int WIDTH_OF_BG_IMAGE1 = 0;  // 340 RHS one
-        int WIDTH_OF_BG_IMAGE2 = 0;  // 512 LHS one
+        int WIDTH_OF_BG_IMAGE1 = 0;
+        int WIDTH_OF_BG_IMAGE2 = 0;
         int START_OF_IMAGE3 = 0;
         int START_OF_IMAGE4 = 0;
         final int WIDTH_TOTAL = 512;
+        final int WIDTH_OF_FINAL_IMAGE = 650;
+        final int HEIGHT_OF_FINAL_IMAGE = 500;
         String URL1 = "";
         String URL2 = "";
         float coverage = 0;
@@ -171,56 +183,72 @@ public class ScreenshotController extends MultiActionController
         boolean isGT180 = false;
         boolean isReplicate = false;
 
-        String bboxParam = "&BBOX=" + bbox.toString();
+        String bboxParam = "&BBOX=" + BBOX.minXValue + "," + BBOX.minYValue + "," + BBOX.maxXValue + "," + BBOX.maxYValue;
 
-        if( (Float.compare(bbox.minX,-180)<0 ))// || (Float.compare(maxXValue,180.0)>0) ) // means we need to generate two URLs
+        if( (Float.compare(BBOX.minXValue,-180)<0 ))// || (Float.compare(maxXValue,180.0)>0) ) // means we need to generate two URLs
 		{
-            minX1 = -180; //minXValue;
-            if (Float.compare(bbox.maxX,180) > 0) // It will only happen for the case of zoom out: when maxX > 180
-            {
-                maxX1 = bbox.maxX - 360;
-                isReplicate = true;
-            }
-            else{
-                maxX1 = bbox.maxX;
-            }
-            minX2 = bbox.minX + 360;
-            maxX2 = +180;
 
-            float rangeofImg1 =  Math.abs(maxX1 - minX1);
-            float rangeofImg2 =  Math.abs(maxX2 - minX2);
-            float totalSpan = rangeofImg1 + rangeofImg2;
+			if( (Float.compare(BBOX.minXValue,-180) < 0 ) )
+			{
+				minX1 = -180; //minXValue;
+                if (Float.compare(BBOX.maxXValue,180) > 0) // It will only happen for the case of zoom out: when maxX > 180
+                {
+                    maxX1 = BBOX.maxXValue - 360;
+                    isReplicate = true;
+                }
+                else{
+                    maxX1 = BBOX.maxXValue;
+                }
+				minX2 = BBOX.minXValue + 360;
+				maxX2 = +180;
 
-            // in normal viewing case, the span is 360
-            // with first zoom-in, the span becomes 180
-            // with first zoom out, the spam becoms 720
-            if (isReplicate) coverage =  (rangeofImg1/(totalSpan*2));
-            else coverage =  (rangeofImg1/totalSpan);
+                float rangeofImg1 =  Math.abs(maxX1 - minX1);
+                float rangeofImg2 =  Math.abs(maxX2 - minX2);
+                float totalSpan = rangeofImg1 + rangeofImg2;
 
-            WIDTH_OF_BG_IMAGE1 = Math.round(((float) (WIDTH_TOTAL)*coverage));   // RHS Image
-            if (isReplicate)
-            {
-                WIDTH_OF_BG_IMAGE2 =  (WIDTH_TOTAL/2) - WIDTH_OF_BG_IMAGE1;
-                START_OF_IMAGE3 = WIDTH_OF_BG_IMAGE1 + WIDTH_OF_BG_IMAGE2;
-                START_OF_IMAGE4 = START_OF_IMAGE3 + WIDTH_OF_BG_IMAGE2;
-            }
-            else{
-                WIDTH_OF_BG_IMAGE2 =  WIDTH_TOTAL - WIDTH_OF_BG_IMAGE1;          // LHS Image
-            }
+                // in normal viewing case, the span is 360
+                // with first zoom-in, the span becomes 180
+                // with first zoom out, the spam becoms 720
+                if (isReplicate) coverage =  (rangeofImg1/(totalSpan*2));
+                else
+                    coverage =  (rangeofImg1/totalSpan);
+                //out.print("Total Span - " + totalSpan);
 
-            String bboxParam1 = "&BBOX=" + minX1 + "," + bbox.minY + "," + maxX1 + "," + bbox.maxY;
-            String bboxParam2 = "&BBOX=" + minX2 + "," + bbox.minY + "," + maxX2 + "," + bbox.maxY;
+                WIDTH_OF_BG_IMAGE1 = Math.round(((float) (WIDTH_TOTAL)*coverage));   // RHS Image
+                if (isReplicate)
+                {
+                    WIDTH_OF_BG_IMAGE2 =  (WIDTH_TOTAL/2) - WIDTH_OF_BG_IMAGE1;
+                    START_OF_IMAGE3 = WIDTH_OF_BG_IMAGE1 + WIDTH_OF_BG_IMAGE2;
+                    START_OF_IMAGE4 = START_OF_IMAGE3 + WIDTH_OF_BG_IMAGE2;
+                }
+                else{
+                    WIDTH_OF_BG_IMAGE2 =  WIDTH_TOTAL - WIDTH_OF_BG_IMAGE1;          // LHS Image
+                }
 
-            URL1 = result.toString() + "WIDTH=" + WIDTH_OF_BG_IMAGE1 + "&HEIGHT=384" + bboxParam1;
-            URL2 = result.toString() + "WIDTH=" + WIDTH_OF_BG_IMAGE2 + "&HEIGHT=384" + bboxParam2;
-            isGT180 = true;
-        }
+                //out.print("WIDTH_OF_BG_IMAGE2 (LHS) " + WIDTH_OF_BG_IMAGE2 + " WIDTH_OF_BG_IMAGE1 (RHS) " + WIDTH_OF_BG_IMAGE1 + "<BR>");
+                //out.print("START_OF_IMAGE3  " + START_OF_IMAGE3 + " START_OF_IMAGE4 " + START_OF_IMAGE4);
+			}
+
+        String bboxParam1 = "&BBOX=" + minX1 + "," + BBOX.minYValue + "," + maxX1 + "," + BBOX.maxYValue;
+        String bboxParam2 = "&BBOX=" + minX2 + "," + BBOX.minYValue + "," + maxX2 + "," + BBOX.maxYValue;
+
+        URL1 = result.toString() + "WIDTH=" + WIDTH_OF_BG_IMAGE1 + "&HEIGHT=384" + bboxParam1;
+        URL2 = result.toString() + "WIDTH=" + WIDTH_OF_BG_IMAGE2 + "&HEIGHT=384" + bboxParam2;
+        isGT180 = true;
+        /*out.print("URL String 1 - " + URL1);
+        out.print("<br>");
+        out.print("URL String 2 - " + URL2);
+        */}
+
         else
         {
             URL1 = result.toString() + "WIDTH=512&HEIGHT=384" + bboxParam;
         }
 
+
         String URL3 = resultFG.toString() + "WIDTH=512&HEIGHT=384" + bboxParam;
+        //out.print("<br>");
+        //out.print("URL String 3 - " + URL3);
 
 		BufferedImage bimgBG1 = null;
         BufferedImage bimgBG2 = null;
@@ -228,28 +256,40 @@ public class ScreenshotController extends MultiActionController
 		BufferedImage bimgFG = null;
 		BufferedImage bimgPalette = null;
 
-        if(isGT180){
-            bimgBG1 = downloadImage(URL1); //(path[0]);  // right-hand side
-            bimgBG2 = downloadImage(URL2); //(path[1]);  // left-hand side
+        try {
+
+        	/*
+            bimgFG = ImageIO.read(new FileInputStream(imageSrcFG));  //ImageIO reads in the bytes of an image to a BufferedImage
+            bimgBG = ImageIO.read(new FileInputStream(imageSrcBG));  //ImageIO reads in the bytes of an image to a BufferedImage
+        	*/
+
+            if(isGT180){
+                bimgBG1 = downloadImage(URL1); //(path[0]);  // right-hand side
+                bimgBG2 = downloadImage(URL2); //(path[1]);  // left-hand side
+
+            }
+            else{
+                bimgBG1 = downloadImage(URL1);
+            }
+            bimgFG = downloadImage(URL3);
+        	bimgPalette = downloadImage(Paletteparam);//(path[2]);
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        else{
-            bimgBG1 = downloadImage(URL1);
-        }
-        bimgFG = downloadImage(URL3);
-        bimgPalette = downloadImage(Paletteparam);//(path[2]);
 
         /* Prepare the final Image */
-        int w = bimgBG1.getWidth();
-        int h = bimgBG1.getHeight();
+        //int w = bimgBG1.getWidth();
+        //int h = bimgBG1.getHeight();
         int type = BufferedImage.TYPE_INT_RGB;
-        BufferedImage image = new BufferedImage(w + 550, h + 550, type);
+        BufferedImage image = new BufferedImage(WIDTH_OF_FINAL_IMAGE, HEIGHT_OF_FINAL_IMAGE, type);
         Graphics2D g = image.createGraphics();
 
         // The Font and Text
         Font font = new Font("SansSerif", Font.BOLD, 12);
         g.setFont(font);
         g.setBackground(Color.white);
-        g.fillRect(0, 0, w+550, h+550);
+        g.fillRect(0, 0, WIDTH_OF_FINAL_IMAGE, HEIGHT_OF_FINAL_IMAGE);
 
         g.setColor(Color.black);
         g.drawString("Title: " + title, 0, 10);
@@ -270,7 +310,8 @@ public class ScreenshotController extends MultiActionController
             g.drawImage(bimgBG1, null, 0, 60);
         }
         g.drawImage(bimgFG, null, 0, 60);
-        g.drawImage(bimgPalette, null, WIDTH_TOTAL, 60);
+        // Width of 40 matches the width as displayed in the Godiva2 client
+        g.drawImage(bimgPalette, WIDTH_TOTAL, 60, 40, bimgPalette.getHeight(), null);
 
         g.drawString(upperValue, 525, 55);
         g.drawString(twoThirds, 560, 160);
@@ -278,47 +319,52 @@ public class ScreenshotController extends MultiActionController
         g.drawString(lowerValue, 525, 470);
 
         g.dispose();
-
-        // write the image to a file in the screenshots directory
-        String imageName = RANDOM.nextLong() + ".png";
-        File imageSrcFinal = new File(this.screenshotCache, imageName);
-        log.debug("Writing screenshot to {}", imageSrcFinal.getPath());
-        ImageIO.write(image, "png", imageSrcFinal);	// write the image to File Output stream
+        //mageIO.write(image, "png", out); 						// write the image to Servlet Output stream
+        ImageIO.write(image, "png", this.getImageFile(imageName));	// write the image to File Output stream
         out.print("http://localhost:8084/ncWMS/screenshots/getScreenshot?img="+ imageName);
+
+        //*****Send the Image*****
+        /*
+        JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
+        encoder.encode(image);
+        */
 
         } finally {
             out.close();
         }
     }
 
-    private static BoundingBox getBoundingBox(String urlStr) throws MalformedURLException
-    {
-        URL url = new URL(urlStr);
-        for (String param : url.getQuery().split("&"))
-        {
-            if(param.toUpperCase().startsWith("BBOX"))
-            {
-                BoundingBox bbox = new BoundingBox();
-                String bbValues = param.substring(5); // to remove BBOX= from the start of the string
-                String[] bboxEls = bbValues.split(",");
-                bbox.minX = (float) Double.parseDouble(bboxEls[0]);
-                bbox.maxX = (float) Double.parseDouble(bboxEls[2]);
-                bbox.minY = (float) Double.parseDouble(bboxEls[1]);
-                bbox.maxY = (float) Double.parseDouble(bboxEls[3]);
-                return bbox;
-            }
-        }
-        throw new IllegalArgumentException(urlStr + " does not contain a bounding box");
-    }
-
-    private static StringBuffer buildURL(String url, String serverName) {
+    private StringBuffer buildURL(String url, String serverName, String type, BoundingBox bb) {
 
         String[] params = url.split("&");
         StringBuffer result = new StringBuffer();
         result.append(serverName);
         result.append("?");
         String separator = "&";
+        //out.println("");
+        //out.print("total parameters " + params.length);
         for (int i=0; i< params.length; i++){
+            //out.print("param " + i + "-" + params[i]);
+            //out.print("<br>");
+            if(params[i].startsWith("BBOX")){
+                String tempParam = params[i];
+                String bbValues = tempParam.substring(5); // to remove BBOX= from the start of the string
+                String [] bbox = bbValues.split(",");
+                if(type.equals("BG")==true){
+                    bb.minXValue = (float) Double.parseDouble(bbox[0]);
+                    bb.maxXValue = (float) Double.parseDouble(bbox[2]);
+                    bb.minYValue = (float) Double.parseDouble(bbox[1]);
+                    bb.maxYValue = (float) Double.parseDouble(bbox[3]);
+                }
+                for (int indx=0; indx< bbox.length; indx++){
+                    //out.print("bbox param " + indx + ": " + bbox[indx]);
+                }
+                continue;
+            }
+            if(params[i].startsWith("WIDTH") || params[i].startsWith("HEIGHT")){
+                continue;
+            }
+
             result.append(params[i]);
             result.append(separator);
         }
@@ -340,7 +386,7 @@ public class ScreenshotController extends MultiActionController
         log.debug("Called getScreenshot with params {}", request.getParameterMap());
         String imageName = request.getParameter("img");
         if (imageName == null) throw new Exception("Must give a screenshot image name");
-        File screenshotFile = new File(this.screenshotCache, imageName);
+        File screenshotFile = this.getImageFile(imageName);
         InputStream in = null;
         OutputStream out = null;
         try
@@ -369,6 +415,11 @@ public class ScreenshotController extends MultiActionController
             if (in != null) in.close();
             if (out != null) out.close();
         }
+    }
+
+    private File getImageFile(String imageName)
+    {
+        return new File(this.screenshotCache, imageName);
     }
 
     /**

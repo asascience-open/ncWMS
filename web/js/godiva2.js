@@ -1130,7 +1130,7 @@ function updateMap()
     
     var imageURL = ncwms.getURL(new OpenLayers.Bounds(bbox[0], bbox[1], bbox[2], bbox[3]));
     $('testImage').innerHTML = '<a target="_blank" href="' + imageURL + '">test image</a>';
-    //$('screenshot').style.visibility = 'visible'; // TODO: enable this when working properly
+    $('screenshot').style.visibility = 'visible'; // TODO: enable this when working properly
     setGEarthURL();
     setPermalinkURL();
 }
@@ -1357,7 +1357,7 @@ function loadScreenshot() {
          if (http_request.status == 200) {
 
             result = http_request.responseText;
-            popUp(result, 800, 500);
+            popUp(result, 800, 550);
             //alert(result);
             //document.getElementById('screenshot').innerHTML = result;
          } else {
