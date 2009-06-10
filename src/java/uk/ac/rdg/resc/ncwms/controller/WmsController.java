@@ -65,6 +65,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionPoint;
+import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
@@ -244,7 +245,7 @@ public class WmsController extends AbstractController
             }
             else if (request.equals("GetTransect"))
             {
-                return getTransect(params, httpServletResponse);
+                return getTransect(params, httpServletResponse, usageLogEntry);
             }
             else
             {
@@ -594,22 +595,22 @@ public class WmsController extends AbstractController
      * This List will have a single element if the variable is scalar, or two
      * elements if the variable is a vector
      */
-    static List<float[]> readData(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid, TileCache tileCache, UsageLogEntry usageLogEntry)
+    static List<float[]> readData(Layer layer, int tIndexInLayer, int zIndex,
+        PointList pointList, TileCache tileCache, UsageLogEntry usageLogEntry)
         throws Exception
     {
         List<float[]> picData = new ArrayList<float[]>();
         if (layer instanceof VectorLayer)
         {
             VectorLayer vecLayer = (VectorLayer)layer;
-            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndex,
-                zIndex, grid, tileCache, usageLogEntry));
-            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndex,
-                zIndex, grid, tileCache, usageLogEntry));
+            picData.add(readDataArray(vecLayer.getEastwardComponent(), tIndexInLayer,
+                zIndex, pointList, tileCache, usageLogEntry));
+            picData.add(readDataArray(vecLayer.getNorthwardComponent(), tIndexInLayer,
+                zIndex, pointList, tileCache, usageLogEntry));
         }
         else
         {
-            picData.add(readDataArray(layer, tIndex, zIndex, grid, tileCache,
+            picData.add(readDataArray(layer, tIndexInLayer, zIndex, pointList, tileCache,
                 usageLogEntry));
         }
         return picData;
@@ -621,56 +622,36 @@ public class WmsController extends AbstractController
      * about the usage of this WMS (may be null, e.g. if this is being called
      * from the MetadataLoader).
      */
-    private static float[] readDataArray(Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid, TileCache tileCache, UsageLogEntry usageLogEntry)
+    private static float[] readDataArray(Layer layer, int tIndexInLayer, int zIndex,
+        PointList pointList, TileCache tileCache, UsageLogEntry usageLogEntry)
         throws Exception
     {
         // Get a DataReader object for reading the data
         Dataset ds = layer.getDataset();
-        String location = layer.getDataset().getLocation();
         DataReader dr = DataReader.forDataset(ds);
         log.debug("Got data reader of type {}", dr.getClass().getName());
         
         // See exactly which file we're reading from, and which time index in 
         // the file (handles datasets with glob aggregation)
-        String filename;
-        int tIndexInFile;
-        if (tIndex >= 0)
-        {
-            TimestepInfo tInfo = layer.getTimesteps().get(tIndex);
-            filename = tInfo.getFilename();
-            tIndexInFile = tInfo.getIndexInFile();
-        }
-        else
-        {
-            // There is no time axis.  If this is a glob aggregation we must make
-            // sure that we use a valid filename, so we pick the first file
-            // in the aggregation.  (If this is not a glob aggregation then this
-            // should still work.)  If we don't do the glob expansion then we
-            // might end up passing an invalid filename such as "/path/to/*.nc"
-            // to DataReader.read().
-            filename = WmsUtils.isOpendapLocation(location)
-                ? location // If this is an OPeNDAP location we don't want to do the glob expansion
-                : ds.getFiles().get(0);
-            tIndexInFile = tIndex;
-        }
+        FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
         float[] data = null;
         TileCacheKey key = null;
-        if (tileCache != null)
+        if (tileCache != null && pointList instanceof HorizontalGrid)
         {
             // Check the cache to see if we've already extracted this data
             // The TileCacheKey class stores different information depending
             // on whether the file in question is a local file, an OPeNDAP
             // endpoint or an NcML aggregation (see the Javadoc for the TileCache
             // class)
-            key = new TileCacheKey(filename, layer, grid, tIndexInFile, zIndex);
+            key = new TileCacheKey(ft.filename, layer, (HorizontalGrid)pointList,
+                ft.tIndexInFile, zIndex);
             // Try to get the data from cache
             data = tileCache.get(key);
         }
         if (data == null)
         {
             // Data not found in cache or cache not present
-            data = dr.read(filename, layer, tIndexInFile, zIndex, grid);
+            data = dr.read(ft.filename, layer, ft.tIndexInFile, zIndex, pointList);
             // Put the data into the cache
             if (tileCache != null) tileCache.put(key, data);
             if (usageLogEntry != null) usageLogEntry.setUsedCache(false);
@@ -750,30 +731,23 @@ public class WmsController extends AbstractController
         // Now read the data, mapping date-times to data values
         // The map is sorted in order of ascending time
         SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
-        for (int tIndex : tIndices)
+        for (int tIndexInLayer : tIndices)
         {
-            DateTime dateTime = tIndex < 0 ? null : layer.getTimesteps().get(tIndex).getDateTime();
+            DateTime dateTime = tIndexInLayer < 0 ? null : layer.getTimesteps().get(tIndexInLayer).getDateTime();
             
             // Create a trivial Grid for reading a single point of data.
             // We use the same coordinate reference system as the original request
-            HorizontalGrid singlePointGrid = new HorizontalGrid(dataRequest.getCrsCode(),
-                1, 1, new double[]{x, y, x, y});
+            PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
+                grid.getCrsHelper());
             
-            float val;
-            // We don't use the tile cache for getFeatureInfo
-            if (layer instanceof VectorLayer)
+            // We don't use the tile cache for reading single points
+            List<float[]> data = readData(layer, tIndexInLayer, zIndex, singlePoint,
+                null, usageLogEntry);
+            float val = data.get(0)[0];
+            if (data.size() > 1)
             {
-                VectorLayer vecLayer = (VectorLayer)layer;
-                float xval = readDataArray(vecLayer.getEastwardComponent(), tIndex,
-                    zIndex, singlePointGrid, null, usageLogEntry)[0];
-                float yval = readDataArray(vecLayer.getNorthwardComponent(), tIndex,
-                    zIndex, singlePointGrid, null, usageLogEntry)[0];
-                val = (float)Math.sqrt(xval * xval + yval * yval);
-            }
-            else
-            {
-                val = readDataArray(layer, tIndex, zIndex, singlePointGrid, null,
-                    usageLogEntry)[0];
+                float val2 = data.get(1)[0];
+                val = (float)Math.sqrt(val*val + val2*val2);
             }
             featureData.put(dateTime, Float.isNaN(val) ? null : val);
         }
@@ -1021,8 +995,8 @@ public class WmsController extends AbstractController
      * XML format.
      * @todo this method is too long, refactor!
      */
-    private ModelAndView getTransect(RequestParams params, HttpServletResponse response)
-            throws Exception {
+    private ModelAndView getTransect(RequestParams params, HttpServletResponse response,
+        UsageLogEntry usageLogEntry) throws Exception {
 
         // Parse the request parameters
         String layerStr = params.getMandatoryString("layer");
@@ -1038,6 +1012,9 @@ public class WmsController extends AbstractController
             throw new InvalidFormatException(outputFormat);
         }
 
+        usageLogEntry.setLayer(layer);
+        usageLogEntry.setOutputFormat(outputFormat);
+
         final CrsHelper crsHelper = CrsHelper.fromCrsCode(crsCode);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
@@ -1051,13 +1028,19 @@ public class WmsController extends AbstractController
         // Create a PointSource wrapper around the interpolated points
         PointList pointList = PointList.fromList(points, crsHelper);
 
-        // Read the data from the data source
-        DataReader dr = DataReader.forDataset(layer.getDataset());
-        // Find the exact file we need and the t index within the file
-        FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
-        // TODO: doesn't work for vector layers!
-        // Read data.  We'll get one data point for each point in the pointList
-        float[] data = dr.read(ft.filename, layer, ft.tIndexInFile, zIndex, pointList);
+        // Read the data from the data source, without using the tile cache
+        List<float[]> dataList = readData(layer, tIndexInLayer, zIndex, pointList,
+            null, usageLogEntry);
+        float[] data = dataList.get(0);
+        if (dataList.size() > 1)
+        {
+            float[] data2 = dataList.get(1);
+            // This is a vector layer: calculate the magnitude
+            for (int i = 0; i < data.length; i++)
+            {
+                data[i] = (float)Math.sqrt(data[i]*data[i] + data2[i]*data2[i]);
+            }
+        }
         log.debug("Transect: Got {} dataValues", data.length);
 
         // Prepare and output the JFreeChart

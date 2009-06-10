@@ -85,14 +85,14 @@ public final class LineString {
         // up to each waypoint
         this.controlPointDistances = new double[this.controlPoints.size()];
         this.pathLength = 0.0;
-        controlPointDistances[0] = pathLength;
+        this.controlPointDistances[0] = this.pathLength;
         for (int i = 1; i < this.controlPoints.size(); i++) {
             ProjectionPoint p1 = this.controlPoints.get(i - 1);
             ProjectionPoint p2 = this.controlPoints.get(i);
             double dx = p2.getX() - p1.getX();
             double dy = p2.getY() - p1.getY();
             this.pathLength += Math.sqrt(dx * dx + dy * dy);
-            controlPointDistances[i] = pathLength;
+            this.controlPointDistances[i] = this.pathLength;
         }
     }
 
@@ -102,6 +102,22 @@ public final class LineString {
      */
     public List<ProjectionPoint> getControlPoints() {
         return this.controlPoints;
+    }
+
+    /**
+     * Returns the fractional distance along the line string to the control
+     * point with the given index.
+     * @index The index of the control point.  An index of zero represents the
+     * start of the line string.
+     * @return the fractional distance along the whole line string to the
+     * control point
+     * @throws IndexOutOfBoundsException if {@code index < 0 || index >= number of control points}
+     */
+    public double getFractionalControlPointDistance(int index) {
+        if (index < 0 || index >= this.controlPointDistances.length) {
+            throw new IndexOutOfBoundsException();
+        }
+        return this.controlPointDistances[index] / this.pathLength;
     }
 
     /**
