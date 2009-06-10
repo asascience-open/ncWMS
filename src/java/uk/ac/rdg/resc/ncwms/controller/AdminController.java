@@ -79,6 +79,27 @@ public class AdminController extends MultiActionController
     public ModelAndView displayErrorPage(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
+        return new ModelAndView("admin_error", "dataset", this.getDataset(request));
+    }
+
+    /**
+     * Displays information about the progress of loading a particular dataset
+     */
+    public ModelAndView displayLoadingPage(HttpServletRequest request,
+        HttpServletResponse response) throws Exception
+    {
+        return new ModelAndView("admin_loading", "dataset", this.getDataset(request));
+    }
+
+    /**
+     * Gets the Dataset that is specified in the given request
+     * @param request Request object, must contain a "dataset" parameter
+     * @return The requested {@link Dataset}
+     * @throws Exception if the request does not contain a dataset id, or if
+     * the provided dataset id does not exist
+     */
+    private Dataset getDataset(HttpServletRequest request) throws Exception
+    {
         // Get the dataset id
         String datasetId = request.getParameter("dataset");
         if (datasetId == null)
@@ -90,7 +111,7 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("There is no dataset with id " + datasetId);
         }
-        return new ModelAndView("admin_error", "dataset", dataset);
+        return dataset;
     }
     
     /**

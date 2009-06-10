@@ -60,7 +60,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                                 <a target="_blank" href="error.jsp?dataset=${dataset.value.id}">${dataset.value.state}</a>
                             </c:when>
                             <c:otherwise>
-                                ${dataset.value.state}
+                                <c:choose>
+                                    <c:when test="${dataset.value.loading}">
+                                        <a target="_blank" href="loading.jsp?dataset=${dataset.value.id}">${dataset.value.state}</a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        ${dataset.value.state}
+                                    </c:otherwise>
+                                </c:choose>
                             </c:otherwise>
                         </c:choose>
                     </td>
