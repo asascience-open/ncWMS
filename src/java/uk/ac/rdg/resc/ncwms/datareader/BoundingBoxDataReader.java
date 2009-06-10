@@ -62,7 +62,7 @@ public class BoundingBoxDataReader extends DefaultDataReader
      */
     @Override
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
+        PixelMap pixelMap, GridDatatype grid) throws Exception
     {
         // Read the whole chunk of x-y data
         Range xRange = new Range(pixelMap.getMinIIndex(), pixelMap.getMaxIIndex());
@@ -79,6 +79,8 @@ public class BoundingBoxDataReader extends DefaultDataReader
         logger.debug("Read data using bounding box algorithm in {} milliseconds", (readData - start));
 
         // Now create the picture from the data array
+        // Get a VariableDS for unpacking and checking for missing data
+        VariableDS var = grid.getVariable();
         Index index = xySlice.getIndex(); // 2D index in y,x order
         for (int j : pixelMap.getJIndices())
         {

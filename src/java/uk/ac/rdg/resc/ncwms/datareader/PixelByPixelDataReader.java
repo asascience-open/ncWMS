@@ -56,9 +56,11 @@ public class PixelByPixelDataReader extends DefaultDataReader
      */
     @Override
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
+        PixelMap pixelMap, GridDatatype grid) throws Exception
     {
         long start = System.currentTimeMillis();
+        // Get a VariableDS for unpacking and checking for missing data
+        VariableDS var = grid.getVariable();
 
         // Now create the picture from the data array
         for (int j : pixelMap.getJIndices())

@@ -146,11 +146,8 @@ public class DefaultDataReader extends DataReader
             
             // Read the data from the dataset
             long before = System.currentTimeMillis();
-            // Get an enhanced variable for doing the conversion of missing
-            // values
-            VariableDS var = (VariableDS)nc.findVariable(layer.getId());
             // The actual reading of data from the variable is done here
-            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData, var);
+            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData);
             long after = System.currentTimeMillis();
             // Write to the benchmark logger (if enabled in log4j.properties)
             // Headings are written in NcwmsContext.init()
@@ -199,11 +196,13 @@ public class DefaultDataReader extends DataReader
      * @see PixelMap
      */
     protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid, VariableDS var) throws Exception
+        PixelMap pixelMap, GridDatatype grid) throws Exception
     {
         // Cycle through the y indices, extracting a scanline of
         // data each time from minX to maxX
         logger.debug("Shape of grid: {}", Arrays.toString(grid.getShape()));
+        // Get a VariableDS for unpacking and checking for missing data
+        VariableDS var = grid.getVariable();
         for (int j : pixelMap.getJIndices())
         {
             Range yRange = new Range(j, j);
