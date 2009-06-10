@@ -66,7 +66,6 @@ final class RtreeWrapper
     // This RtreeWrapper will only be used within a single thread so it's
     // OK to share this callback object
     private final Callback callback = new Callback();
-    private float cachedEstimatedFurthestDistance = Float.NaN;
     // The radius of the largest Cell in this RTree, calculated by
     // getBoundingRadius.  Used as the furthestDistance parameter in RTree searches
     private double largestCellRadius = 0.0;
@@ -143,9 +142,6 @@ final class RtreeWrapper
         this.cells.add(cell);
         // See if this cell has the largest radius
         this.largestCellRadius = Math.max(this.largestCellRadius, this.getBoundingRadius(cell));
-
-        // Record that the furthestDistance parameter must be re-estimated
-        this.cachedEstimatedFurthestDistance = Float.NaN;
     }
 
     /**
@@ -178,32 +174,6 @@ final class RtreeWrapper
     }
 
     /**
-     * Gets a rectangle that bounds the given cell in this RTree's CRS.
-     * @param cell
-     * @return
-     */
-    private Rectangle getBoundingRectangle(Cell cell) throws TransformException
-    {
-        List<LatLonPoint> corners = cell.getCorners();
-        // Get the coordinates of the first corner
-        double[] coords = this.lonLatToCrs(corners.get(0));
-        double minX = coords[0];
-        double minY = coords[1];
-        double maxX = coords[0];
-        double maxY = coords[1];
-        // Now look at the other corners
-        for (int i = 1; i < 4; i++)
-        {
-            coords = this.lonLatToCrs(corners.get(i));
-            minX = Math.min(minX, coords[0]);
-            minY = Math.min(minY, coords[1]);
-            maxX = Math.max(maxX, coords[0]);
-            maxY = Math.max(maxY, coords[1]);
-        }
-        return new Rectangle((float)minX, (float)minY, (float)maxX, (float)maxY);
-    }
-
-    /**
      * Finds the grid cell that contains the given longitude-latitude point,
      * or null if no cell contains the point.
      * @param longitude The longitude of the point to find
@@ -221,7 +191,9 @@ final class RtreeWrapper
         Point point = new Point((float)coords[0], (float)coords[1]);
         // Find the nearest-neighbour index in this RTree
         this.callback.nearest = -1;
-        this.rTree.nearest(point, callback, (float)this.largestCellRadius);
+        // We use the largest cell radius as the "furthestDistance" parameter
+        // in the RTree search, adding 10% as a margin of safety.
+        this.rTree.nearest(point, callback, (float)(this.largestCellRadius * 1.1));
         // See if we got a hit
         if (this.callback.nearest >= 0)
         {
@@ -269,38 +241,5 @@ final class RtreeWrapper
     private double[] lonLatToCrs(LatLonPoint llp) throws TransformException
     {
         return this.lonLatToCrs(llp.getLongitude(), llp.getLatitude());
-    }
-
-    /**
-     * Calculates and returns an estimate of an appropriate "furthest distance"
-     * parameter for this RTree.
-     * When querying an {@link RTree}, we need to provide a "furthest distance"
-     * parameter that defines the search radius around the point of interest.
-     * This value must be carefully chosen: too small a value will result
-     * in points being missed, whereas too large a value will lead to very
-     * slow search times.
-     * @return An esimate of an appropriate value of the "furthest distance"
-     * parameter for this RTree, based upon the geographic extent of the points
-     * in the RTree and the number of points therein.  The accuracy of this
-     * estimate is contingent upon the points in the domain being
-     * reasonably evenly spaced.
-     */
-    private float estimateFurthestDistance()
-    {
-        if (Float.isNaN(this.cachedEstimatedFurthestDistance))
-        {
-            // Must recalculate the furthestDistanceParameter
-            // First calculate the area covered by the points in the RTree in
-            // the RTree's coordinate system
-            float area = this.rTree.getBounds().area();
-            // Calculate the average area covered by each point in the RTree
-            // TODO: watch for division by zero
-            float averagePointSize = area / this.rTree.size();
-            // The square root of this point size gives an underestimate of the
-            // required "furthest distance": we double this value to be safe.
-            // TODO: might need to triple or quadruple the value.
-            this.cachedEstimatedFurthestDistance = (float)(2.0 * Math.sqrt(averagePointSize));
-        }
-        return this.cachedEstimatedFurthestDistance;
     }
 }
