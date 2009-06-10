@@ -61,8 +61,8 @@ public final class LutCacheKey implements Serializable
     // The following fields are not serialized as they contain redundant information
     // These define the look-up table itself: the lat-lon bounding box and the
     // number of points in each direction.
-    private transient double lonMin; // TODO these are redundant and could be calculated from the
-    private transient double lonMax; // lon and lat arrays
+    private transient double lonMin;
+    private transient double lonMax;
     private transient double latMin;
     private transient double latMax;
     private transient int nLon;
@@ -142,6 +142,7 @@ public final class LutCacheKey implements Serializable
      */
     private void populateTransientFields()
     {
+        // Set the min and max longitude and latitudes
         this.setLutBoundingBox();
 
         // Now calculate the number of points in the LUT along the longitude
