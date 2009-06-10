@@ -34,11 +34,13 @@ import java.util.List;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionImpl;
+import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.Style;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
@@ -566,5 +568,43 @@ public class LayerImpl implements Layer
     private Variable getVariable()
     {
         return this.dataset.getVariables().get(this.id);
+    }
+
+    public void setHorizontalProjection(ProjectionImpl proj)
+    {
+        this.horizProj = HorizontalProjection.create(proj);
+    }
+
+    public int[] latLonToGrid(LatLonPoint latLon)
+    {
+        // Translate this lat-lon point to a point in the data's projection coordinates
+        ProjectionPoint projPoint = this.horizProj.latLonToProj(latLon);
+        // Translate the projection point to grid point indices i, j
+        int i, j;
+        if (this.xaxis instanceof OneDCoordAxis && this.yaxis instanceof OneDCoordAxis)
+        {
+            OneDCoordAxis xAxis1D = (OneDCoordAxis)this.xaxis;
+            OneDCoordAxis yAxis1D = (OneDCoordAxis)this.yaxis;
+            i = xAxis1D.getIndex(projPoint.getX());
+            j = yAxis1D.getIndex(projPoint.getY());
+        }
+        else if (this.xaxis instanceof TwoDCoordAxis && this.yaxis instanceof TwoDCoordAxis)
+        {
+            TwoDCoordAxis xAxis2D = (TwoDCoordAxis)this.xaxis;
+            TwoDCoordAxis yAxis2D = (TwoDCoordAxis)this.yaxis;
+            i = xAxis2D.getIndex(projPoint);
+            j = yAxis2D.getIndex(projPoint);
+        }
+        else
+        {
+            // Shouldn't happen
+            throw new IllegalStateException("x and y axes are of different types!");
+        }
+        return new int[]{i, j};
+    }
+
+    public boolean isLatLon()
+    {
+        return this.horizProj.isLatLon();
     }
 }

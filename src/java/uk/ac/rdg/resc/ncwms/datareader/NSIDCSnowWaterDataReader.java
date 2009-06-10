@@ -42,12 +42,16 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
- * DataReader for NSIDC snow/water data
+ * DataReader for NSIDC snow/water data.  This is an example of how to create
+ * a DataReader for files that can't be read by the Java-NetCDF libararies.
+ * Another alternative method would be to create an IO Service Provider for
+ * this dataset.
  *
  * @author Jon Blower
  * $Revision$
@@ -119,28 +123,29 @@ public class NSIDCSnowWaterDataReader extends DataReader
     }
     
     /**
-     * Reads an array of data from a NetCDF file and projects onto a rectangular
-     * lat-lon grid.  Reads data for a single timestep only.  This method knows
-     * nothing about aggregation: it simply reads data from the given file. 
+     * Reads data from a file.  Reads data for a single timestep only.
+     * This method knows
+     * nothing about aggregation: it simply reads data from the given file.
      * Missing values (e.g. land pixels in oceanography data) will be represented
      * by Float.NaN.
-     * 
-     * @param filename Full path to the individual file containing the data
+     *
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
      * @param layer {@link Layer} object representing the variable
-     * @param tIndex The index along the time axis (or -1 if there is no time axis).
-     * This is ignored in this class as there is only one timestep per file.
+     * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param grid The grid onto which the data are to be read
+     * @param pointList The list of real-world x-y points for which we need data
+     * @return an array of floating-point data values, one for each point in
+     * the {@code pointList}, in the same order.
      * @throws Exception if an error occurs
      */
-    public float[] read(String filename, Layer layer, int tIndex, int zIndex, HorizontalGrid grid)
+    public float[] read(String filename, Layer layer, int tIndex, int zIndex, PointList pointList)
         throws Exception
     {
         // Find the file containing the data
         logger.debug("Reading data from " + filename);
         
         // Create an array to hold the data
-        float[] picData = new float[grid.getSize()];
+        float[] picData = new float[pointList.size()];
         Arrays.fill(picData, Float.NaN);
         
         FileInputStream fin = null;
@@ -160,21 +165,18 @@ public class NSIDCSnowWaterDataReader extends DataReader
         }
         
         int picIndex = 0;
-        for (double y : grid.getYAxisValues())
+        for (ProjectionPoint point : pointList.asList())
         {
-            for (double x: grid.getXAxisValues())
+            LatLonPoint latLon = pointList.getCrsHelper().crsToLatLon(point);
+            if (latLon.getLatitude() >= 0.0 && latLon.getLatitude() <= 90.0)
             {
-                LatLonPoint latLon = grid.transformToLatLon(x, y);
-                if (latLon.getLatitude() >= 0.0 && latLon.getLatitude() <= 90.0)
-                {
-                    // Find the index in the source data
-                    int dataIndex = latLonToIndex(latLon.getLatitude(), latLon.getLongitude());
-                    // two bytes per pixel
-                    short val = data.getShort(dataIndex * 2);
-                    if (val > 0) picData[picIndex] = val;
-                }
-                picIndex++;
+                // Find the index in the source data
+                int dataIndex = latLonToIndex(latLon.getLatitude(), latLon.getLongitude());
+                // two bytes per pixel
+                short val = data.getShort(dataIndex * 2);
+                if (val > 0) picData[picIndex] = val;
             }
+            picIndex++;
         }
         
         return picData;

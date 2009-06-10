@@ -62,7 +62,6 @@ import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.lut.LutCoordAxis;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -78,27 +77,29 @@ public class DefaultDataReader extends DataReader
     private static final Logger logger = LoggerFactory.getLogger(DefaultDataReader.class);
     // We'll use this logger to output performance information
     private static final Logger benchmarkLogger = LoggerFactory.getLogger("ncwms.benchmark");
-    
+
     /**
-     * <p>Reads an array of data from a NetCDF file and projects onto the given
-     * {@link HorizontalGrid}.  Reads data for a single timestep and elevation only.
+     * Reads data from a NetCDF file.  Reads data for a single timestep only.
      * This method knows
-     * nothing about aggregation: it simply reads data from the given file. 
-     * Missing values (e.g. land pixels in marine data) will be represented
-     * by Float.NaN.</p>
+     * nothing about aggregation: it simply reads data from the given file.
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by Float.NaN.
      *
      * <p>The actual reading of data is performed in {@link #populatePixelArray
      * populatePixelArray()}</p>
-     * 
+     *
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
-     * @param layer {@link Layer} object representing the variable to read
+     * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param grid The grid onto which the data are to be read
+     * @param pointList The list of real-world x-y points for which we need data.
+     * In the case of a GetMap operation this will usually be a {@link HorizontalGrid}.
+     * @return an array of floating-point data values, one for each point in
+     * the {@code pointList}, in the same order.
      * @throws Exception if an error occurs
      */
     public float[] read(String filename, Layer layer, int tIndex, int zIndex,
-        HorizontalGrid grid) throws Exception
+        PointList pointList) throws Exception
     {
         NetcdfDataset nc = null;
         try
@@ -114,11 +115,11 @@ public class DefaultDataReader extends DataReader
             Range zRange = new Range(zIndex, zIndex);
             
             // Create an array to hold the data
-            float[] picData = new float[grid.getSize()];
+            float[] picData = new float[pointList.size()];
             // Use NaNs to represent missing data
             Arrays.fill(picData, Float.NaN);
             
-            PixelMap pixelMap = new PixelMap(layer, grid);
+            PixelMap pixelMap = new PixelMap(layer, pointList);
             if (pixelMap.isEmpty()) return picData;
             
             long readMetadata = System.currentTimeMillis();
@@ -129,7 +130,7 @@ public class DefaultDataReader extends DataReader
                 null, // Use the default factory
                 filename,
                 // Read the coordinate systems but don't automatically process
-                // scale/missing.offset when reading data, for efficiency reasons
+                // scale/missing/offset when reading data, for efficiency reasons
                 EnumSet.of(Enhance.ScaleMissingDefer, Enhance.CoordSystems),
                 -1, // use default buffer size
                 null, // no CancelTask
@@ -159,7 +160,7 @@ public class DefaultDataReader extends DataReader
                     layer.getDataset().getId() + "," +
                     layer.getId() + "," +
                     this.getClass().getSimpleName() + "," +
-                    grid.getSize() + "," +
+                    pointList.size() + "," +
                     pixelMap.getNumUniqueIJPairs() + "," +
                     pixelMap.getSumRowLengths() + "," +
                     pixelMap.getBoundingBoxSize() + "," +
@@ -301,7 +302,6 @@ public class DefaultDataReader extends DataReader
                     logger.debug("Creating coordinate system objects");
                     CoordAxis xAxis = this.getXAxis(coordSys);
                     CoordAxis yAxis = this.getYAxis(coordSys);
-                    HorizontalProjection proj = HorizontalProjection.create(coordSys.getProjection());
                     
                     boolean zPositive = this.isZPositive(coordSys);
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
@@ -341,7 +341,7 @@ public class DefaultDataReader extends DataReader
                         layer.setUnits(grid.getUnitsString());
                         layer.setXaxis(xAxis);
                         layer.setYaxis(yAxis);
-                        layer.setHorizontalProjection(proj);
+                        layer.setHorizontalProjection(coordSys.getProjection());
                         layer.setBbox(bbox);
 
                         if (zAxis != null)

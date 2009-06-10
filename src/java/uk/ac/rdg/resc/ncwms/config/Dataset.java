@@ -28,11 +28,14 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.oro.io.GlobFilenameFilter;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +46,7 @@ import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * A dataset Java bean: contains a number of Layer objects.
@@ -418,5 +422,97 @@ public class Dataset
         var.setDataset(this);
         this.variableList.add(var);
         this.variables.put(var.getId(), var);
+    }
+
+    /**
+     * Gets a List of the files that comprise this dataset; if this dataset's
+     * location is a glob expression, this will be expanded.  This method
+     * recursively searches directories, allowing for glob expressions like
+     * {@code "c:\\data\\200[6-7]\\*\\1*\\A*.nc"}.  If this dataset's location
+     * is not a glob expression, this method will return a single-element list
+     * containing the dataset's {@link #getLocation() location}.
+     * @return a list of the full paths to files that comprise this dataset,
+     * or a single-element list containing the dataset's location.
+     * @throws Exception if the glob expression does not represent an absolute
+     * path
+     * @author Mike Grant, Plymouth Marine Labs; Jon Blower
+     */
+    public List<String> getFiles() throws Exception
+    {
+        List<String> filePaths = new ArrayList<String>();
+        if (WmsUtils.isOpendapLocation(location))
+        {
+            filePaths.add(this.location);
+            return filePaths;
+        }
+        // Check that the glob expression is an absolute path.  Relative paths
+        // would cause unpredictable and platform-dependent behaviour so
+        // we disallow them.
+        // If ds.getLocation() is a glob expression this test will still work
+        // because we are not attempting to resolve the string to a real path.
+        File globFile = new File(this.location);
+        if (!globFile.isAbsolute())
+        {
+            throw new Exception("Dataset location must be an absolute path");
+        }
+
+        // Break glob pattern into path components.  To do this in a reliable
+        // and platform-independent way we use methods of the File class, rather
+        // than String.split().
+        List<String> pathComponents = new ArrayList<String>();
+        while (globFile != null)
+        {
+            // We "pop off" the last component of the glob pattern and place
+            // it in the first component of the pathComponents List.  We therefore
+            // ensure that the pathComponents end up in the right order.
+            File parent = globFile.getParentFile();
+            // For a top-level directory, getName() returns an empty string,
+            // hence we use getPath() in this case
+            String pathComponent = parent == null ? globFile.getPath() : globFile.getName();
+            pathComponents.add(0, pathComponent);
+            globFile = parent;
+        }
+
+        // We must have at least two path components: one directory and one
+        // filename or glob expression
+        List<File> searchPaths = new ArrayList<File>();
+        searchPaths.add(new File(pathComponents.get(0)));
+        int i = 1; // Index of the glob path component
+
+        while(i < pathComponents.size())
+        {
+            FilenameFilter globFilter = new GlobFilenameFilter(pathComponents.get(i));
+            List<File> newSearchPaths = new ArrayList<File>();
+            // Look for matches in all the current search paths
+            for (File dir : searchPaths)
+            {
+                if (dir.isDirectory())
+                {
+                    // Workaround for automounters that don't make filesystems
+                    // appear unless they're poked
+                    // do a listing on searchpath/pathcomponent whether or not
+                    // it exists, then discard the results
+                    new File(dir, pathComponents.get(i)).list();
+
+                    for (File match : dir.listFiles(globFilter))
+                    {
+                        newSearchPaths.add(match);
+                    }
+                }
+            }
+            // Next time we'll search based on these new matches and will use
+            // the next globComponent
+            searchPaths = newSearchPaths;
+            i++;
+        }
+
+        // Now we've done all our searching, we'll only retain the files from
+        // the list of search paths
+        for (File path : searchPaths)
+        {
+            if (path.isFile()) filePaths.add(path.getPath());
+        }
+
+        return filePaths;
     }
 }

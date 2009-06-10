@@ -30,9 +30,9 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.List;
 import org.joda.time.DateTime;
+import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
-import uk.ac.rdg.resc.ncwms.metadata.projection.HorizontalProjection;
 import uk.ac.rdg.resc.ncwms.styles.Style;
 
 /**
@@ -155,9 +155,18 @@ public interface Layer
     CoordAxis getYaxis();
 
     /**
-     * @return the projection for the data, as stored in the source files.
+     * @return the nearest grid point to the given lat-lon point, or null if the
+     * lat-lon point is not contained within this layer's domain. The grid point
+     * is given as a two-dimensional integer array: [i,j].
      */
-    HorizontalProjection getHorizontalProjection();
+    int[] latLonToGrid(LatLonPoint latLon);
+
+    /**
+     * @return true if this layer's grid is a lat-lon grid, {@literal i.e.}
+     * the {@link #getXaxis() x axis} is longitude and the {@link #getYaxis() y axis}
+     * is latitude.
+     */
+    public boolean isLatLon();
     
     String getZunits();
 

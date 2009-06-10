@@ -34,6 +34,8 @@ var paletteSelector = null; // Pop-up panel for selecting a new palette
 var paletteName = null; // Name of the currently-selected palette
 
 var popups = []; // Pop-ups (GetFeatureInfo results) shown on the map
+var editingToolbar; // Toolbar containing vector graphics editing controls (for drawing lines etc)
+
 
 var layersLoading = 0;
 var animationSelector = null; // Pop-up panel for selecting the time resolution of an animation
@@ -47,10 +49,42 @@ window.onload = function()
     $('scaleMin').value = '';
 
     // Stop the pink tiles appearing on error
-    OpenLayers.Util.onImageLoadError = function() {  this.style.display = ""; this.src="./images/blank.png"; }
-    
+    OpenLayers.Util.onImageLoadError = function() {  this.style.display = ""; this.src="./images/blank.png"; }// Set up a layer for drawing lines etc (for transects and sections)
+    var drawinglayer = new OpenLayers.Layer.Vector( "Drawing" );
+    drawinglayer.displayInLayerSwitcher = false;
+    drawinglayer.events.register('featureadded', drawinglayer, function(event) {
+        // Destroy previously-added line string
+        if (drawinglayer.features.length > 1) {
+            drawinglayer.destroyFeatures(drawinglayer.features[0]);
+        }
+        // Get the linestring specification
+        var line = event.feature.geometry.toString();
+        // we strip off the "LINESTRING(" and the trailing ")"
+        line = line.substring(11, line.length - 1);
+        // Load an image of the transect
+        var transectUrl = 'wms?REQUEST=GetTransect' +
+            '&LAYER=' + activeLayer.id +
+            '&CRS=' + map.baseLayer.projection.toString() +
+            '&ELEVATION=' + getZValue() +
+            '&TIME=' + isoTValue +
+            '&LINESTRING=' + line +
+            '&FORMAT=image/png';
+        popUp(transectUrl, 450, 350);
+    });
+
+    // Set up a control for drawing on the map
+    // We use CSS to hide the controls we're not using
+    editingToolbar = new OpenLayers.Control.EditingToolbar(drawinglayer);
+
     // Set up the OpenLayers map widget
-    map = new OpenLayers.Map('map');
+    map = new OpenLayers.Map( 'map', {
+        controls: [
+            new OpenLayers.Control.PanZoom(),
+            editingToolbar
+        ]
+    });
+    editingToolbar.div.style.visibility = 'hidden';
+
     map.fractionalZoom = true;
 
     // Set up the throbber (acts as progress indicator)
@@ -154,7 +188,7 @@ window.onload = function()
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);*/
     
-    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer/*, seazone_wms, essi_wms*/]);
+    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer, drawinglayer/*, seazone_wms, essi_wms*/]);
     
     map.setBaseLayer(demis_wms);
     projectionCode = map.baseLayer.projection.getCode();
@@ -613,6 +647,9 @@ function layerSelected(layerDetails)
     if (!scaleLocked && typeof layerDetails.logScaling != 'undefined') {
         $('scaleSpacing').value = layerDetails.logScaling ? 'logarithmic' : 'linear';
     }
+
+    // Make the editing toolbar visible
+    editingToolbar.div.style.visibility = 'visible';
 
     // Now set up the calendar control
     if (layerDetails.datesWithData == null) {

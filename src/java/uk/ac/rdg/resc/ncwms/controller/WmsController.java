@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
@@ -47,20 +48,32 @@ import org.slf4j.LoggerFactory;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.title.TextTitle;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.ui.HorizontalAlignment;
+import org.jfree.ui.RectangleEdge;
 import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 import ucar.unidata.geoloc.LatLonPoint;
+import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.datareader.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.datareader.LineString;
+import uk.ac.rdg.resc.ncwms.datareader.PointList;
 import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -228,6 +241,10 @@ public class WmsController extends AbstractController
                 // This is a request for a particular sub-region from Google Earth.
                 logUsage = false; // We don't log usage for this operation
                 return getKMLRegion(params, httpServletRequest);
+            }
+            else if (request.equals("GetTransect"))
+            {
+                return getTransect(params, httpServletResponse);
             }
             else
             {
@@ -537,6 +554,40 @@ public class WmsController extends AbstractController
 
         return null;
     }
+
+        /** Simple class to hold a filename and a time index in the file */
+    private static final class FilenameAndTindex
+    {
+        /** The filename */
+        private String filename;
+        /** The time index within this file */
+        private int tIndexInFile;
+    }
+
+    /**
+     * Given a layer and an index along the layer's time axis, this method
+     * returns the exact file and the time index within that file that must
+     * be read.
+     */
+    private static FilenameAndTindex getFilenameAndTindex(Layer layer, int tIndexInLayer) throws Exception
+    {
+        FilenameAndTindex ft = new FilenameAndTindex();
+        if (tIndexInLayer >= 0) {
+            TimestepInfo tInfo = layer.getTimesteps().get(tIndexInLayer);
+            ft.filename = tInfo.getFilename();
+            ft.tIndexInFile = tInfo.getIndexInFile();
+        } else {
+            // There is no time axis.  If this is a glob aggregation we must make
+            // sure that we use a valid filename, so we pick the first file
+            // in the aggregation.  (If this is not a glob aggregation then this
+            // should still work.)  If we don't do the glob expansion then we
+            // might end up passing an invalid filename such as "/path/to/*.nc"
+            // to DataReader.read().
+            ft.filename = layer.getDataset().getFiles().get(0);
+            ft.tIndexInFile = tIndexInLayer;
+        }
+        return ft;
+    }
     
     /**
      * Reads data from the given variable, returning a List of data arrays.
@@ -575,9 +626,9 @@ public class WmsController extends AbstractController
         throws Exception
     {
         // Get a DataReader object for reading the data
-        String dataReaderClass = layer.getDataset().getDataReaderClass();
+        Dataset ds = layer.getDataset();
         String location = layer.getDataset().getLocation();
-        DataReader dr = DataReader.getDataReader(dataReaderClass, location);
+        DataReader dr = DataReader.forDataset(ds);
         log.debug("Got data reader of type {}", dr.getClass().getName());
         
         // See exactly which file we're reading from, and which time index in 
@@ -600,7 +651,7 @@ public class WmsController extends AbstractController
             // to DataReader.read().
             filename = WmsUtils.isOpendapLocation(location)
                 ? location // If this is an OPeNDAP location we don't want to do the glob expansion
-                : WmsUtils.globFiles(location).get(0).getPath();
+                : ds.getFiles().get(0);
             tIndexInFile = tIndex;
         }
         float[] data = null;
@@ -686,7 +737,7 @@ public class WmsController extends AbstractController
         // Get the x and y values of the point of interest
         double x = grid.getXAxisValues()[dataRequest.getPixelColumn()];
         double y = grid.getYAxisValues()[dataRequest.getPixelRow()];
-        LatLonPoint latLon = grid.transformToLatLon(x, y);
+        LatLonPoint latLon = grid.getCrsHelper().crsToLatLon(x, y);
         usageLogEntry.setFeatureInfoLocation(latLon.getLongitude(), latLon.getLatitude());
         
         // Get the index along the z axis
@@ -964,6 +1015,110 @@ public class WmsController extends AbstractController
         models.put("regionDBoxes", regionDBoxes);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         return new ModelAndView("regionBasedOverlay", models);
+    }
+    /**
+     * Outputs a transect (data value versus distance along a path) in PNG or
+     * XML format.
+     * @todo this method is too long, refactor!
+     */
+    private ModelAndView getTransect(RequestParams params, HttpServletResponse response)
+            throws Exception {
+
+        // Parse the request parameters
+        String layerStr = params.getMandatoryString("layer");
+        Layer layer = this.metadataStore.getLayerByUniqueName(layerStr);
+        String crsCode = params.getMandatoryString("crs");
+        String lineString = params.getMandatoryString("linestring");
+        String outputFormat = params.getMandatoryString("format");
+        int tIndexInLayer = getTIndices(params.getString("time"), layer).get(0); // -1 if no t axis
+        int zIndex = getZIndex(params.getString("elevation"), layer); // -1 if no z axis
+
+        if (!outputFormat.equals(FEATURE_INFO_PNG_FORMAT)) {
+            // TODO: support XML format
+            throw new InvalidFormatException(outputFormat);
+        }
+
+        final CrsHelper crsHelper = CrsHelper.fromCrsCode(crsCode);
+
+        // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
+        final LineString transect = new LineString(lineString);
+        log.debug("Got {} control points", transect.getControlPoints().size());
+        // Create a list of points interpolated along this path
+        // No point in getting more points than we can display
+        final List<ProjectionPoint> points = transect.getPointsOnPath(100);
+        log.debug("Created {} points along the path", points.size());
+
+        // Create a PointSource wrapper around the interpolated points
+        PointList pointList = PointList.fromList(points, crsHelper);
+
+        // Read the data from the data source
+        DataReader dr = DataReader.forDataset(layer.getDataset());
+        // Find the exact file we need and the t index within the file
+        FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
+        // TODO: doesn't work for vector layers!
+        // Read data.  We'll get one data point for each point in the pointList
+        float[] data = dr.read(ft.filename, layer, ft.tIndexInFile, zIndex, pointList);
+        log.debug("Transect: Got {} dataValues", data.length);
+
+        // Prepare and output the JFreeChart
+        // TODO: this is nasty: we're mixing presentation code in the controller
+
+        //SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+
+        /*if (outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
+            Map<String, Object> models = new HashMap<String, Object>();
+            models.put("name", elements);
+            try {
+                models.put("date", df.parse(time));
+            } catch (ParseException ex) {
+                java.util.logging.Logger.getLogger(WmsController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            // This displays WEB-INF/jsp/transect_xml.jsp, passing in the data
+            return new ModelAndView("transect_xml", models);
+        } else {*/
+
+        //SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+        /*Date date = null;
+        try {
+            date = df.parse(time);
+        } catch (ParseException ex) {
+            java.util.logging.Logger.getLogger(WmsController.class.getName()).log(Level.SEVERE, null, ex);
+        }*/
+
+        XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
+        for (int i = 0; i < data.length; i++) {
+            series.add(i, data[i]);
+        }
+
+        XYSeriesCollection xySeriesColl = new XYSeriesCollection();
+        xySeriesColl.addSeries(series);
+
+        JFreeChart chart = ChartFactory.createXYLineChart(
+            "Transect for " + layer.getTitle(), // title
+            "transect distance", // TODO more meaningful x axis label
+            layer.getTitle() + " (" + layer.getUnits() + ")",
+            xySeriesColl,
+            PlotOrientation.VERTICAL,
+            false, // show legend
+            false, // show tooltips (?)
+            false // urls (?)
+        );
+
+        XYPlot plot = chart.getXYPlot();
+        plot.getRenderer().setSeriesPaint(0, Color.RED);
+        if(layer.getCopyrightStatement() != null) {
+            final TextTitle textTitle = new TextTitle(layer.getCopyrightStatement());
+            textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
+            textTitle.setPosition(RectangleEdge.BOTTOM);
+            textTitle.setHorizontalAlignment(HorizontalAlignment.RIGHT);
+            chart.addSubtitle(textTitle);
+        }
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+
+        rangeAxis.setAutoRangeIncludesZero(false);
+        plot.setNoDataMessage("There is no data for what you have chosen.");
+        ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
+        return null;
     }
     
     /**

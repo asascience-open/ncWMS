@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -60,19 +59,16 @@ public abstract class DataReader
     protected DataReader(){}
     
     /**
-     * Gets a DataReader object.  <b>Only one</b> object of each class will be
-     * created (hence methods have to be thread-safe).
-     * 
-     * @param className Name of the class to generate
-     * @param location the location of the dataset: used to detect OPeNDAP URLs
-     * @return a DataReader object of the given class, or {@link DefaultDataReader}
-     * or {@link BoundingBoxDataReader} (depending on whether the location starts with
-     * "http://" or "dods://") if <code>className</code> is null or the empty string
-     * @throws an Exception if the DataReader could not be created
+     * Gets a DataReader for the given dataset.  Note that DataReader objects
+     * may be shared among datasets.
+     * @param dataset The dataset for which the DataReader is to be retrieved
+     * @return a DataReader that can read data for the given layer
+     * @throws Exception if there was an error retrieving the layer
      */
-    public static DataReader getDataReader(String className, String location)
-        throws Exception
+    public static DataReader forDataset(Dataset ds) throws Exception
     {
+        String className = ds.getDataReaderClass();
+        String location = ds.getLocation();
         String clazz = DefaultDataReader.class.getName();
         if (WmsUtils.isOpendapLocation(location))
         {
@@ -95,8 +91,8 @@ public abstract class DataReader
     }
     
     /**
-     * Reads an array of data from a NetCDF file and projects onto the given
-     * {@link HorizontalGrid}.  Reads data for a single timestep only.  This method knows
+     * Reads data from a NetCDF file.  Reads data for a single timestep only.
+     * This method knows
      * nothing about aggregation: it simply reads data from the given file.
      * Missing values (e.g. land pixels in oceanography data) will be represented
      * by Float.NaN.
@@ -105,11 +101,13 @@ public abstract class DataReader
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param grid The grid onto which the data are to be read
+     * @param pointList The list of real-world x-y points for which we need data
+     * @return an array of floating-point data values, one for each point in
+     * the {@code pointList}, in the same order.
      * @throws Exception if an error occurs
      */
     public abstract float[] read(String filename, Layer layer,
-        int tIndex, int zIndex, HorizontalGrid grid)
+        int tIndex, int zIndex, PointList pointList)
         throws Exception;
     
     /**
@@ -133,10 +131,10 @@ public abstract class DataReader
         }
         else
         {
-            // Add all the matching filenames
-            for (File f : WmsUtils.globFiles(location))
+            // Add all the files in the dataset
+            for (String filename : dataset.getFiles())
             {
-                filenames.add(f.getPath());
+                filenames.add(filename);
             }
         }
         if (filenames.size() == 0)

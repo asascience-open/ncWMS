@@ -28,20 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.geotools.referencing.CRS;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.NoSuchAuthorityCodeException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.cs.CoordinateSystemAxis;
-import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import ucar.nc2.constants.AxisType;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
+import ucar.unidata.geoloc.ProjectionPoint;
+import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
@@ -55,49 +47,25 @@ import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
  * $Date$
  * $Log$
  */
-public class HorizontalGrid
+public class HorizontalGrid extends PointList
 {
     private static final Logger logger = LoggerFactory.getLogger(HorizontalGrid.class);
-    public static final String PLATE_CARREE_CRS_CODE = "CRS:84";
-    public static final CoordinateReferenceSystem PLATE_CARREE_CRS;
-    public static final List<String> SUPPORTED_CRS_CODES = new ArrayList<String>();
-    
+
     private int width;      // Width of the grid in pixels
     private int height;     // Height of the grid in pixels
     private double[] bbox;  // Array of four floats representing the bounding box
     private String crsCode; // String representing the CRS
-    private CoordinateReferenceSystem crs;
-    private MathTransform transformToLatLon;
-    private MathTransform latLonToCrs;
-    
+    private CrsHelper crsHelper;
+
     private double[] xAxisValues;
     private double[] yAxisValues;
-    
+
     private Regular1DCoordAxis gridXAxis;
     private Regular1DCoordAxis gridYAxis;
-    
-    static
-    {
-        // Find the supported CRS codes
-        // I think this is the appropriate method to get all the CRS codes
-        // that we can support
-        for (Object codeObj : CRS.getSupportedCodes("urn:ogc:def"))
-        {
-            SUPPORTED_CRS_CODES.add((String)codeObj);
-        }
-        try
-        {
-            PLATE_CARREE_CRS = CRS.decode(PLATE_CARREE_CRS_CODE, true); // force longitude-first
-        }
-        catch (Exception ex)
-        {
-            throw new ExceptionInInitializerError("Can't find CRS:84");
-        }
-    }
-    
+
     /**
      * Creates a HorizontalGrid from the parameters in the given GetMapDataRequest
-     * 
+     *
      * @throws InvalidCrsException if the given CRS code is not recognized
      * @throws Exception if there was an internal error.
      * @todo check validity of the bounding box?
@@ -106,10 +74,10 @@ public class HorizontalGrid
     {
         this(dr.getCrsCode(), dr.getWidth(), dr.getHeight(), dr.getBbox());
     }
-    
+
     /**
      * Creates a HorizontalGrid.
-     * 
+     *
      * @param crsCode Code for the CRS of the grid
      * @param width Width of the grid in pixels
      * @param height Height of the grid in pixels
@@ -121,46 +89,12 @@ public class HorizontalGrid
     public HorizontalGrid(String crsCode, int width, int height, double[] bbox)
         throws InvalidCrsException, Exception
     {
-        try
-        {
-            logger.debug("Getting CRS object for code {}", crsCode);
-            // The "true" means "force longitude-first axis order"
-            this.crs = CRS.decode(crsCode, true);
-            logger.debug("Finding transform for CRS {} to Plate Carree", crsCode);
-            // Get a converter to convert the grid's CRS to lat-lon
-            // The "true" means "lenient", i.e. ignore datum shifts.  This 
-            // is necessary to prevent "Bursa wolf parameters required"
-            // errors (Some CRSs, including British National Grid, fail if
-            // we are not "lenient".)
-            this.transformToLatLon = CRS.findMathTransform(
-                this.crs, PLATE_CARREE_CRS, true);
-            logger.debug("Found transform to Plate Carree");
-            logger.debug("Finding transform from Plate Carree to CRS {}", crsCode);
-            // Get a converter to convert lat-lon to the grid's CRS
-            // The "true" means "lenient", i.e. ignore datum shifts.  This 
-            // is necessary to prevent "Bursa wolf parameters required"
-            // errors (Some CRSs, including British National Grid, fail if
-            // we are not "lenient".)
-            this.latLonToCrs = CRS.findMathTransform(
-                PLATE_CARREE_CRS, this.crs, true);
-            logger.debug("Found transform from Plate Carree");
-        }
-        catch (NoSuchAuthorityCodeException ex)
-        {
-            logger.error("No CRS with code {} can be found", crsCode);
-            throw new InvalidCrsException(crsCode);
-        }
-        catch (FactoryException ex)
-        {
-            logger.error("FactoryException when creating CRS {} or its " +
-                "transform to Plate Carree", crsCode);
-            throw ex; // This is an internal error 
-        }
+        this.crsHelper = CrsHelper.fromCrsCode(crsCode);
         this.crsCode = crsCode;
         this.width = width;
         this.height = height;
         this.bbox = bbox;
-        
+
         // Now calculate the values along the x and y axes of this grid
         double dx = (this.bbox[2] - this.bbox[0]) / this.width;
         this.xAxisValues = new double[this.width];
@@ -169,8 +103,8 @@ public class HorizontalGrid
             this.xAxisValues[i] = this.bbox[0] + (i + 0.5) * dx;
         }
         this.gridXAxis = new Regular1DCoordAxis(this.bbox[0], dx, this.width,
-            this.isLatLon() ? AxisType.Lon : AxisType.GeoX);
-        
+            this.crsHelper.isLatLon() ? AxisType.Lon : AxisType.GeoX);
+
         double dy = (this.bbox[3] - this.bbox[1]) / this.height;
         this.yAxisValues = new double[this.height];
         for (int i = 0; i < this.yAxisValues.length; i++)
@@ -179,7 +113,7 @@ public class HorizontalGrid
             this.yAxisValues[i] = this.bbox[1] + (this.height - i - 0.5) * dy;
         }
         this.gridYAxis = new Regular1DCoordAxis(this.bbox[1], dy, this.height,
-            this.isLatLon() ? AxisType.Lat : AxisType.GeoY);
+            this.crsHelper.isLatLon() ? AxisType.Lat : AxisType.GeoY);
         logger.debug("Created HorizontalGrid object for CRS {}", crsCode);
     }
 
@@ -216,48 +150,11 @@ public class HorizontalGrid
         return this.yAxisValues;
     }
 
-    public CoordinateReferenceSystem getCoordinateReferenceSystem()
-    {
-        return this.crs;
-    }
-    
-    /**
-     * @return true if the given coordinate pair is valid for this CRS
-     */
-    public boolean isPointValidForCrs(double x, double y)
-    {
-        CoordinateSystemAxis xAxis = this.crs.getCoordinateSystem().getAxis(0);
-        CoordinateSystemAxis yAxis = this.crs.getCoordinateSystem().getAxis(1);
-        if (x < xAxis.getMinimumValue() || x > xAxis.getMaximumValue() ||
-            y < yAxis.getMinimumValue() || y > yAxis.getMaximumValue())
-        {
-            return false;
-        }
-        else
-        {
-            return true;
-        }
-    }
-
-    public int getSize()
+    public int size()
     {
         return this.width * this.height;
     }
-    
-    /**
-     * Transforms the given x-y point to a LatLonPoint.
-     * @throws TransformException if the required transformation could not be performed
-     */
-    public LatLonPoint transformToLatLon(double x, double y) throws TransformException
-    {
-        // We know x must go first in this array because we selected
-        // "force longitude-first" when creating the CRS for this grid
-        double[] point = new double[]{x, y};
-        // Transform to lat-lon in-place
-        this.transformToLatLon.transform(point, 0, point, 0, 1);
-        return new LatLonPointImpl(point[1], point[0]);
-    }
-    
+
     /**
      * Transforms the given lat-lon point to a coordinate pair {x,y} within
      * this grid.
@@ -265,33 +162,40 @@ public class HorizontalGrid
      * @return the coordinate pair, or null if this point is outside the grid.
      */
     public int[] latLonToGridCoords(double longitude, double latitude) throws TransformException {
-        double x, y;
-        if (this.isLatLon()) {
-            x = longitude;
-            y = latitude;
-        } else {
-            // Transform the lat-lon point into the CRS of this grid
-            double[] point = new double[]{longitude, latitude};
-            this.latLonToCrs.transform(point, 0, point, 0, 1);
-            x = point[0];
-            y = point[1];
-        }
-        int i = this.gridXAxis.getIndex(x);
-        int j = this.gridYAxis.getIndex(y);
+        ProjectionPoint crsPoint = this.crsHelper.latLonToCrs(longitude, latitude);
+        int i = this.gridXAxis.getIndex(crsPoint.getX());
+        int j = this.gridYAxis.getIndex(crsPoint.getY());
         if (i < 0 || j < 0) return null;
         else return new int[]{i,j};
     }
-    
+
     /**
-     * @return true if this grid is a lat-lon grid
+     * @return true if this is a lat-lon grid
      */
-    public final boolean isLatLon()
+    public boolean isLatLon()
     {
-        return this.transformToLatLon.isIdentity();
+        return this.crsHelper.isLatLon();
+    }
+
+    public CrsHelper getCrsHelper()
+    {
+        return this.crsHelper;
     }
 
     public String getCrsCode()
     {
-        return crsCode;
+        return this.crsCode;
+    }
+
+    /**
+     * Returns the ProjectionPoint at the given index in this PointList.  The
+     * index is such that the x axis in this grid varies fastest, i.e. index=0
+     * corresponds with x=0,y=0, and index=1 corresponds with x=1,y=0.
+     */
+    @Override
+    public ProjectionPoint getPoint(int index) {
+        int yi = index / this.xAxisValues.length;
+        int xi = index % this.xAxisValues.length;
+        return new ProjectionPointImpl(this.xAxisValues[xi], this.yAxisValues[yi]);
     }
 }

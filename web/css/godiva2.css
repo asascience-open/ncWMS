@@ -209,3 +209,17 @@ input.scaleMin {
     background-position:center;
     background-repeat:no-repeat;
 }
+
+/* Hide the controls on the editing panel that we're not using */
+.olControlDrawFeaturePointItemInactive {
+    visibility: hidden;
+}
+.olControlDrawFeaturePointItemActive {
+    visibility: hidden;
+}
+.olControlDrawFeaturePolygonItemInactive {
+    visibility: hidden;
+}
+.olControlDrawFeaturePolygonItemActive {
+    visibility: hidden;
+}

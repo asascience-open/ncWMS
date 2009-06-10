@@ -154,7 +154,7 @@ public class MetadataLoader
         {
             // Get a DataReader object of the correct type
             logger.debug("Getting data reader of type {}", ds.getDataReaderClass());
-            DataReader dr = DataReader.getDataReader(ds.getDataReaderClass(), ds.getLocation());
+            DataReader dr = DataReader.forDataset(ds);
             // Look for OPeNDAP datasets and update the credentials provider accordingly
             this.updateCredentialsProvider(ds);
             // Read the metadata
