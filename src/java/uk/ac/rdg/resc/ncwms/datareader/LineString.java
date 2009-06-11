@@ -48,19 +48,27 @@ public final class LineString {
     private final List<ProjectionPoint> controlPoints;
     private final transient double[] controlPointDistances;
     private double pathLength;
+    private CrsHelper crsHelper;
 
     /**
      * Constructs a {@link LineString} from a line string in the form.
      * @param lineStringSpec the line string as specified in the form
      * "x1 y1, x2 y2, x3 y3".
+     * @param crsHelper The coordinate reference system for the line string's
+     * coordinates (wrapped in a helper object)
      * @throws InvalidLineStringException if the line string is not correctly
      * specified.
+     * @throws NullPointerException if crsHelper == null
      */
-    public LineString(String lineStringSpec) throws InvalidLineStringException {
+    public LineString(String lineStringSpec, CrsHelper crsHelper) throws InvalidLineStringException {
         String[] pointsStr = lineStringSpec.split(",");
         if (pointsStr.length < 2) {
             throw new InvalidLineStringException("At least two points are required to generate a transect");
         }
+        if (crsHelper == null) {
+            throw new NullPointerException("CrsHelper cannot be null");
+        }
+        this.crsHelper = crsHelper;
 
         // The control points along the transect as specified by the line string
         final List<ProjectionPoint> ctlPoints = new ArrayList<ProjectionPoint>();
@@ -195,6 +203,11 @@ public final class LineString {
             if (this.controlPointDistances[i] > s) return i - 1;
         }
         throw new AssertionError(); // Shouldn't get here.
+    }
+
+    public CrsHelper getCrsHelper()
+    {
+        return this.crsHelper;
     }
 
 }

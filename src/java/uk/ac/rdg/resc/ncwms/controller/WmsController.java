@@ -36,6 +36,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -74,6 +75,7 @@ import uk.ac.rdg.resc.ncwms.datareader.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.LineString;
+import uk.ac.rdg.resc.ncwms.datareader.PixelMap;
 import uk.ac.rdg.resc.ncwms.datareader.PointList;
 import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
@@ -636,13 +638,10 @@ public class WmsController extends AbstractController
         FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
         float[] data = null;
         TileCacheKey key = null;
+        // We only use the tileCache to store grids of data
         if (tileCache != null && pointList instanceof HorizontalGrid)
         {
             // Check the cache to see if we've already extracted this data
-            // The TileCacheKey class stores different information depending
-            // on whether the file in question is a local file, an OPeNDAP
-            // endpoint or an NcML aggregation (see the Javadoc for the TileCache
-            // class)
             key = new TileCacheKey(ft.filename, layer, (HorizontalGrid)pointList,
                 ft.tIndexInFile, zIndex);
             // Try to get the data from cache
@@ -653,7 +652,7 @@ public class WmsController extends AbstractController
             // Data not found in cache or cache not present
             data = dr.read(ft.filename, layer, ft.tIndexInFile, zIndex, pointList);
             // Put the data into the cache
-            if (tileCache != null) tileCache.put(key, data);
+            if (key != null) tileCache.put(key, data);
             if (usageLogEntry != null) usageLogEntry.setUsedCache(false);
         }
         else
@@ -990,6 +989,7 @@ public class WmsController extends AbstractController
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         return new ModelAndView("regionBasedOverlay", models);
     }
+
     /**
      * Outputs a transect (data value versus distance along a path) in PNG or
      * XML format.
@@ -1007,8 +1007,8 @@ public class WmsController extends AbstractController
         int tIndexInLayer = getTIndices(params.getString("time"), layer).get(0); // -1 if no t axis
         int zIndex = getZIndex(params.getString("elevation"), layer); // -1 if no z axis
 
-        if (!outputFormat.equals(FEATURE_INFO_PNG_FORMAT)) {
-            // TODO: support XML format
+        if (!outputFormat.equals(FEATURE_INFO_PNG_FORMAT) &&
+            !outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
             throw new InvalidFormatException(outputFormat);
         }
 
@@ -1018,15 +1018,12 @@ public class WmsController extends AbstractController
         final CrsHelper crsHelper = CrsHelper.fromCrsCode(crsCode);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
-        final LineString transect = new LineString(lineString);
+        final LineString transect = new LineString(lineString, crsHelper);
         log.debug("Got {} control points", transect.getControlPoints().size());
-        // Create a list of points interpolated along this path
-        // No point in getting more points than we can display
-        final List<ProjectionPoint> points = transect.getPointsOnPath(100);
-        log.debug("Created {} points along the path", points.size());
 
-        // Create a PointSource wrapper around the interpolated points
-        PointList pointList = PointList.fromList(points, crsHelper);
+        // Find the optimal number of points to sample the layer's source grid
+        PointList pointList = getOptimalTransectPointList(layer, transect);
+        log.debug("Using transect consisting of {} points", pointList.size());
 
         // Read the data from the data source, without using the tile cache
         List<float[]> dataList = readData(layer, tIndexInLayer, zIndex, pointList,
@@ -1043,65 +1040,115 @@ public class WmsController extends AbstractController
         }
         log.debug("Transect: Got {} dataValues", data.length);
 
-        // Prepare and output the JFreeChart
-        // TODO: this is nasty: we're mixing presentation code in the controller
-
-        //SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-
-        /*if (outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
-            Map<String, Object> models = new HashMap<String, Object>();
-            models.put("name", elements);
-            try {
-                models.put("date", df.parse(time));
-            } catch (ParseException ex) {
-                java.util.logging.Logger.getLogger(WmsController.class.getName()).log(Level.SEVERE, null, ex);
+        // Now output the data in the selected format
+        response.setContentType(outputFormat);
+        if (outputFormat.equals(FEATURE_INFO_PNG_FORMAT))
+        {
+            XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
+            for (int i = 0; i < data.length; i++) {
+                series.add(i, data[i]);
             }
-            // This displays WEB-INF/jsp/transect_xml.jsp, passing in the data
-            return new ModelAndView("transect_xml", models);
-        } else {*/
 
-        //SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-        /*Date date = null;
-        try {
-            date = df.parse(time);
-        } catch (ParseException ex) {
-            java.util.logging.Logger.getLogger(WmsController.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
+            XYSeriesCollection xySeriesColl = new XYSeriesCollection();
+            xySeriesColl.addSeries(series);
 
-        XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
-        for (int i = 0; i < data.length; i++) {
-            series.add(i, data[i]);
+            JFreeChart chart = ChartFactory.createXYLineChart(
+                "Transect for " + layer.getTitle(), // title
+                "transect distance", // TODO more meaningful x axis label
+                layer.getTitle() + " (" + layer.getUnits() + ")",
+                xySeriesColl,
+                PlotOrientation.VERTICAL,
+                false, // show legend
+                false, // show tooltips (?)
+                false // urls (?)
+            );
+
+            XYPlot plot = chart.getXYPlot();
+            plot.getRenderer().setSeriesPaint(0, Color.RED);
+            if (layer.getCopyrightStatement() != null) {
+                final TextTitle textTitle = new TextTitle(layer.getCopyrightStatement());
+                textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                textTitle.setPosition(RectangleEdge.BOTTOM);
+                textTitle.setHorizontalAlignment(HorizontalAlignment.RIGHT);
+                chart.addSubtitle(textTitle);
+            }
+            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+
+            rangeAxis.setAutoRangeIncludesZero(false);
+            plot.setNoDataMessage("There is no data for what you have chosen.");
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
         }
+        else if (outputFormat.equals(FEATURE_INFO_XML_FORMAT))
+        {
+            // Output data as XML using a template
+            // First create an ordered map of ProjectionPoints to data values
+            Map<ProjectionPoint, Float> dataPoints = new LinkedHashMap<ProjectionPoint, Float>();
+            List<ProjectionPoint> points = pointList.asList();
+            for (int i = 0; i < points.size(); i++)
+            {
+                dataPoints.put(points.get(i), data[i]);
+            }
 
-        XYSeriesCollection xySeriesColl = new XYSeriesCollection();
-        xySeriesColl.addSeries(series);
-
-        JFreeChart chart = ChartFactory.createXYLineChart(
-            "Transect for " + layer.getTitle(), // title
-            "transect distance", // TODO more meaningful x axis label
-            layer.getTitle() + " (" + layer.getUnits() + ")",
-            xySeriesColl,
-            PlotOrientation.VERTICAL,
-            false, // show legend
-            false, // show tooltips (?)
-            false // urls (?)
-        );
-
-        XYPlot plot = chart.getXYPlot();
-        plot.getRenderer().setSeriesPaint(0, Color.RED);
-        if(layer.getCopyrightStatement() != null) {
-            final TextTitle textTitle = new TextTitle(layer.getCopyrightStatement());
-            textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
-            textTitle.setPosition(RectangleEdge.BOTTOM);
-            textTitle.setHorizontalAlignment(HorizontalAlignment.RIGHT);
-            chart.addSubtitle(textTitle);
+            Map<String, Object> models = new HashMap<String, Object>();
+            models.put("crs", crsCode);
+            models.put("layer", layer);
+            models.put("linestring", lineString);
+            models.put("data", dataPoints);
+            return new ModelAndView("showTransect_xml", models);
         }
-        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-
-        rangeAxis.setAutoRangeIncludesZero(false);
-        plot.setNoDataMessage("There is no data for what you have chosen.");
-        ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
         return null;
+    }
+
+    /**
+     * Gets a PointList that contains (near) the minimum necessary number of
+     * points to sample a layer's source grid of data.  That is to say,
+     * creating a PointList at higher resolution would not result in sampling
+     * significantly more points in the layer's source grid.
+     * @param layer The layer for which the transect will be generated
+     * @param transect The transect as specified in the request
+     * @return a PointList that contains (near) the minimum necessary number of
+     * points to sample a layer's source grid of data.
+     */
+    private static PointList getOptimalTransectPointList(Layer layer,
+        LineString transect) throws Exception
+    {
+        // We need to work out how many points we need to include in order to
+        // completely sample the data grid (i.e. we need the resolution of the
+        // points to be higher than that of the data grid).  It's hard to work
+        // this out neatly (data grids can be irregular) but we can estimate
+        // this by creating transects at progressively higher resolution, and
+        // working out how many grid points will be sampled.
+        int numTransectPoints = 500; // a bit more than the final image width
+        int lastNumGridPointsSampled = -1;
+        PointList pointList = null;
+        boolean done = false;
+        while(!done)
+        {
+            // Create a transect with the required number of points, interpolating
+            // between the control points in the line string
+            List<ProjectionPoint> points = transect.getPointsOnPath(numTransectPoints);
+            // Create a PointList from the interpolated points
+            PointList testPointList = PointList.fromList(points, transect.getCrsHelper());
+            // Work out how many grid points will be sampled by this transect
+            int numGridPointsSampled = new PixelMap(layer, testPointList).getNumUniqueIJPairs();
+            log.debug("With {} transect points, we'll sample {} grid points",
+                numTransectPoints, numGridPointsSampled);
+            // If this increase in resolution results in at least 10% more points
+            // being sampled we'll go around the loop again
+            if (numGridPointsSampled > lastNumGridPointsSampled * 1.1)
+            {
+                // We need to increase the transect resolution and try again
+                lastNumGridPointsSampled = numGridPointsSampled;
+                numTransectPoints += 500;
+                pointList = testPointList;
+            }
+            else
+            {
+                // We've gained little advantage by the last resolution increase
+                done = true;
+            }
+        }
+        return pointList;
     }
     
     /**

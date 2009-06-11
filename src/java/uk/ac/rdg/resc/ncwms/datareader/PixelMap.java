@@ -114,7 +114,7 @@ import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
  * $Date$
  * $Log$
  */
-public class PixelMap
+public final class PixelMap
 {
     private static final Logger logger = LoggerFactory.getLogger(PixelMap.class);
 
@@ -125,8 +125,8 @@ public class PixelMap
     private int maxIIndex = -1;
     private int maxJIndex = -1;
 
-    // Maps Y indices to row information
-    private Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
+    // Maps j indices to row information
+    private final Map<Integer, Row> pixelMap = new HashMap<Integer, Row>();
 
     // Number of unique i-j pairs
     private int numUniqueIJPairs = 0;
@@ -290,11 +290,11 @@ public class PixelMap
     }
 
     /**
-     * Gets the set of all pixel indices, representing individual points in the
-     * final image, that correspond with the given point in the source data.  A single
-     * value from the source data might map to several pixels in the final image,
+     * Gets the set of all pixel indices, representing individual elements in the
+     * final data array, that correspond with the given grid point in the source data.  A single
+     * value from the source data might map to several elements in the final data array,
      * especially if we are "zoomed in".
-     * @return a Set of all pixel indices that correspond with the given i and
+     * @return a Set of all data array indices that correspond with the given i and
      * j index
      * @throws IllegalArgumentException if there is no row with the given j index
      * or if the given i index is not found in the row
@@ -405,7 +405,7 @@ public class PixelMap
                 pixelIndices = new HashSet<Integer>();
                 this.iIndices.put(i, pixelIndices);
                 // We have a new unique x-y pair
-                numUniqueIJPairs++;
+                PixelMap.this.numUniqueIJPairs++;
             }
             // Add the pixel index to the set
             pixelIndices.add(pixel);
@@ -413,17 +413,17 @@ public class PixelMap
 
         public Map<Integer, Set<Integer>> getIIndices()
         {
-            return iIndices;
+            return this.iIndices;
         }
 
         public int getMinIIndex()
         {
-            return minIIndex;
+            return this.minIIndex;
         }
 
         public int getMaxIIndex()
         {
-            return maxIIndex;
+            return this.maxIIndex;
         }
     }
 
