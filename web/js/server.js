@@ -199,3 +199,33 @@ function getAnimationTimesteps(url, params) {
         }
     });
 }
+
+/**
+ * Gets a link to a screenshot that is generated on the server
+ */
+function getScreenshotLink(url, params) {
+    // Add the common elements to the URL pa
+    new Ajax.Request('screenshots/createScreenshot', {
+        method: 'post',
+        parameters: params.urlparams,
+        onSuccess: function(transport) {
+            try {
+                var myobj = transport.responseText.evalJSON();
+            } catch(err) {
+                alert("Invalid JSON returned from server");
+                return;
+            }
+            if (typeof myobj.exception == 'undefined') {
+                params.callback(myobj.screenshotUrl);
+            } else {
+                params.error(myobj.exception);
+            }
+        },
+        onFailure: function() {
+            var exception = new Object();
+            exception.className="Transport error";
+            exception.message=('Error getting data from server'); // TODO: get the full URL somehow?
+            params.error(exception);
+        }
+    });
+}

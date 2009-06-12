@@ -141,11 +141,21 @@
     <!-- The animation resolution pop-up window.  Initially invisible. -->
     <div id="animationSelector" style="visibility: hidden">
         <div class="hd">Select the time resolution of your animation</div>
-        <p style="background-color: #ffffff; padding: 1em">The more frames you choose the longer your animation will take to
-        load.  Please choose the smallest number you think you need!</p>
+        <p style="background-color: #ffffff; padding: 1em">The more frames you
+        choose the longer your animation will take to load.  Please choose the
+        smallest number you think you need!</p>
         <div class="bd">
             <select id="animationResolution"></select>
             <button type="button" onclick="loadAnimation()">OK</button>
+        </div>
+    </div>
+
+    <!-- The "screenshot loading" pop-up window.  Initially invisible. -->
+    <div id="screenshotPanel" style="visibility: hidden">
+        <div class="hd">Screenshot</div>
+        <div class="bd">
+            <p style="background-color: #ffffff; padding: 1em"><span id="screenshotMessage"></span></p>
+            <img id="screenshot" src="images/ajax-loader.gif" />
         </div>
     </div>
 
