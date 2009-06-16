@@ -11,5 +11,5 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          dataset     = uk.ac.rdg.resc.ncwms.config.Dataset --%>
 Progress loading dataset ${dataset.id} (for debugging):
 Loading state: ${dataset.state}
-Progress information:
+Progress information (refresh page for updates):
 ${dataset.loadingProgress}
