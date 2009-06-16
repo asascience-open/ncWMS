@@ -131,13 +131,15 @@ public class ScreenshotController extends MultiActionController
 
     private ModelAndView createScreenshot(HttpServletRequest request) throws Exception
     {
-		String title = request.getParameter("title"); //"Hello World";
+		String title = request.getParameter("title").replaceAll("&gt;", ">"); //"Hello World";
 		String time = request.getParameter("time"); //"null";
 		String elevation = request.getParameter("elevation"); //"null";
+        String units = request.getParameter("units");
 		String upperValue = request.getParameter("upperValue"); //1.0967412;
         String twoThirds = request.getParameter("twoThirds");
         String oneThird = request.getParameter("oneThird");
 		String lowerValue = request.getParameter("lowerValue"); //-0.9546131;
+        boolean isLatLon = "true".equalsIgnoreCase(request.getParameter("latLon"));
 
         // Find the URL of this server from the request
         StringBuffer requestUrl = request.getRequestURL();
@@ -172,7 +174,7 @@ public class ScreenshotController extends MultiActionController
         final int WIDTH_TOTAL = 512;
         final int HEIGHT_TOTAL = 400;
         final int WIDTH_OF_FINAL_IMAGE = 650;
-        final int HEIGHT_OF_FINAL_IMAGE = 550;
+        final int HEIGHT_OF_FINAL_IMAGE = 480;
         String URL1 = "";
         String URL2 = "";
         float coverage = 0;
@@ -182,7 +184,7 @@ public class ScreenshotController extends MultiActionController
 
         String bboxParam = "&BBOX=" + BBOX.minXValue + "," + BBOX.minYValue + "," + BBOX.maxXValue + "," + BBOX.maxYValue;
 
-        if( (Float.compare(BBOX.minXValue,-180)<0 )) // means we need to generate two URLs
+        if(isLatLon && (Float.compare(BBOX.minXValue,-180)<0 )) // means we need to generate two URLs
 		{
 
 			if( (Float.compare(BBOX.minXValue,-180) < 0 ) )
@@ -249,7 +251,6 @@ public class ScreenshotController extends MultiActionController
         if(isGT180){
             bimgBG1 = downloadImage(URL1); //(path[0]);  // right-hand side
             bimgBG2 = downloadImage(URL2); //(path[1]);  // left-hand side
-
         }
         else{
             bimgBG1 = downloadImage(URL1);
@@ -269,9 +270,13 @@ public class ScreenshotController extends MultiActionController
         g.fillRect(0, 0, WIDTH_OF_FINAL_IMAGE, HEIGHT_OF_FINAL_IMAGE);
 
         g.setColor(Color.black);
-        g.drawString("Title: " + title, 0, 10);
-        g.drawString("Time : " + time, 0, 30);
-        g.drawString("Elevation : " + elevation, 0, 50);
+        g.drawString(title, 0, 10);
+        if (time != null) {
+            g.drawString("Time: " + time, 0, 30);
+        }
+        if (elevation != null) {
+            g.drawString(elevation, 0, 50);
+        }
 
         // Now draw the image
         if(isGT180){
@@ -290,6 +295,9 @@ public class ScreenshotController extends MultiActionController
 
         g.drawString(upperValue, 560, 63);
         g.drawString(twoThirds, 560, 192);
+        if (units != null) {
+            g.drawString("Units: " + units, 560, 258);
+        }
         g.drawString(oneThird, 560, 325);
         g.drawString(lowerValue, 560, 460);
 

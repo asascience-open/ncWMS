@@ -1355,26 +1355,40 @@ function loadScreenshot() {
         alert('Data not yet loaded');
     } else {
         $('screenshotMessage').innerHTML = "Screenshot loading, please wait...";
-        $('screenshot').src = "images/ajax-loader.gif";
+        $('screenshotImage').src = "images/ajax-loader.gif";
         screenshotPanel.render(document.body);
         screenshotPanel.show();
         // See code in server.js
         var bounds = map.getExtent();
+        var params = {
+            urlBG: map.baseLayer.getURL(bounds),
+            urlFG: ncwms.getURL(bounds),
+            urlPalette: $('scaleBar').src,
+            title: $('layerPath').innerHTML,
+            upperValue: $('scaleMax').value,
+            twoThirds: $('scaleTwoThirds').innerHTML,
+            oneThird: $('scaleOneThird').innerHTML,
+            lowerValue: $('scaleMin').value,
+            latLon: map.baseLayer.projection.getCode() == 'EPSG:4326'
+        };
+        // Add the elevation, time and units if this layer has them
+        var zAxis = activeLayer.zaxis;
+        if (zAxis != null) {
+            var axisLabel = zAxis.positive ? 'Elevation' : 'Depth';
+            var zValue = $('zValues').options[$('zValues').selectedIndex].text;
+            params.elevation = axisLabel + ': ' + zValue + ' ' + zAxis.units;
+        }
+        if (activeLayer.datesWithData != null) {
+            params.time = isoTValue;
+        }
+        if (typeof activeLayer.units != 'undefined') {
+            params.units = activeLayer.units;
+        }
+
         getScreenshotLink(activeLayer.server, {
             callback: gotScreenshotLink,
             error: screenshotError,
-            urlparams: {
-                urlBG: map.baseLayer.getURL(bounds),
-                urlFG: ncwms.getURL(bounds),
-                urlPalette: $('scaleBar').src,
-                title: $('layerPath').innerHTML,
-                time: isoTValue,
-                elevation: getZValue(),
-                upperValue: $('scaleMax').value,
-                twoThirds: $('scaleTwoThirds').innerHTML,
-                oneThird: $('scaleOneThird').innerHTML,
-                lowerValue: $('scaleMin').value
-            }
+            urlparams: params
         });
     }
 }
@@ -1382,8 +1396,8 @@ function loadScreenshot() {
 // Called when the server has generated a screenshot
 function gotScreenshotLink(url)
 {
-    $('screenshotMessage').innerHTML = 'To save the screenshot, right-click on the image and select "Save Image"';
-    $('screenshot').src = url;
+    $('screenshotMessage').innerHTML = 'To save the screenshot, right-click on the image and select "Save Image As"';
+    $('screenshotImage').src = url;
 }
 
 // Called when there is an error getting the screenshot
@@ -1399,7 +1413,7 @@ function screenshotError(exception)
 // bounding box and the viewport's bounding box.
 function getIntersectionBBOX()
 {
-    if (map.baseLayer.projection == 'EPSG:4326') {
+    if (map.baseLayer.projection.getCode() == 'EPSG:4326') {
         // We compute the intersection of the bounding box and the currently-
         // visible map extent
         var mapBboxEls = map.getExtent().toArray();
