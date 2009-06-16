@@ -250,10 +250,12 @@ public class DefaultDataReader extends DataReader
      * @param location Full path to the dataset. This will be passed to 
      * {@link NetcdfDataset#openDataset}.
      * @param layers Map of Layer Ids to LayerImpl objects to populate or update
+     * @param progressMonitor A {@link ProgressMonitor} that can be updated
+     * with updates on the progress with loading the metadata.  Can be null.
      * @throws Exception if there was an error reading from the data source
      */
-    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
-        throws Exception
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers,
+        ProgressMonitor progressMonitor) throws Exception
     {
         logger.debug("Finding layers in {}", location);
         
@@ -300,8 +302,8 @@ public class DefaultDataReader extends DataReader
                 if (newGrids.size() > 0)
                 {
                     logger.debug("Creating coordinate system objects");
-                    CoordAxis xAxis = this.getXAxis(coordSys);
-                    CoordAxis yAxis = this.getYAxis(coordSys);
+                    CoordAxis xAxis = this.getXAxis(coordSys, progressMonitor);
+                    CoordAxis yAxis = this.getYAxis(coordSys, progressMonitor);
                     
                     boolean zPositive = this.isZPositive(coordSys);
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
@@ -402,7 +404,7 @@ public class DefaultDataReader extends DataReader
     /**
      * Gets the X axis from the given coordinate system
      */
-    protected CoordAxis getXAxis(GridCoordSystem coordSys) throws Exception
+    protected CoordAxis getXAxis(GridCoordSystem coordSys, ProgressMonitor progressMonitor) throws Exception
     {
         if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
             coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
@@ -410,7 +412,8 @@ public class DefaultDataReader extends DataReader
             return LutCoordAxis.fromCoordSys(
                 (CoordinateAxis2D)coordSys.getXHorizAxis(),
                 (CoordinateAxis2D)coordSys.getYHorizAxis(),
-                AxisType.GeoX
+                AxisType.GeoX,
+                progressMonitor
             );
         }
         return CoordAxis.create(coordSys.getXHorizAxis());
@@ -419,7 +422,7 @@ public class DefaultDataReader extends DataReader
     /**
      * Gets the Y axis from the given coordinate system
      */
-    protected CoordAxis getYAxis(GridCoordSystem coordSys) throws Exception
+    protected CoordAxis getYAxis(GridCoordSystem coordSys, ProgressMonitor progressMonitor) throws Exception
     {
         if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
             coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
@@ -427,7 +430,8 @@ public class DefaultDataReader extends DataReader
             return LutCoordAxis.fromCoordSys(
                 (CoordinateAxis2D)coordSys.getXHorizAxis(),
                 (CoordinateAxis2D)coordSys.getYHorizAxis(),
-                AxisType.GeoY
+                AxisType.GeoY,
+                progressMonitor
             );
         }
         return CoordAxis.create(coordSys.getYHorizAxis());

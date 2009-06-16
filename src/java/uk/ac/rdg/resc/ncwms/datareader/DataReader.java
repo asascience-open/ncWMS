@@ -118,7 +118,7 @@ public abstract class DataReader
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws Exception if there was an error reading from the data source
      */
-    public Map<String, LayerImpl> getAllLayers(Dataset dataset)
+    public Map<String, LayerImpl> getAllLayers(final Dataset dataset)
         throws Exception
     {
         String location = dataset.getLocation();
@@ -141,6 +141,14 @@ public abstract class DataReader
         {
             throw new Exception(location + " does not match any files");
         }
+        // Create a ProgressMonitor that will update the "loading progress"
+        // of the dataset
+        ProgressMonitor progressMonitor = new ProgressMonitor() {
+            public void updateProgress(String progress) {
+                // TODO: a bit ugly
+                dataset.setLoadingProgress(dataset.getLoadingProgress() + "\n" + progress);
+            }
+        };
         // Now extract the data for each individual file
         // LinkedHashMaps preserve the order of insertion
         Map<String, LayerImpl> layers = new LinkedHashMap<String, LayerImpl>();
@@ -149,8 +157,10 @@ public abstract class DataReader
             // Read the metadata from the file and update the Map.
             // TODO: only do this if the file's last modified date has changed?
             // This would require us to keep the previous metadata...
-            this.findAndUpdateLayers(filename, layers);
+            progressMonitor.updateProgress("Loading metadata from " + filename);
+            this.findAndUpdateLayers(filename, layers, progressMonitor);
         }
+        progressMonitor.updateProgress("Metadata loading complete");
         return layers;
     }
     
@@ -161,8 +171,20 @@ public abstract class DataReader
      * expansion of a glob aggregation).
      * @param location Full path to the dataset
      * @param layers Map of Layer Ids to Layer objects to populate or update
+     * @param progressMonitor A {@link ProgressMonitor} that can be updated
+     * with updates on the progress with loading the metadata.  Can be null.
      * @throws Exception if there was an error reading from the data source
      */
-    protected abstract void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
-        throws Exception;
+    protected abstract void findAndUpdateLayers(String location, Map<String, LayerImpl> layers,
+        ProgressMonitor progressMonitor) throws Exception;
+
+    /**
+     * Simple interface describing a class that can be used to monitor progress
+     * of a long-running job such as the extraction of metadata from a dataset
+     */
+    public static interface ProgressMonitor
+    {
+        /** Updates the monitor with the latest progress information */
+        public void updateProgress(String progress);
+    }
 }

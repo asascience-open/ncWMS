@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.metadata.lut;
 
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis2D;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader.ProgressMonitor;
 import uk.ac.rdg.resc.ncwms.metadata.TwoDCoordAxis;
 
 /**
@@ -48,9 +49,9 @@ public class LutCoordAxis extends TwoDCoordAxis
     private LookUpTable lut;
 
     public static LutCoordAxis fromCoordSys(CoordinateAxis2D lonAxis,
-        CoordinateAxis2D latAxis, AxisType type) throws Exception
+        CoordinateAxis2D latAxis, AxisType type, ProgressMonitor progressMonitor) throws Exception
     {
-        return new LutCoordAxis(LookUpTable.fromCoordSys(lonAxis, latAxis), type);
+        return new LutCoordAxis(LookUpTable.fromCoordSys(lonAxis, latAxis, progressMonitor), type);
     }
 
     private LutCoordAxis(LookUpTable lut, AxisType type)

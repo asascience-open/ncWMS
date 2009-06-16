@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis2D;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader.ProgressMonitor;
 import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
@@ -75,7 +76,8 @@ public final class LookUpTable implements Serializable
     private transient Regular1DCoordAxis latAxis;
     
     /**
-     * Temporary cache of LUTs
+     * Temporary cache of LUTs.  Will be removed when we integrate properly
+     * with the {@link LutCache}.
      */
     private static final Map<LutCacheKey, LookUpTable> LUTS = 
         new HashMap<LutCacheKey, LookUpTable>();
@@ -87,7 +89,7 @@ public final class LookUpTable implements Serializable
      * @return a LookUpTable for the given coordinate system
      * @throws Exception if there was an error generating the LUT
      */
-    public static LookUpTable fromCoordSys(CoordinateAxis2D lonAxis, CoordinateAxis2D latAxis)
+    public static LookUpTable fromCoordSys(CoordinateAxis2D lonAxis, CoordinateAxis2D latAxis, ProgressMonitor progressMonitor)
         throws Exception
     {
         LutCacheKey key = LutCacheKey.fromCoordSys(lonAxis, latAxis, 3); // resolution multiplier is 3
@@ -95,7 +97,7 @@ public final class LookUpTable implements Serializable
         if (lut == null)
         {
             logger.debug("Need to calculate look up table for key {}", key);
-            lut = RtreeLutGenerator.INSTANCE.generateLut(key);
+            lut = RtreeLutGenerator.INSTANCE.generateLut(key, progressMonitor);
             LUTS.put(key, lut);
         }
         else

@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.metadata.lut;
 
+import uk.ac.rdg.resc.ncwms.datareader.DataReader.ProgressMonitor;
+
 /**
  * Interface describing an object that can generate look-up tables
  * @author Jon
@@ -39,9 +41,11 @@ public interface LutGenerator
      * the provided key.
      * @param key An {@link LutCacheKey} that contains all the information needed
      * to generate a look-up table.
+     * @param progressMonitor A {@link ProgressMonitor} that will be updated as
+     * the look-up table is generated.
      * @return A newly-created {@link LookUpTable} object.
      * @throws Exception if the LUT could not be generated
      * @todo more appropriate error handling
      */
-    public LookUpTable generateLut(LutCacheKey key) throws Exception;
+    public LookUpTable generateLut(LutCacheKey key, ProgressMonitor progressMonitor) throws Exception;
 }

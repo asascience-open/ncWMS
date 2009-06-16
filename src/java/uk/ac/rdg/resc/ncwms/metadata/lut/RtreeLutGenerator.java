@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.rdg.resc.ncwms.datareader.DataReader.ProgressMonitor;
 import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 import uk.ac.rdg.resc.ncwms.metadata.lut.CurvilinearGrid.Cell;
 
@@ -56,9 +57,10 @@ public final class RtreeLutGenerator implements LutGenerator
     /** Private constructor to prevent direct instantiation */
     private RtreeLutGenerator() {}
 
-    public LookUpTable generateLut(LutCacheKey key) throws Exception
+    public LookUpTable generateLut(LutCacheKey key, ProgressMonitor progressMonitor) throws Exception
     {
         logger.debug("Generating LUT for key {}", key);
+        progressMonitor.updateProgress("Generating look-up table");
 
         // Create three RTrees, one for the high latitudes, one for the low
         // latitudes and one for the mid-latitudes.  We allow some overlap
@@ -81,14 +83,22 @@ public final class RtreeLutGenerator implements LutGenerator
             }
         }
         logger.debug("Built rTrees in {} seconds", (System.nanoTime() - nanoTime) / 1000000000.0);
+        progressMonitor.updateProgress("Built RTrees");
         
         // Now we build up the look-up table.
         LookUpTable lut = new LookUpTable(key);
         nanoTime = System.nanoTime();
         Regular1DCoordAxis lonAxis = key.getLutLonAxis();
         Regular1DCoordAxis latAxis = key.getLutLatAxis();
+        // Report progress in increments of approximately 5%
+        int progressInterval = latAxis.getSize() / 20;
         for (int latIndex = 0; latIndex < latAxis.getSize(); latIndex++)
         {
+            if (latIndex % progressInterval == 0)
+            {
+                double percentComplete = (100.0 * latIndex) / latAxis.getSize();
+                progressMonitor.updateProgress("Look up table generation " + percentComplete + " percent complete");
+            }
             double lat = latAxis.getCoordValue(latIndex);
             for (int lonIndex = 0; lonIndex < lonAxis.getSize(); lonIndex++)
             {
@@ -99,7 +109,6 @@ public final class RtreeLutGenerator implements LutGenerator
                     Cell containingCell = rTree.findContainingCell(lon, lat);
                     if (containingCell != null)
                     {
-                        // TODO: check that the lat-lon point falls in the grid cell
                         // Add these coordinates to the look-up table.
                         lut.setGridCoordinates(lonIndex, latIndex, containingCell.getGridCoords());
                         break;
@@ -108,6 +117,7 @@ public final class RtreeLutGenerator implements LutGenerator
             }
         }
         logger.debug("Built look-up table in {} seconds", (System.nanoTime() - nanoTime) / 1000000000.0);
+        progressMonitor.updateProgress("Look up table generation complete");
 
         return lut;
     }
