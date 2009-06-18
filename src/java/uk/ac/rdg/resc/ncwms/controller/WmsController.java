@@ -955,7 +955,6 @@ public class WmsController extends AbstractController {
             XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
             for (int i = 0; i < data.length; i++) {
                 series.add(i, data[i]);
-
             }
 
             XYSeriesCollection xySeriesColl = new XYSeriesCollection();
@@ -963,7 +962,7 @@ public class WmsController extends AbstractController {
 
             JFreeChart chart = ChartFactory.createXYLineChart(
                     "Transect for " + layer.getTitle(), // title
-                    "transect distance", // TODO more meaningful x axis label
+                    "distance along transect (arbitrary units)", // TODO more meaningful x axis label
                     layer.getTitle() + " (" + layer.getUnits() + ")",
                     xySeriesColl,
                     PlotOrientation.VERTICAL,
