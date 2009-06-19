@@ -63,6 +63,7 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.HorizontalAlignment;
 import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.RectangleEdge;
+import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
@@ -996,7 +997,7 @@ public class WmsController extends AbstractController {
                     log.debug("ctrlPointDistance " + ctrlPointDistance);
                     //determine start end end value for marker based on index of ctrl point
                     IntervalMarker target = new IntervalMarker(data.length * prevCtrlPointDistance, data.length * ctrlPointDistance);
-                    target.setLabel("[" + roundTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
+                    target.setLabel("[" + roundTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "][" + roundTwoDecimals(transect.getControlPoints().get(i).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i).getX()) + "]");                    
                     target.setLabelFont(new Font("SansSerif", Font.ITALIC, 11));
                     //alter color of segment and position of label based on odd/even index
                     if (i % 2 == 0) {
