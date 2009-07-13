@@ -43,6 +43,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
@@ -68,6 +70,8 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  */
 public class MetadataController
 {
+    private static final Logger log = LoggerFactory.getLogger(MetadataController.class);
+
     // These objects will be injected by Spring
     private Config config;
     private MetadataStore metadataStore;
@@ -342,9 +346,11 @@ public class MetadataController
         // comparisons will not do what we expect
         dt1 = dt1.withZone(DateTimeZone.UTC);
         dt2 = dt2.withZone(DateTimeZone.UTC);
-        return dt1.getYear() == dt2.getYear()
-            && dt1.getMonthOfYear() == dt2.getMonthOfYear()
-            && dt1.getDayOfMonth() == dt2.getDayOfMonth();
+        boolean onSameDay = dt1.getYear() == dt2.getYear()
+                         && dt1.getMonthOfYear() == dt2.getMonthOfYear()
+                         && dt1.getDayOfMonth() == dt2.getDayOfMonth();
+        log.debug("onSameDay({}, {}) = {}", new Object[]{dt1, dt2, onSameDay});
+        return onSameDay;
     }
     
     /**
