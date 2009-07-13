@@ -31,8 +31,8 @@ package uk.ac.rdg.resc.ncwms.utils;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormatter;
@@ -60,7 +60,7 @@ public class WmsUtils
     /**
      * The versions of the WMS standard that this server supports
      */
-    public static final Collection<String> SUPPORTED_VERSIONS = new ArrayList<String>();
+    public static final Set<String> SUPPORTED_VERSIONS = new HashSet<String>();
 
     private static DateTimeFormatter ISO_DATE_TIME_FORMATTER =
         ISODateTimeFormat.dateTime().withZone(DateTimeZone.UTC);
