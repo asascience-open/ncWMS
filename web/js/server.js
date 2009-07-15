@@ -27,7 +27,7 @@ function iso8601ToDate(string)
         offset *= ((d[15] == '-') ? 1 : -1);
     }
 
-    offset -= date.getTimezoneOffset();
+    //offset -= date.getTimezoneOffset();  We don't correct for the local time zone offset
     var time = (Number(date) + (offset * 60 * 1000));
     var ret = new Date();
     ret.setTime(Number(time));

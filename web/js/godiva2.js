@@ -230,9 +230,6 @@ window.onload = function()
         populateAutoLoad(window.top.location);
     }
     
-    // Set up the left-hand menu
-    setupTreeControl(menu);
-    
     // Set up the palette selector pop-up
     paletteSelector = new YAHOO.widget.Panel("paletteSelector", { 
         width:"400px",
@@ -269,6 +266,9 @@ window.onload = function()
         draggable:true,
         modal:true
     });
+
+    // Set up the left-hand menu of layers
+    setupLayerMenu();
 }
 
 // Populates the autoLoad object from the given window location object
@@ -301,11 +301,16 @@ function populateAutoLoad(windowLocation)
     }
 }
 
-function setupTreeControl(menu)
+function setupLayerMenu()
 {
-    tree = new YAHOO.widget.TreeView('layerSelector');
-    // Add an event callback that gets fired when a tree node is clicked
-    tree.subscribe('labelClick', treeNodeClicked);
+    if (tree == null) {
+        tree = new YAHOO.widget.TreeView('layerSelector');
+        // Add an event callback that gets fired when a tree node is clicked
+        tree.subscribe('labelClick', treeNodeClicked);
+    } else {
+        // Clear the contents of the tree
+        tree.removeChildren(tree.getRoot());
+    }
     
     // The servers can be specified using the global "servers" array above
     // but if not, we'll just use the default server
@@ -330,15 +335,25 @@ function setupTreeControl(menu)
                 // Add layers recursively.
                 addNodes(layerRootNode, layers.children);
                 tree.draw();
-                
-                // Now look to see if we are auto-loading a certain layer
-                if (typeof autoLoad.layer != 'undefined') {
-                    var node = tree.getNodeByProperty('id', autoLoad.layer);
-                    if (node == null) {
-                        alert("Layer " + autoLoad.layer + " not found");
-                    } else {
+                var node;
+                if (activeLayer == null) {
+                    // The user hasn't yet selected a layer
+                    // Look to see if we are auto-loading a certain layer
+                    if (typeof autoLoad.layer != 'undefined') {
+                        node = tree.getNodeByProperty('id', autoLoad.layer);
+                        if (node == null) {
+                            alert("Layer " + autoLoad.layer + " not found");
+                        } else {
+                            expandParents(node);
+                            treeNodeClicked(node); // act as if we have clicked this node
+                        }
+                    }
+                } else { // activeLayer != null
+                    // The user has selected a layer, so we must make sure that
+                    // the correct node in the tree is expanded
+                    node = tree.getNodeByProperty('id', activeLayer.id);
+                    if (node != null) {
                         expandParents(node);
-                        treeNodeClicked(node); // act as if we have clicked this node
                     }
                 }
             }
@@ -482,6 +497,8 @@ function getFeatureInfo(e)
             var xmldoc = response.responseXML;
             var lon = parseFloat(xmldoc.getElementsByTagName('longitude')[0].firstChild.nodeValue);
             var lat = parseFloat(xmldoc.getElementsByTagName('latitude')[0].firstChild.nodeValue);
+            var iIndex = parseInt(xmldoc.getElementsByTagName('iIndex')[0].firstChild.nodeValue);
+            var jIndex = parseInt(xmldoc.getElementsByTagName('jIndex')[0].firstChild.nodeValue);
             var val = parseFloat(xmldoc.getElementsByTagName('value')[0].firstChild.nodeValue);
             var html = "";
             if (lon) {
@@ -489,6 +506,7 @@ function getFeatureInfo(e)
                 var truncVal = toNSigFigs(val, 4);
                 html = "<b>Lon:</b> " + lon + "<br /><b>Lat:</b> " + lat +
                     "<br /><b>Value:</b> " + truncVal + "<br />"
+                html += "<i>(Grid indices: i=" + iIndex + ", j=" + jIndex + ")</i><br />";
                 // Add links to alter colour scale min/max
                 html += "<a href='#' onclick=setColourScaleMin(" + val + ") " +
                     "title='Sets the minimum of the colour scale to " + truncVal + "'>" +
@@ -700,28 +718,7 @@ function layerSelected(layerDetails)
             }
         }
         calendar.setRange(minYear, maxYear);
-
-        // Get the time on the t axis that is nearest to the currently-selected
-        // time, as calculated on the server
-        // NOTE: the calendar displays times in the local time zone.  We must
-        // work around this by 'correcting' nearestTime (which is in UTC) by
-        // adding the current time zone offset.
-        // The calendar is only used to select a year, month and day.  If we
-        // are in the Eastern US then the time zone offset will be 5 hours.
-        // If layerDetails.nearestTime = 2007-05-04T00:00:00Z, this corresponds
-        // with 2007-05-03T19:00:00 local time, hence the calendar will display
-        // the 3rd May instead of the 4th.  We need to artificially add 5 hours
-        // to the date so that the local time will be 2007-05-04T00:00:00 and
-        // the calendar will display correctly.  Hence in the code elsewhere
-        // in this file (getIsoDate() and anywhere dates are printed) we use the
-        // calendar's *local* date, not the UTC date.
-
-        var tzOffsetMs = new Date().getTimezoneOffset() * 60 * 1000; // Time zone offset in mins
-        var theDateMs = layerDetails.nearestTime.getTime() + tzOffsetMs;
-        var theDate = new Date();
-        theDate.setTime(theDateMs);
-
-        calendar.setDate(theDate);
+        calendar.setDate(layerDetails.nearestTime);
 
         calendar.refresh();
         // N.B. For some reason the call to show() seems sometimes to toggle the
