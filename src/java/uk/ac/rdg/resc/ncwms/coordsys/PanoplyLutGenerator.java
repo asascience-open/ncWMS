@@ -26,26 +26,46 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata.lut;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
-import uk.ac.rdg.resc.ncwms.datareader.DataReader.ProgressMonitor;
+import java.util.ArrayList;
+import java.util.List;
+import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
 /**
- * Interface describing an object that can generate look-up tables
+ * <p>A {@link LutGenerator} that uses an algorithm similar to that used by the
+ * <a href="http://www.giss.nasa.gov/tools/panoply/">Panoply</a> NetCDF and
+ * HDF viewer.  This calculates the extents of grid cells in the {@link CurvilinearGrid}
+ * by joining up adjacent grid <i>points</i>.  (Note that this differs from the
+ * method used by ToolsUI, in which cells are formed by joining grid <i>corners</i>.)</p>
+ * <p>Many thanks to Robert Schmunk for kindly spending the time to
+ * explain to me how Panoply works.</p>
+ * <p>This class is stateless and therefore only a single {@link #INSTANCE instance}
+ * is necessary.</p>
  * @author Jon
  */
-public interface LutGenerator
+final class PanoplyLutGenerator extends BufferedImageLutGenerator
 {
+    /** Singleton instance. */
+    public static final PanoplyLutGenerator INSTANCE = new PanoplyLutGenerator();
+
+    /** Private constructor to prevent direct instantiation */
+    private PanoplyLutGenerator() {}
+
     /**
-     * Generates a {@link LookUpTable} based upon the specification given by
-     * the provided key.
-     * @param key An {@link LutCacheKey} that contains all the information needed
-     * to generate a look-up table.
-     * @param progressMonitor A {@link ProgressMonitor} that will be updated as
-     * the look-up table is generated.
-     * @return A newly-created {@link LookUpTable} object.
-     * @throws Exception if the LUT could not be generated
-     * @todo more appropriate error handling
+     * Returns a polygon that joins the centres of the neighbouring cells
      */
-    public LookUpTable generateLut(LutCacheKey key, ProgressMonitor progressMonitor) throws Exception;
+    @Override
+    protected List<LatLonPoint> getPolygon(Cell cell)
+    {
+        // Prepare a list of the centres of the neighbouring cells
+        List<LatLonPoint> neighbourCentres = new ArrayList<LatLonPoint>(4);
+        for (Cell neighbour : cell.getEdgeNeighbours())
+        {
+            neighbourCentres.add(neighbour.getCentre());
+        }
+        return neighbourCentres;
+    }
+
 }

@@ -34,11 +34,9 @@ import java.util.List;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.ProjectionImpl;
-import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Variable;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.styles.Style;
@@ -65,9 +63,7 @@ public class LayerImpl implements Layer
     protected double[] zValues;
     protected boolean zPositive;
     protected double[] bbox = new double[]{-180.0, -90.0, 180.0, 90.0}; // Bounding box : minx, miny, maxx, maxy
-    protected CoordAxis xaxis;
-    protected CoordAxis yaxis;
-    private HorizontalProjection horizProj = HorizontalProjection.LON_LAT_PROJECTION;
+    protected HorizontalCoordSys horizCoordSys;
     protected transient Dataset dataset; // Not stored in the metadata database
     // Sorted in ascending order of time
     protected List<TimestepInfo> timesteps = new ArrayList<TimestepInfo>();
@@ -195,26 +191,6 @@ public class LayerImpl implements Layer
     public void setUnits(String units)
     {
         this.units = units;
-    }
-
-    public CoordAxis getXaxis()
-    {
-        return xaxis;
-    }
-
-    public void setXaxis(CoordAxis xaxis)
-    {
-        this.xaxis = xaxis;
-    }
-
-    public CoordAxis getYaxis()
-    {
-        return yaxis;
-    }
-
-    public void setYaxis(CoordAxis yaxis)
-    {
-        this.yaxis = yaxis;
     }
 
     public Dataset getDataset()
@@ -488,20 +464,6 @@ public class LayerImpl implements Layer
     }
 
     /**
-     * @return the projection for the data, as stored in the source files.  Defaults
-     * to the lon-lat projection unless explicitly set.
-     */
-    public HorizontalProjection getHorizontalProjection()
-    {
-        return this.horizProj;
-    }
-
-    public void setHorizontalProjection(HorizontalProjection horizProj)
-    {
-        this.horizProj = horizProj;
-    }
-
-    /**
      * Gets the copyright statement for this layer, replacing ${year} as 
      * appropriate with the year range that this layer covers.
      * @return The copyright statement, or the empty string if no copyright
@@ -570,41 +532,13 @@ public class LayerImpl implements Layer
         return this.dataset.getVariables().get(this.id);
     }
 
-    public void setHorizontalProjection(ProjectionImpl proj)
+    public HorizontalCoordSys getHorizontalCoordSys()
     {
-        this.horizProj = HorizontalProjection.create(proj);
+        return this.horizCoordSys;
     }
 
-    public int[] latLonToGrid(LatLonPoint latLon)
+    public void setHorizontalCoordSys(HorizontalCoordSys horizCoordSys)
     {
-        // Translate this lat-lon point to a point in the data's projection coordinates
-        ProjectionPoint projPoint = this.horizProj.latLonToProj(latLon);
-        // Translate the projection point to grid point indices i, j
-        int i, j;
-        if (this.xaxis instanceof OneDCoordAxis && this.yaxis instanceof OneDCoordAxis)
-        {
-            OneDCoordAxis xAxis1D = (OneDCoordAxis)this.xaxis;
-            OneDCoordAxis yAxis1D = (OneDCoordAxis)this.yaxis;
-            i = xAxis1D.getIndex(projPoint.getX());
-            j = yAxis1D.getIndex(projPoint.getY());
-        }
-        else if (this.xaxis instanceof TwoDCoordAxis && this.yaxis instanceof TwoDCoordAxis)
-        {
-            TwoDCoordAxis xAxis2D = (TwoDCoordAxis)this.xaxis;
-            TwoDCoordAxis yAxis2D = (TwoDCoordAxis)this.yaxis;
-            i = xAxis2D.getIndex(projPoint);
-            j = yAxis2D.getIndex(projPoint);
-        }
-        else
-        {
-            // Shouldn't happen
-            throw new IllegalStateException("x and y axes are of different types!");
-        }
-        return new int[]{i, j};
-    }
-
-    public boolean isLatLon()
-    {
-        return this.horizProj.isLatLon();
+        this.horizCoordSys = horizCoordSys;
     }
 }

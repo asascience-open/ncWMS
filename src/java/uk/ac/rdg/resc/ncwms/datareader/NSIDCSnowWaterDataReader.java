@@ -49,7 +49,7 @@ import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 
 /**
  * DataReader for NSIDC snow/water data.  This is an example of how to create
- * a DataReader for files that can't be read by the Java-NetCDF libararies.
+ * a DataReader for files that can't be read by the Java-NetCDF libraries.
  * Another alternative method would be to create an IO Service Provider for
  * this dataset.
  *
@@ -82,7 +82,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
     /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
-     * aggregation, or OPeNDAP location (i.e. one element resulting from the
+     * aggregation, or OPeNDAP location ({@literal i.e.} one element resulting from the
      * expansion of a glob aggregation).
      * @param location Full path to the individual file
      * @throws IOException if there was an error reading from the data source

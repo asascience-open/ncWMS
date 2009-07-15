@@ -36,23 +36,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionPoint;
-import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
+import uk.ac.rdg.resc.ncwms.coordsys.LatLonCoordSys;
 
 /**
- *<p>Maps pixels within the requested image to i and j indices of corresponding
+ *<p>Maps real-world points to i and j indices of corresponding
  * points within the source data.  This is a very important class in ncWMS.  A
- * PixelMap is constructed using the constructor <code>new PixelMap(layer, grid)</code>,
- * which employs the following general algorithm:</p>
+ * PixelMap is constructed using the following general algorithm:</p>
  *
  * <pre>
- * For each pixel in the image:
- *    1. Find the x-y coordinates of this point in the CRS of the image
+ * For each point in the given {@link PointList}:
+ *    1. Find the x-y coordinates of this point in the CRS of the PointList
  *    2. Transform these x-y coordinates into latitude and longitude
- *    3. Transform lat-lon into the coordinate system of the source data
- *    4. Transform the coordinate pair into index values (i and j)
- *    5. Add the mapping (pixel -> i,j) to the pixel map
+ *    3. Use the given {@link HorizontalCoordSys} to transform lat-lon into the
+ *       index values (i and j) of the nearest cell in the source grid
+ *    5. Add the mapping (point -> i,j) to the pixel map
  * </pre>
  *
  * <p>(A more efficient algorithm is used for the special case in which both the
@@ -61,7 +60,7 @@ import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
  * <p>The resulting PixelMap is then used by {@link DataReader}s to work out what
  * data to read from the source data files.  The grid below represents the source
  * data.  Black grid squares represent data points that must be read from the source
- * data and become part of the final image:</p>
+ * data and will be used to generate the final output (e.g. image):</p>
  * <img src="doc-files/pixelmap_pbp.png">
  * <p>A variety of strategies are possible for reading these data points:</p>
  *
@@ -110,9 +109,7 @@ import uk.ac.rdg.resc.ncwms.metadata.OneDCoordAxis;
  * <img src="doc-files/pixelmap_scanline.png">
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * @todo Perhaps we can think of a more appropriate name for this class?
  */
 public final class PixelMap
 {
@@ -131,21 +128,21 @@ public final class PixelMap
     // Number of unique i-j pairs
     private int numUniqueIJPairs = 0;
 
-    public PixelMap(Layer layer, PointList pointList) throws Exception
+    public PixelMap(HorizontalCoordSys horizCoordSys, PointList pointList) throws Exception
     {
         long start = System.currentTimeMillis();
         if (pointList instanceof HorizontalGrid)
         {
-            this.initFromGrid(layer, (HorizontalGrid)pointList);
+            this.initFromGrid(horizCoordSys, (HorizontalGrid)pointList);
         }
         else
         {
-            this.initFromPointList(layer, pointList);
+            this.initFromPointList(horizCoordSys, pointList);
         }
         logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);
     }
 
-    private void initFromPointList(Layer layer, PointList pointList) throws Exception
+    private void initFromPointList(HorizontalCoordSys horizCoordSys, PointList pointList) throws Exception
     {
         logger.debug("Using generic method based on iterating over the PointList");
         CrsHelper crsHelper = pointList.getCrsHelper();
@@ -158,7 +155,7 @@ public final class PixelMap
                 // Translate this point in the target grid to lat-lon
                 LatLonPoint latLon = crsHelper.crsToLatLon(point);
                 // Now find the nearest index in the grid
-                int[] gridCoords = layer.latLonToGrid(latLon);
+                int[] gridCoords = horizCoordSys.latLonToGrid(latLon);
                 if (gridCoords != null)
                 {
                     // Ignores negative indices
@@ -175,36 +172,30 @@ public final class PixelMap
      *
      * @throws Exception if the necessary transformations could not be performed
      */
-    private void initFromGrid(Layer layer, HorizontalGrid grid) throws Exception
+    private void initFromGrid(HorizontalCoordSys horizCoordSys, HorizontalGrid grid) throws Exception
     {
-        CoordAxis xAxis = layer.getXaxis();
-        CoordAxis yAxis = layer.getYaxis();
-
         // Cycle through each pixel in the picture and work out which
         // i and j index in the source data it corresponds to
 
         // We can gain efficiency if the target grid is a lat-lon grid and
         // the data exist on a lat-long grid by minimizing the number of
         // calls to axis.getIndex().
-        if (layer.isLatLon() && grid.isLatLon() &&
-            xAxis instanceof OneDCoordAxis && yAxis instanceof OneDCoordAxis)
+        if (grid.isLatLon() && horizCoordSys instanceof LatLonCoordSys)
         {
             logger.debug("Using optimized method for lat-lon coordinates with 1D axes");
+            LatLonCoordSys latLonGrid = (LatLonCoordSys)horizCoordSys;
             int pixelIndex = 0;
-            // These class casts should always be valid
-            OneDCoordAxis xAxis1D = (OneDCoordAxis)xAxis;
-            OneDCoordAxis yAxis1D = (OneDCoordAxis)yAxis;
             // Calculate the indices along the x axis.
             int[] xIndices = new int[grid.getXAxisValues().length];
             for (int i = 0; i < grid.getXAxisValues().length; i++)
             {
-                xIndices[i] = xAxis1D.getIndex(grid.getXAxisValues()[i]);
+                xIndices[i] = latLonGrid.getLonIndex(grid.getXAxisValues()[i]);
             }
             for (double lat : grid.getYAxisValues())
             {
                 if (lat >= -90.0 && lat <= 90.0)
                 {
-                    int yIndex = yAxis1D.getIndex(lat);
+                    int yIndex = latLonGrid.getLatIndex(lat);
                     for (int xIndex : xIndices)
                     {
                         this.put(xIndex, yIndex, pixelIndex);
@@ -222,7 +213,7 @@ public final class PixelMap
         {
             // We can't do better than the generic initialization method
             // based upon iterating through each point in the grid.
-            this.initFromPointList(layer, (PointList)grid);
+            this.initFromPointList(horizCoordSys, (PointList)grid);
         }
     }
 

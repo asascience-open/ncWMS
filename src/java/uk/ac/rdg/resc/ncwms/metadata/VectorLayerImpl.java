@@ -55,8 +55,7 @@ public class VectorLayerImpl extends LayerImpl implements VectorLayer
         this.zUnits = eastwardComponent.getZunits();
         this.zValues = eastwardComponent.getZvalues();
         this.bbox = eastwardComponent.getBbox();
-        this.xaxis = eastwardComponent.getXaxis();
-        this.yaxis = eastwardComponent.getYaxis();
+        this.horizCoordSys = eastwardComponent.getHorizontalCoordSys();
         this.dataset = eastwardComponent.getDataset();
         this.units = eastwardComponent.getUnits();
         this.timesteps = eastwardComponent.getTimesteps(); // Only used for metadata:
@@ -72,13 +71,6 @@ public class VectorLayerImpl extends LayerImpl implements VectorLayer
         this.northwardComponent = northwardComponent;
     }
     
-    /**
-     * Default constructor (used by Berkeley DB).  This can still be private
-     * and apparently the Berkeley DB will get around this (we don't need public
-     * setters for the fields for the same reason).
-     */
-    private VectorLayerImpl() {}
-
     public Layer getNorthwardComponent()
     {
         return this.northwardComponent;

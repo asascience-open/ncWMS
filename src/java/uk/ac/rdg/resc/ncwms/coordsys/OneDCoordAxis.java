@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
@@ -42,8 +42,9 @@ import ucar.nc2.dataset.CoordinateAxis1D;
  * $Date$
  * $Log$
  */
-public abstract class OneDCoordAxis extends CoordAxis
+abstract class OneDCoordAxis
 {
+    protected AxisType type;
     protected int size; // Number of points on this axis
     
     /**
@@ -79,7 +80,7 @@ public abstract class OneDCoordAxis extends CoordAxis
     
     protected OneDCoordAxis(AxisType type, int size)
     {
-        super(type);
+        this.type = type;
         this.size = size;
     }
     
@@ -109,6 +110,11 @@ public abstract class OneDCoordAxis extends CoordAxis
     public int getSize()
     {
         return size;
+    }
+
+    public AxisType getAxisType()
+    {
+        return this.type;
     }
     
     /**

@@ -31,10 +31,10 @@ package uk.ac.rdg.resc.ncwms.cache;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
-import uk.ac.rdg.resc.ncwms.datareader.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.Longitude;
+import uk.ac.rdg.resc.ncwms.coordsys.Longitude;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**

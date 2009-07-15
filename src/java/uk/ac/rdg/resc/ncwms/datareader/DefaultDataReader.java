@@ -42,10 +42,8 @@ import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
-import ucar.nc2.constants.AxisType;
 import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis1D;
-import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.dataset.VariableDS;
@@ -57,11 +55,10 @@ import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
-import uk.ac.rdg.resc.ncwms.metadata.CoordAxis;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
-import uk.ac.rdg.resc.ncwms.metadata.lut.LutCoordAxis;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
@@ -119,7 +116,7 @@ public class DefaultDataReader extends DataReader
             // Use NaNs to represent missing data
             Arrays.fill(picData, Float.NaN);
             
-            PixelMap pixelMap = new PixelMap(layer, pointList);
+            PixelMap pixelMap = new PixelMap(layer.getHorizontalCoordSys(), pointList);
             if (pixelMap.isEmpty()) return picData;
             
             long readMetadata = System.currentTimeMillis();
@@ -302,8 +299,8 @@ public class DefaultDataReader extends DataReader
                 if (newGrids.size() > 0)
                 {
                     logger.debug("Creating coordinate system objects");
-                    CoordAxis xAxis = this.getXAxis(coordSys, progressMonitor);
-                    CoordAxis yAxis = this.getYAxis(coordSys, progressMonitor);
+                    // Create an object that will map lat-lon points to nearest grid points
+                    HorizontalCoordSys horizCoordSys = HorizontalCoordSys.fromCoordSys(coordSys);
                     
                     boolean zPositive = this.isZPositive(coordSys);
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
@@ -341,9 +338,7 @@ public class DefaultDataReader extends DataReader
                         layer.setTitle(getLayerTitle(grid.getVariable()));
                         layer.setAbstract(grid.getDescription());
                         layer.setUnits(grid.getUnitsString());
-                        layer.setXaxis(xAxis);
-                        layer.setYaxis(yAxis);
-                        layer.setHorizontalProjection(coordSys.getProjection());
+                        layer.setHorizontalCoordSys(horizCoordSys);
                         layer.setBbox(bbox);
 
                         if (zAxis != null)
@@ -399,42 +394,6 @@ public class DefaultDataReader extends DataReader
     protected boolean includeGrid(GridDatatype grid)
     {
         return true;
-    }
-    
-    /**
-     * Gets the X axis from the given coordinate system
-     */
-    protected CoordAxis getXAxis(GridCoordSystem coordSys, ProgressMonitor progressMonitor) throws Exception
-    {
-        if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
-            coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
-        {
-            return LutCoordAxis.fromCoordSys(
-                (CoordinateAxis2D)coordSys.getXHorizAxis(),
-                (CoordinateAxis2D)coordSys.getYHorizAxis(),
-                AxisType.GeoX,
-                progressMonitor
-            );
-        }
-        return CoordAxis.create(coordSys.getXHorizAxis());
-    }
-    
-    /**
-     * Gets the Y axis from the given coordinate system
-     */
-    protected CoordAxis getYAxis(GridCoordSystem coordSys, ProgressMonitor progressMonitor) throws Exception
-    {
-        if (coordSys.getXHorizAxis() instanceof CoordinateAxis2D &&
-            coordSys.getYHorizAxis() instanceof CoordinateAxis2D)
-        {
-            return LutCoordAxis.fromCoordSys(
-                (CoordinateAxis2D)coordSys.getXHorizAxis(),
-                (CoordinateAxis2D)coordSys.getYHorizAxis(),
-                AxisType.GeoY,
-                progressMonitor
-            );
-        }
-        return CoordAxis.create(coordSys.getYHorizAxis());
     }
     
     /**

@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,7 +43,7 @@ import ucar.nc2.constants.AxisType;
  * $Date$
  * $Log$
  */
-public class Irregular1DCoordAxis extends OneDCoordAxis
+class Irregular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = LoggerFactory.getLogger(Irregular1DCoordAxis.class);
     

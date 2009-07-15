@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
 /**
  * Describes a point in longitude space
@@ -58,7 +58,7 @@ public class Longitude
     /**
      * @return String representation of this point
      */
-    public String toString()
+    @Override public String toString()
     {
         return "" + this.value;
     }
@@ -149,16 +149,8 @@ public class Longitude
      */
     public static double constrain360(double input)
     {
-        if (input >= 0.0)
-        {
-            return input % 360.0;
-        }
-        else
-        {
-            // input is negative
-            double temp = input % 360.0;
-            return temp + 360.0;
-        }
+        double temp = input % 360.0;
+        return input >= 0.0 ? temp : temp + 360.0;
     }
     
     /**
@@ -167,16 +159,10 @@ public class Longitude
     public static double constrain180(double input)
     {
         double val360 = constrain360(input);
-        if (val360 <= 180)
-        {
-            return val360;
-        }
-        else
-        {
-            return val360 - 360.0f;
-        }
+        return val360 <= 180.0 ? val360 : val360 - 360.0;
     }
-    
+
+    /** TODO: convert to JUnit tests, esp for constrain180/360 */
     public static void main(String[] args)
     {
         Longitude long1 = new Longitude(245.67);

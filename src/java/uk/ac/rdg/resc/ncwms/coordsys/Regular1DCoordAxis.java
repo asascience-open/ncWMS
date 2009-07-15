@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +44,7 @@ import ucar.nc2.constants.AxisType;
  * $Date$
  * $Log$
  */
-public class Regular1DCoordAxis extends OneDCoordAxis
+class Regular1DCoordAxis extends OneDCoordAxis
 {
     private static final Logger logger = LoggerFactory.getLogger(Regular1DCoordAxis.class);
     

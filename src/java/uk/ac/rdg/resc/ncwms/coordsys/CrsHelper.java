@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.datareader;
+package uk.ac.rdg.resc.ncwms.coordsys;
 
 import java.util.ArrayList;
 import java.util.List;

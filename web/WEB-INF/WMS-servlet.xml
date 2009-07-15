@@ -42,12 +42,6 @@
          <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
          <property name="config"><ref local="config"/></property>
     </bean>
-
-    <!-- A cache for look-up tables -->
-    <bean id="lutCache" class="uk.ac.rdg.resc.ncwms.metadata.lut.LutCache"
-            init-method="init" destroy-method="close">
-         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
-    </bean>
     
     <!-- Object that handles the provision of authentication credentials
          for OPeNDAP servers -->

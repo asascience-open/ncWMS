@@ -30,8 +30,8 @@ package uk.ac.rdg.resc.ncwms.metadata;
 
 import java.util.List;
 import org.joda.time.DateTime;
-import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.styles.Style;
 
@@ -150,23 +150,11 @@ public interface Layer
      */
     float[] getColorScaleRange();
 
-    CoordAxis getXaxis();
-
-    CoordAxis getYaxis();
-
     /**
-     * @return the nearest grid point to the given lat-lon point, or null if the
-     * lat-lon point is not contained within this layer's domain. The grid point
-     * is given as a two-dimensional integer array: [i,j].
+     * Gets the HorizontalCoordSys object, which finds the nearest i,j coordinates
+     * to a given lat-lon point.
      */
-    int[] latLonToGrid(LatLonPoint latLon);
-
-    /**
-     * @return true if this layer's grid is a lat-lon grid, {@literal i.e.}
-     * the {@link #getXaxis() x axis} is longitude and the {@link #getYaxis() y axis}
-     * is latitude.
-     */
-    public boolean isLatLon();
+    HorizontalCoordSys getHorizontalCoordSys();
     
     String getZunits();
 

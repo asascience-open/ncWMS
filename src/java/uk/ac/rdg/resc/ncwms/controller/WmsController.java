@@ -63,7 +63,6 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.HorizontalAlignment;
 import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.RectangleEdge;
-import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
@@ -75,7 +74,7 @@ import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.datareader.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.LineString;
@@ -499,8 +498,8 @@ public class WmsController extends AbstractController {
     }
 
     /** Simple class to hold a filename and a time index in the file */
-    private static final class FilenameAndTindex {
-
+    private static final class FilenameAndTindex
+    {
         /** The filename */
         private String filename;
         /** The time index within this file */
@@ -509,8 +508,7 @@ public class WmsController extends AbstractController {
 
     /**
      * Given a layer and an index along the layer's time axis, this method
-     * returns the exact file and the time index within that file that must
-     * be read.
+     * returns the exact file and the time index that must be read from the file.
      */
     private static FilenameAndTindex getFilenameAndTindex(Layer layer, int tIndexInLayer) throws Exception {
         FilenameAndTindex ft = new FilenameAndTindex();
@@ -651,6 +649,16 @@ public class WmsController extends AbstractController {
         LatLonPoint latLon = grid.getCrsHelper().crsToLatLon(x, y);
         usageLogEntry.setFeatureInfoLocation(latLon.getLongitude(), latLon.getLatitude());
 
+        // Create a trivial PointList for reading a single point of data.
+        // We use the same coordinate reference system as the original request
+        PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
+                grid.getCrsHelper());
+        // Find out the i,j coordinates of this point
+        PixelMap pixelMap = new PixelMap(layer.getHorizontalCoordSys(), singlePoint);
+        // There's only one i,j pair in the pixelMap
+        int i = pixelMap.getMaxIIndex();
+        int j = pixelMap.getMaxJIndex();
+
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
 
@@ -663,11 +671,6 @@ public class WmsController extends AbstractController {
         SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
         for (int tIndexInLayer : tIndices) {
             DateTime dateTime = tIndexInLayer < 0 ? null : layer.getTimesteps().get(tIndexInLayer).getDateTime();
-
-            // Create a trivial Grid for reading a single point of data.
-            // We use the same coordinate reference system as the original request
-            PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
-                    grid.getCrsHelper());
 
             // We don't use the tile cache for reading single points
             List<float[]> data = readData(layer, tIndexInLayer, zIndex, singlePoint,
@@ -684,6 +687,8 @@ public class WmsController extends AbstractController {
             Map<String, Object> models = new HashMap<String, Object>();
             models.put("longitude", latLon.getLongitude());
             models.put("latitude", latLon.getLatitude());
+            models.put("i", i);
+            models.put("j", j);
             models.put("data", featureData);
             return new ModelAndView("showFeatureInfo_xml", models);
         } else {
@@ -997,7 +1002,7 @@ public class WmsController extends AbstractController {
                     log.debug("ctrlPointDistance " + ctrlPointDistance);
                     //determine start end end value for marker based on index of ctrl point
                     IntervalMarker target = new IntervalMarker(data.length * prevCtrlPointDistance, data.length * ctrlPointDistance);
-                    target.setLabel("[" + roundTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "][" + roundTwoDecimals(transect.getControlPoints().get(i).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i).getX()) + "]");                    
+                    target.setLabel("[" + roundTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
                     target.setLabelFont(new Font("SansSerif", Font.ITALIC, 11));
                     //alter color of segment and position of label based on odd/even index
                     if (i % 2 == 0) {
@@ -1076,7 +1081,7 @@ public class WmsController extends AbstractController {
             // Create a PointList from the interpolated points
             PointList testPointList = PointList.fromList(points, transect.getCrsHelper());
             // Work out how many grid points will be sampled by this transect
-            int numGridPointsSampled = new PixelMap(layer, testPointList).getNumUniqueIJPairs();
+            int numGridPointsSampled = new PixelMap(layer.getHorizontalCoordSys(), testPointList).getNumUniqueIJPairs();
             log.debug("With {} transect points, we'll sample {} grid points",
                     numTransectPoints, numGridPointsSampled);
             // If this increase in resolution results in at least 10% more points

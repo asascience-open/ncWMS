@@ -30,13 +30,11 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.opengis.referencing.operation.TransformException;
-import ucar.nc2.constants.AxisType;
 import ucar.unidata.geoloc.ProjectionPoint;
 import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
-import uk.ac.rdg.resc.ncwms.metadata.Regular1DCoordAxis;
 
 /**
  * A Grid of points onto which data is to be projected.  This is the grid that
@@ -53,24 +51,20 @@ public class HorizontalGrid extends PointList
 
     private int width;      // Width of the grid in pixels
     private int height;     // Height of the grid in pixels
-    private double[] bbox;  // Array of four floats representing the bounding box
+    private double[] bbox;  // Array of four doubles representing the bounding box
     private String crsCode; // String representing the CRS
     private CrsHelper crsHelper;
 
     private double[] xAxisValues;
     private double[] yAxisValues;
 
-    private Regular1DCoordAxis gridXAxis;
-    private Regular1DCoordAxis gridYAxis;
-
     /**
      * Creates a HorizontalGrid from the parameters in the given GetMapDataRequest
      *
-     * @throws InvalidCrsException if the given CRS code is not recognized
-     * @throws Exception if there was an internal error.
+     * @throws InvalidCrsException if the given CRS code is not recognizeda
      * @todo check validity of the bounding box?
      */
-    public HorizontalGrid(GetMapDataRequest dr) throws InvalidCrsException, Exception
+    public HorizontalGrid(GetMapDataRequest dr) throws InvalidCrsException
     {
         this(dr.getCrsCode(), dr.getWidth(), dr.getHeight(), dr.getBbox());
     }
@@ -83,11 +77,10 @@ public class HorizontalGrid extends PointList
      * @param height Height of the grid in pixels
      * @param bbox Bounding box of the grid in the units of the given CRS
      * @throws InvalidCrsException if the given CRS code is not recognized
-     * @throws Exception if there was an internal error.
      * @todo check validity of the bounding box?
      */
     public HorizontalGrid(String crsCode, int width, int height, double[] bbox)
-        throws InvalidCrsException, Exception
+        throws InvalidCrsException
     {
         this.crsHelper = CrsHelper.fromCrsCode(crsCode);
         this.crsCode = crsCode;
@@ -102,8 +95,6 @@ public class HorizontalGrid extends PointList
         {
             this.xAxisValues[i] = this.bbox[0] + (i + 0.5) * dx;
         }
-        this.gridXAxis = new Regular1DCoordAxis(this.bbox[0], dx, this.width,
-            this.crsHelper.isLatLon() ? AxisType.Lon : AxisType.GeoX);
 
         double dy = (this.bbox[3] - this.bbox[1]) / this.height;
         this.yAxisValues = new double[this.height];
@@ -112,8 +103,6 @@ public class HorizontalGrid extends PointList
             // The y axis is flipped
             this.yAxisValues[i] = this.bbox[1] + (this.height - i - 0.5) * dy;
         }
-        this.gridYAxis = new Regular1DCoordAxis(this.bbox[1], dy, this.height,
-            this.crsHelper.isLatLon() ? AxisType.Lat : AxisType.GeoY);
         logger.debug("Created HorizontalGrid object for CRS {}", crsCode);
     }
 
@@ -156,21 +145,8 @@ public class HorizontalGrid extends PointList
     }
 
     /**
-     * Transforms the given lat-lon point to a coordinate pair {x,y} within
-     * this grid.
-     * @param latLonPoint
-     * @return the coordinate pair, or null if this point is outside the grid.
-     */
-    public int[] latLonToGridCoords(double longitude, double latitude) throws TransformException {
-        ProjectionPoint crsPoint = this.crsHelper.latLonToCrs(longitude, latitude);
-        int i = this.gridXAxis.getIndex(crsPoint.getX());
-        int j = this.gridYAxis.getIndex(crsPoint.getY());
-        if (i < 0 || j < 0) return null;
-        else return new int[]{i,j};
-    }
-
-    /**
-     * @return true if this is a lat-lon grid
+     * @return true if this is a lat-lon grid, i.e. x axis is longitude,
+     * y axis is latitude
      */
     public boolean isLatLon()
     {
