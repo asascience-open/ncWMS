@@ -47,7 +47,10 @@
 
     <div id="leftPanel">
 
-        <div style="padding-left:10px;padding-top:10px"><input id="zoomOnSelect" type="checkbox" checked="checked" title="Check this box to automatically zoom to a layer's maximum extent when it is loaded"/> Auto-zoom on select</div>
+        <div style="padding-left:10px;padding-top:10px">
+            <input id="zoomOnSelect" type="checkbox" checked="checked" title="Check this box to automatically zoom to a layer's maximum extent when it is loaded"/> Auto-zoom on select&nbsp;&nbsp;&nbsp;
+            <button onclick="javascript:setupLayerMenu()" title="Click to refresh the layer menu">Refresh</button>
+        </div>
 
         <!-- This is the left menu bar that will contain the layer selector -->
         <div id="layerSelector" class="yui-skin-sam"></div>

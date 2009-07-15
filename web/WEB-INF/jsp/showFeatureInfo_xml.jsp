@@ -11,10 +11,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
      Data (models) passed in to this page:
           longitude = longitude of the point of interest (float)
           latitude = latitude of the point of interest (float)
+          i = i index of the data point in the source grid (int)
+          j = j index of the data point in the source grid (int)
           data = Map of joda-time DateTime objects to data values (Map<DateTime, Float>) --%>
 <FeatureInfoResponse>
     <longitude>${longitude}</longitude>
     <latitude>${latitude}</latitude>
+    <iIndex>${i}</iIndex>
+    <jIndex>${j}</jIndex>
     <c:forEach var="datapoint" items="${data}">
     <FeatureInfo>
         <c:if test="${not empty datapoint.key}">
