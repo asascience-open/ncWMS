@@ -57,7 +57,9 @@ final class LutCoordSys extends HorizontalCoordSys
 
     private final LookUpTable lut;
 
-    /** The passed-in coordSys must have 2D horizontal coordinate axes */
+    /**
+     * The passed-in coordSys must have 2D horizontal coordinate axes.
+     */
     public static LutCoordSys generate(GridCoordSystem coordSys, int resolutionMultiplier,
         LutGenerator lutGenerator)
     {
@@ -73,6 +75,7 @@ final class LutCoordSys extends HorizontalCoordSys
                 LookUpTable lut = new LookUpTable(curvGrid, resolutionMultiplier);
                 // Populate the look-up table
                 lutGenerator.populateLut(lut, curvGrid);
+                logger.debug("Generated new look-up table");
                 // Create the LutCoordSys
                 lutCoordSys = new LutCoordSys(lut);
                 // Now put this in the cache

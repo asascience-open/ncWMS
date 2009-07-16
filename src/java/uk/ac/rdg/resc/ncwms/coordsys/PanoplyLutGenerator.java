@@ -38,7 +38,7 @@ import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
  * <a href="http://www.giss.nasa.gov/tools/panoply/">Panoply</a> NetCDF and
  * HDF viewer.  This calculates the extents of grid cells in the {@link CurvilinearGrid}
  * by joining up adjacent grid <i>points</i>.  (Note that this differs from the
- * method used by ToolsUI, in which cells are formed by joining grid <i>corners</i>.)</p>
+ * {@link ToolsUiLutGenerator}, in which cells are formed by joining grid <i>corners</i>.)</p>
  * <p>Many thanks to Robert Schmunk for kindly spending the time to
  * explain to me how Panoply works.</p>
  * <p>This class is stateless and therefore only a single {@link #INSTANCE instance}
