@@ -4,6 +4,7 @@
 
 var map = null;
 var calendar = null; // The calendar object
+var selectedDate = null;
 var datesWithData = null; // Will be populated with the dates on which we have data
                           // for the currently-selected variable
 var isoTValue = null; // The currently-selected t value (ISO8601)
@@ -718,9 +719,14 @@ function layerSelected(layerDetails)
             }
         }
         calendar.setRange(minYear, maxYear);
-        calendar.setDate(layerDetails.nearestTime);
 
-        calendar.refresh();
+        // Under Internet Explorer 7 (possibly other versions too) the calendar
+        // behaves oddly for early dates (e.g. year = 0031).  Therefore we
+        // don't use calendar.date to get the selected date, and we pass a clone
+        // of the selected date to the calendar to protect against mutation.
+        selectedDate = layerDetails.nearestTime;
+        calendar.setDate(new Date(selectedDate.getTime()));
+
         // N.B. For some reason the call to show() seems sometimes to toggle the
         // visibility of the zValues selector.  Hence we set this visibility
         // below, in updateMap()
@@ -744,14 +750,14 @@ function dateSelected(cal)
 function loadTimesteps()
 {
     // Print out date, e.g. "15 Oct 2007"
-    $('date').innerHTML = '<b>Date/time: </b>' + calendar.date.print('%d %b %Y');
+    $('date').innerHTML = '<b>Date/time: </b>' + selectedDate.print('%d %b %Y');
 
     // Get the timesteps for this day
     getTimesteps(activeLayer.server, {
         callback: updateTimesteps,
         layerName: activeLayer.id,
         // TODO: Hack! Use date only and adjust server-side logic
-        day: makeIsoDate(calendar.date) + 'T00:00:00Z'
+        day: makeIsoDate(selectedDate) + 'T00:00:00Z'
     });
 }
 
@@ -782,7 +788,7 @@ function updateTimesteps(times)
     var s = '<select id="tValues" onchange="javascript:updateMap()">';
     for (var i = 0; i < times.length; i++) {
         // Construct the full ISO Date-time
-        var isoDateTime = makeIsoDate(calendar.date) + 'T' + times[i];// + 'Z';
+        var isoDateTime = makeIsoDate(selectedDate) + 'T' + times[i];// + 'Z';
         // Strip off the trailing "Z" and any zero-length milliseconds
         var stopIndex = times[i].length;
         if (times[i].endsWith('.000Z')) {
