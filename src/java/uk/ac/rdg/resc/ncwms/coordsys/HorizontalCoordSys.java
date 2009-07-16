@@ -36,7 +36,6 @@ import ucar.nc2.dt.GridCoordSystem;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionImpl;
 import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionPointImpl;
 
 /**
  * Maps latitude-longitude points to the nearest i,j indices in a Layer's data array.
@@ -119,10 +118,8 @@ public abstract class HorizontalCoordSys
             // Hermida of Meteogalicia for pointing this out!
             ProjectionPoint point;
             synchronized(this.proj) {
-                // TODO: we have to create a new object each time to
-                // ensure thread safety.  But when we upgrade to
-                // nj4.0.46 or above we can remove this I think.
-                point = new ProjectionPointImpl(this.proj.latLonToProj(latLonPoint));
+                // This returns a new ProjectionPoint with each invocation
+                point = this.proj.latLonToProj(latLonPoint);
             }
             return new int[] {
                 this.xAxis.getIndex(point.getX()),
