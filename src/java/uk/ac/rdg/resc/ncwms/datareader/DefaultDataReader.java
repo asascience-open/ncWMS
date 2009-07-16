@@ -38,15 +38,12 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.Array;
-import ucar.ma2.Index;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
 import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDataset.Enhance;
-import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.VariableEnhanced;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
@@ -144,9 +141,18 @@ public class DefaultDataReader extends DataReader
             
             // Read the data from the dataset
             long before = System.currentTimeMillis();
-            // The actual reading of data from the variable is done here
-            this.populatePixelArray(picData, tRange, zRange, pixelMap, gridData);
+            // Decide on which strategy to use for reading data from the source
+            String fileType = nc.getFileTypeId();
+            // If data are local and uncompressed then it's relatively cheap to
+            // make many small reads of data to save memory.  If data are remote
+            // or compressed, it's generally more efficient to read data in a
+            // single operation, even if the memory footprint is larger.
+            DataReadingStrategy drStrategy = fileType.equals("netCDF") || fileType.equals("HDF4")
+                ? DataReadingStrategy.SCANLINE
+                : DataReadingStrategy.BOUNDING_BOX;
+            drStrategy.populatePixelArray(picData, tRange, zRange, pixelMap, gridData);
             long after = System.currentTimeMillis();
+
             // Write to the benchmark logger (if enabled in log4j.properties)
             // Headings are written in NcwmsContext.init()
             if (pixelMap.getNumUniqueIJPairs() > 1)
@@ -182,58 +188,6 @@ public class DefaultDataReader extends DataReader
                 catch (IOException ex)
                 {
                     logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Reads data from the given GridDatatype and populates the given pixel array.
-     * This uses a scanline-based algorithm: subclasses can override this to
-     * use alternative strategies, e.g. point-by-point or bounding box.
-     * @see PixelMap
-     */
-    protected void populatePixelArray(float[] picData, Range tRange, Range zRange,
-        PixelMap pixelMap, GridDatatype grid) throws Exception
-    {
-        // Cycle through the y indices, extracting a scanline of
-        // data each time from minX to maxX
-        logger.debug("Shape of grid: {}", Arrays.toString(grid.getShape()));
-        // Get a VariableDS for unpacking and checking for missing data
-        VariableDS var = grid.getVariable();
-        for (int j : pixelMap.getJIndices())
-        {
-            Range yRange = new Range(j, j);
-            // Read a row of data from the source
-            int imin = pixelMap.getMinIIndexInRow(j);
-            int imax = pixelMap.getMaxIIndexInRow(j);
-            Range xRange = new Range(imin, imax);
-            // Read a chunk of data - values will not be unpacked or
-            // checked for missing values yet
-            logger.debug("tRange: {}, zRange: {}, yRange: {}, xRange: {}", new
-                Object[] {tRange, zRange, yRange, xRange});
-            GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
-            logger.debug("Subset shape = {}", Arrays.toString(subset.getShape()));
-            // Read all of the x-y data in this subset
-            Array xySlice = subset.readDataSlice(0, 0, -1, -1);
-            logger.debug("Slice shape = {}", Arrays.toString(xySlice.getShape()));
-            // We now have a 2D array in y,x order.  We don't reduce this array
-            // because it will go to zero size if there is only one point in
-            // each direction.
-            Index index = xySlice.getIndex();
-            
-            // Now copy the scanline's data to the picture array
-            for (int i : pixelMap.getIIndices(j))
-            {
-                float val = xySlice.getFloat(index.set(0, i - imin));
-                // We unpack and check for missing values just for
-                // the points we need to display.
-                val = (float)var.convertScaleOffsetMissing(val);
-                // Now we set the value of all the image pixels associated with
-                // this data point.
-                for (int p : pixelMap.getPixelIndices(i, j))
-                {
-                    picData[p] = val;
                 }
             }
         }
@@ -479,7 +433,8 @@ public class DefaultDataReader extends DataReader
 
     public static void main(String[] args) throws Exception {
         //NetcdfDataset nc = NetcdfDataset.openDataset("http://topaz.nersc.no/thredds/dodsC/topaz/mersea-ipv2/arctic/tmipv2a-class1-b-be");
-        NetcdfDataset nc = NetcdfDataset.openDataset("c:\\documents and settings\\jon\\desktop\\topaz.ncml");
+        NetcdfDataset nc = NetcdfDataset.openDataset("c:\\Documents and Settings\\Jon\\Desktop\\adriatic.ncml");
+        System.out.println(nc.getFileTypeId());
         GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
             nc, null, null);
         GridDatatype tmp = gd.findGridDatatype("temperature");

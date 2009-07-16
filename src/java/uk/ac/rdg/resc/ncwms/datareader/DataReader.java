@@ -54,7 +54,7 @@ public abstract class DataReader
     private static Map<String, DataReader> readers = new HashMap<String, DataReader>();
     
     /**
-     * This class can only be instantiated through getDataReader()
+     * This class can only be instantiated through forDataset()
      */
     protected DataReader(){}
     
@@ -70,10 +70,6 @@ public abstract class DataReader
         String className = ds.getDataReaderClass();
         String location = ds.getLocation();
         String clazz = DefaultDataReader.class.getName();
-        if (WmsUtils.isOpendapLocation(location))
-        {
-            clazz = BoundingBoxDataReader.class.getName();
-        }
         if (className != null && !className.trim().equals(""))
         {
             clazz = className;

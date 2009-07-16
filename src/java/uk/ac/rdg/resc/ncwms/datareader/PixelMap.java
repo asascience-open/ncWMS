@@ -58,55 +58,9 @@ import uk.ac.rdg.resc.ncwms.coordsys.LatLonCoordSys;
  * requested CRS and the CRS of the data are lat-lon.)</p>
  *
  * <p>The resulting PixelMap is then used by {@link DataReader}s to work out what
- * data to read from the source data files.  The grid below represents the source
- * data.  Black grid squares represent data points that must be read from the source
- * data and will be used to generate the final output (e.g. image):</p>
- * <img src="doc-files/pixelmap_pbp.png">
- * <p>A variety of strategies are possible for reading these data points:</p>
- *
- * <h3>Strategy 1: read data points one at a time</h3>
- * <p>Read each data point individually by iterating through {@link #getJIndices}
- *    and {@link #getIIndices}.  This minimizes the memory footprint as the minimum
- *    amount of data is read from disk.  However, in general this method is inefficient
- *    as it maximizes the overhead of the low-level data extraction code by making
- *    a large number of small data extractions.  This strategy is employed by
- *    {@link PixelByPixelDataReader} and is not recommended for general use.</p>
- *
- * <h3>Strategy 2: read all data points in one operation</h3>
- * <p>Read all data in one operation (potentially including lots of data points
- *       that are not needed) by finding the overall i-j bounding box with
- *       {@link #getMinIIndex}, {@link #getMaxIIndex}, {@link #getMinJIndex}
- *       and {@link #getMaxJIndex}.  This minimizes the number
- *       of calls to low-level data extraction code, but may result in a large memory
- *       footprint.  The {@link DataReader} would then subset this data array in-memory.
- *       This strategy is employed by {@link BoundingBoxDataReader}.  This approach is recommended for remote
- *       datasets (e.g. on an OPeNDAP server) as it minimizes the overhead associated
- *       with the data extraction operation.</p>
- * <p>This approach is illustrated in the diagram below.  Grey squares represent
- * data points that are read into memory but are discarded because they do not
- * form part of the final image:</p>
- * <img src="doc-files/pixelmap_bbox.png">
- *
- * <h3>Strategy 3: Read "scanlines" of data</h3>
- * <p>A compromise strategy, which balances memory considerations against the overhead
- *       of the low-level data extraction code, works as follows:
- *       <ol>
- *          <li>Iterate through each row (i.e. each j index) that is represented in
- *              the PixelMap using {@link #getJIndices}.</li>
- *          <li>For each j index, extract data from the minimum to the maximum i index
- *              in this row (a "scanline") using {@link #getMinIIndexInRow} and
- *              {@link #getMaxIIndexInRow}.  (This assumes that the data are stored with the i
- *              dimension varying fastest, meaning that the scanline represents
- *              contiguous data in the source files.)</li>
- *       </ol>
- *       Therefore if there are 25 distinct j indices in the PixelMap there will be 25
- *       individual calls to the low-level data extraction code.  This algorithm has
- *       been found to work well in a variety of situations although it may not always
- *       be the most efficient.  This strategy is employed by the {@link DefaultDataReader}.</p>
- * <p>This approach is illustrated in the diagram below.  There is now a much smaller
- * amount of "wasted data" (i.e. grey squares) than in Strategy 2, and there are
- * much fewer individual read operations than in Strategy 1.</p>
- * <img src="doc-files/pixelmap_scanline.png">
+ * data to read from the source data files.  A variety of strategies are possible
+ * for reading these data points, each of which may be optimal in a certain
+ * situation.  See {@link DataReadingStrategy} for further information.</p>
  *
  * @author Jon Blower
  * @todo Perhaps we can think of a more appropriate name for this class?
