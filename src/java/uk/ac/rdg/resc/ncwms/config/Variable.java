@@ -85,10 +85,7 @@ public class Variable
             {
                 float min = Float.parseFloat(els[0]);
                 float max = Float.parseFloat(els[1]);
-                if (max <= min)
-                {
-                    throw new PersistenceException("Invalid colorScaleRange attribute for variable " + this.id);
-                }
+                if (max < min) max = min;
                 this.colorScaleRange = new float[]{min, max};
             }
             catch(NumberFormatException nfe)
@@ -166,20 +163,18 @@ public class Variable
         {
             this.colorScaleRange = null;
             this.colorScaleRangeStr = null;
+            return;
         }
-        else if (colorScaleRange.length != 2)
+        if (colorScaleRange.length != 2)
         {
             throw new IllegalArgumentException("Colorscalerange must have two elements");
         }
-        else if (colorScaleRange[0] >= colorScaleRange[1])
+        if (colorScaleRange[0] > colorScaleRange[1])
         {
-            throw new IllegalArgumentException("Invalid color scale range");
+            colorScaleRange[1] = colorScaleRange[0];
         }
-        else
-        {
-            this.colorScaleRange = colorScaleRange;
-            this.colorScaleRangeStr = colorScaleRange[0] + "," + colorScaleRange[1];
-        }
+        this.colorScaleRange = colorScaleRange;
+        this.colorScaleRangeStr = colorScaleRange[0] + "," + colorScaleRange[1];
     }
 
     public String getPaletteName()

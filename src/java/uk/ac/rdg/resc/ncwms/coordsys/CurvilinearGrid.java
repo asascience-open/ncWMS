@@ -35,6 +35,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.ma2.ArrayDouble;
+import ucar.nc2.constants.AxisType;
+import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -73,20 +75,23 @@ final class CurvilinearGrid implements Iterable<Cell>
     private final LatLonRect latLonBbox;
 
     /**
-     * Creates a CurvilinearGrid.
-     * @param ni The number of grid cells in the i direction
-     * @param nj The number of grid cells in the j direction
-     * @param longitudes Array of ni*nj longitude values, with the i direction
-     * varying fastest.  This class keeps a reference to this array, hence
-     * changes to this array will cause problems!
-     * @param latitudes Array of ni*nj latitude values, with the i direction
-     * varying fastest.  This class keeps a reference to this array, hence
-     * changes to this array will cause problems!
-     * @throws IllegalArgumentException if {@code ni <= 0} or {@code nj <= 0}
-     * or if the lengths of the arrays are not {@code ni*nj}
+     * Creates a CurvilinearGrid from a GridCoordSystem.
+     * @param coordSys The GridCoordSystem from which this CurvilinearGrid will
+     * be created.
+     * @throws IllegalArgumentException if the x and y axes of the provided
+     * GridCoordSystem are not 2D coordinate axes of type Lon and Lat respectively
      */
     public CurvilinearGrid(GridCoordSystem coordSys)
     {
+        CoordinateAxis xAxis = coordSys.getXHorizAxis();
+        CoordinateAxis yAxis = coordSys.getYHorizAxis();
+        if (xAxis == null || yAxis == null ||
+            !(xAxis instanceof CoordinateAxis2D) || !(yAxis instanceof CoordinateAxis2D) ||
+            xAxis.getAxisType() != AxisType.Lon || yAxis.getAxisType() != AxisType.Lat)
+        {
+            throw new IllegalArgumentException("Coordinate system must consist" +
+                " of two-dimensional latitude and longitude axes");
+        }
         CoordinateAxis2D lonAxis = (CoordinateAxis2D)coordSys.getXHorizAxis();
         CoordinateAxis2D latAxis = (CoordinateAxis2D)coordSys.getYHorizAxis();
 
@@ -96,6 +101,12 @@ final class CurvilinearGrid implements Iterable<Cell>
         this.nj = lonAxis.getShape(0);
         this.longitudes = lonAxis.getCoordValues();
         this.latitudes  = latAxis.getCoordValues();
+
+        // Make sure all longitudes are in the range [-180,180]
+        for (int i = 0; i < this.longitudes.length; i++)
+        {
+            this.longitudes[i] = Longitude.constrain180(this.longitudes[i]);
+        }
 
         // Calculate the corners of the grid cells
         logger.debug("Making longitude corners");

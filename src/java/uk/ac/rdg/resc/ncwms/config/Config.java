@@ -283,11 +283,11 @@ public class Config implements ApplicationContextAware
         this.datasets.remove(ds.getId());
     }
     
-    public synchronized void changeDatasetId(String oldId, String newId)
+    public synchronized void changeDatasetId(Dataset ds, String newId)
     {
-        Dataset ds = this.datasets.remove(oldId);
+        this.datasets.remove(ds.getId());
         ds.setId(newId);
-        this.datasets.put(ds.getId(), ds);
+        this.datasets.put(newId, ds);
     }
     
     /**

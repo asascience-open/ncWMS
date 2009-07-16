@@ -170,7 +170,7 @@ public class AdminController extends MultiActionController
             // First look through the existing datasets for edits.
             List<Dataset> datasetsToRemove = new ArrayList<Dataset>(); 
             // Keeps track of dataset IDs that have been changed
-            Map<String, String> changedIds = new HashMap<String, String>();
+            Map<Dataset, String> changedIds = new HashMap<Dataset, String>();
             for (Dataset ds : this.config.getDatasets().values())
             {
                 boolean refreshDataset = false;
@@ -214,7 +214,7 @@ public class AdminController extends MultiActionController
                     String newId = request.getParameter("dataset." + ds.getId() + ".id").trim();
                     if (!newId.equals(ds.getId()))
                     {
-                        changedIds.put(ds.getId(), newId);
+                        changedIds.put(ds, newId);
                         // The ID will be changed later
                     }
                 }
@@ -229,9 +229,12 @@ public class AdminController extends MultiActionController
                 config.removeDataset(ds);
             }
             // Now we change the ids of the relevant datasets
-            for (String oldId : changedIds.keySet())
+            for (Dataset ds : changedIds.keySet())
             {
-                config.changeDatasetId(oldId, changedIds.get(oldId));
+                config.changeDatasetId(ds, changedIds.get(ds));
+                // Force a refresh of the dataset.  We do this in case the 
+                // new ID happens to be the same as an existing dataset.
+                this.metadataLoader.scheduleMetadataReload(ds);
             }
             
             // Now look for the new datasets. The logic below means that we don't have
