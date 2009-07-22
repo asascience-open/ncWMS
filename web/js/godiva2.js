@@ -740,6 +740,7 @@ function layerSelected(layerDetails)
 function dateSelected(cal)
 {
     if (cal.dateClicked) {
+        selectedDate = new Date(calendar.date.getTime());
         loadTimesteps();
     }
 }
