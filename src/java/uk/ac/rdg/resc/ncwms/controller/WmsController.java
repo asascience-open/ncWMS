@@ -33,11 +33,13 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -1002,7 +1004,8 @@ public class WmsController extends AbstractController {
                     log.debug("ctrlPointDistance " + ctrlPointDistance);
                     //determine start end end value for marker based on index of ctrl point
                     IntervalMarker target = new IntervalMarker(data.length * prevCtrlPointDistance, data.length * ctrlPointDistance);
-                    target.setLabel("[" + roundTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + roundTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
+                    // TODO: printing to two d.p. not always appropriate
+                    target.setLabel("[" + printTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + printTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
                     target.setLabelFont(new Font("SansSerif", Font.ITALIC, 11));
                     //alter color of segment and position of label based on odd/even index
                     if (i % 2 == 0) {
@@ -1042,13 +1045,19 @@ public class WmsController extends AbstractController {
     }
 
     /**
-     * rounds a double to 2 decimal places
+     * Prints a double-precision number to 2 decimal places
      * @param d the double
-     * @return rounded value to 2 places
+     * @return rounded value to 2 places, as a String
      */
-    private double roundTwoDecimals(double d) {
+    private static String printTwoDecimals(double d)
+    {
         DecimalFormat twoDForm = new DecimalFormat("#.##");
-        return Double.valueOf(twoDForm.format(d));
+        // We need to set the Locale properly, otherwise the DecimalFormat doesn't
+        // work in locales that use commas instead of points.
+        // Thanks to Justino Martinez for this fix!
+        DecimalFormatSymbols decSym = DecimalFormatSymbols.getInstance(new Locale("us", "US"));
+        twoDForm.setDecimalFormatSymbols(decSym);
+        return twoDForm.format(d);
     }
 
     /**
