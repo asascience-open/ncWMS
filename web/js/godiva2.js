@@ -85,9 +85,7 @@ window.onload = function()
 
     // Set up the history navigator
     var nav = new OpenLayers.Control.NavigationHistory();
-    var navHistoryPanel = new OpenLayers.Control.Panel(
-        //{div: document.getElementById("navHistoryPanel")}
-    );
+    var navHistoryPanel = new OpenLayers.Control.Panel();
     navHistoryPanel.addControls([nav.next, nav.previous]);
 
     // Set up the OpenLayers map widget
@@ -783,7 +781,10 @@ function dateSelected(cal)
 function loadTimesteps()
 {
     // Print out date, e.g. "15 Oct 2007"
-    $('date').innerHTML = '<b>Date/time: </b>' + selectedDate.print('%d %b %Y');
+    var prettyPrintDate = selectedDate.getFullYear() == 0
+        ? selectedDate.print('%d %b 0000')
+        : selectedDate.print('%d %b %Y');
+    $('date').innerHTML = '<b>Date/time: </b>' + prettyPrintDate;
 
     // Get the timesteps for this day
     getTimesteps(activeLayer.server, {
@@ -799,8 +800,9 @@ function loadTimesteps()
 function makeIsoDate(date)
 {
     // Watch out for low-numbered years when generating the ISO string
-    var prefix = '';
     var year = date.getFullYear();
+    if (year == 0) return date.print('0000-%m-%d'); // need workaround for year zero
+    var prefix = '';
     if (year < 10) prefix = '000';
     else if (year < 100) prefix = '00';
     else if (year < 1000) prefix = '0';
