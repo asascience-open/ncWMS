@@ -46,9 +46,8 @@ final class LookUpTable
 {
     // The contents of the look-up table: i.e. the i and j indices of each
     // lon-lat point in the LUT.  These are flattened from a 2D to a 1D array.
-    // We store these as shorts to save disk space and (more importantly) disk
-    // read/write time.  The LUT would need to be extremely large before we
-    // have to worry about this.
+    // We store these as shorts to save disk space.  The LUT would need to be
+    // extremely large before we would have to worry about overflows.
     // Each array has the size nLon * nLat
     private final short[] iIndices;
     private final short[] jIndices;
@@ -61,16 +60,17 @@ final class LookUpTable
 
     /**
      * Creates an empty look-up table (with all indices set to -1).
+     * @param curvGrid The CurvilinearGrid which this LUT will approximate
+     * @param minResolution The minimum resolution of the LUT in degrees
      */
-    public LookUpTable(CurvilinearGrid curvGrid, int resolutionMultiplier)
+    public LookUpTable(CurvilinearGrid curvGrid, double minResolution)
     {
         LatLonRect bbox = curvGrid.getLatLonBoundingBox();
 
         // Now calculate the number of points in the LUT along the longitude
         // and latitude directions
-        double ratio = (bbox.getLonMax() - bbox.getLonMin()) / (bbox.getLatMax() - bbox.getLatMin());
-        this.nLat = (int) Math.sqrt((resolutionMultiplier * resolutionMultiplier * curvGrid.size()) / ratio);
-        this.nLon = (int) (ratio * this.nLat);
+        this.nLon = (int)Math.ceil((bbox.getLonMax() - bbox.getLonMin()) / minResolution);
+        this.nLat = (int)Math.ceil((bbox.getLatMax() - bbox.getLatMin()) / minResolution);
         if (this.nLon <= 0 || this.nLat <= 0)
         {
             String msg = String.format("nLon (=%d) and nLat (=%d) must be positive and > 0", this.nLon, this.nLat);
@@ -117,10 +117,10 @@ final class LookUpTable
             return null;
         }
         int index = iLon + (iLat * this.nLon);
-        return new int[]{
-            this.iIndices[index],
-            this.jIndices[index]
-        };
+        int iIndex = this.iIndices[index];
+        int jIndex = this.jIndices[index];
+        if (iIndex < 0 || jIndex < 0) return null;
+        return new int[] {iIndex, jIndex};
     }
 
     /**

@@ -46,6 +46,7 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.jfree.chart.ChartFactory;
@@ -243,7 +244,13 @@ public class WmsController extends AbstractController {
             }
             throw wmse;
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            // Filter out ClientAbortExceptions, otherwise the log gets full of
+            // them (very common when the user is panning and zooming in a
+            // visualization client).
+            if (!(e instanceof ClientAbortException)) {
+                log.error(e.getMessage(), e);
+                logUsage = false;
+            }
             usageLogEntry.setException(e);
             throw e;
         } finally {
@@ -651,15 +658,10 @@ public class WmsController extends AbstractController {
         LatLonPoint latLon = grid.getCrsHelper().crsToLatLon(x, y);
         usageLogEntry.setFeatureInfoLocation(latLon.getLongitude(), latLon.getLatitude());
 
-        // Create a trivial PointList for reading a single point of data.
-        // We use the same coordinate reference system as the original request
-        PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
-                grid.getCrsHelper());
-        // Find out the i,j coordinates of this point
-        PixelMap pixelMap = new PixelMap(layer.getHorizontalCoordSys(), singlePoint);
-        // There's only one i,j pair in the pixelMap
-        int i = pixelMap.getMaxIIndex();
-        int j = pixelMap.getMaxJIndex();
+        // Find out the i,j coordinates of this point in the source grid (could be null)
+        int[] gridCoords = layer.getHorizontalCoordSys().latLonToGrid(latLon);
+        // Get the location of the centre of the grid cell
+        LatLonPoint gridCellCentre = layer.getHorizontalCoordSys().gridToLatLon(gridCoords);
 
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
@@ -670,6 +672,10 @@ public class WmsController extends AbstractController {
 
         // Now read the data, mapping date-times to data values
         // The map is sorted in order of ascending time
+        // Create a trivial PointList for reading a single point of data.
+        // We use the same coordinate reference system as the original request
+        PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
+                grid.getCrsHelper());
         SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
         for (int tIndexInLayer : tIndices) {
             DateTime dateTime = tIndexInLayer < 0 ? null : layer.getTimesteps().get(tIndexInLayer).getDateTime();
@@ -689,8 +695,8 @@ public class WmsController extends AbstractController {
             Map<String, Object> models = new HashMap<String, Object>();
             models.put("longitude", latLon.getLongitude());
             models.put("latitude", latLon.getLatitude());
-            models.put("i", i);
-            models.put("j", j);
+            models.put("gridCoords", gridCoords);
+            models.put("gridCentre", gridCellCentre);
             models.put("data", featureData);
             return new ModelAndView("showFeatureInfo_xml", models);
         } else {
@@ -1070,8 +1076,7 @@ public class WmsController extends AbstractController {
      * @return a PointList that contains (near) the minimum necessary number of
      * points to sample a layer's source grid of data.
      */
-    private static PointList getOptimalTransectPointList(
-            Layer layer,
+    private static PointList getOptimalTransectPointList(Layer layer,
             LineString transect) throws Exception {
         // We need to work out how many points we need to include in order to
         // completely sample the data grid (i.e. we need the resolution of the
@@ -1082,15 +1087,15 @@ public class WmsController extends AbstractController {
         int numTransectPoints = 500; // a bit more than the final image width
         int lastNumGridPointsSampled = -1;
         PointList pointList = null;
-        boolean done = false;
-        while (!done) {
+        while (true) {
             // Create a transect with the required number of points, interpolating
             // between the control points in the line string
             List<ProjectionPoint> points = transect.getPointsOnPath(numTransectPoints);
             // Create a PointList from the interpolated points
             PointList testPointList = PointList.fromList(points, transect.getCrsHelper());
             // Work out how many grid points will be sampled by this transect
-            int numGridPointsSampled = new PixelMap(layer.getHorizontalCoordSys(), testPointList).getNumUniqueIJPairs();
+            int numGridPointsSampled =
+                new PixelMap(layer.getHorizontalCoordSys(), testPointList).getNumUniqueIJPairs();
             log.debug("With {} transect points, we'll sample {} grid points",
                     numTransectPoints, numGridPointsSampled);
             // If this increase in resolution results in at least 10% more points
@@ -1098,17 +1103,13 @@ public class WmsController extends AbstractController {
             if (numGridPointsSampled > lastNumGridPointsSampled * 1.1) {
                 // We need to increase the transect resolution and try again
                 lastNumGridPointsSampled = numGridPointsSampled;
-                numTransectPoints +=
-                        500;
-                pointList =
-                        testPointList;
+                numTransectPoints += 500;
+                pointList = testPointList;
             } else {
                 // We've gained little advantage by the last resolution increase
-                done = true;
+                return pointList;
             }
-
         }
-        return pointList;
     }
 
     /**

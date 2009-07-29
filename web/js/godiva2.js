@@ -43,6 +43,9 @@ var layersLoading = 0;
 var animationSelector = null; // Pop-up panel for selecting the time resolution of an animation
 var projectionCode = null; // Projection code for map baselayer
 
+var debugMode = false; // Can be switched on with a URL parameter to provide more
+                       // information in GetFeatureInfo requests
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -296,6 +299,8 @@ function populateAutoLoad(windowLocation)
                 } else if (key == 'menu') {
                     // we load a specific menu instead of the default
                     menu = keyAndVal[1];
+                } else if (key == 'debugmode') {
+                    debugMode = keyAndVal[1] == 'true';
                 }
             }
         }
@@ -496,25 +501,34 @@ function getFeatureInfo(e)
         // Now make the call to GetFeatureInfo
         OpenLayers.loadURL(featureInfoUrl, '', this, function(response) {
             var xmldoc = response.responseXML;
-            var lon = parseFloat(xmldoc.getElementsByTagName('longitude')[0].firstChild.nodeValue);
-            var lat = parseFloat(xmldoc.getElementsByTagName('latitude')[0].firstChild.nodeValue);
-            var iIndex = parseInt(xmldoc.getElementsByTagName('iIndex')[0].firstChild.nodeValue);
-            var jIndex = parseInt(xmldoc.getElementsByTagName('jIndex')[0].firstChild.nodeValue);
-            var val = parseFloat(xmldoc.getElementsByTagName('value')[0].firstChild.nodeValue);
+            var lon = parseFloat(getElementValue(xmldoc, 'longitude'));
+            var lat = parseFloat(getElementValue(xmldoc, 'latitude'));
+            var iIndex = parseInt(getElementValue(xmldoc, 'iIndex'));
+            var jIndex = parseInt(getElementValue(xmldoc, 'jIndex'));
+            var gridCentreLon = parseFloat(getElementValue(xmldoc, 'gridCentreLon'));
+            var gridCentreLat = parseFloat(getElementValue(xmldoc, 'gridCentreLat'));
+            var val = parseFloat(getElementValue(xmldoc, 'value'));
             var html = "";
             if (lon) {
                 // We have a successful result
-                var truncVal = toNSigFigs(val, 4);
-                html = "<b>Lon:</b> " + lon + "<br /><b>Lat:</b> " + lat +
-                    "<br /><b>Value:</b> " + truncVal + "<br />"
-                html += "<i>(Grid indices: i=" + iIndex + ", j=" + jIndex + ")</i><br />";
-                // Add links to alter colour scale min/max
-                html += "<a href='#' onclick=setColourScaleMin(" + val + ") " +
-                    "title='Sets the minimum of the colour scale to " + truncVal + "'>" +
-                    "Set colour min</a><br />";
-                html += "<a href='#' onclick=setColourScaleMax(" + val + ") " +
-                    "title='Sets the maximum of the colour scale to " + truncVal + "'>" +
-                    "Set colour max</a>";
+                var truncVal = val.toPrecision(4);
+                html = "<b>Lon:</b> " + lon.toFixed(6) + "<br /><b>Lat:</b> " +
+                    lat.toFixed(6) + "<br /><b>Value:</b> " + truncVal + "<br />"
+                if (iIndex && debugMode) {
+                    // Add extra information about the grid
+                    html += "<i>(Grid indices: i=" + iIndex + ", j=" + jIndex + ")</i><br />";
+                    html += "<i>(Grid centre: lon=" + gridCentreLon.toFixed(6) + ", lat="
+                        + gridCentreLat.toFixed(6) + ")</i><br />";
+                }
+                if (!isNaN(truncVal)) {
+                    // Add links to alter colour scale min/max
+                    html += "<a href='#' onclick=setColourScaleMin(" + val + ") " +
+                        "title='Sets the minimum of the colour scale to " + truncVal + "'>" +
+                        "Set colour min</a><br />";
+                    html += "<a href='#' onclick=setColourScaleMax(" + val + ") " +
+                        "title='Sets the maximum of the colour scale to " + truncVal + "'>" +
+                        "Set colour max</a>";
+                }
                 if (timeSeriesSelected()) {
                     // Construct a GetFeatureInfo request for the timeseries plot
                     // Get a URL for a WMS request that covers the current map extent
@@ -556,6 +570,15 @@ function getFeatureInfo(e)
         });
         Event.stop(e);
     }
+}
+
+// Gets the value of the element with the given name from the given XML document,
+// or null if the given element doesn't exist
+function getElementValue(xml, elName)
+{
+    var el = xml.getElementsByTagName(elName);
+    if (!el || !el[0] || !el[0].firstChild) return null;
+    return el[0].firstChild.nodeValue;
 }
 
 function popUp(url, width, height)
@@ -643,8 +666,8 @@ function layerSelected(layerDetails)
             !scaleLocked) {
         scaleMinVal = layerDetails.scaleRange[0];
         scaleMaxVal = layerDetails.scaleRange[1];
-        $('scaleMin').value = toNSigFigs(scaleMinVal, 4);
-        $('scaleMax').value = toNSigFigs(scaleMaxVal, 4);
+        $('scaleMin').value = scaleMinVal.toPrecision(4);
+        $('scaleMax').value = scaleMaxVal.toPrecision(4);
         gotScaleRange = true;
     }
 
@@ -912,8 +935,8 @@ function toggleLockScale()
 // This function is called when we have received the min and max values from the server
 function gotMinMax(minmax)
 {
-    $('scaleMin').value = toNSigFigs(minmax.min, 4);
-    $('scaleMax').value = toNSigFigs(minmax.max, 4);
+    $('scaleMin').value = minmax.min.toPrecision(4);
+    $('scaleMax').value = minmax.max.toPrecision(4);
     validateScale(); // This calls updateMap()
 }
 
@@ -1122,8 +1145,8 @@ function updateMap()
     var third = (max - min) / 3;
     var scaleOneThird = logscale ? Math.exp(min + third) : min + third;
     var scaleTwoThirds = logscale ? Math.exp(min + 2 * third) : min + 2 * third;
-    $('scaleOneThird').innerHTML = toNSigFigs(scaleOneThird, 4);
-    $('scaleTwoThirds').innerHTML = toNSigFigs(scaleTwoThirds, 4);
+    $('scaleOneThird').innerHTML = scaleOneThird.toPrecision(4);
+    $('scaleTwoThirds').innerHTML = scaleTwoThirds.toPrecision(4);
     
     if ($('tValues')) {
         isoTValue = $('tValues').value;
@@ -1429,19 +1452,6 @@ function getIntersectionBBOX()
         return newBBOX;
     } else {
         return map.getExtent().toBBOX();
-    }
-}
-
-// Formats the given value to numSigFigs significant figures
-// WARNING: Javascript 1.5 only!
-function toNSigFigs(value, numSigFigs)
-{
-    if (!value.toPrecision) {
-        // TODO: do this somewhere more useful
-        alert("Your browser doesn't support Javascript 1.5");
-        return value;
-    } else {
-        return value.toPrecision(numSigFigs);
     }
 }
 

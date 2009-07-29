@@ -108,11 +108,11 @@ public final class PixelMap
             {
                 // Translate this point in the target grid to lat-lon
                 LatLonPoint latLon = crsHelper.crsToLatLon(point);
-                // Now find the nearest index in the grid
+                // Now find the nearest index in the grid: gridCoords will be
+                // null if latLon is outside the grid's domain
                 int[] gridCoords = horizCoordSys.latLonToGrid(latLon);
                 if (gridCoords != null)
                 {
-                    // Ignores negative indices
                     this.put(gridCoords[0], gridCoords[1], pixelIndex);
                 }
             }

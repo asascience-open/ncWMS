@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.unidata.geoloc.LatLonPoint;
+import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
 /**
  * A HorizontalCoordSys that is created from a "curvilinear" coordinate system,
@@ -45,41 +46,46 @@ import ucar.unidata.geoloc.LatLonPoint;
  * the nearest i-j indices to a set of lat-lon points. Coordinate
  * conversions using such a look-up table are not precise but may suffice for
  * many applications.
- *
+ * @todo reduce the number of objects: fold in LookUpTable and BufferedImageLutGenerator
  * @author Jon Blower
  */
-final class LutCoordSys extends HorizontalCoordSys
+final class TwoDCoordSys extends HorizontalCoordSys
 {
-    private static final Logger logger = LoggerFactory.getLogger(LutCoordSys.class);
+    private static final Logger logger = LoggerFactory.getLogger(TwoDCoordSys.class);
 
-    /** In-memory cache of LutCoordSys objects to save expensive re-generation of same object */
-    private static final Map<Key, LutCoordSys> CACHE = new HashMap<Key, LutCoordSys>();
+    /** In-memory cache of TwoDCoordSys objects to save expensive re-generation of same object */
+    private static final Map<CurvilinearGrid, TwoDCoordSys> CACHE = new HashMap<CurvilinearGrid, TwoDCoordSys>();
 
+    private final CurvilinearGrid curvGrid;
     private final LookUpTable lut;
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
      */
-    public static LutCoordSys generate(GridCoordSystem coordSys, int resolutionMultiplier,
-        LutGenerator lutGenerator)
+    public static TwoDCoordSys generate(GridCoordSystem coordSys)
     {
         CurvilinearGrid curvGrid = new CurvilinearGrid(coordSys);
-        Key key = new Key(curvGrid, resolutionMultiplier, lutGenerator);
+
+        // We calculate the required resolution of the look-up tables.  We
+        // want this to be around 3 times the resolution of the grid.
+        double minLutResolution = Math.sqrt(curvGrid.getMeanCellArea()) / 3.0;
+        logger.debug("minLutResolution = {}", minLutResolution);
+
         synchronized(CACHE)
         {
-            LutCoordSys lutCoordSys = CACHE.get(key);
+            TwoDCoordSys lutCoordSys = CACHE.get(curvGrid);
             if (lutCoordSys == null)
             {
                 logger.debug("Need to generate new look-up table");
                 // Create a blank look-up table
-                LookUpTable lut = new LookUpTable(curvGrid, resolutionMultiplier);
+                LookUpTable lut = new LookUpTable(curvGrid, minLutResolution);
                 // Populate the look-up table
-                lutGenerator.populateLut(lut, curvGrid);
+                BufferedImageLutGenerator.populateLut(lut, curvGrid);
                 logger.debug("Generated new look-up table");
-                // Create the LutCoordSys
-                lutCoordSys = new LutCoordSys(lut);
+                // Create the TwoDCoordSys
+                lutCoordSys = new TwoDCoordSys(curvGrid, lut);
                 // Now put this in the cache
-                CACHE.put(key, lutCoordSys);
+                CACHE.put(curvGrid, lutCoordSys);
             }
             else
             {
@@ -90,47 +96,62 @@ final class LutCoordSys extends HorizontalCoordSys
     }
 
     /** Private constructor to prevent direct instantiation */
-    private LutCoordSys(LookUpTable lut)
+    private TwoDCoordSys(CurvilinearGrid curvGrid, LookUpTable lut)
     {
+        this.curvGrid = curvGrid;
         this.lut = lut;
     }
 
+    /**
+     * @return the nearest grid point to the given lat-lon point, or null if the
+     * lat-lon point is not contained within this layer's domain. The grid point
+     * is given as a two-dimensional integer array: [i,j].
+     */
     @Override
-    public int[] latLonToGrid(LatLonPoint latLonPoint) {
-        return this.lut.getGridCoordinates(latLonPoint.getLongitude(), latLonPoint.getLatitude());
+    public int[] latLonToGrid(LatLonPoint latLonPoint)
+    {
+        int[] lutCoords =
+            this.lut.getGridCoordinates(latLonPoint.getLongitude(), latLonPoint.getLatitude());
+        // Return null if the latLonPoint does not match a valid grid point
+        if (lutCoords == null) return null;
+        // Check that this cell really contains this point, if not, check
+        // the neighbours
+        Cell cell = this.curvGrid.getCell(lutCoords[0], lutCoords[1]);
+        if (cell.contains(latLonPoint)) return lutCoords;
+        for (Cell neighbour : cell.getEdgeNeighbours())
+        {
+            if (neighbour.contains(latLonPoint))
+            {
+                return new int[]{ neighbour.getI(), neighbour.getJ() };
+            }
+        }
+        for (Cell neighbour : cell.getCornerNeighbours())
+        {
+            if (neighbour.contains(latLonPoint))
+            {
+                return new int[]{ neighbour.getI(), neighbour.getJ() };
+            }
+        }
+        // If we get this far something probably went wrong with the LUT
+        //logger.debug("Point is not contained by cell or its neighbours");
+        return lutCoords;
     }
 
-    private static final class Key
+    /**
+     * @return the latitude and longitude of the given grid point, or null if
+     * the given grid coordinates [i,j] are outside the extent of the grid
+     */
+    @Override
+    public LatLonPoint gridToLatLon(int i, int j)
     {
-        private CurvilinearGrid curvGrid;
-        private int resolutionMultiplier;
-        private LutGenerator lutGenerator;
-
-        public Key(CurvilinearGrid curvGrid, int resolutionMultiplier,
-            LutGenerator lutGenerator)
+        if (i >= 0 && i < this.curvGrid.getNi() &&
+            j >= 0 && j < this.curvGrid.getNj())
         {
-            this.curvGrid = curvGrid;
-            this.resolutionMultiplier = resolutionMultiplier;
-            this.lutGenerator = lutGenerator;
+            return this.curvGrid.getMidpoint(i, j);
         }
-
-        @Override public int hashCode()
+        else
         {
-            int hashCode = 17;
-            hashCode = 31 * hashCode + this.curvGrid.hashCode();
-            hashCode = 31 * hashCode + this.resolutionMultiplier;
-            hashCode = 31 * hashCode + this.lutGenerator.hashCode();
-            return hashCode;
-        }
-
-        @Override public boolean equals(Object obj)
-        {
-            if (obj == this) return true;
-            if (!(obj instanceof Key)) return false;
-            Key other = (Key)obj;
-            return this.resolutionMultiplier == other.resolutionMultiplier &&
-                   this.lutGenerator.equals(other.lutGenerator) &&
-                   this.curvGrid.equals(other.curvGrid);
+            return null;
         }
     }
 }

@@ -35,7 +35,6 @@ import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionImpl;
-import ucar.unidata.geoloc.ProjectionPoint;
 
 /**
  * Maps latitude-longitude points to the nearest i,j indices in a Layer's data array.
@@ -67,7 +66,7 @@ public abstract class HorizontalCoordSys
             OneDCoordAxis yAxis1D = OneDCoordAxis.create((CoordinateAxis1D)yAxis);
             return isLatLon
                 ? new LatLonCoordSys(xAxis1D, yAxis1D) // A 1D lat-lon system
-                : new Projected1DCoordSys(xAxis1D, yAxis1D, proj); // A 1D projected system
+                : new OneDCoordSys(xAxis1D, yAxis1D, proj); // A 1D projected system
         }
         else if (xAxis instanceof CoordinateAxis2D && yAxis instanceof CoordinateAxis2D)
         {
@@ -77,8 +76,7 @@ public abstract class HorizontalCoordSys
                 throw new UnsupportedOperationException("Can't create a HorizontalCoordSys" +
                     " from 2D coordinate axes that are not longitude and latitude.");
             }
-            // resolution multiplier of 3 seems to give reasonable results
-            return LutCoordSys.generate(coordSys, 3, ToolsUiLutGenerator.INSTANCE);
+            return TwoDCoordSys.generate(coordSys);
         }
         else
         {
@@ -95,37 +93,26 @@ public abstract class HorizontalCoordSys
     public abstract int[] latLonToGrid(LatLonPoint latLonPoint);
 
     /**
-     * A HorizontalCoordSys that consists of two orthogonal 1D axes whose coordinates
-     * are not latitude and longitude.
+     * @return the latitude and longitude of the given grid point [i,j].  Returns
+     * null if gridCoords is null, or if gridCoords represents a point outside
+     * the extent of the grid.
+     * @throws IllegalArgumentException if gridCoords is non-null and does not
+     * contain two elements
      */
-    private static final class Projected1DCoordSys extends HorizontalCoordSys
+    public final LatLonPoint gridToLatLon(int[] gridCoords)
     {
-        private final OneDCoordAxis xAxis;
-        private final OneDCoordAxis yAxis;
-        private final ProjectionImpl proj;
-
-        private Projected1DCoordSys(OneDCoordAxis xAxis, OneDCoordAxis yAxis, ProjectionImpl proj)
+        if (gridCoords == null) return null;
+        if (gridCoords.length != 2)
         {
-            this.xAxis = xAxis;
-            this.yAxis = yAxis;
-            this.proj = proj;
+            throw new IllegalArgumentException("gridCoords must be of length 2");
         }
-
-        @Override
-        public int[] latLonToGrid(LatLonPoint latLonPoint)
-        {
-            // ProjectionImpls are not thread-safe.  Thanks to Marcos
-            // Hermida of Meteogalicia for pointing this out!
-            ProjectionPoint point;
-            synchronized(this.proj) {
-                // This returns a new ProjectionPoint with each invocation
-                point = this.proj.latLonToProj(latLonPoint);
-            }
-            return new int[] {
-                this.xAxis.getIndex(point.getX()),
-                this.yAxis.getIndex(point.getY())
-            };
-        }
+        return gridToLatLon(gridCoords[0], gridCoords[1]);
     }
+
+    /**
+     * @return the latitude and longitude of the given grid point, or null if
+     * the given grid coordinates [i,j] are outside the extent of the grid
+     */
+    public abstract LatLonPoint gridToLatLon(int i, int j);
 
 }

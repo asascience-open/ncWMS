@@ -28,54 +28,36 @@
 
 package uk.ac.rdg.resc.ncwms.coordsys;
 
-import ucar.unidata.geoloc.LatLonPoint;
-
 /**
  * Special case of a {@link HorizontalCoordSys} in which the axes are both
  * one-dimensional and are latitude and longitude.  Instances of this class
  * can only be created through
  * {@link HorizontalCoordSys#fromCoordSys(ucar.nc2.dt.GridCoordSystem)}.
  */
-public final class LatLonCoordSys extends HorizontalCoordSys
+public final class LatLonCoordSys extends OneDCoordSys
 {
-    private final OneDCoordAxis lonAxis;
-    private final OneDCoordAxis latAxis;
 
     /** Package-private constructor to prevent direct instantiation */
     LatLonCoordSys(OneDCoordAxis lonAxis, OneDCoordAxis latAxis)
     {
-        this.lonAxis = lonAxis;
-        this.latAxis = latAxis;
-    }
-
-    /**
-     * @return the nearest grid point to the given lat-lon point, or null if the
-     * lat-lon point is not contained within this layer's domain. The grid point
-     * is given as a two-dimensional integer array: [i,j].
-     */
-    @Override
-    public int[] latLonToGrid(LatLonPoint latLonPoint) {
-        return new int[]{
-            this.getLonIndex(latLonPoint.getLongitude()),
-            this.getLatIndex(latLonPoint.getLatitude())
-        };
+        super(lonAxis, latAxis, null);
     }
 
     /**
      * @return the nearest point along the longitude axis to the given
-     * longitude coordinate.
+     * longitude coordinate, or -1 if the value is out of range for this axis.
      */
     public int getLonIndex(double longitude)
     {
-        return this.lonAxis.getIndex(longitude);
+        return this.getXIndex(longitude);
     }
 
     /**
      * @return the nearest point along the latitude axis to the given
-     * latitude coordinate.
+     * latitude coordinate, or -1 if the value is out of range for this axis.
      */
     public int getLatIndex(double latitude)
     {
-        return this.latAxis.getIndex(latitude);
+        return this.getYIndex(latitude);
     }
 }

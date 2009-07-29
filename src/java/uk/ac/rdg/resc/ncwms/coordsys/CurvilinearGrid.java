@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.coordsys;
 
+import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -125,27 +127,24 @@ final class CurvilinearGrid implements Iterable<Cell>
      */
     public LatLonPoint getMidpoint(int i, int j)
     {
-        int index = j * this.ni + i;
+        int index = this.getIndex(i, j);
         return new LatLonPointImpl(
             this.latitudes[index],
             this.longitudes[index]
         );
     }
 
+    private int getIndex(int i, int j)
+    {
+        return j * this.ni + i;
+    }
+
     /**
-     * Gets the location of the four corners of the cell at indices i, j.  The
-     * {@link LatLonPoint#getLongitude() longitude coordinate} of all the corners
-     * will be in the range [-180,180].
-     * Care must therefore be taken when plotting the cell as, in a 
-     * lat vs lon projection, corners of cells that cross the anti-meridian
-     * will appear at opposite edges of the plot.  (In order to plot such points
-     * it is recommended to {@link #harmonizeLongitudes(double, double)
-     * harmonize the longitudes} of all the corners with the centre point of the
-     * cell.)
+     * Gets the location of the four corners of the cell at indices i, j.
      * @throws ArrayIndexOutOfBoundsException if i and j combine to give a point
      * outside the grid.
      */
-    public List<LatLonPoint> getCorners(int i, int j)
+    private List<LatLonPoint> getCorners(int i, int j)
     {
         List<LatLonPoint> corners = new ArrayList<LatLonPoint>(4);
         corners.add(getCorner(i, j));
@@ -168,6 +167,21 @@ final class CurvilinearGrid implements Iterable<Cell>
     }
 
     /**
+     * Gets the [i,j]th cell in this grid.
+     * @todo cache or precompute the cells?
+     * @throws IllegalArgumentException if i,j is not a valid cell in this grid.
+     */
+    public Cell getCell(int i, int j)
+    {
+        if (i < 0 || j < 0 || i >= this.ni || j >= this.nj)
+        {
+            throw new IllegalArgumentException(i + "," + j +
+                " is not a valid cell in this grid");
+        }
+        return new Cell(i, j);
+    }
+
+    /**
      * Adapted from {@link CoordinateAxis2D#makeXEdges(ucar.ma2.ArrayDouble.D2)},
      * taking into account the wrapping of longitude at +/- 180 degrees
      */
@@ -177,11 +191,10 @@ final class CurvilinearGrid implements Iterable<Cell>
     for (int j=0; j<nj-1; j++) {
       for (int i=0; i<ni-1; i++) {
         // the interior edges are the average of the 4 surrounding midpoints
-          int index = j * this.ni + i;
-          double midpoint1 = midpoints[index];
-          double midpoint2 = midpoints[index];
-          double midpoint3 = midpoints[index];
-          double midpoint4 = midpoints[index];
+          double midpoint1 = midpoints[this.getIndex(i, j)];
+          double midpoint2 = midpoints[this.getIndex(i+1, j)];
+          double midpoint3 = midpoints[this.getIndex(i, j+1)];
+          double midpoint4 = midpoints[this.getIndex(i+1, j+1)];
           if (isLongitude) {
               // Make sure that all corners are as close together as possible,
               // e.g. see whether we need to use -179 or +181.
@@ -220,7 +233,7 @@ final class CurvilinearGrid implements Iterable<Cell>
      * @todo unit tests for this
      * @todo move to Longitude class?
      */
-    public static double harmonizeLongitudes(double ref, double test)
+    private static double harmonizeLongitudes(double ref, double test)
     {
         if (ref < -180.0 || ref > 180.0)
         {
@@ -232,6 +245,19 @@ final class CurvilinearGrid implements Iterable<Cell>
         double d1 = Math.abs(ref - lon1);
         double d2 = Math.abs(ref - lon2);
         return d1 < d2 ? lon1 : lon2;
+    }
+
+    /** @return the number of points in the i direction in this grid */
+    public int getNi()
+    {
+        return this.ni;
+    }
+
+    // TODO: replace this with GridExtents?
+    /** @return the number of points in the j direction in this grid */
+    public int getNj()
+    {
+        return this.nj;
     }
 
     /** Returns the number of cells in this grid */
@@ -294,11 +320,47 @@ final class CurvilinearGrid implements Iterable<Cell>
             throw new UnsupportedOperationException("Not supported.");
         }
     }
+
+    /**
+     * Returns the area of the quadrilateral defined by the given four vertices.
+     * Uses Bretschneider's Formula, http://mathworld.wolfram.com/BretschneidersFormula.html
+     */
+    private static double getArea(Point2D p1, Point2D p2, Point2D p3, Point2D p4)
+    {
+        // The squares of the side lengths
+        double a2 = p1.distanceSq(p2);
+        double b2 = p2.distanceSq(p3);
+        double c2 = p3.distanceSq(p4);
+        double d2 = p4.distanceSq(p1);
+        // The squares of the diagonal lengths
+        double f2 = p1.distanceSq(p3);
+        double g2 = p2.distanceSq(p4);
+        // Calculate an intermediate term
+        double term = b2 + d2 - a2 - c2;
+        // Calculate and return the area
+        return Math.sqrt(4*f2*g2 - term*term) / 4.0;
+    }
+
+    /**
+     * Gets the mean area of the cells in this grid, in square degrees.
+     */
+    public double getMeanCellArea()
+    {
+        double sumArea = 0.0;
+        int nans = 0;
+        for (Cell cell : this)
+        {
+            double cellArea = cell.getArea();
+            // Cell areas can be NaN - see Javadoc for Cell.getArea()
+            if (Double.isNaN(cellArea)) nans++;
+            else sumArea += cellArea;
+        }
+        logger.debug("{} cells out of {} had area = NaN", nans, this.size());
+        return sumArea / (this.size() - nans);
+    }
     
     /**
-     * A cell within this curvilinear grid.  Essentially provides convenience
-     * methods for finding the centre, the corners and the neighbours of this
-     * cell.
+     * A cell within this curvilinear grid.
      */
     public class Cell
     {
@@ -318,19 +380,44 @@ final class CurvilinearGrid implements Iterable<Cell>
         /** Gets the j index of this cell within the curvilinear grid */
         public int getJ() { return this.j; }
 
-        /** Gets the centre point of this cell. */
+        /**
+         * Gets the centre point of this cell. Note that in some grid
+         * formulations, the point could be represented by NaNs (in this case
+         * the cell cannot be used or plotted: it exists in the grid simply
+         * for structural convenience).
+         */
         public LatLonPoint getCentre()
         {
             return CurvilinearGrid.this.getMidpoint(this.i, this.j);
         }
 
         /**
-         * Returns a list of the corners of this
-         * @return
+         * <p>Returns a list of the (four) corners of this cell.  The
+         * longitude coordinate (given by {@link Point2D#getX()}) of all the corners
+         * will be as close to the {@link #getCentre() centre} of the
+         * cell as possible.  That is to say, if the centre of the cell is at
+         * a longitude of 179 degrees then a corner of the cell would be given with
+         * a longitude of 181 degrees, rather than -179 degrees.  This helps with
+         * the plotting of the cell on a plane.  This method returns a new List
+         * containing new Points with each invocation.</p>
+         * <p>Note that in some grid
+         * formulations, the corners could be represented by NaNs (in this case
+         * the cell cannot be used or plotted: it exists in the grid simply
+         * for structural convenience).</p>
          */
-        public List<LatLonPoint> getCorners()
+        public List<Point2D> getCorners()
         {
-            return CurvilinearGrid.this.getCorners(this.i, this.j);
+            List<LatLonPoint> corners = CurvilinearGrid.this.getCorners(this.i, this.j);
+            List<Point2D> cornerPoints = new ArrayList<Point2D>(corners.size());
+            for (LatLonPoint corner : corners)
+            {
+                Point2D cornerPoint = new Point2D.Double(
+                    this.harmonizeWithCentre(corner.getLongitude()),
+                    corner.getLatitude()
+                );
+                cornerPoints.add(cornerPoint);
+            }
+            return cornerPoints;
         }
 
         /**
@@ -357,6 +444,86 @@ final class CurvilinearGrid implements Iterable<Cell>
             return neighbours;
         }
 
+        /**
+         * Gets the neighbours of this cell (up to four) that join this cell
+         * at a corner.  The order of the cells in the list is such that
+         * the centres of the cells can be joined to form a polygon in which
+         * the edges do not cross.
+         */
+        public List<Cell> getCornerNeighbours()
+        {
+            List<Cell> neighbours = new ArrayList<Cell>(4);
+            if (this.i > 0 && this.j > 0) {
+                neighbours.add(new Cell(this.i - 1, this.j - 1));
+            }
+            if (this.i < CurvilinearGrid.this.ni - 1 && this.j > 0) {
+                neighbours.add(new Cell(this.i + 1, this.j - 1));
+            }
+            if (this.i < CurvilinearGrid.this.ni - 1 && this.j < CurvilinearGrid.this.nj - 1) {
+                neighbours.add(new Cell(this.i + 1, this.j + 1));
+            }
+            if (this.i > 0 && this.j < CurvilinearGrid.this.nj - 1) {
+                neighbours.add(new Cell(this.i - 1, this.j + 1));
+            }
+            return neighbours;
+        }
+
+        /**
+         * <p>Returns the area of this cell in square degrees.</p>
+         * <p>Note that in some grid
+         * formulations, the area could be NaN (in this case
+         * the cell cannot be used or plotted: it exists in the grid simply
+         * for structural convenience).</p>
+         */
+        public double getArea()
+        {
+            List<Point2D> corners = this.getCorners();
+            return CurvilinearGrid.getArea(corners.get(0), corners.get(1),
+                corners.get(2), corners.get(3));
+        }
+
+        /**
+         * Gets a Path2D object representing the boundary of this cell, formed
+         * by joining its {@link #getCorners() corners} by straight lines in
+         * longitude-latitude space.  This returns a new Path2D object with
+         * each invocation.
+         */
+        public Path2D getBoundaryPath()
+        {
+            Path2D path = new Path2D.Double();
+            boolean firstTime = true;
+            for (Point2D point : this.getCorners())
+            {
+                // Add the point to the path
+                if (firstTime) path.moveTo(point.getX(), point.getY());
+                else path.lineTo(point.getX(), point.getY());
+                firstTime = false;
+            }
+            path.closePath();
+            return path;
+        }
+
+        /**
+         * Returns true if this cell's {@link #getBoundaryPath() boundary}
+         * contains the given longitude-latitude point.
+         * @todo what happens if this cell is represented by NaNs?
+         */
+        public boolean contains(LatLonPoint latLonPoint)
+        {
+            Path2D path = this.getBoundaryPath();
+            double lon = this.harmonizeWithCentre(latLonPoint.getLongitude());
+            return path.contains(lon, latLonPoint.getLatitude());
+        }
+
+        /**
+         * Harmonizes the given longitude (in the range [-180:180]) with the
+         * centre of this cell.
+         */
+        private double harmonizeWithCentre(double lon)
+        {
+            return CurvilinearGrid.harmonizeLongitudes(this.getCentre().getLongitude(), lon);
+        }
+
         @Override public int hashCode()
         {
             int hashCode = 17;
@@ -371,6 +538,14 @@ final class CurvilinearGrid implements Iterable<Cell>
             if (!(obj instanceof Cell)) return false;
             Cell other = (Cell)obj;
             return this.i == other.i && this.j == other.j;
+        }
+
+        @Override public String toString()
+        {
+            LatLonPoint centre = this.getCentre();
+            List<Point2D> corners = this.getCorners();
+            return String.format("[%d,%d]: [%f,%f] %s", this.i, this.j,
+                centre.getLongitude(), centre.getLatitude(), corners);
         }
     }
 

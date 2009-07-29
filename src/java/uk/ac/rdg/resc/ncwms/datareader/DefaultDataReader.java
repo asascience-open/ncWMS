@@ -430,20 +430,5 @@ public class DefaultDataReader extends DataReader
             return stdNameAtt.getStringValue();
         }
     }
-
-    public static void main(String[] args) throws Exception {
-        //NetcdfDataset nc = NetcdfDataset.openDataset("http://topaz.nersc.no/thredds/dodsC/topaz/mersea-ipv2/arctic/tmipv2a-class1-b-be");
-        NetcdfDataset nc = NetcdfDataset.openDataset("c:\\Documents and Settings\\Jon\\Desktop\\adriatic.ncml");
-        System.out.println(nc.getFileTypeId());
-        GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
-            nc, null, null);
-        GridDatatype tmp = gd.findGridDatatype("temperature");
-        GridCoordSystem coordSys = tmp.getCoordinateSystem();
-        System.out.println("X axis type: " + coordSys.getXHorizAxis().getAxisType());
-        System.out.println("Y axis type: " + coordSys.getYHorizAxis().getAxisType());
-        System.out.println("Z axis type: " + coordSys.getVerticalAxis().getAxisType());
-        System.out.println("T axis type: " + coordSys.getTimeAxis().getAxisType());
-        nc.close();
-    }
     
 }

@@ -33,18 +33,16 @@ import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
 /**
- * An {@link LutGenerator} that constructs look-up tables by "painting" cells
- * from a {@link CurvilinearGrid} onto {@link BufferedImage}s.
+ * Generates look-up tables by "painting" cells from a {@link CurvilinearGrid}
+ * onto {@link BufferedImage}s.
  * @author Jon
  */
-abstract class BufferedImageLutGenerator implements LutGenerator
+final class BufferedImageLutGenerator
 {
     private static final Logger logger = LoggerFactory.getLogger(BufferedImageLutGenerator.class);
 
@@ -53,7 +51,7 @@ abstract class BufferedImageLutGenerator implements LutGenerator
      * @param lut
      * @param grid
      */
-    public final void populateLut(LookUpTable lut, CurvilinearGrid grid)
+    public static synchronized void populateLut(LookUpTable lut, CurvilinearGrid grid)
     {
         // Create BufferedImages for holding the LUT information
         BufferedImage iIndices = createBufferedImage(lut);
@@ -72,10 +70,23 @@ abstract class BufferedImageLutGenerator implements LutGenerator
         // lat-lon coordinates that represents the cell
         for (Cell cell : grid)
         {
-            // Get a list of LatLonPoints representing this cell
-            List<LatLonPoint> polygon = this.getPolygon(cell);
-            // Paint the cell onto the BufferedImages
-            paintPolygon(cell, polygon, ig2d, jg2d);
+            // Get a Path representing the boundary of the cell
+            Path2D path = cell.getBoundaryPath();
+            // Paint the path onto the BufferedImages as polygons
+            // Use the i and j indices of the cell as the colour
+            ig2d.setPaint(new Color(cell.getI()));
+            jg2d.setPaint(new Color(cell.getJ()));
+            ig2d.fill(path);
+            jg2d.fill(path);
+
+            // We paint a second copy of the cell, shifted by 360 degrees, to handle
+            // the anti-meridian
+            double shiftLon = cell.getCentre().getLongitude() > 0.0
+                ? -360.0
+                : 360.0;
+            path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
+            ig2d.fill(path);
+            jg2d.fill(path);
         }
 
         // Copy the information from the BufferedImages to the LookUpTable.
@@ -109,48 +120,6 @@ abstract class BufferedImageLutGenerator implements LutGenerator
         }
         logger.debug("Created BufferedImage of size {},{}", im.getWidth(), im.getHeight());
         return im;
-    }
-
-    /**
-     * Gets a polygon, represented as a list of LatLonPoints, that represents
-     * the given Cell from a CurvilinearGrid.
-     */
-    protected abstract List<LatLonPoint> getPolygon(Cell cell);
-
-    private static void paintPolygon(Cell cell, List<LatLonPoint> polygon, Graphics2D ig2d, Graphics2D jg2d)
-    {
-        if (polygon.size() < 3) return;
-
-        Path2D path = new Path2D.Double();
-        LatLonPoint firstPoint = polygon.get(0);
-        double refLon = firstPoint.getLongitude();
-        // Add the first point to the path
-        path.moveTo(refLon, firstPoint.getLatitude());
-        // Add the remaining points
-        for (int i = 1; i < polygon.size(); i++)
-        {
-            LatLonPoint point = polygon.get(i);
-            // Harmonize the longitude of this point with the reference longitude
-            double lon = CurvilinearGrid.harmonizeLongitudes(refLon, point.getLongitude());
-            // Add the point to the path
-            path.lineTo(lon, point.getLatitude());
-        }
-        path.closePath();
-
-        // Use the i and j indices of the cell as the colour
-        ig2d.setPaint(new Color(cell.getI()));
-        jg2d.setPaint(new Color(cell.getJ()));
-
-        // Paint the path onto the graphics contexts
-        ig2d.fill(path);
-        jg2d.fill(path);
-
-        // We paint a second copy of the cell, shifted by 360 degrees, to handle
-        // the anti-meridian
-        double shiftLon = refLon > 0.0 ? -360.0 : 360.0;
-        path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
-        ig2d.fill(path);
-        jg2d.fill(path);
     }
 
 }
