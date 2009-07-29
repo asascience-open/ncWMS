@@ -223,3 +223,10 @@ input.scaleMin {
 .olControlDrawFeaturePolygonItemActive {
     visibility: hidden;
 }
+
+/* Positions the navigation history control sensibly on the map */
+.olControlNavigationHistory {
+    position: relative;
+    top: 130px;
+    left: 17px;
+}

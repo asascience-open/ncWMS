@@ -83,10 +83,19 @@ window.onload = function()
     // We use CSS to hide the controls we're not using
     editingToolbar = new OpenLayers.Control.EditingToolbar(drawinglayer);
 
+    // Set up the history navigator
+    var nav = new OpenLayers.Control.NavigationHistory();
+    var navHistoryPanel = new OpenLayers.Control.Panel(
+        //{div: document.getElementById("navHistoryPanel")}
+    );
+    navHistoryPanel.addControls([nav.next, nav.previous]);
+
     // Set up the OpenLayers map widget
     map = new OpenLayers.Map( 'map', {
         controls: [
             new OpenLayers.Control.PanZoom(),
+            nav,
+            navHistoryPanel,
             editingToolbar
         ]
     });
