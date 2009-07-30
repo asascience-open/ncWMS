@@ -205,8 +205,8 @@ public class DefaultDataReader extends DataReader
      * with updates on the progress with loading the metadata.  Can be null.
      * @throws Exception if there was an error reading from the data source
      */
-    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers,
-        ProgressMonitor progressMonitor) throws Exception
+    protected void findAndUpdateLayers(String location,
+        Map<String, LayerImpl> layers) throws Exception
     {
         logger.debug("Finding layers in {}", location);
         

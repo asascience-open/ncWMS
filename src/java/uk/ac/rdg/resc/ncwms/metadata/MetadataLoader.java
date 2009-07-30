@@ -145,7 +145,7 @@ public class MetadataLoader
         // Include the id of the dataset in the thread for debugging purposes
         // Comment this out to use the default thread names (e.g. "pool-2-thread-1")
         Thread.currentThread().setName("load-metadata-" + ds.getId());
-        logger.debug("Loading metadata for {}", ds.getId());
+        ds.setLoadingProgress("Loading metadata");
         synchronized(ds)
         {
             ds.setState(ds.getState() == State.READY ? State.UPDATING : State.LOADING);
@@ -163,13 +163,13 @@ public class MetadataLoader
             {
                 layer.setDataset(ds);
             }
-            logger.debug("loaded layers");
+            ds.appendLoadingProgress("loaded layers");
             // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
             findVectorQuantities(ds, layers);
-            logger.debug("found vector quantities");
+            ds.appendLoadingProgress("found vector quantities");
             // Look for overriding attributes in the configuration
             readLayerConfig(ds, layers);
-            logger.debug("attributes overridden");
+            ds.appendLoadingProgress("attributes overridden");
             // Update the metadata store
             this.metadataStore.setLayersInDataset(ds.getId(), layers);
             ds.setState(State.READY);
@@ -177,6 +177,7 @@ public class MetadataLoader
             this.config.setLastUpdateTime(new DateTime());
             // Save the config information to the file
             this.config.save();
+            ds.appendLoadingProgress("Finished loading metadata");
             logger.debug("Loaded metadata for {}, num RAFs open = {}", ds.getId(),
                 RandomAccessFile.getOpenFiles().size());
         }
@@ -278,7 +279,8 @@ public class MetadataLoader
             // from the source data.
             if (var.getColorScaleRange() == null)
             {
-                logger.debug("Reading min-max data for layer {}", layer.getLayerName());
+                dataset.appendLoadingProgress("Reading min-max data for layer "
+                    + layer.getLayerName());
                 float[] minMax;
                 try
                 {

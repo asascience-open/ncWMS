@@ -114,7 +114,7 @@ public class Dataset
     private State state;     // State of this dataset.  Will be set in Config.readConfig()
     
     private Exception err;   // Set if there is an error loading the dataset
-    private String loadingProgress = ""; // Used to express progress with loading
+    private StringBuffer loadingProgress = new StringBuffer(); // Used to express progress with loading
                                          // the metadata for this dataset
     private Config config;   // The Config object to which this belongs
 
@@ -392,16 +392,26 @@ public class Dataset
      */
     public String getLoadingProgress()
     {
-        return this.loadingProgress;
+        return this.loadingProgress.toString();
     }
 
     /**
      * Sets an explanation of the current progress with loading this dataset.
      * Will be displayed in the admin application when isLoading() == true.
+     * Also logs the progress string to the debug stream.
      */
-    public void setLoadingProgress(String loadingProgress)
+    public void setLoadingProgress(String progress)
     {
-        this.loadingProgress = loadingProgress;
+        this.loadingProgress = new StringBuffer(progress);
+    }
+
+    /**
+     * Adds a newline to the end of the {@link #getLoadingProgress() current
+     * loading progress} and appends the given string.
+     */
+    public void appendLoadingProgress(String progressUpdate)
+    {
+        this.loadingProgress.append("\n" + progressUpdate);
     }
 
     /**

@@ -88,8 +88,8 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @throws IOException if there was an error reading from the data source
      */
     @Override
-    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers,
-        ProgressMonitor progressMonitor) throws IOException
+    protected void findAndUpdateLayers(String location,
+        Map<String, LayerImpl> layers) throws IOException
     {
         // Look for this layer in the list
         LayerImpl layer = layers.get("swe");
