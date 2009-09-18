@@ -463,6 +463,8 @@ public class MetadataController
         addTimeString("Daily", timeStrings, tValues, startIndex, endIndex, new Period().withDays(1));
         addTimeString("Weekly", timeStrings, tValues, startIndex, endIndex, new Period().withWeeks(1));
         addTimeString("Monthly", timeStrings, tValues, startIndex, endIndex, new Period().withMonths(1));
+        addTimeString("Bi-monthly", timeStrings, tValues, startIndex, endIndex, new Period().withMonths(2));
+        addTimeString("Twice-yearly", timeStrings, tValues, startIndex, endIndex, new Period().withMonths(6));
         addTimeString("Yearly", timeStrings, tValues, startIndex, endIndex, new Period().withYears(1));
 
         return new ModelAndView("showAnimationTimesteps", "timeStrings", timeStrings);
