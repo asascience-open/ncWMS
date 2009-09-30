@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +72,14 @@ public class DefaultDataReader extends DataReader
     private static final Logger logger = LoggerFactory.getLogger(DefaultDataReader.class);
     // We'll use this logger to output performance information
     private static final Logger benchmarkLogger = LoggerFactory.getLogger("ncwms.benchmark");
+
+    /**
+     * Enumeration of enhancements we want to perform when opening NetcdfDatasets
+     * Read the coordinate systems but don't automatically process
+     * scale/missing/offset when reading data, for efficiency reasons.
+     */
+    private static final Set<Enhance> DATASET_ENHANCEMENTS =
+        EnumSet.of(Enhance.ScaleMissingDefer, Enhance.CoordSystems);
 
     /**
      * Reads data from a NetCDF file.  Reads data for a single timestep only.
@@ -119,19 +128,11 @@ public class DefaultDataReader extends DataReader
             long readMetadata = System.currentTimeMillis();
             logger.debug("Read metadata in {} milliseconds", (readMetadata - start));
             
-            // Get the dataset, from the cache if possible
-            nc = NetcdfDataset.acquireDataset(
-                null, // Use the default factory
-                filename,
-                // Read the coordinate systems but don't automatically process
-                // scale/missing/offset when reading data, for efficiency reasons
-                EnumSet.of(Enhance.ScaleMissingDefer, Enhance.CoordSystems),
-                -1, // use default buffer size
-                null, // no CancelTask
-                null // no iospMessage
-            );
+            // Open the dataset, using the cache for NcML aggregations
+            nc = openDataset(filename);
             long openedDS = System.currentTimeMillis();
             logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - readMetadata));
+
             // Get a GridDataset object, since we know this is a grid
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID, nc, null, null);
             
@@ -201,8 +202,6 @@ public class DefaultDataReader extends DataReader
      * @param location Full path to the dataset. This will be passed to 
      * {@link NetcdfDataset#openDataset}.
      * @param layers Map of Layer Ids to LayerImpl objects to populate or update
-     * @param progressMonitor A {@link ProgressMonitor} that can be updated
-     * with updates on the progress with loading the metadata.  Can be null.
      * @throws Exception if there was an error reading from the data source
      */
     protected void findAndUpdateLayers(String location,
@@ -213,8 +212,8 @@ public class DefaultDataReader extends DataReader
         NetcdfDataset nc = null;
         try
         {
-            // Open the dataset, using the cache if appropriate
-            nc = WmsUtils.openDataset(location);
+            // Open the dataset, using the cache for NcML aggregations
+            nc = openDataset(location);
             GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
                 nc, null, null);
             
@@ -428,6 +427,59 @@ public class DefaultDataReader extends DataReader
         else
         {
             return stdNameAtt.getStringValue();
+        }
+    }
+
+    /**
+     * Opens the NetCDF dataset at the given location, using the dataset
+     * cache if {@code location} represents an NcML aggregation.  We cannot
+     * use the cache for OPeNDAP or single NetCDF files because the underlying
+     * data may have changed and the NetcdfDataset cache may cache a dataset
+     * forever.  In the case of NcML we rely on the fact that server administrators
+     * ought to have set a "recheckEvery" parameter for NcML aggregations that
+     * may change with time.  It is desirable to use the dataset cache for NcML
+     * aggregations because they can be time-consuming to assemble and we don't
+     * want to do this every time a map is drawn.
+     * @param location The location of the data: a local NetCDF file, an NcML
+     * aggregation file or an OPeNDAP location, {@literal i.e.} anything that can be
+     * passed to NetcdfDataset.openDataset(location).
+     * @return a {@link NetcdfDataset} object for accessing the data at the
+     * given location.  The coordinate systems will have been read, but
+     * the application of scale-offset-missing is deferred.
+     * @throws IOException if there was an error reading from the data source.
+     */
+    public static NetcdfDataset openDataset(String location) throws IOException
+    {
+        if (WmsUtils.isNcmlAggregation(location))
+        {
+            // We use the cache of NetcdfDatasets to read NcML aggregations
+            // as they can be time-consuming to put together.  If the underlying
+            // data can change we rely on the server admin setting the
+            // "recheckEvery" parameter in the aggregation file.
+            return NetcdfDataset.acquireDataset(
+                null, // Use the default factory
+                location,
+                DATASET_ENHANCEMENTS,
+                -1, // use default buffer size
+                null, // no CancelTask
+                null // no iospMessage
+            );
+        }
+        else
+        {
+            // For local single files and OPeNDAP datasets we don't use the
+            // cache, to ensure that we are always reading the most up-to-date
+            // data.  There is a small possibility that the dataset cache will
+            // have swallowed up all available file handles, in which case
+            // the server admin will need to increase the number of available
+            // handles on the server.
+            return NetcdfDataset.openDataset(
+                location,
+                DATASET_ENHANCEMENTS,
+                -1, // use default buffer size
+                null, // no CancelTask
+                null // no iospMessage
+            );
         }
     }
     

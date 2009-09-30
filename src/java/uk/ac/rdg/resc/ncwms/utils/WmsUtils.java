@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.utils;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,7 +36,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
-import ucar.nc2.dataset.NetcdfDataset;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 
 /**
@@ -223,37 +221,6 @@ public class WmsUtils
     public static boolean isNcmlAggregation(String location)
     {
         return location.endsWith(".xml") || location.endsWith(".ncml");
-    }
-
-    /**
-     * Opens the NetCDF dataset at the given location, using the dataset
-     * cache if {@code location} represents a local NetCDF file or NcML
-     * aggregation.  Does not use cache if {@code location} is an OPeNDAP
-     * server address.  Uses the default enhanced mode for the dataset.
-     * @param location The location of the data: a local NetCDF file, an NcML
-     * aggregation file or an OPeNDAP location, {@literal i.e.} anything that can be
-     * passed to NetcdfDataset.openDataset(location).
-     * @return a {@link NetcdfDataset} object for accessing the data at the
-     * given location.
-     * @throws IOException if there was an error reading from the data source.
-     */
-    public static NetcdfDataset openDataset(String location) throws IOException
-    {
-        if (isOpendapLocation(location))
-        {
-            // We don't use the dataset cache for OPeNDAP locations
-            return NetcdfDataset.openDataset(location);
-        }
-        else
-        {
-            // If this is a local dataset we must use the dataset cache for the following
-            // reason: if the cache has swallowed all of our available file handles,
-            // we can't bypass the cache as there will be no file handles left.
-            // The metadata might be a little out of date, depending on how long
-            // the cache clear-out time is set to in MetadataLoader.init()
-            // (should be around 5 minutes).
-            return NetcdfDataset.acquireDataset(location, null);
-        }
     }
     
 }

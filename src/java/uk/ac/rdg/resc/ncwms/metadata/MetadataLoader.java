@@ -79,10 +79,16 @@ public class MetadataLoader
     public void init()
     {
         // Initialize the cache of NetcdfDatasets.  Hold between 50 and 500
-        // datasets, refresh cache every 5 minutes (Are these sensible values)?
-        // The length of the refresh period affects the metadata that will be
-        // loaded: a long refresh period might lead to a lag in updates to
-        // metadata).
+        // datasets, clearing out the cache every 5 minutes.  If the number of
+        // individual files in the cache exceeds the limit, the least-recently-used
+        // files will be closed in the clearout process.
+        // **NOTE** the age of the files in the cache is not taken into account,
+        // therefore the cache could hold on to files forever.  The only way
+        // to expire out-of-date information is to set a recheckEvery parameter
+        // in an NcML aggregation.  It is not possible currently to expire
+        // information based on time for single NetCDF files or OPeNDAP datasets.
+        // Therefore the DefaultDataReader only uses this cache for NcML aggregations.
+        // TODO: move the initialization of the cache to the DefaultDataReader?
         NetcdfDataset.initNetcdfFileCache(50, 500, 500, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
         if (logger.isDebugEnabled())
