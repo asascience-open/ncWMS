@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +35,6 @@ import java.util.Map;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**
  * Abstract superclass for classes that read data and metadata from datasets.
@@ -117,26 +115,14 @@ public abstract class DataReader
     public Map<String, LayerImpl> getAllLayers(final Dataset dataset)
         throws Exception
     {
-        String location = dataset.getLocation();
         // A list of names of files resulting from glob expansion
-        List<String> filenames = new ArrayList<String>();
-        if (WmsUtils.isOpendapLocation(location))
-        {
-            // We don't do the glob expansion
-            filenames.add(location);
-        }
-        else
-        {
-            // Add all the files in the dataset
-            for (String filename : dataset.getFiles())
-            {
-                filenames.add(filename);
-            }
-        }
+        List<String> filenames = dataset.getFiles();
+        
         if (filenames.size() == 0)
         {
-            throw new Exception(location + " does not match any files");
+            throw new Exception(dataset.getLocation() + " does not match any files");
         }
+
         // Now extract the data for each individual file
         // LinkedHashMaps preserve the order of insertion
         Map<String, LayerImpl> layers = new LinkedHashMap<String, LayerImpl>();

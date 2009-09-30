@@ -35,6 +35,7 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -1120,21 +1121,16 @@ public class WmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the provided z value is not
      * a valid floating-point number or if it is not a valid value for this axis.
      */
-    static int getZIndex(String zValue, Layer layer)
-            throws InvalidDimensionValueException {
+    static int getZIndex(String zValue, Layer layer) throws InvalidDimensionValueException 
+    {
+        if (!layer.isZaxisPresent()) return -1;
+        
         // Get the z value.  The default value is the first value in the array
         // of z values
-        if (zValue == null) {
-            // No value has been specified
-            return layer.isZaxisPresent() ? layer.getDefaultZIndex() : -1;
-        }
-// The user has specified a z value.  Check that we have a z axis
+        if (zValue == null) return layer.getDefaultZIndex();
 
-        if (!layer.isZaxisPresent()) {
-            return -1; // We ignore the given value
-        }
-// Check to see if this is a single value (the
-// user hasn't requested anything of the form z1,z2 or start/stop/step)
+        // Check to see if this is a single value (the
+        // user hasn't requested anything of the form z1,z2 or start/stop/step)
 
         if (zValue.split(",").length > 1 || zValue.split("/").length > 1) {
             throw new InvalidDimensionValueException("elevation", zValue);
@@ -1149,34 +1145,29 @@ public class WmsController extends AbstractController {
      * a List with a single value of -1.
      */
     static List<Integer> getTIndices(String timeString, Layer layer)
-            throws WmsException {
+            throws InvalidDimensionValueException {
+
+        // The variable has no time axis.  We ignore any provided TIME value.
+        // Signifies a single frame with no particular time value
+        if (!layer.isTaxisPresent()) return Arrays.asList(-1);
+        
+        // Use the default time if none is specified
+        if (timeString == null) return Arrays.asList(layer.getDefaultTIndex());
+
+        // Interpret the time specification
         List<Integer> tIndices = new ArrayList<Integer>();
-        if (layer.isTaxisPresent()) {
-            if (timeString == null) {
-                // The default time is the last value along the axis
-                // TODO: this should be the time closest to now
-                tIndices.add(layer.getDefaultTIndex());
+        for (String t : timeString.split(",")) {
+            String[] startStop = t.split("/");
+            if (startStop.length == 1) {
+                // This is a single time value
+                tIndices.add(layer.findTIndex(startStop[0]));
+            } else if (startStop.length == 2) {
+                // Use all time values from start to stop inclusive
+                tIndices.addAll(layer.findTIndices(startStop[0], startStop[1]));
             } else {
-                // Interpret the time specification
-                for (String t : timeString.split(",")) {
-                    String[] startStop = t.split("/");
-                    if (startStop.length == 1) {
-                        // This is a single time value
-                        tIndices.add(layer.findTIndex(startStop[0]));
-                    } else if (startStop.length == 2) {
-                        // Use all time values from start to stop inclusive
-                        tIndices.addAll(layer.findTIndices(startStop[0], startStop[1]));
-                    } else {
-                        throw new InvalidDimensionValueException("time", t);
-                    }
-
-                }
+                throw new InvalidDimensionValueException("time", t);
             }
-        } else {
-            // The variable has no time axis.  We ignore any provided TIME value.
-            tIndices.add(-1); // Signifies a single frame with no particular time value
         }
-
         return tIndices;
     }
 

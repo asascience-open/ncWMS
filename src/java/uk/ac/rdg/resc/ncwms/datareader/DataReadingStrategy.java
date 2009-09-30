@@ -145,7 +145,7 @@ public enum DataReadingStrategy {
 
     /**
      * Reads all data in a single operation, then subsets in memory.  Recommended
-     * in situations in which individual data reads are expensive, e.g. when
+     * in situations in which individual data reads have a high overhead, e.g. when
      * reading from OPeNDAP datasets or compressed files.
      */
     BOUNDING_BOX {
@@ -239,8 +239,6 @@ public enum DataReadingStrategy {
 
     /**
      * Reads data from the given GridDatatype and populates the given pixel array.
-     * This uses a scanline-based algorithm: subclasses can override this to
-     * use alternative strategies, e.g. point-by-point or bounding box.
      * @see PixelMap
      */
     public abstract void populatePixelArray(float[] picData, Range tRange, Range zRange,

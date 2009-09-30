@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -449,12 +450,7 @@ public class Dataset
      */
     public List<String> getFiles() throws Exception
     {
-        List<String> filePaths = new ArrayList<String>();
-        if (WmsUtils.isOpendapLocation(location))
-        {
-            filePaths.add(this.location);
-            return filePaths;
-        }
+        if (WmsUtils.isOpendapLocation(this.location)) return Arrays.asList(this.location);
         // Check that the glob expression is an absolute path.  Relative paths
         // would cause unpredictable and platform-dependent behaviour so
         // we disallow them.
@@ -518,11 +514,11 @@ public class Dataset
 
         // Now we've done all our searching, we'll only retain the files from
         // the list of search paths
+        List<String> filePaths = new ArrayList<String>();
         for (File path : searchPaths)
         {
             if (path.isFile()) filePaths.add(path.getPath());
         }
-
         return filePaths;
     }
 }

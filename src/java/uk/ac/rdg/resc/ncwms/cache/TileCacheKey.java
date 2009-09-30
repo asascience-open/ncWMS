@@ -145,6 +145,7 @@ public class TileCacheKey implements Serializable
         
         // Create and store the string representations and hash code for this
         // key.  The key is immutable so these will not change.
+        // TODO: create the hash code in a better way
         this.str = buf.toString();
         this.hashCode = this.str.hashCode();
     }
