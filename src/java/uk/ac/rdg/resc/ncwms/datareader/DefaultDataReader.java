@@ -448,7 +448,7 @@ public class DefaultDataReader extends DataReader
      * the application of scale-offset-missing is deferred.
      * @throws IOException if there was an error reading from the data source.
      */
-    public static NetcdfDataset openDataset(String location) throws IOException
+    private static NetcdfDataset openDataset(String location) throws IOException
     {
         if (WmsUtils.isNcmlAggregation(location))
         {

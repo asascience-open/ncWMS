@@ -183,6 +183,7 @@ public class WmsController extends AbstractController {
      * user.  See the <a href="../exceptions/package-summary.html">Exceptions package</a>
      * for more details.</p>
      */
+    @Override
     protected ModelAndView handleRequestInternal(HttpServletRequest httpServletRequest,
             HttpServletResponse httpServletResponse) throws Exception {
         UsageLogEntry usageLogEntry = new UsageLogEntry(httpServletRequest);
@@ -1256,6 +1257,7 @@ public class WmsController extends AbstractController {
          * negative integer, zero, or a positive integer as this Version is less
          * than, equal to, or greater than the specified Version.
          */
+        @Override
         public int compareTo(WmsVersion otherVersion) {
             return this.value.compareTo(otherVersion.value);
         }
