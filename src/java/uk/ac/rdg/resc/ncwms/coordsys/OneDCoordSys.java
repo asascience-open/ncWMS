@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.coordsys;
 
 import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.ProjectionImpl;
 import ucar.unidata.geoloc.ProjectionPoint;
 
@@ -57,21 +56,20 @@ public class OneDCoordSys extends HorizontalCoordSys
      * is given as a two-dimensional integer array: [i,j].
      */
     @Override
-    public final int[] latLonToGrid(LatLonPoint latLonPoint)
+    public final int[] lonLatToGrid(LonLatPosition lonLatPoint)
     {
         if (this.proj == null)
         {
             return new int[] {
-                this.getXIndex(latLonPoint.getLongitude()),
-                this.getYIndex(latLonPoint.getLatitude())
+                this.getXIndex(lonLatPoint.getLongitude()),
+                this.getYIndex(lonLatPoint.getLatitude())
             };
         }
         // ProjectionImpls are not thread-safe.  Thanks to Marcos
         // Hermida of Meteogalicia for pointing this out!
         ProjectionPoint point;
         synchronized(this.proj) {
-            // This returns a new ProjectionPoint with each invocation
-            point = this.proj.latLonToProj(latLonPoint);
+            point = this.proj.latLonToProj(lonLatPoint.getLatitude(), lonLatPoint.getLongitude());
         }
         int iIndex = this.xAxis.getIndex(point.getX());
         int jIndex = this.yAxis.getIndex(point.getY());
@@ -80,7 +78,7 @@ public class OneDCoordSys extends HorizontalCoordSys
     }
 
     @Override
-    public final LatLonPoint gridToLatLon(int i, int j) {
+    public final LonLatPosition gridToLonLat(int i, int j) {
         // Check that the indices are within range
         if (i < 0 || i >= this.xAxis.getSize() ||
             j < 0 || j >= this.yAxis.getSize())
@@ -89,15 +87,16 @@ public class OneDCoordSys extends HorizontalCoordSys
         }
         if (this.proj == null)
         {
-            return new LatLonPointImpl(
+            return new LonLatPositionImpl(
                 this.xAxis.getCoordValue(i),
                 this.yAxis.getCoordValue(j)
             );
         }
-        return this.proj.projToLatLon(
+        LatLonPoint llp = this.proj.projToLatLon(
             this.xAxis.getCoordValue(i),
             this.yAxis.getCoordValue(j)
         );
+        return new LonLatPositionImpl(llp.getLongitude(), llp.getLatitude());
     }
 
     /**

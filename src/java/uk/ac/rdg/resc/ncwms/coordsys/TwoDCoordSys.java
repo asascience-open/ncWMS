@@ -33,7 +33,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.unidata.geoloc.LatLonPoint;
 import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
 /**
@@ -108,26 +107,26 @@ final class TwoDCoordSys extends HorizontalCoordSys
      * is given as a two-dimensional integer array: [i,j].
      */
     @Override
-    public int[] latLonToGrid(LatLonPoint latLonPoint)
+    public int[] lonLatToGrid(LonLatPosition lonLatPoint)
     {
         int[] lutCoords =
-            this.lut.getGridCoordinates(latLonPoint.getLongitude(), latLonPoint.getLatitude());
+            this.lut.getGridCoordinates(lonLatPoint.getLongitude(), lonLatPoint.getLatitude());
         // Return null if the latLonPoint does not match a valid grid point
         if (lutCoords == null) return null;
         // Check that this cell really contains this point, if not, check
         // the neighbours
         Cell cell = this.curvGrid.getCell(lutCoords[0], lutCoords[1]);
-        if (cell.contains(latLonPoint)) return lutCoords;
+        if (cell.contains(lonLatPoint)) return lutCoords;
         for (Cell neighbour : cell.getEdgeNeighbours())
         {
-            if (neighbour.contains(latLonPoint))
+            if (neighbour.contains(lonLatPoint))
             {
                 return new int[]{ neighbour.getI(), neighbour.getJ() };
             }
         }
         for (Cell neighbour : cell.getCornerNeighbours())
         {
-            if (neighbour.contains(latLonPoint))
+            if (neighbour.contains(lonLatPoint))
             {
                 return new int[]{ neighbour.getI(), neighbour.getJ() };
             }
@@ -142,7 +141,7 @@ final class TwoDCoordSys extends HorizontalCoordSys
      * the given grid coordinates [i,j] are outside the extent of the grid
      */
     @Override
-    public LatLonPoint gridToLatLon(int i, int j)
+    public LonLatPosition gridToLonLat(int i, int j)
     {
         if (i >= 0 && i < this.curvGrid.getNi() &&
             j >= 0 && j < this.curvGrid.getNj())

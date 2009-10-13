@@ -31,7 +31,7 @@ package uk.ac.rdg.resc.ncwms.coordsys;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.util.Arrays;
-import ucar.unidata.geoloc.LatLonRect;
+import org.opengis.metadata.extent.GeographicBoundingBox;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 
 /**
@@ -65,12 +65,15 @@ final class LookUpTable
      */
     public LookUpTable(CurvilinearGrid curvGrid, double minResolution)
     {
-        LatLonRect bbox = curvGrid.getLatLonBoundingBox();
+        GeographicBoundingBox bbox = curvGrid.getBoundingBox();
+        
+        double lonDiff = bbox.getEastBoundLongitude() - bbox.getWestBoundLongitude();
+        double latDiff = bbox.getNorthBoundLatitude() - bbox.getSouthBoundLatitude();
 
         // Now calculate the number of points in the LUT along the longitude
         // and latitude directions
-        this.nLon = (int)Math.ceil((bbox.getLonMax() - bbox.getLonMin()) / minResolution);
-        this.nLat = (int)Math.ceil((bbox.getLatMax() - bbox.getLatMin()) / minResolution);
+        this.nLon = (int)Math.ceil(lonDiff / minResolution);
+        this.nLat = (int)Math.ceil(latDiff / minResolution);
         if (this.nLon <= 0 || this.nLat <= 0)
         {
             String msg = String.format("nLon (=%d) and nLat (=%d) must be positive and > 0", this.nLon, this.nLat);
@@ -79,13 +82,13 @@ final class LookUpTable
 
         // This ensures that the highest value of longitude (corresponding
         // with nLon - 1) is getLonMax()
-        double lonStride = (bbox.getLonMax() - bbox.getLonMin()) / (this.nLon - 1);
-        double latStride = (bbox.getLatMax() - bbox.getLatMin()) / (this.nLat - 1);
+        double lonStride = lonDiff / (this.nLon - 1);
+        double latStride = latDiff / (this.nLat - 1);
 
         // Create the transform.  We scale by the inverse of the stride length
         this.transform.scale(1.0/lonStride, 1.0/latStride);
         // Then we translate by the minimum coordinate values
-        this.transform.translate(-bbox.getLonMin(), -bbox.getLatMin());
+        this.transform.translate(-bbox.getWestBoundLongitude(), -bbox.getSouthBoundLatitude());
 
         this.iIndices = new short[this.nLon * this.nLat];
         this.jIndices = new short[this.nLon * this.nLat];

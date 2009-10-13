@@ -31,10 +31,10 @@ package uk.ac.rdg.resc.ncwms.datareader;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import java.util.AbstractList;
 import java.util.List;
-import ucar.unidata.geoloc.ProjectionPoint;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
 
 /**
- * <p>A list of {@link ProjectionPoint}s in a certain coordinate reference system.
+ * <p>A list of {@link HorizontalPosition}s in a certain coordinate reference system.
  * Instances of this class usually represent requests for data from an operation
  * such as GetMap or GetTransect: the points in this list are the coordinates
  * of real-world points for which we need data.</p>
@@ -61,12 +61,12 @@ public abstract class PointList
     public abstract CrsHelper getCrsHelper();
 
     /**
-     * Gets the {@link ProjectionPoint} at the given index in this list.
-     * @param index The index of the required ProjectionPoint
-     * @return the ProjectionPoint at the given index
+     * Gets the {@link HorizontalPosition} at the given index in this list.
+     * @param index The index of the required HorizontalPosition
+     * @return the HorizontalPosition at the given index
      * @throws IndexOutOfBoundsException if {@code index < 0 || index > this.size()}
      */
-    public abstract ProjectionPoint getPoint(int index);
+    public abstract HorizontalPosition getPoint(int index);
 
     /**
      * Returns the number of points in this list
@@ -81,28 +81,28 @@ public abstract class PointList
      * @param crsHelper Wrapper around the coordinate reference system of the points
      * @return a new PointList that wraps the given list of projection points
      */
-    public static PointList fromList(final List<ProjectionPoint> list, final CrsHelper crsHelper)
+    public static PointList fromList(final List<HorizontalPosition> list, final CrsHelper crsHelper)
     {
         return new PointList() {
-            public CrsHelper getCrsHelper() { return crsHelper; }
-            public ProjectionPoint getPoint(int index) { return list.get(index); }
-            public int size() { return list.size(); }
-            @Override public List<ProjectionPoint> asList() { return list; }
+            @Override public CrsHelper getCrsHelper() { return crsHelper; }
+            @Override public HorizontalPosition getPoint(int index) { return list.get(index); }
+            @Override public int size() { return list.size(); }
+            @Override public List<HorizontalPosition> asList() { return list; }
         };
     }
 
     /**
      * Creates a PointList containing a single point.  Useful for getFeatureInfo
      * requests
-     * @param point The ProjectionPoint to wrap
+     * @param point The HorizontalPosition to wrap
      * @param crsHelper Wrapper around the coordinate reference system of the points
      * @return a new PointList that wraps the given projection point
      */
-    public static PointList fromPoint(final ProjectionPoint point, final CrsHelper crsHelper)
+    public static PointList fromPoint(final HorizontalPosition point, final CrsHelper crsHelper)
     {
         return new PointList() {
             public CrsHelper getCrsHelper() { return crsHelper; }
-            public ProjectionPoint getPoint(int index) {
+            public HorizontalPosition getPoint(int index) {
                 if (index != 0) throw new IndexOutOfBoundsException();
                 return point;
             }
@@ -120,17 +120,15 @@ public abstract class PointList
      * compare the CoordinateReferenceSystem objects).</p>
      * @return
      */
-    public List<ProjectionPoint> asList()
+    public List<HorizontalPosition> asList()
     {
-        return new AbstractList<ProjectionPoint>() {
+        return new AbstractList<HorizontalPosition>() {
 
-            @Override
-            public ProjectionPoint get(int index) {
+            @Override public HorizontalPosition get(int index) {
                 return PointList.this.getPoint(index);
             }
 
-            @Override
-            public int size() {
+            @Override public int size() {
                 return PointList.this.size();
             }
 

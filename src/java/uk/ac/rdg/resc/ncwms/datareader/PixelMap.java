@@ -34,11 +34,11 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.ProjectionPoint;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.coordsys.LatLonCoordSys;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 
 /**
  *<p>Maps real-world points to i and j indices of corresponding
@@ -101,16 +101,16 @@ public final class PixelMap
         logger.debug("Using generic method based on iterating over the PointList");
         CrsHelper crsHelper = pointList.getCrsHelper();
         int pixelIndex = 0;
-        for (ProjectionPoint point : pointList.asList())
+        for (HorizontalPosition point : pointList.asList())
         {
             // Check that this point is valid in the target CRS
             if (crsHelper.isPointValidForCrs(point))
             {
                 // Translate this point in the target grid to lat-lon
-                LatLonPoint latLon = crsHelper.crsToLatLon(point);
+                LonLatPosition lonLat = crsHelper.crsToLonLat(point);
                 // Now find the nearest index in the grid: gridCoords will be
                 // null if latLon is outside the grid's domain
-                int[] gridCoords = horizCoordSys.latLonToGrid(latLon);
+                int[] gridCoords = horizCoordSys.lonLatToGrid(lonLat);
                 if (gridCoords != null)
                 {
                     this.put(gridCoords[0], gridCoords[1], pixelIndex);

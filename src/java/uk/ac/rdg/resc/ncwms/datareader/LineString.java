@@ -28,12 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.datareader;
 
-import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionPointImpl;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPositionImpl;
 
 /**
  * Represents a path through a coordinate system.  The path consists of a set
@@ -46,7 +46,7 @@ import ucar.unidata.geoloc.ProjectionPointImpl;
  */
 public final class LineString {
 
-    private final List<ProjectionPoint> controlPoints;
+    private final List<HorizontalPosition> controlPoints;
     private final transient double[] controlPointDistances;
     private double pathLength;
     private CrsHelper crsHelper;
@@ -72,14 +72,14 @@ public final class LineString {
         this.crsHelper = crsHelper;
 
         // The control points along the transect as specified by the line string
-        final List<ProjectionPoint> ctlPoints = new ArrayList<ProjectionPoint>();
+        final List<HorizontalPosition> ctlPoints = new ArrayList<HorizontalPosition>();
         for (String s : pointsStr) {
             String[] coords = s.trim().split(" +"); // allows one or more spaces to be used as a delimiter
             if (coords.length != 2) {
                 throw new InvalidLineStringException("Coordinates format error");
             }
             try {
-                ctlPoints.add(new ProjectionPointImpl(
+                ctlPoints.add(new HorizontalPositionImpl(
                     Double.parseDouble(coords[0].trim()),
                     Double.parseDouble(coords[1].trim())
                 ));
@@ -96,8 +96,8 @@ public final class LineString {
         this.pathLength = 0.0;
         this.controlPointDistances[0] = this.pathLength;
         for (int i = 1; i < this.controlPoints.size(); i++) {
-            ProjectionPoint p1 = this.controlPoints.get(i - 1);
-            ProjectionPoint p2 = this.controlPoints.get(i);
+            HorizontalPosition p1 = this.controlPoints.get(i - 1);
+            HorizontalPosition p2 = this.controlPoints.get(i);
             double dx = p2.getX() - p1.getX();
             double dy = p2.getY() - p1.getY();
             this.pathLength += Math.sqrt(dx * dx + dy * dy);
@@ -109,7 +109,7 @@ public final class LineString {
      * Returns the list of control points along this line string.
      * @return an unmodifiable list of control points.
      */
-    public List<ProjectionPoint> getControlPoints() {
+    public List<HorizontalPosition> getControlPoints() {
         return this.controlPoints;
     }
 
@@ -140,11 +140,11 @@ public final class LineString {
      * @throws IllegalArgumentException if {@code numPoints < 2}
      * @todo Add the control points to this list, in the correct location.
      */
-    public List<ProjectionPoint> getPointsOnPath(int n) {
+    public List<HorizontalPosition> getPointsOnPath(int n) {
         if (n < 2) {
             throw new IllegalArgumentException("Must request at least 2 points");
         }
-        final List<ProjectionPoint> points = new ArrayList<ProjectionPoint>(n);
+        final List<HorizontalPosition> points = new ArrayList<HorizontalPosition>(n);
         // The first point is the first control point
         points.add(this.controlPoints.get(0));
         // Now for the points in the middle
@@ -162,13 +162,13 @@ public final class LineString {
 
     /**
      * Given a length <i>s</i> along the path defined by this line string, this
-     * method returns a {@link ProjectionPoint} that represents this point on the
+     * method returns a {@link HorizontalPosition} that represents this point on the
      * path.
      * @param s the distance along the path
-     * @return a ProjectionPoint representing this point on the path.
+     * @return a HorizontalPosition representing this point on the path.
      * @throws IllegalArgumentException if s < 0 or s > pathLength
      */
-    private ProjectionPoint interpolatePoint(double s) {
+    private HorizontalPosition interpolatePoint(double s) {
         if (s < 0.0 || s > this.pathLength) {
             throw new IllegalArgumentException("s does not lie on the path");
         }
@@ -182,12 +182,12 @@ public final class LineString {
         double dfrac = dlast / (dlast + dnext);
 
         // Find the x and y coordinates of the interpolated point
-        ProjectionPoint cplast = this.controlPoints.get(i);
-        ProjectionPoint cpnext = this.controlPoints.get(i + 1);
+        HorizontalPosition cplast = this.controlPoints.get(i);
+        HorizontalPosition cpnext = this.controlPoints.get(i + 1);
         double x = (1.0 - dfrac) * cplast.getX() + dfrac * cpnext.getX();
         double y = (1.0 - dfrac) * cplast.getY() + dfrac * cpnext.getY();
 
-        return new ProjectionPointImpl(x, y);
+        return new HorizontalPositionImpl(x, y);
     }
 
     /**

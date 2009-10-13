@@ -28,18 +28,14 @@
 
 package uk.ac.rdg.resc.ncwms.coordsys;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.geotools.referencing.CRS;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
+import java.util.Collections;
+import java.util.Set;
+import org.geotoolkit.referencing.CRS;
+import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.cs.CoordinateSystemAxis;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
-import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 
 /**
@@ -52,26 +48,20 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 public final class CrsHelper {
 
     public static final String PLATE_CARREE_CRS_CODE = "CRS:84";
-    public static final List<String> SUPPORTED_CRS_CODES = new ArrayList<String>();
+
+    /**
+     * An unmodifiable set of CRS codes that are suppored by this class
+     */
+    public static final Set<String> SUPPORTED_CRS_CODES =
+        Collections.unmodifiableSet(CRS.getSupportedCodes("urn:ogc:def"));
 
     private CoordinateReferenceSystem crs;
     private MathTransform crsToLatLon;
     private MathTransform latLonToCrs;
     private boolean isLatLon;
 
-    static
-    {
-        // Find the supported CRS codes
-        // I think this is the appropriate method to get all the CRS codes
-        // that we can support
-        for (Object codeObj : CRS.getSupportedCodes("urn:ogc:def"))
-        {
-            SUPPORTED_CRS_CODES.add((String)codeObj);
-        }
-    }
-
     /** Private constructor to prevent direct instantiation */
-    private CrsHelper() {}
+    private CrsHelper() { }
 
     public static CrsHelper fromCrsCode(String crsCode) throws InvalidCrsException {
         // TODO: could cache CrsHelpers with the same code
@@ -92,7 +82,8 @@ public final class CrsHelper {
         }
         catch(Exception e)
         {
-            throw new InvalidCrsException("Error creating CrsHelper from code " + crsCode);
+            e.printStackTrace();
+            throw new InvalidCrsException(crsCode);
         }
     }
 
@@ -105,7 +96,7 @@ public final class CrsHelper {
      * @return true if the given coordinate pair is within the valid range of
      * both the x and y axis of this coordinate reference system.
      */
-    public boolean isPointValidForCrs(ProjectionPoint point)
+    public boolean isPointValidForCrs(HorizontalPosition point)
     {
         return this.isPointValidForCrs(point.getX(), point.getY());
     }
@@ -124,21 +115,21 @@ public final class CrsHelper {
 
     /**
      * Transforms the given x-y point in this {@link #getCoordinateReferenceSystem() CRS}
-     * to a LatLonPoint.
+     * to a {@link LonLatPosition}.
      * @throws TransformException if the required transformation could not be performed
      */
-    public LatLonPoint crsToLatLon(double x, double y) throws TransformException
+    public LonLatPosition crsToLonLat(double x, double y) throws TransformException
     {
         if (this.isLatLon) {
             // We don't need to do the transformation
-            return new LatLonPointImpl(y, x);
+            return new LonLatPositionImpl(x, y);
         }
         // We know x must go first in this array because we selected
         // "force longitude-first" when creating the CRS for this grid
         double[] point = new double[]{x, y};
         // Transform to lat-lon in-place
         this.crsToLatLon.transform(point, 0, point, 0, 1);
-        return new LatLonPointImpl(point[1], point[0]);
+        return new LonLatPositionImpl(point[0], point[1]);
     }
 
     /**
@@ -146,9 +137,9 @@ public final class CrsHelper {
      * to a LatLonPoint.
      * @throws TransformException if the required transformation could not be performed
      */
-    public LatLonPoint crsToLatLon(ProjectionPoint point) throws TransformException
+    public LonLatPosition crsToLonLat(HorizontalPosition point) throws TransformException
     {
-        return this.crsToLatLon(point.getX(), point.getY());
+        return this.crsToLonLat(point.getX(), point.getY());
     }
 
     /**
@@ -156,9 +147,9 @@ public final class CrsHelper {
      * {@link #getCoordinateReferenceSystem() CRS}.
      * @throws TransformException if the required transformation could not be performed
      */
-    public ProjectionPoint latLonToCrs(LatLonPoint latLonPoint) throws TransformException
+    public HorizontalPosition lonLatToCrs(LonLatPosition lonLatPoint) throws TransformException
     {
-        return this.latLonToCrs(latLonPoint.getLongitude(), latLonPoint.getLatitude());
+        return this.lonLatToCrs(lonLatPoint.getLongitude(), lonLatPoint.getLatitude());
     }
 
     /**
@@ -166,18 +157,18 @@ public final class CrsHelper {
      * {@link #getCoordinateReferenceSystem() CRS}.
      * @throws TransformException if the required transformation could not be performed
      */
-    public ProjectionPoint latLonToCrs(double longitude, double latitude) throws TransformException
+    public HorizontalPosition lonLatToCrs(double longitude, double latitude) throws TransformException
     {
         if (this.isLatLon) {
             // We don't need to do the transformation
-            return new ProjectionPointImpl(longitude, latitude);
+            return new LonLatPositionImpl(longitude, latitude);
         }
         // We know x must go first in this array because we selected
         // "force longitude-first" when creating the CRS for this grid
         double[] point = new double[]{longitude, latitude};
         // Transform to lat-lon in-place
         this.latLonToCrs.transform(point, 0, point, 0, 1);
-        return new ProjectionPointImpl(point[0], point[1]);
+        return new HorizontalPositionImpl(point[0], point[1]);
     }
 
     /**

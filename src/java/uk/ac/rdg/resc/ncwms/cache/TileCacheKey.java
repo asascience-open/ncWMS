@@ -196,7 +196,6 @@ public class TileCacheKey implements Serializable
                this.crsCode.equals(other.crsCode) &&
                this.filepath.equals(other.filepath) &&
                this.layerId.equals(other.layerId) &&
-               this.bbox.length == other.bbox.length &&
                Arrays.equals(this.bbox, other.bbox);
     }
     
@@ -214,6 +213,7 @@ public class TileCacheKey implements Serializable
         this.height = grid.getHeight();
         if (grid.isLatLon())
         {
+            // Make sure we always use the same code for lat-lon projections
             this.crsCode = CrsHelper.PLATE_CARREE_CRS_CODE;
             // Constrain longitudes to range [-180,180]
             this.bbox = new double[] {

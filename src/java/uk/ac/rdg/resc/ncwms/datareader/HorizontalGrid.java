@@ -30,10 +30,10 @@ package uk.ac.rdg.resc.ncwms.datareader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPositionImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 
 /**
@@ -164,14 +164,14 @@ public class HorizontalGrid extends PointList
     }
 
     /**
-     * Returns the ProjectionPoint at the given index in this PointList.  The
+     * Returns the HorizontalPosition at the given index in this PointList.  The
      * index is such that the x axis in this grid varies fastest, i.e. index=0
      * corresponds with x=0,y=0, and index=1 corresponds with x=1,y=0.
      */
     @Override
-    public ProjectionPoint getPoint(int index) {
+    public HorizontalPosition getPoint(int index) {
         int yi = index / this.xAxisValues.length;
         int xi = index % this.xAxisValues.length;
-        return new ProjectionPointImpl(this.xAxisValues[xi], this.yAxisValues[yi]);
+        return new HorizontalPositionImpl(this.xAxisValues[xi], this.yAxisValues[yi]);
     }
 }

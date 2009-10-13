@@ -33,7 +33,6 @@ import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.ProjectionImpl;
 
 /**
@@ -90,7 +89,7 @@ public abstract class HorizontalCoordSys
      * lat-lon point is not contained within this layer's domain. The grid point
      * is given as a two-dimensional integer array: [i,j].
      */
-    public abstract int[] latLonToGrid(LatLonPoint latLonPoint);
+    public abstract int[] lonLatToGrid(LonLatPosition lonLatPoint);
 
     /**
      * @return the latitude and longitude of the given grid point [i,j].  Returns
@@ -99,20 +98,20 @@ public abstract class HorizontalCoordSys
      * @throws IllegalArgumentException if gridCoords is non-null and does not
      * contain two elements
      */
-    public final LatLonPoint gridToLatLon(int[] gridCoords)
+    public final LonLatPosition gridToLonLat(int[] gridCoords)
     {
         if (gridCoords == null) return null;
         if (gridCoords.length != 2)
         {
             throw new IllegalArgumentException("gridCoords must be of length 2");
         }
-        return gridToLatLon(gridCoords[0], gridCoords[1]);
+        return gridToLonLat(gridCoords[0], gridCoords[1]);
     }
 
     /**
      * @return the latitude and longitude of the given grid point, or null if
      * the given grid coordinates [i,j] are outside the extent of the grid
      */
-    public abstract LatLonPoint gridToLatLon(int i, int j);
+    public abstract LonLatPosition gridToLonLat(int i, int j);
 
 }

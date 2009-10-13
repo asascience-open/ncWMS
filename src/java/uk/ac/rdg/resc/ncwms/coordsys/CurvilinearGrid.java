@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
+import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.ma2.ArrayDouble;
@@ -41,8 +43,6 @@ import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
@@ -74,7 +74,7 @@ final class CurvilinearGrid implements Iterable<Cell>
     /** The latitudes of the corners of the grid cells */
     private final ArrayDouble.D2 cornerLats;
     /** The lat-lon bounding box of the grid */
-    private final LatLonRect latLonBbox;
+    private final GeographicBoundingBox latLonBbox;
 
     /**
      * Creates a CurvilinearGrid from a GridCoordSystem.
@@ -97,7 +97,13 @@ final class CurvilinearGrid implements Iterable<Cell>
         CoordinateAxis2D lonAxis = (CoordinateAxis2D)coordSys.getXHorizAxis();
         CoordinateAxis2D latAxis = (CoordinateAxis2D)coordSys.getYHorizAxis();
 
-        this.latLonBbox = coordSys.getLatLonBoundingBox();
+        LatLonRect llr = coordSys.getLatLonBoundingBox();
+        this.latLonBbox = new DefaultGeographicBoundingBox(
+            llr.getLonMin(),
+            llr.getLonMax(),
+            llr.getLatMin(),
+            llr.getLatMax()
+        );
 
         this.ni = lonAxis.getShape(1);
         this.nj = lonAxis.getShape(0);
@@ -120,17 +126,17 @@ final class CurvilinearGrid implements Iterable<Cell>
 
     /**
      * Gets the location of the midpoint of the cell at indices i, j.  The
-     * {@link LatLonPoint#getLongitude() longitude coordinate} of the midpoint
+     * {@link LonLatPosition#getLongitude() longitude coordinate} of the midpoint
      * will be in the range [-180,180].
      * @throws ArrayIndexOutOfBoundsException if i and j combine to give a point
      * outside the grid.
      */
-    public LatLonPoint getMidpoint(int i, int j)
+    public LonLatPosition getMidpoint(int i, int j)
     {
         int index = this.getIndex(i, j);
-        return new LatLonPointImpl(
-            this.latitudes[index],
-            this.longitudes[index]
+        return new LonLatPositionImpl(
+            this.longitudes[index],
+            this.latitudes[index]
         );
     }
 
@@ -144,9 +150,9 @@ final class CurvilinearGrid implements Iterable<Cell>
      * @throws ArrayIndexOutOfBoundsException if i and j combine to give a point
      * outside the grid.
      */
-    private List<LatLonPoint> getCorners(int i, int j)
+    private List<LonLatPosition> getCorners(int i, int j)
     {
-        List<LatLonPoint> corners = new ArrayList<LatLonPoint>(4);
+        List<LonLatPosition> corners = new ArrayList<LonLatPosition>(4);
         corners.add(getCorner(i, j));
         corners.add(getCorner(i+1, j));
         corners.add(getCorner(i+1, j+1));
@@ -158,11 +164,11 @@ final class CurvilinearGrid implements Iterable<Cell>
      * Gets the coordinates of the corner with the given indices <i>in the arrays
      * of corner coordinates</i> (not in the arrays of midpoints).
      */
-    private LatLonPoint getCorner(int cornerI, int cornerJ)
+    private LonLatPosition getCorner(int cornerI, int cornerJ)
     {
-        return new LatLonPointImpl (
-            this.cornerLats.get(cornerJ, cornerI),
-            this.cornerLons.get(cornerJ, cornerI)
+        return new LonLatPositionImpl (
+            this.cornerLons.get(cornerJ, cornerI),
+            this.cornerLats.get(cornerJ, cornerI)
         );
     }
 
@@ -266,7 +272,7 @@ final class CurvilinearGrid implements Iterable<Cell>
         return this.longitudes.length;
     }
 
-    public LatLonRect getLatLonBoundingBox()
+    public GeographicBoundingBox getBoundingBox()
     {
         return this.latLonBbox;
     }
@@ -295,7 +301,7 @@ final class CurvilinearGrid implements Iterable<Cell>
 
     /** Returns an unmodifiable iterator over the cells in this grid, with the
      * i direction varying fastest. */
-    public Iterator<Cell> iterator()
+    @Override public Iterator<Cell> iterator()
     {
         return new CellIterator();
     }
@@ -305,18 +311,18 @@ final class CurvilinearGrid implements Iterable<Cell>
     {
         private int index = 0;
 
-        public boolean hasNext() {
+        @Override public boolean hasNext() {
             return this.index < CurvilinearGrid.this.size();
         }
 
-        public Cell next() {
+        @Override public Cell next() {
             int i = this.index % CurvilinearGrid.this.ni;
             int j = this.index / CurvilinearGrid.this.ni;
             this.index++;
             return new Cell(i, j);
         }
 
-        public void remove() {
+        @Override public void remove() {
             throw new UnsupportedOperationException("Not supported.");
         }
     }
@@ -386,7 +392,7 @@ final class CurvilinearGrid implements Iterable<Cell>
          * the cell cannot be used or plotted: it exists in the grid simply
          * for structural convenience).
          */
-        public LatLonPoint getCentre()
+        public LonLatPosition getCentre()
         {
             return CurvilinearGrid.this.getMidpoint(this.i, this.j);
         }
@@ -407,9 +413,9 @@ final class CurvilinearGrid implements Iterable<Cell>
          */
         public List<Point2D> getCorners()
         {
-            List<LatLonPoint> corners = CurvilinearGrid.this.getCorners(this.i, this.j);
+            List<LonLatPosition> corners = CurvilinearGrid.this.getCorners(this.i, this.j);
             List<Point2D> cornerPoints = new ArrayList<Point2D>(corners.size());
-            for (LatLonPoint corner : corners)
+            for (LonLatPosition corner : corners)
             {
                 Point2D cornerPoint = new Point2D.Double(
                     this.harmonizeWithCentre(corner.getLongitude()),
@@ -508,7 +514,7 @@ final class CurvilinearGrid implements Iterable<Cell>
          * contains the given longitude-latitude point.
          * @todo what happens if this cell is represented by NaNs?
          */
-        public boolean contains(LatLonPoint latLonPoint)
+        public boolean contains(LonLatPosition latLonPoint)
         {
             Path2D path = this.getBoundaryPath();
             double lon = this.harmonizeWithCentre(latLonPoint.getLongitude());
@@ -542,7 +548,7 @@ final class CurvilinearGrid implements Iterable<Cell>
 
         @Override public String toString()
         {
-            LatLonPoint centre = this.getCentre();
+            LonLatPosition centre = this.getCentre();
             List<Point2D> corners = this.getCorners();
             return String.format("[%d,%d]: [%f,%f] %s", this.i, this.j,
                 centre.getLongitude(), centre.getLatitude(), corners);

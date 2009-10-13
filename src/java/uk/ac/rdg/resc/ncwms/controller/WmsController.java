@@ -71,14 +71,14 @@ import org.jfree.ui.TextAnchor;
 import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.ProjectionPoint;
-import ucar.unidata.geoloc.ProjectionPointImpl;
 import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPositionImpl;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.LineString;
@@ -657,13 +657,13 @@ public class WmsController extends AbstractController {
         // Get the x and y values of the point of interest
         double x = grid.getXAxisValues()[dataRequest.getPixelColumn()];
         double y = grid.getYAxisValues()[dataRequest.getPixelRow()];
-        LatLonPoint latLon = grid.getCrsHelper().crsToLatLon(x, y);
-        usageLogEntry.setFeatureInfoLocation(latLon.getLongitude(), latLon.getLatitude());
+        LonLatPosition lonLat = grid.getCrsHelper().crsToLonLat(x, y);
+        usageLogEntry.setFeatureInfoLocation(lonLat.getLongitude(), lonLat.getLatitude());
 
         // Find out the i,j coordinates of this point in the source grid (could be null)
-        int[] gridCoords = layer.getHorizontalCoordSys().latLonToGrid(latLon);
+        int[] gridCoords = layer.getHorizontalCoordSys().lonLatToGrid(lonLat);
         // Get the location of the centre of the grid cell
-        LatLonPoint gridCellCentre = layer.getHorizontalCoordSys().gridToLatLon(gridCoords);
+        LonLatPosition gridCellCentre = layer.getHorizontalCoordSys().gridToLonLat(gridCoords);
 
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
@@ -676,7 +676,7 @@ public class WmsController extends AbstractController {
         // The map is sorted in order of ascending time
         // Create a trivial PointList for reading a single point of data.
         // We use the same coordinate reference system as the original request
-        PointList singlePoint = PointList.fromPoint(new ProjectionPointImpl(x, y),
+        PointList singlePoint = PointList.fromPoint(new HorizontalPositionImpl(x, y),
                 grid.getCrsHelper());
         SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
         for (int tIndexInLayer : tIndices) {
@@ -695,8 +695,8 @@ public class WmsController extends AbstractController {
 
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT)) {
             Map<String, Object> models = new HashMap<String, Object>();
-            models.put("longitude", latLon.getLongitude());
-            models.put("latitude", latLon.getLatitude());
+            models.put("longitude", lonLat.getLongitude());
+            models.put("latitude", lonLat.getLatitude());
             models.put("gridCoords", gridCoords);
             models.put("gridCentre", gridCellCentre);
             models.put("data", featureData);
@@ -712,8 +712,8 @@ public class WmsController extends AbstractController {
             xydataset.addSeries(ts);
 
             // Create a chart with no legend, tooltips or URLs
-            String title = "Lon: " + latLon.getLongitude() + ", Lat: " +
-                    latLon.getLatitude();
+            String title = "Lon: " + lonLat.getLongitude() + ", Lat: " +
+                    lonLat.getLatitude();
             String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
             JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                     "Date / time", yLabel, xydataset, false, false, false);
@@ -1036,8 +1036,8 @@ public class WmsController extends AbstractController {
         } else if (outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
             // Output data as XML using a template
             // First create an ordered map of ProjectionPoints to data values
-            Map<ProjectionPoint, Float> dataPoints = new LinkedHashMap<ProjectionPoint, Float>();
-            List<ProjectionPoint> points = pointList.asList();
+            Map<HorizontalPosition, Float> dataPoints = new LinkedHashMap<HorizontalPosition, Float>();
+            List<HorizontalPosition> points = pointList.asList();
             for (int i = 0; i < points.size(); i++) {
                 dataPoints.put(points.get(i), data[i]);
             }
@@ -1092,7 +1092,7 @@ public class WmsController extends AbstractController {
         while (true) {
             // Create a transect with the required number of points, interpolating
             // between the control points in the line string
-            List<ProjectionPoint> points = transect.getPointsOnPath(numTransectPoints);
+            List<HorizontalPosition> points = transect.getPointsOnPath(numTransectPoints);
             // Create a PointList from the interpolated points
             PointList testPointList = PointList.fromList(points, transect.getCrsHelper());
             // Work out how many grid points will be sampled by this transect

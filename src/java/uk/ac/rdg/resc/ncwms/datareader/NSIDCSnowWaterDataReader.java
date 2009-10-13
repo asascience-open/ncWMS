@@ -41,8 +41,8 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.unidata.geoloc.LatLonPoint;
-import ucar.unidata.geoloc.ProjectionPoint;
+import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -165,13 +165,13 @@ public class NSIDCSnowWaterDataReader extends DataReader
         }
         
         int picIndex = 0;
-        for (ProjectionPoint point : pointList.asList())
+        for (HorizontalPosition point : pointList.asList())
         {
-            LatLonPoint latLon = pointList.getCrsHelper().crsToLatLon(point);
-            if (latLon.getLatitude() >= 0.0 && latLon.getLatitude() <= 90.0)
+            LonLatPosition lonLat = pointList.getCrsHelper().crsToLonLat(point);
+            if (lonLat.getLatitude() >= 0.0 && lonLat.getLatitude() <= 90.0)
             {
                 // Find the index in the source data
-                int dataIndex = latLonToIndex(latLon.getLatitude(), latLon.getLongitude());
+                int dataIndex = latLonToIndex(lonLat.getLatitude(), lonLat.getLongitude());
                 // two bytes per pixel
                 short val = data.getShort(dataIndex * 2);
                 if (val > 0) picData[picIndex] = val;

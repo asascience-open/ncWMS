@@ -46,6 +46,7 @@ import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
 import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
+import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
@@ -292,7 +293,7 @@ public class MetadataLoader
                 {
                     // Set the scale range for each variable by reading a 100x100
                     // chunk of data and finding the min and max values of this chunk.
-                    HorizontalGrid grid = new HorizontalGrid("CRS:84", 100, 100, layer.getBbox());
+                    HorizontalGrid grid = new HorizontalGrid(CrsHelper.PLATE_CARREE_CRS_CODE, 100, 100, layer.getBbox());
                     // Read from the first t and z indices
                     int tIndex = layer.isTaxisPresent() ? 0 : -1;
                     int zIndex = layer.isZaxisPresent() ? 0 : -1;

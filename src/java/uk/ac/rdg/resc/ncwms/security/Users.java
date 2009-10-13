@@ -33,7 +33,6 @@ import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.userdetails.UserDetails;
 import org.acegisecurity.userdetails.UserDetailsService;
 import org.acegisecurity.userdetails.UsernameNotFoundException;
-import org.opengis.coverage.ThiessenPolygonCoverage;
 import org.springframework.dao.DataAccessException;
 
 /**
