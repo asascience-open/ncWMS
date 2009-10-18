@@ -32,6 +32,7 @@ import java.awt.Font;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
@@ -47,7 +48,6 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.jfree.chart.ChartFactory;
@@ -245,14 +245,14 @@ public class WmsController extends AbstractController {
                 throw new Wms1_1_1Exception(wmse);
             }
             throw wmse;
+        } catch (IOException ioe) {
+            // Filter out IOExceptions, otherwise the log gets full of
+            // them.  These most commonly occur when the client disconnects
+            // part-way through an image download, very common when the user is
+            // panning and zooming in a tile-based visualization client).
+            return null;
         } catch (Exception e) {
-            // Filter out ClientAbortExceptions, otherwise the log gets full of
-            // them (very common when the user is panning and zooming in a
-            // visualization client).
-            if (!(e instanceof ClientAbortException)) {
-                log.error(e.getMessage(), e);
-                logUsage = false;
-            }
+            // An unexpected (internal) error has occurred
             usageLogEntry.setException(e);
             throw e;
         } finally {
@@ -440,8 +440,15 @@ public class WmsController extends AbstractController {
         }
         // TODO: support more than one layer (superimposition, difference, mask)
         Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
-
         usageLogEntry.setLayer(layer);
+
+        // Check the dimensions of the image
+        if (dr.getHeight() > this.config.getServer().getMaxImageHeight() ||
+            dr.getWidth()  > this.config.getServer().getMaxImageWidth()) {
+            throw new WmsException("Requested image size exceeds the maximum of "
+                    + this.config.getServer().getMaxImageWidth() + "x"
+                    + this.config.getServer().getMaxImageHeight());
+        }
 
         // Get the grid onto which the data will be projected
         HorizontalGrid grid = new HorizontalGrid(dr);
@@ -1208,8 +1215,7 @@ public class WmsController extends AbstractController {
     }
 
     /**
-     * Represents a WMS version number.  Not used in the current code, but preserved
-     * for future use in version negotiation.
+     * Represents a WMS version number.
      */
     private static final class WmsVersion implements Comparable<WmsVersion> {
 
