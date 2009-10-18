@@ -143,7 +143,7 @@ public class AdminController extends MultiActionController
     /**
      * Handles the submission of new configuration information from admin_index.jsp
      */
-    public ModelAndView updateConfig(HttpServletRequest request,
+    public void updateConfig(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         Contact contact = this.config.getContact();
@@ -284,7 +284,7 @@ public class AdminController extends MultiActionController
         // This causes a client-side redirect, meaning that the user can safely
         // press refresh in their browser without resubmitting the new config information.
         // TODO: ... although it probably doesn't really matter if they do.  Does it?
-        return new ModelAndView("postConfigUpdate");
+        response.sendRedirect("index.jsp");
     }
 
     /**
