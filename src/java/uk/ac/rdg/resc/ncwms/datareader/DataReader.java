@@ -66,7 +66,6 @@ public abstract class DataReader
     public static DataReader forDataset(Dataset ds) throws Exception
     {
         String className = ds.getDataReaderClass();
-        String location = ds.getLocation();
         String clazz = DefaultDataReader.class.getName();
         if (className != null && !className.trim().equals(""))
         {
