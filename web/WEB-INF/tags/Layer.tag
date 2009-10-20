@@ -3,8 +3,9 @@
 <%@taglib uri="http://www.atg.com/taglibs/json" prefix="json"%>
 <%@attribute name="dataset" required="true" type="uk.ac.rdg.resc.ncwms.config.Dataset" description="Dataset containing this layer"%>
 <%@attribute name="id" required="true" description="ID of layer within the dataset"%>
-<%@attribute name="label" required="true" description="Optional: can be used to override the title for this layer"%>
-<%@attribute name="server" description="Optional URL to the ncWMS server providing this layer"%>
+<%@attribute name="label" required="true" description="Specifies the title for this layer"%>
+<%-- A layer on this server.  Has the capability to add information about the
+     readiness and error state of the layer's dataset --%>
 <json:object>
     <c:if test="${empty dataset}">
         <json:property name="label" value="Dataset does not exist"/>
@@ -12,9 +13,6 @@
     <c:if test="${dataset.ready}">
         <json:property name="id" value="${dataset.id}/${id}"/>
         <json:property name="label" value="${label}"/>
-        <c:if test="${not empty server}">
-            <json:property name="server" value="${server}"/>
-        </c:if>
     </c:if>
     <c:if test="${dataset.loading}">
         <json:property name="label" value="${label} (loading)"/>

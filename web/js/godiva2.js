@@ -69,7 +69,8 @@ window.onload = function()
         // we strip off the "LINESTRING(" and the trailing ")"
         line = line.substring(11, line.length - 1);
         // Load an image of the transect
-        var transectUrl = 'wms?REQUEST=GetTransect' +
+        var server = activeLayer.server == '' ? 'wms' : activeLayer.server;
+        var transectUrl = server + '?REQUEST=GetTransect' +
             '&LAYER=' + activeLayer.id +
             '&CRS=' + map.baseLayer.projection.toString() +
             '&ELEVATION=' + getZValue() +
@@ -538,12 +539,13 @@ function getFeatureInfo(e)
                 }
                 if (timeSeriesSelected()) {
                     // Construct a GetFeatureInfo request for the timeseries plot
-                    // Get a URL for a WMS request that covers the current map extent
-                    var urlEls = featureInfoUrl.split('&');
-                    // Replace the parameters as needed.  We generate a map that is half the
-                    // width and height of the viewport, otherwise it takes too long
-                    var newURL = urlEls[0];
-                    for (var i = 1; i < urlEls.length; i++) {
+                    var serverAndParams = featureInfoUrl.split('?');
+                    var server = activeLayer.server == '' ? 'wms' : activeLayer.server;
+                    var urlEls = serverAndParams[1].split('&');
+                    // Replace the parameters as needed: we need to add the
+                    // time range and change the format to PNG
+                    var newURL = server + '?';
+                    for (var i = 0; i < urlEls.length; i++) {
                         if (urlEls[i].startsWith('TIME=')) {
                             newURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
                         } else if (urlEls[i].startsWith('INFO_FORMAT')) {
@@ -1249,7 +1251,9 @@ function updatePaletteSelector()
     // TODO test if coming from a different server
     var width = 50;
     var height = 200;
-    var paletteUrl = activeLayer.server + 'wms?REQUEST=GetLegendGraphic' +
+    var server = activeLayer.server;
+    if (server == '') server = 'wms';
+    var paletteUrl = server + '?REQUEST=GetLegendGraphic' +
         '&LAYER=' + activeLayer.id +
         '&COLORBARONLY=true' +
         '&WIDTH=1' +
