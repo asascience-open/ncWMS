@@ -34,7 +34,19 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          <menu:dataset dataset="${datasets.BALTIC_FORECAST}"/>
      </menu:folder>
      <menu:folder label="North-East Atlantic Ocean">
-         <menu:dataset dataset="${datasets.MERSEA_NATL}" label="FOAM North Atlantic analysis"/>
+         <%-- <menu:dataset dataset="${datasets.MERSEA_NATL}" label="FOAM North Atlantic analysis"/> --%>
+         <menu:folder label="North Atlantic 1/12 degree">
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/sossheig" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iiceconc" label="sea_ice_area_fraction"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iicethic" label="sea_ice_thickness"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itmecrty" label="Ice meridional current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itzocrtx" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vosaline" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/votemper" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vomecrty" label="eastward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/sea_water_velocity" label="sea_water_velocity"/>
+         </menu:folder>
      </menu:folder>
      <menu:folder label="Mediterranean Sea">
          <%-- The Mediterranean data come from three different datasets so we
