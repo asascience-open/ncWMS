@@ -101,7 +101,6 @@
         <property name="config"><ref local="config"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
-        <property name="tileCache"><ref local="tileCache"/></property>
         <property name="methodNameResolver"><ref local="adminMethodNameResolver"/></property>
     </bean>
     <!-- This maps URL patterns to the methods of the admin controller -->

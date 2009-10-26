@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
-import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Contact;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
@@ -61,7 +60,6 @@ public class AdminController extends MultiActionController
     // These will be injected by Spring
     private MetadataLoader metadataLoader;
     private Config config;
-    private TileCache tileCache;
     private UsageLogger usageLogger;
     
     /**
@@ -319,7 +317,7 @@ public class AdminController extends MultiActionController
     /**
      * Called when the user presses "Save" or "Cancel" on the edit variables page
      */
-    public ModelAndView updateVariables(HttpServletRequest request,
+    public void updateVariables(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         // We only take action if the user pressed "save"
@@ -349,7 +347,7 @@ public class AdminController extends MultiActionController
         // This causes a client-side redirect, meaning that the user can safely
         // press refresh in their browser without resubmitting the new config information.
         // TODO: ... although it probably doesn't really matter if they do.  Does it?
-        return new ModelAndView("postConfigUpdate");
+        response.sendRedirect("index.jsp");
     }
     
     /**
@@ -375,14 +373,6 @@ public class AdminController extends MultiActionController
     public void setUsageLogger(UsageLogger usageLogger)
     {
         this.usageLogger = usageLogger;
-    }
-    
-    /**
-     * Called by Spring to inject the tile cache
-     */
-    public void setTileCache(TileCache tileCache)
-    {
-        this.tileCache = tileCache;
     }
     
 }
