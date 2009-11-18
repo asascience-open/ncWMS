@@ -25,7 +25,7 @@ var ncwms_untiled = null; // quantities) and one untiled (for vector quantities)
 
 var animation_layer = null; // The layer that will be used to display animations
 
-var servers = ['', 'http://behemoth.nerc-essc.ac.uk/ncWMS/wms']; // URLs to the servers from which we will display layers
+var servers = ['']  // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
 var activeLayer = null; // The currently-selected layer metadata
 

@@ -13,8 +13,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     <ServiceException>Unexpected error of type ${exception.class.name}: ${exception.message}</ServiceException>
     <%-- A non-standard addition, useful for debugging --%>
     <StackTrace>
-        <c:forEach var="stacktraceelement" items="${exception.stackTrace}">
-        <![CDATA[${stacktraceelement}]]>
-        </c:forEach>
+        <![CDATA[<c:forEach var="stacktraceelement" items="${exception.stackTrace}">
+        ${stacktraceelement}
+        </c:forEach>]]>
     </StackTrace>
 </ServiceExceptionReport>
