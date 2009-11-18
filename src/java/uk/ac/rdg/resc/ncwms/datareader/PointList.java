@@ -32,6 +32,7 @@ import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import java.util.AbstractList;
 import java.util.List;
 import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 
 /**
  * <p>A list of {@link HorizontalPosition}s in a certain coordinate reference system.
@@ -48,7 +49,9 @@ import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
  *    // data.length equals pointList.size()
  *    // Furthermore data[i] corresponds to pointList.get(i)
  * </pre>
- * @todo
+ * @todo The CRS information might be stored in the passed-in HorizontalPositions,
+ * so there may be no need to create more CrsHelper objects.  The API could also
+ * be simplified.
  * @author Jon
  */
 public abstract class PointList
@@ -96,7 +99,7 @@ public abstract class PointList
      * requests
      * @param point The HorizontalPosition to wrap
      * @param crsHelper Wrapper around the coordinate reference system of the points
-     * @return a new PointList that wraps the given projection point
+     * @return a new PointList that wraps the given point
      */
     public static PointList fromPoint(final HorizontalPosition point, final CrsHelper crsHelper)
     {
@@ -108,6 +111,17 @@ public abstract class PointList
             }
             public int size() { return 1; }
         };
+    }
+
+    /**
+     * Creates a PointList containing a single lon-lat point.  Useful for getFeatureInfo
+     * requests.
+     * @param point The LonLatPosition to wrap
+     * @return a new PointList that wraps the given lon-lat point
+     */
+    public static PointList fromPoint(final LonLatPosition lonLat)
+    {
+        return fromPoint(lonLat, CrsHelper.CRS_84);
     }
 
     /**

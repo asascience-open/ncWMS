@@ -39,12 +39,14 @@ import java.util.Set;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ucar.ma2.Array;
 import ucar.ma2.Range;
 import ucar.nc2.Attribute;
 import ucar.nc2.constants.FeatureType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dataset.NetcdfDataset.Enhance;
+import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dataset.VariableEnhanced;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
@@ -54,6 +56,7 @@ import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.coordsys.HorizontalCoordSys;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
@@ -101,6 +104,7 @@ public class DefaultDataReader extends DataReader
      * the {@code pointList}, in the same order.
      * @throws Exception if an error occurs
      */
+    @Override
     public float[] read(String filename, Layer layer, int tIndex, int zIndex,
         PointList pointList) throws Exception
     {
@@ -193,6 +197,107 @@ public class DefaultDataReader extends DataReader
             }
         }
     }
+
+    /**
+     * <p>Reads a timeseries of data from a file from a single xyz point.  This
+     * method knows nothing about aggregation: it simply reads data from the
+     * given file.  Missing values (e.g. land pixels in oceanography data) will
+     * be represented by Float.NaN.</p>
+     * <p>If the provided Layer doesn't have a time axis then {@code tIndices}
+     * must be a single-element list with value -1.  In this case the returned
+     * "timeseries" of data will be a single data value. (TODO: make this more
+     * sensible.)</p>
+     * <p>This implementation reads all data with a single I/O operation
+     * (as opposed to the {@link DataReader#readTimeseries(java.lang.String,
+     * uk.ac.rdg.resc.ncwms.metadata.Layer, java.util.List, int,
+     * uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition) superclass implementation},
+     * which uses an I/O operation for each individual point).  This method is
+     * therefore expected to be more efficient, particularly when reading from
+     * OPeNDAP servers.</p>
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
+     * @param layer {@link Layer} object representing the variable
+     * @param tIndices the indices along the time axis within this file
+     * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
+     * @param lonLat The longitude and latitude of the point
+     * @return an array of floating-point data values, one for each point in
+     * {@code tIndices}, in the same order.
+     * @throws Exception if an error occurs
+     * @todo Validity checking on tIndices and layer.hasTAxis()?
+     */
+    @Override
+    public float[] readTimeseries(String filename, Layer layer,
+        List<Integer> tIndices, int zIndex, LonLatPosition lonLat)
+        throws Exception
+    {
+
+        int firstTIndex = tIndices.get(0);
+        int lastTIndex = tIndices.get(tIndices.size() - 1);
+        int[] gridCoords = layer.getHorizontalCoordSys().lonLatToGrid(lonLat);
+
+        // Prevent InvalidRangeExceptions if z or t axes are missing
+        if (firstTIndex < 0 || lastTIndex < 0)
+        {
+            firstTIndex = 0;
+            lastTIndex = 0;
+        }
+        if (zIndex < 0) zIndex = 0;
+
+        NetcdfDataset nc = null;
+
+        try
+        {
+            Range tRange = new Range(firstTIndex, lastTIndex);
+            Range zRange = new Range(zIndex, zIndex);
+            Range yRange = new Range(gridCoords[1], gridCoords[1]);
+            Range xRange = new Range(gridCoords[0], gridCoords[0]);
+
+            // Open the dataset, using the cache for NcML aggregations
+            nc = openDataset(filename);
+            GridDataset gd = (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
+                nc, null, null);
+            GridDatatype grid = gd.findGridDatatype(layer.getId());
+
+            // Now read the data
+            GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+            Array arr = subset.readDataSlice(-1, 0, 0, 0);
+
+            // Check for consistency
+            if (arr.getSize() != lastTIndex - firstTIndex + 1)
+            {
+                throw new Exception("Unexpected array size (got " + arr.getSize()
+                    + ", expected " + (lastTIndex - firstTIndex + 1) + ")");
+            }
+
+            // Copy the data (which may include many points we don't need) to
+            // the required array
+            VariableDS var = grid.getVariable();
+            float[] tsData = new float[tIndices.size()];
+            for (int i = 0; i < tIndices.size(); i++)
+            {
+                int tIndex = tIndices.get(i) - firstTIndex;
+                if (tIndex < 0) tIndex = 0; // This will happen if the layer has no t axis
+                float val = arr.getFloat(tIndex);
+                // Convert scale-offset-missing
+                tsData[i] = (float)var.convertScaleOffsetMissing(val);
+            }
+            return tsData;
+        }
+        finally
+        {
+            if (nc != null)
+            {
+                try
+                {
+                    nc.close();
+                }
+                catch (IOException ex)
+                {
+                    logger.error("IOException closing " + nc.getLocation(), ex);
+                }
+            }
+
+        }
+    }
     
     /**
      * Reads the metadata for all the variables in the dataset
@@ -204,6 +309,7 @@ public class DefaultDataReader extends DataReader
      * @param layers Map of Layer Ids to LayerImpl objects to populate or update
      * @throws Exception if there was an error reading from the data source
      */
+    @Override
     protected void findAndUpdateLayers(String location,
         Map<String, LayerImpl> layers) throws Exception
     {

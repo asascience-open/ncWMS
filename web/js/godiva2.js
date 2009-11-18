@@ -25,7 +25,7 @@ var ncwms_untiled = null; // quantities) and one untiled (for vector quantities)
 
 var animation_layer = null; // The layer that will be used to display animations
 
-var servers = ['']; // URLs to the servers from which we will display layers
+var servers = ['', 'http://behemoth.nerc-essc.ac.uk/ncWMS/wms']; // URLs to the servers from which we will display layers
                     // An empty string means the server that is serving this page.
 var activeLayer = null; // The currently-selected layer metadata
 
@@ -560,7 +560,7 @@ function getFeatureInfo(e)
                         + " at this point over the selected time range'>Create timeseries plot</a>";
                 }
             } else {
-                html = "Can't get feature info data for this layer <a href='javascript:popUp('whynot.html', 200, 200)'>(why not?)</a>";
+                html = "Can't get feature info data<br /> for this layer <a href=\"javascript:popUp('whynot.html', 200, 200)\">(why not?)</a>";
             }
             // Remove the "Loading..." popup
             map.removePopup(tempPopup);

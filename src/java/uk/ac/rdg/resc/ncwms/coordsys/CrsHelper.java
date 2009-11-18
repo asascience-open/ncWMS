@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.ncwms.coordsys;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import org.geotoolkit.referencing.CRS;
 import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
@@ -42,7 +44,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
  * This class wraps the GeoTools/GeoAPI coordinate reference system methods,
  * providing a set of convenience methods such as transformations and validity
  * checks.
- * @todo this object is immutable and could be re-used.
  * @author Jon
  */
 public final class CrsHelper {
@@ -51,21 +52,47 @@ public final class CrsHelper {
 
     /**
      * An unmodifiable set of CRS codes that are suppored by this class
+     * @todo: actually these are just the ones in the urn:ogc:def namespace
      */
     public static final Set<String> SUPPORTED_CRS_CODES =
         Collections.unmodifiableSet(CRS.getSupportedCodes("urn:ogc:def"));
 
+    /**
+     * A CrsHelper for the WGS84 lon-lat coordinate system ("CRS:84")
+     */
+    public static final CrsHelper CRS_84;
+
+    /** Cache of CrsHelper objects */
+    private static final Map<String, CrsHelper> CACHE = new HashMap<String, CrsHelper>();
+
+    static {
+        try {
+            CRS_84 = fromCrsCode(PLATE_CARREE_CRS_CODE);
+            CACHE.put(PLATE_CARREE_CRS_CODE, CRS_84);
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private CoordinateReferenceSystem crs;
-    private MathTransform crsToLatLon;
-    private MathTransform latLonToCrs;
+    private MathTransform crsToLonLat;
+    private MathTransform lonLatToCrs;
     private boolean isLatLon;
 
     /** Private constructor to prevent direct instantiation */
     private CrsHelper() { }
 
+    /**
+     * Returns a CrsHelper object corresponding with the given CRS code.  CrsHelper
+     * objects are cached, so only one CrsHelper per CRS code will ever exist.
+     * @throws InvalidCrsException if the CRS code is not recognized
+     */
     public static CrsHelper fromCrsCode(String crsCode) throws InvalidCrsException {
-        // TODO: could cache CrsHelpers with the same code
-        CrsHelper crsHelper = new CrsHelper();
+        CrsHelper crsHelper = CACHE.get(crsCode);
+        if (crsHelper != null) return crsHelper;
+
+        // We have to create a new CrsHelper object
+        crsHelper = new CrsHelper();
         try
         {
             // The "true" means "force longitude first" axis order
@@ -75,14 +102,14 @@ public final class CrsHelper {
             // is necessary to prevent "Bursa wolf parameters required"
             // errors (Some CRSs, including British National Grid, fail if
             // we are not "lenient".)
-            crsHelper.crsToLatLon = CRS.findMathTransform(crsHelper.crs, DefaultGeographicCRS.WGS84, true);
-            crsHelper.latLonToCrs = CRS.findMathTransform(DefaultGeographicCRS.WGS84, crsHelper.crs, true);
-            crsHelper.isLatLon = crsHelper.crsToLatLon.isIdentity();
+            crsHelper.crsToLonLat = CRS.findMathTransform(crsHelper.crs, DefaultGeographicCRS.WGS84, true);
+            crsHelper.lonLatToCrs = CRS.findMathTransform(DefaultGeographicCRS.WGS84, crsHelper.crs, true);
+            crsHelper.isLatLon = crsHelper.crsToLonLat.isIdentity();
+            CACHE.put(crsCode, crsHelper);
             return crsHelper;
         }
         catch(Exception e)
         {
-            e.printStackTrace();
             throw new InvalidCrsException(crsCode);
         }
     }
@@ -128,7 +155,7 @@ public final class CrsHelper {
         // "force longitude-first" when creating the CRS for this grid
         double[] point = new double[]{x, y};
         // Transform to lat-lon in-place
-        this.crsToLatLon.transform(point, 0, point, 0, 1);
+        this.crsToLonLat.transform(point, 0, point, 0, 1);
         return new LonLatPositionImpl(point[0], point[1]);
     }
 
@@ -167,7 +194,7 @@ public final class CrsHelper {
         // "force longitude-first" when creating the CRS for this grid
         double[] point = new double[]{longitude, latitude};
         // Transform to lat-lon in-place
-        this.latLonToCrs.transform(point, 0, point, 0, 1);
+        this.lonLatToCrs.transform(point, 0, point, 0, 1);
         return new HorizontalPositionImpl(point[0], point[1]);
     }
 

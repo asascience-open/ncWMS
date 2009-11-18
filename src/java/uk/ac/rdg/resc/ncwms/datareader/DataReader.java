@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
 
@@ -84,7 +85,7 @@ public abstract class DataReader
     }
     
     /**
-     * Reads data from a NetCDF file.  Reads data for a single timestep only.
+     * Reads data from a file.  Reads data for a single timestep only.
      * This method knows
      * nothing about aggregation: it simply reads data from the given file.
      * Missing values (e.g. land pixels in oceanography data) will be represented
@@ -102,6 +103,44 @@ public abstract class DataReader
     public abstract float[] read(String filename, Layer layer,
         int tIndex, int zIndex, PointList pointList)
         throws Exception;
+
+    /**
+     * <p>Reads a timeseries of data from a file from a single xyz point.  This
+     * method knows nothing about aggregation: it simply reads data from the
+     * given file.  Missing values (e.g. land pixels in oceanography data) will
+     * be represented by Float.NaN.</p>
+     * <p>If the provided Layer doesn't have a time axis then {@code tIndices}
+     * must be a single-element list with value -1.  In this case the returned
+     * "timeseries" of data will be a single data value. (TODO: make this more
+     * sensible.)</p>
+     * <p>This default implementation simply makes multiple calls to
+     * {@link #read(java.lang.String, uk.ac.rdg.resc.ncwms.metadata.Layer, int,
+     * int, uk.ac.rdg.resc.ncwms.datareader.PointList) read()},
+     * which is not very efficient because the same file may be opened and closed
+     * multiple times (a particular problem when reading from OPeNDAP servers).
+     * Subclasses are encouraged to override this with a more efficient method.</p>
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
+     * @param layer {@link Layer} object representing the variable
+     * @param tIndices the indices along the time axis within this file
+     * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
+     * @param lonLat The longitude and latitude of the point
+     * @return an array of floating-point data values, one for each point in
+     * {@code tIndices}, in the same order.
+     * @throws Exception if an error occurs
+     * @todo Validity checking on tIndices and layer.hasTAxis()?
+     */
+    public float[] readTimeseries(String filename, Layer layer,
+        List<Integer> tIndices, int zIndex, LonLatPosition lonLat)
+        throws Exception {
+
+        PointList pointList = PointList.fromPoint(lonLat);
+        float[] tsData = new float[tIndices.size()];
+        for (int i = 0; i < tsData.length; i++) {
+            tsData[i] = this.read(filename, layer, tIndices.get(i), zIndex, pointList)[0];
+        }
+
+        return tsData;
+    }
     
     /**
      * Reads and returns the metadata for all the layers (i.e. variables) in the
@@ -142,8 +181,6 @@ public abstract class DataReader
      * expansion of a glob aggregation).
      * @param location Full path to the dataset
      * @param layers Map of Layer Ids to Layer objects to populate or update
-     * @param progressMonitor A {@link ProgressMonitor} that can be updated
-     * with updates on the progress with loading the metadata.  Can be null.
      * @throws Exception if there was an error reading from the data source
      */
     protected abstract void findAndUpdateLayers(String location,

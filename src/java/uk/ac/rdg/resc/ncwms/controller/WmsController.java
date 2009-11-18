@@ -77,7 +77,6 @@ import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.coordsys.HorizontalPositionImpl;
 import uk.ac.rdg.resc.ncwms.coordsys.LonLatPosition;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
@@ -123,9 +122,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * names to bind request parameters to an object.)</i></p>
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class WmsController extends AbstractController {
 
@@ -548,7 +544,8 @@ public class WmsController extends AbstractController {
     }
 
     /**
-     * Reads data from the given variable, returning a List of data arrays.
+     * Reads data from the given variable, from a single timestep,
+     * returning a List of data arrays.
      * This List will have a single element if the variable is scalar, or two
      * elements if the variable is a vector
      */
@@ -600,17 +597,13 @@ public class WmsController extends AbstractController {
             // Data not found in cache or cache not present
             data = dr.read(ft.filename, layer, ft.tIndexInFile, zIndex, pointList);
             // Put the data into the cache
-            if (key != null) {
+            if (key != null) { // The key is only created if the tileCache exists
                 tileCache.put(key, data);
             }
-            if (usageLogEntry != null) {
-                usageLogEntry.setUsedCache(false);
-            }
-        } else {
-            // Data were found in the cache
-            if (usageLogEntry != null) {
-                usageLogEntry.setUsedCache(true);
-            }
+        }
+        // Record whether or not we used the cache
+        if (usageLogEntry != null) {
+            usageLogEntry.setUsedCache(data != null);
         }
 
         return data;
@@ -669,35 +662,47 @@ public class WmsController extends AbstractController {
 
         // Find out the i,j coordinates of this point in the source grid (could be null)
         int[] gridCoords = layer.getHorizontalCoordSys().lonLatToGrid(lonLat);
+        // *** TODO: what if gridCoords is null? ***
         // Get the location of the centre of the grid cell
         LonLatPosition gridCellCentre = layer.getHorizontalCoordSys().gridToLonLat(gridCoords);
 
         // Get the index along the z axis
         int zIndex = getZIndex(dataRequest.getElevationString(), layer); // -1 if no z axis present
 
-        // Get the information about the requested timesteps
+        // Get the indices of the requested timesteps.  If the layer doesn't have
+        // a time axis then this will return a single-element List with value -1.
         List<Integer> tIndices = getTIndices(dataRequest.getTimeString(), layer);
         usageLogEntry.setNumTimeSteps(tIndices.size());
 
-        // Now read the data, mapping date-times to data values
-        // The map is sorted in order of ascending time
-        // Create a trivial PointList for reading a single point of data.
-        // We use the same coordinate reference system as the original request
-        PointList singlePoint = PointList.fromPoint(new HorizontalPositionImpl(x, y),
-                grid.getCrsHelper());
-        SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
+        // First we read the timeseries data.  If the layer doesn't have a time
+        // axis this will return a List of one-element arrays.
+        List<float[]> tsData = readTimeseriesData(layer, lonLat, tIndices, zIndex);
+        // Now we calculate the date/times represented by each point in the timeseries
+        List<DateTime> dts = new ArrayList<DateTime>();
         for (int tIndexInLayer : tIndices) {
-            DateTime dateTime = tIndexInLayer < 0 ? null : layer.getTimesteps().get(tIndexInLayer).getDateTime();
+            DateTime dateTime = tIndexInLayer < 0 ? null : layer.getTimesteps().get(tIndexInLayer).getDateTime(); 
+            dts.add(dateTime);
+        }
 
-            // We don't use the tile cache for reading single points
-            List<float[]> data = readData(layer, tIndexInLayer, zIndex, singlePoint,
-                    null, usageLogEntry);
-            float val = data.get(0)[0];
-            if (data.size() > 1) {
-                float val2 = data.get(1)[0];
+        float[] vals1 = tsData.get(0);
+        float[] vals2 = tsData.size() > 1 ? tsData.get(1) : null;
+
+        // Internal consistency check: arrays should be the same length
+        if (dts.size() != vals1.length || (vals2 != null && dts.size() != vals2.length)) {
+            throw new Exception("Internal error: timeseries length inconsistency");
+        }
+
+        // Now we map date-times to data values
+        // The map is sorted in order of ascending time
+        SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
+        for (int i = 0; i < dts.size(); i++) {
+            float val = vals1[i];
+            // If this is a vector quantity, calculate its magnitude
+            if (vals2 != null) {
+                float val2 = vals2[i];
                 val = (float) Math.sqrt(val * val + val2 * val2);
             }
-            featureData.put(dateTime, Float.isNaN(val) ? null : val);
+            featureData.put(dts.get(i), Float.isNaN(val) ? null : val);
         }
 
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT)) {
@@ -736,6 +741,83 @@ public class WmsController extends AbstractController {
                     chart, 400, 300);
             return null;
         }
+    }
+
+    /**
+     * Reads timeseries data from the given variable from a single point,
+     * returning a List of data arrays.
+     * This List will have a single element if the variable is scalar, or two
+     * elements if the variable is a vector.  Each element in the list is
+     * an array of floats, representing the timeseries data.  The length of each
+     * array will equal tIndices.size().
+     */
+    private static List<float[]> readTimeseriesData(Layer layer,
+            LonLatPosition lonLat, List<Integer> tIndices, int zIndex)
+            throws Exception {
+        List<float[]> tsData = new ArrayList<float[]>();
+        if (layer instanceof VectorLayer) {
+            VectorLayer vecLayer = (VectorLayer) layer;
+            tsData.add(readTimeseriesDataArray(vecLayer.getEastwardComponent(),
+                    lonLat, tIndices, zIndex));
+            tsData.add(readTimeseriesDataArray(vecLayer.getNorthwardComponent(),
+                    lonLat, tIndices, zIndex));
+        } else {
+            tsData.add(readTimeseriesDataArray(layer, lonLat, tIndices, zIndex));
+        }
+        return tsData;
+    }
+
+    /**
+     * Reads a timeseries of data from a Layer that is <b>not</b> a VectorLayer.
+     */
+    private static float[] readTimeseriesDataArray(Layer layer,
+            LonLatPosition lonLat, List<Integer> tIndices, int zIndex)
+            throws Exception {
+
+        if (tIndices == null) throw new NullPointerException("tIndices");
+
+        // We need to group the tIndices by their containing file.  That way, we
+        // can read all the time data from the same file in the same operation.
+        // This maps filenames to lists of t indices within the file.  We must
+        // preserve the insertion order so we use a LinkedHashMap.
+        Map<String, List<Integer>> files = new LinkedHashMap<String, List<Integer>>();
+        for (int tIndexInLayer : tIndices) {
+            FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
+            List<Integer> tIndicesInFile = files.get(ft.filename);
+            if (tIndicesInFile == null) {
+                tIndicesInFile = new ArrayList<Integer>();
+                files.put(ft.filename, tIndicesInFile);
+            }
+            tIndicesInFile.add(ft.tIndexInFile);
+        }
+
+        // Get a DataReader object for reading the data
+        Dataset ds = layer.getDataset();
+        DataReader dr = DataReader.forDataset(ds);
+        log.debug("Got data reader of type {}", dr.getClass().getName());
+
+        // Now we read the data from each file and add it to the timeseries
+        List<Float> data = new ArrayList<Float>();
+        for (String filename : files.keySet()) {
+            List<Integer> tIndicesInFile = files.get(filename);
+            float[] arr = dr.readTimeseries(filename, layer, tIndicesInFile, zIndex, lonLat);
+            for (float val : arr) {
+                data.add(val);
+            }
+        }
+
+        // Check that we have the right number of data points
+        if (data.size() != tIndices.size()) {
+            throw new AssertionError("Timeseries length inconsistency");
+        }
+
+        // Copy the data to an array of primitives and return
+        float[] arr = new float[data.size()];
+        for (int i = 0; i < arr.length; i++) {
+            arr[i] = data.get(i);
+        }
+
+        return arr;
     }
 
     /**
