@@ -52,6 +52,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	</menu:folder>
 
 	<menu:folder label="NW Shelves NOOS">
+		<menu:dataset dataset="${datasets.ecoop_mumm}"/>
+
 	    	<menu:folder label="Met Office UK">
         		<%--
 			<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
@@ -73,7 +75,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             			<menu:layer id ="ECOVARSALL/p1c" label="Diatom biomass" server="${pmlServer}"/>
         		</menu:folder>
 		       --%>
-        		<menu:dataset dataset="${datasets.ECOOP_POLCOMS_MRCS_forecast}" label="POLCOMS MRCS (Physical)"/>
+        		<menu:dataset dataset="${datasets.NCOF_MRCS}" label="POLCOMS MRCS (Physical)"/>
 
       	  		<menu:dataset dataset="${datasets.MRCS_ECOOP_TOP_best}"/>
     		</menu:folder>
@@ -128,7 +130,8 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     		</menu:folder>
  		<menu:dataset dataset="${datasets.ECOOP_IOLR}"/>
         	<menu:dataset dataset="${datasets.ECOOP_IMEDEA}"/>
-        	<menu:dataset dataset="${datasets.ECOOP_MALTA_ROSARIO2}"/>
+        	<menu:dataset dataset="${datasets.Rosario_6420}"/>
+        	<menu:dataset dataset="${datasets.Rosario_9620}"/>
 		<menu:dataset dataset="${datasets.AFS_Forecast_Last}"/>
  	</menu:folder>
 
