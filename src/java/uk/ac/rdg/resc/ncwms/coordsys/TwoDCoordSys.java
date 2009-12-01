@@ -76,10 +76,8 @@ final class TwoDCoordSys extends HorizontalCoordSys
             if (lutCoordSys == null)
             {
                 logger.debug("Need to generate new look-up table");
-                // Create a blank look-up table
+                // Create a look-up table for this coord sys
                 LookUpTable lut = new LookUpTable(curvGrid, minLutResolution);
-                // Populate the look-up table
-                BufferedImageLutGenerator.populateLut(lut, curvGrid);
                 logger.debug("Generated new look-up table");
                 // Create the TwoDCoordSys
                 lutCoordSys = new TwoDCoordSys(curvGrid, lut);

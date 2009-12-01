@@ -28,10 +28,20 @@
 
 package uk.ac.rdg.resc.ncwms.coordsys;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
-import java.util.Arrays;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DirectColorModel;
+import java.awt.image.WritableRaster;
 import org.opengis.metadata.extent.GeographicBoundingBox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 
 /**
@@ -44,19 +54,39 @@ import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
  */
 final class LookUpTable
 {
+    private static final Logger logger = LoggerFactory.getLogger(LookUpTable.class);
+
     // The contents of the look-up table: i.e. the i and j indices of each
     // lon-lat point in the LUT.  These are flattened from a 2D to a 1D array.
     // We store these as shorts to save disk space.  The LUT would need to be
     // extremely large before we would have to worry about overflows.
     // Each array has the size nLon * nLat
-    private final short[] iIndices;
-    private final short[] jIndices;
+    private DataBuffer iIndices;
+    private DataBuffer jIndices;
 
     private final int nLon;
     private final int nLat;
 
     // Converts from lat-lon coordinates to index space in the LUT.
     private final AffineTransform transform = new AffineTransform();
+
+    /**
+     * A {@link DirectColorModel} that holds data as unsigned shorts, ignoring
+     * the red and alpha components.  (int value = green &lt;&lt; 8 | blue)
+     */
+    private static final ColorModel COLOR_MODEL = new DirectColorModel(
+        16,           // Store the data as unsigned shorts
+        0x00000000,
+        0x0000ff00,
+        0x000000ff,
+        0x00000000
+    );
+
+    /** This value in the look-up table means "missing value" */
+    private static final int MISSING_VALUE = 65535;
+
+    /** This is the maximum index that can be stored in the LUT */
+    private static final int MAX_INDEX = 65534;
 
     /**
      * Creates an empty look-up table (with all indices set to -1).
@@ -90,10 +120,81 @@ final class LookUpTable
         // Then we translate by the minimum coordinate values
         this.transform.translate(-bbox.getWestBoundLongitude(), -bbox.getSouthBoundLatitude());
 
-        this.iIndices = new short[this.nLon * this.nLat];
-        this.jIndices = new short[this.nLon * this.nLat];
-        Arrays.fill(this.iIndices, (short)-1);
-        Arrays.fill(this.jIndices, (short)-1);
+        // Populate the look-up tables
+        this.makeLuts(curvGrid);
+    }
+
+    /**
+     * Generates the data for the look-up tables
+     */
+    private void makeLuts(CurvilinearGrid curvGrid)
+    {
+        // Create BufferedImages on which we will paint the i and j indices of
+        // cells
+        BufferedImage iIm = this.createBufferedImage();
+        BufferedImage jIm = this.createBufferedImage();
+
+        // Get graphics contexts onto which we'll paint
+        Graphics2D ig2d = iIm.createGraphics();
+        Graphics2D jg2d = jIm.createGraphics();
+
+        // Apply a transform so that we can paint in lat-lon coordinates
+        ig2d.setTransform(this.transform);
+        jg2d.setTransform(this.transform);
+
+        // Populate the BufferedImages using the information from the curvilinear grid
+        // Iterate over all the cells in the grid, painting the i and j indices of the
+        // cell onto the BufferedImage
+        for (Cell cell : curvGrid)
+        {
+            // Get a Path representing the boundary of the cell
+            Path2D path = cell.getBoundaryPath();
+            // Paint the path onto the BufferedImages as polygons
+            // Use the i and j indices of the cell as the colours
+            if (cell.getI() > MAX_INDEX || cell.getJ() > MAX_INDEX)
+            {
+                // Very unlikely to happen!
+                throw new IllegalStateException("Can't store indices greater than " + MAX_INDEX);
+            }
+            ig2d.setPaint(new Color(cell.getI()));
+            jg2d.setPaint(new Color(cell.getJ()));
+            ig2d.fill(path);
+            jg2d.fill(path);
+
+            // We paint a second copy of the cell, shifted by 360 degrees, to handle
+            // the anti-meridian
+            double shiftLon = cell.getCentre().getLongitude() > 0.0
+                ? -360.0
+                : 360.0;
+            path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
+            ig2d.fill(path);
+            jg2d.fill(path);
+        }
+
+        // We only need to store the data buffers, not the whole BufferedImages
+        this.iIndices = iIm.getRaster().getDataBuffer();
+        this.jIndices = jIm.getRaster().getDataBuffer();
+    }
+
+    /**
+     * Creates and returns a new {@link BufferedImage} that stores pixel data
+     * as unsigned shorts.  Initializes all pixel values to {@link #MISSING_VALUE}.
+     * @return
+     */
+    private BufferedImage createBufferedImage()
+    {
+        WritableRaster raster = COLOR_MODEL.createCompatibleWritableRaster(this.nLon, this.nLat);
+        BufferedImage im = new BufferedImage(COLOR_MODEL, raster, true, null);
+        for (int y = 0; y < im.getHeight(); y++)
+        {
+            for (int x = 0; x < im.getWidth(); x++)
+            {
+                im.setRGB(x, y, MISSING_VALUE);
+            }
+        }
+        logger.debug("Created BufferedImage of size {},{}, data buffer type {}",
+            new Object[]{im.getWidth(), im.getHeight(), im.getRaster().getDataBuffer().getClass()});
+        return im;
     }
 
     /**
@@ -119,51 +220,20 @@ final class LookUpTable
         {
             return null;
         }
+
+        // Find the index within the LUT
         int index = iLon + (iLat * this.nLon);
-        int iIndex = this.iIndices[index];
-        int jIndex = this.jIndices[index];
-        if (iIndex < 0 || jIndex < 0) return null;
+        // Extract the i and j indices of the nearest grid point
+        int iIndex = this.iIndices.getElem(index);
+        int jIndex = this.jIndices.getElem(index);
+
+        // Check for missing values
+        if (iIndex < 0 || iIndex > MAX_INDEX ||
+            jIndex < 0 || jIndex > MAX_INDEX)
+        {
+            return null;
+        }
         return new int[] {iIndex, jIndex};
-    }
-
-    /**
-     * Sets the i index of the nearest source grid point to the provided
-     * longitude-latitude point. The longitude-latitude point is defined by the
-     * indices along the longitude and latitude axes.
-     * @param lonIndex Index along the longitude axis in this look-up table.
-     * @param latIndex Index along the latitude axis in this look-up table.
-     * @param iIndex i index of the nearest grid point in the source data
-     * @throws IllegalArgumentException if {@code iIndex} is greater
-     * than {@link Short#MAX_VALUE}.
-     */
-    public void setIIndex(int lonIndex, int latIndex, int iIndex)
-    {
-        int index = (latIndex * this.nLon) + lonIndex;
-        if (iIndex > Short.MAX_VALUE)
-        {
-            throw new IllegalArgumentException("data index out of range for this look-up table");
-        }
-        this.iIndices[index] = (short)iIndex;
-    }
-
-    /**
-     * Sets the j index of the nearest source grid point to the provided
-     * longitude-latitude point. The longitude-latitude point is defined by the
-     * indices along the longitude and latitude axes.
-     * @param lonIndex Index along the longitude axis in this look-up table.
-     * @param latIndex Index along the latitude axis in this look-up table.
-     * @param jIndex j index of the nearest grid point in the source data
-     * @throws IllegalArgumentException if {@code jIndex} is greater
-     * than {@link Short#MAX_VALUE}.
-     */
-    public void setJIndex(int lonIndex, int latIndex, int jIndex)
-    {
-        int index = (latIndex * this.nLon) + lonIndex;
-        if (jIndex > Short.MAX_VALUE)
-        {
-            throw new IllegalArgumentException("data index out of range for this look-up table");
-        }
-        this.jIndices[index] = (short)jIndex;
     }
 
     /**
