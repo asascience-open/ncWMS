@@ -127,32 +127,43 @@ final class LookUpTable
     }
 
     /**
-     * Sets the coordinates of the nearest source grid point to the provided
+     * Sets the i index of the nearest source grid point to the provided
      * longitude-latitude point. The longitude-latitude point is defined by the
      * indices along the longitude and latitude axes.
      * @param lonIndex Index along the longitude axis in this look-up table.
      * @param latIndex Index along the latitude axis in this look-up table.
-     * @param dataIndices Pair of i-j indices of the nearest grid point in the
-     * source data, or null if the lon-lat point is not within the grid's domain
-     * @throws IllegalArgumentException if {@code dataIndices} is not null and
-     * is not a two-element array, or if either of the dataIndices are greater
+     * @param iIndex i index of the nearest grid point in the source data
+     * @throws IllegalArgumentException if {@code iIndex} is greater
      * than {@link Short#MAX_VALUE}.
      */
-    public void setGridCoordinates(int lonIndex, int latIndex, int[] dataIndices)
+    public void setIIndex(int lonIndex, int latIndex, int iIndex)
     {
-        if (dataIndices == null) return;
-        if (dataIndices.length != 2)
-        {
-            throw new IllegalArgumentException("dataIndices must be a two-element array, or null");
-        }
         int index = (latIndex * this.nLon) + lonIndex;
-        if (dataIndices[0] > Short.MAX_VALUE ||
-            dataIndices[1] > Short.MAX_VALUE)
+        if (iIndex > Short.MAX_VALUE)
         {
-            throw new IllegalArgumentException("data indices out of range for this look-up table");
+            throw new IllegalArgumentException("data index out of range for this look-up table");
         }
-        this.iIndices[index] = (short)dataIndices[0];
-        this.jIndices[index] = (short)dataIndices[1];
+        this.iIndices[index] = (short)iIndex;
+    }
+
+    /**
+     * Sets the j index of the nearest source grid point to the provided
+     * longitude-latitude point. The longitude-latitude point is defined by the
+     * indices along the longitude and latitude axes.
+     * @param lonIndex Index along the longitude axis in this look-up table.
+     * @param latIndex Index along the latitude axis in this look-up table.
+     * @param jIndex j index of the nearest grid point in the source data
+     * @throws IllegalArgumentException if {@code jIndex} is greater
+     * than {@link Short#MAX_VALUE}.
+     */
+    public void setJIndex(int lonIndex, int latIndex, int jIndex)
+    {
+        int index = (latIndex * this.nLon) + lonIndex;
+        if (jIndex > Short.MAX_VALUE)
+        {
+            throw new IllegalArgumentException("data index out of range for this look-up table");
+        }
+        this.jIndices[index] = (short)jIndex;
     }
 
     /**

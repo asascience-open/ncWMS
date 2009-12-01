@@ -53,54 +53,46 @@ final class BufferedImageLutGenerator
      */
     public static synchronized void populateLut(LookUpTable lut, CurvilinearGrid grid)
     {
-        // Create BufferedImages for holding the LUT information
-        BufferedImage iIndices = createBufferedImage(lut);
-        BufferedImage jIndices = createBufferedImage(lut);
+        // Create BufferedImages for temporarily holding the LUT information
+        BufferedImage im = createBufferedImage(lut);
         
         // Get the graphics contexts
-        Graphics2D ig2d = iIndices.createGraphics();
-        Graphics2D jg2d = jIndices.createGraphics();
+        Graphics2D g2d = im.createGraphics();
 
         // Apply a transform so that we can paint in lat-lon coordinates
-        ig2d.setTransform(lut.getTransform());
-        jg2d.setTransform(lut.getTransform());
+        g2d.setTransform(lut.getTransform());
 
         // Populate the BufferedImages using the information from the curvilinear grid
-        // Iterate over all the cells in the grid, finding a polygon in 
-        // lat-lon coordinates that represents the cell
+        // Iterate over all the cells in the grid, painting the i indices of the
+        // cell onto the BufferedImage
         for (Cell cell : grid)
         {
-            // Get a Path representing the boundary of the cell
-            Path2D path = cell.getBoundaryPath();
-            // Paint the path onto the BufferedImages as polygons
-            // Use the i and j indices of the cell as the colour
-            ig2d.setPaint(new Color(cell.getI()));
-            jg2d.setPaint(new Color(cell.getJ()));
-            ig2d.fill(path);
-            jg2d.fill(path);
-
-            // We paint a second copy of the cell, shifted by 360 degrees, to handle
-            // the anti-meridian
-            double shiftLon = cell.getCentre().getLongitude() > 0.0
-                ? -360.0
-                : 360.0;
-            path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
-            ig2d.fill(path);
-            jg2d.fill(path);
+            paintCell(g2d, cell, cell.getI());
         }
 
         // Copy the information from the BufferedImages to the LookUpTable.
-        for (int y = 0; y < iIndices.getHeight(); y++) {
-            for (int x = 0; x < iIndices.getWidth(); x++) {
-                int iIndex = iIndices.getRGB(x, y);
-                int jIndex = jIndices.getRGB(x, y);
-                lut.setGridCoordinates(x, y, new int[]{iIndex, jIndex});
+        for (int y = 0; y < im.getHeight(); y++) {
+            for (int x = 0; x < im.getWidth(); x++) {
+                int iIndex = im.getRGB(x, y);
+                lut.setIIndex(x, y, iIndex);
+            }
+        }
+
+        // Now reset the image and do the same for the j indices
+        resetImage(im);
+        for (Cell cell : grid)
+        {
+            paintCell(g2d, cell, cell.getJ());
+        }
+        for (int y = 0; y < im.getHeight(); y++) {
+            for (int x = 0; x < im.getWidth(); x++) {
+                int jIndex = im.getRGB(x, y);
+                lut.setJIndex(x, y, jIndex);
             }
         }
 
         // Free the resources from the graphics contexts
-        ig2d.dispose();
-        jg2d.dispose();
+        g2d.dispose();
     }
 
     /**
@@ -113,13 +105,40 @@ final class BufferedImageLutGenerator
         int height = lut.getNumLatPoints();
         // This color model matches the one assumed by BufferedImage.get/setRGB()
         BufferedImage im = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+        resetImage(im);
+        logger.debug("Created BufferedImage of size {},{}", im.getWidth(), im.getHeight());
+        return im;
+    }
+    
+    /**
+     * Resets all the pixels in the given image to -1.
+     * @param im
+     */
+    private static void resetImage(BufferedImage im)
+    {
+        for (int y = 0; y < im.getHeight(); y++) {
+            for (int x = 0; x < im.getWidth(); x++) {
                 im.setRGB(x, y, -1);
             }
         }
-        logger.debug("Created BufferedImage of size {},{}", im.getWidth(), im.getHeight());
-        return im;
+    }
+
+    private static void paintCell(Graphics2D g2d, Cell cell, int color)
+    {
+        // Get a Path representing the boundary of the cell
+        Path2D path = cell.getBoundaryPath();
+        // Paint the path onto the BufferedImages as polygons
+        // Use the i and j indices of the cell as the colours
+        g2d.setPaint(new Color(color));
+        g2d.fill(path);
+
+        // We paint a second copy of the cell, shifted by 360 degrees, to handle
+        // the anti-meridian
+        double shiftLon = cell.getCentre().getLongitude() > 0.0
+            ? -360.0
+            : 360.0;
+        path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
+        g2d.fill(path);
     }
 
 }
