@@ -52,7 +52,13 @@ final class TwoDCoordSys extends HorizontalCoordSys
 {
     private static final Logger logger = LoggerFactory.getLogger(TwoDCoordSys.class);
 
-    /** In-memory cache of TwoDCoordSys objects to save expensive re-generation of same object */
+    /**
+     * In-memory cache of TwoDCoordSys objects to save expensive re-generation of same object
+     * @todo The CurvilinearGrid objects can be very big.  Really we only need to key
+     * on the arrays of lon and lat: all other quantities can be calculated from
+     * these.  This means that we could make other large objects available for
+     * garbage collection.
+     */
     private static final Map<CurvilinearGrid, TwoDCoordSys> CACHE = new HashMap<CurvilinearGrid, TwoDCoordSys>();
 
     private final CurvilinearGrid curvGrid;

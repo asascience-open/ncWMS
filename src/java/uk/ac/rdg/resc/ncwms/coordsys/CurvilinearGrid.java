@@ -32,8 +32,10 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
@@ -42,8 +44,8 @@ import ucar.ma2.ArrayDouble;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
+import ucar.nc2.dataset.NetcdfDataset.Enhance;
 import ucar.nc2.dt.GridCoordSystem;
-import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.ncwms.coordsys.CurvilinearGrid.Cell;
 
 /**
@@ -69,12 +71,18 @@ final class CurvilinearGrid implements Iterable<Cell>
     /** The latitudes of the centres of the grid cells, flattened to a 1D array
         of size ni*nj */
     private final double[] latitudes;
+
+    // *** TODO: can we avoid storing both lon/lats and cornerLon/cornerLats -
+    // *** can get very big!.  At least we could store them as floats.
+
     /** The longitudes of the corners of the grid cells */
     private final ArrayDouble.D2 cornerLons;
     /** The latitudes of the corners of the grid cells */
     private final ArrayDouble.D2 cornerLats;
     /** The lat-lon bounding box of the grid */
     private final GeographicBoundingBox latLonBbox;
+
+    private static final Set<Enhance> SCALE_MISSING = EnumSet.of(Enhance.ScaleMissing);
 
     /**
      * Creates a CurvilinearGrid from a GridCoordSystem.
@@ -97,24 +105,53 @@ final class CurvilinearGrid implements Iterable<Cell>
         CoordinateAxis2D lonAxis = (CoordinateAxis2D)coordSys.getXHorizAxis();
         CoordinateAxis2D latAxis = (CoordinateAxis2D)coordSys.getYHorizAxis();
 
-        LatLonRect llr = coordSys.getLatLonBoundingBox();
-        this.latLonBbox = new DefaultGeographicBoundingBox(
-            llr.getLonMin(),
-            llr.getLonMax(),
-            llr.getLatMin(),
-            llr.getLatMax()
-        );
+        // Make sure that scale/offset/missing are processed for the coordinate
+        // axis values
+        // TODO: we could do this in DefaultDataReader, but this means we need
+        // to check for NaNs throughout (e.g. for 1D coordinate axes) and we
+        // might break datasets that currently work.  Need to think about this more.
+        lonAxis.enhance(SCALE_MISSING);
+        latAxis.enhance(SCALE_MISSING);
 
         this.ni = lonAxis.getShape(1);
         this.nj = lonAxis.getShape(0);
         this.longitudes = lonAxis.getCoordValues();
         this.latitudes  = latAxis.getCoordValues();
 
-        // Make sure all longitudes are in the range [-180,180]
+        // Make sure all longitudes are in the range [-180,180] and find the
+        // min and max lat and lon values
+        double minLon = 180.0;
+        double maxLon = -180.0;
+        double minLat = 90.0;
+        double maxLat = -90.0;
         for (int i = 0; i < this.longitudes.length; i++)
         {
-            this.longitudes[i] = Longitude.constrain180(this.longitudes[i]);
+            if (!Double.isNaN(this.longitudes[i])) {
+                this.longitudes[i] = Longitude.constrain180(this.longitudes[i]);
+                minLon = Math.min(minLon, this.longitudes[i]);
+                maxLon = Math.max(maxLon, this.longitudes[i]);
+            }
+            
+            if (!Double.isNaN(this.latitudes[i])) {
+                minLat = Math.min(minLat, this.latitudes[i]);
+                maxLat = Math.max(maxLat, this.latitudes[i]);
+            }
         }
+
+        if (maxLon < minLon || maxLat < minLat)
+        {
+            throw new IllegalStateException("Invalid bounding box");
+        }
+
+        this.latLonBbox = new DefaultGeographicBoundingBox(
+            minLon, maxLon, minLat, maxLat
+        );
+        logger.debug("Bounding box = {},{},{},{}", new Object[]{
+            this.latLonBbox.getWestBoundLongitude(),
+            this.latLonBbox.getSouthBoundLatitude(),
+            this.latLonBbox.getEastBoundLongitude(),
+            this.latLonBbox.getNorthBoundLatitude()
+        });
 
         // Calculate the corners of the grid cells
         logger.debug("Making longitude corners");
