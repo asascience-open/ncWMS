@@ -40,7 +40,7 @@ import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.ArrayDouble;
+import ucar.ma2.ArrayFloat;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis2D;
@@ -65,20 +65,24 @@ final class CurvilinearGrid implements Iterable<Cell>
     private final int ni;
     /** The number of grid cells in the j direction */
     private final int nj;
+
+    // We use floats to store the midpoints and corners to save memory.
+    // The arrays can be very large for large datasets.
+    // TODO: we could probably avoid storing the corners altogether, although
+    // it may be expensive to keep re-creating them (we need the corners to figure
+    // out whether an arbitrary lat-lon point is within a grid cell).
+
     /** The longitudes of the centres of the grid cells, flattened to a 1D array
         of size ni*nj */
-    private final double[] longitudes;
+    private final float[] longitudes;
     /** The latitudes of the centres of the grid cells, flattened to a 1D array
         of size ni*nj */
-    private final double[] latitudes;
-
-    // *** TODO: can we avoid storing both lon/lats and cornerLon/cornerLats -
-    // *** can get very big!.  At least we could store them as floats.
+    private final float[] latitudes;
 
     /** The longitudes of the corners of the grid cells */
-    private final ArrayDouble.D2 cornerLons;
+    private final ArrayFloat.D2 cornerLons;
     /** The latitudes of the corners of the grid cells */
-    private final ArrayDouble.D2 cornerLats;
+    private final ArrayFloat.D2 cornerLats;
     /** The lat-lon bounding box of the grid */
     private final GeographicBoundingBox latLonBbox;
 
@@ -115,8 +119,8 @@ final class CurvilinearGrid implements Iterable<Cell>
 
         this.ni = lonAxis.getShape(1);
         this.nj = lonAxis.getShape(0);
-        this.longitudes = lonAxis.getCoordValues();
-        this.latitudes  = latAxis.getCoordValues();
+        this.longitudes = new float[this.ni * this.nj]; //lonAxis.getCoordValues();
+        this.latitudes  = new float[this.ni * this.nj]; //latAxis.getCoordValues();
 
         // Make sure all longitudes are in the range [-180,180] and find the
         // min and max lat and lon values
@@ -124,17 +128,32 @@ final class CurvilinearGrid implements Iterable<Cell>
         double maxLon = -180.0;
         double minLat = 90.0;
         double maxLat = -90.0;
-        for (int i = 0; i < this.longitudes.length; i++)
+        int index = 0;
+        for (int j = 0; j < this.nj; j++)
         {
-            if (!Double.isNaN(this.longitudes[i])) {
-                this.longitudes[i] = Longitude.constrain180(this.longitudes[i]);
-                minLon = Math.min(minLon, this.longitudes[i]);
-                maxLon = Math.max(maxLon, this.longitudes[i]);
-            }
-            
-            if (!Double.isNaN(this.latitudes[i])) {
-                minLat = Math.min(minLat, this.latitudes[i]);
-                maxLat = Math.max(maxLat, this.latitudes[i]);
+            for (int i = 0; i < this.ni; i++)
+            {
+                double lon = lonAxis.getCoordValue(j, i);
+                double lat = latAxis.getCoordValue(j, i);
+                float lonf;
+                float latf;
+                if (Double.isNaN(lon) || Double.isNaN(lat))
+                {
+                    lonf = Float.NaN;
+                    latf = Float.NaN;
+                }
+                else
+                {
+                    lonf = (float)Longitude.constrain180(lon);
+                    latf = (float)lat;
+                    minLon = Math.min(minLon, lon);
+                    maxLon = Math.max(maxLon, lon);
+                    minLat = Math.min(minLat, lat);
+                    maxLat = Math.max(maxLat, lat);
+                }
+                this.longitudes[index] = lonf;
+                this.latitudes[index] = latf;
+                index++;
             }
         }
 
@@ -228,8 +247,8 @@ final class CurvilinearGrid implements Iterable<Cell>
      * Adapted from {@link CoordinateAxis2D#makeXEdges(ucar.ma2.ArrayDouble.D2)},
      * taking into account the wrapping of longitude at +/- 180 degrees
      */
-    private ArrayDouble.D2 makeCorners(double[] midpoints, boolean isLongitude) {
-    ArrayDouble.D2 edges = new ArrayDouble.D2(nj+1, ni+1);
+    private ArrayFloat.D2 makeCorners(float[] midpoints, boolean isLongitude) {
+    ArrayFloat.D2 edges = new ArrayFloat.D2(nj+1, ni+1);
 
     for (int j=0; j<nj-1; j++) {
       for (int i=0; i<ni-1; i++) {
@@ -246,7 +265,7 @@ final class CurvilinearGrid implements Iterable<Cell>
               midpoint4 = harmonizeLongitudes(midpoint1, midpoint4);
           }
           double xval = (midpoint1 + midpoint2 + midpoint3 + midpoint4) / 4.0;
-        edges.set(j+1, i+1, xval);
+        edges.set(j+1, i+1, (float)xval);
       }
       // extrapolate to exterior points
       edges.set(j+1, 0, edges.get(j+1,1) - (edges.get(j+1,2) - edges.get(j+1,1)));
