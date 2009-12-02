@@ -46,6 +46,10 @@ var projectionCode = null; // Projection code for map baselayer
 var debugMode = false; // Can be switched on with a URL parameter to provide more
                        // information in GetFeatureInfo requests
 
+var isGoogleEarthAnim = false; // Set true in createAnimation() when we are
+                               // loading a Google Earth animation (nasty use
+                               // of global variable)
+
 // Called when the page has loaded
 window.onload = function()
 {
@@ -54,7 +58,10 @@ window.onload = function()
     $('scaleMin').value = '';
 
     // Stop the pink tiles appearing on error
-    OpenLayers.Util.onImageLoadError = function() {  this.style.display = ""; this.src="./images/blank.png"; }// Set up a layer for drawing lines etc (for transects and sections)
+    OpenLayers.Util.onImageLoadError = function() {
+        this.style.display = "";
+        this.src="./images/blank.png";
+    }
 
     // Create a layer on which users can draw transects (i.e. lines on the map)
     var drawinglayer = new OpenLayers.Layer.Vector( "Drawing" );
@@ -1003,12 +1010,13 @@ function setLastAnimationFrame()
     $('animation').style.visibility = 'visible';
     setGEarthURL();
 }
-function createAnimation()
+function createAnimation(isGoogleEarth)
 {
     if (!timeSeriesSelected()) {
         alert("Must select a first and last frame for the animation");
         return;
     }
+    isGoogleEarthAnim = isGoogleEarth;
 
     getAnimationTimesteps(activeLayer.server, {
         callback: gotAnimationTimesteps,
@@ -1037,35 +1045,53 @@ function gotAnimationTimesteps(timesteps)
 function loadAnimation()
 {
     animationSelector.hide();
-    // Get a URL for a WMS request that covers the current map extent
-    var urlEls = ncwms.getURL(getMapExtent()).split('&');
-    // Replace the parameters as needed.
-    var width = $('map').clientWidth;// / 2;
-    var height = $('map').clientHeight;// / 2;
-    var newURL = urlEls[0];
-    for (var i = 1; i < urlEls.length; i++) {
-        if (urlEls[i].startsWith('TIME=')) {
-            newURL += '&TIME=' + $('animationResolution').value
-        } else if (urlEls[i].startsWith('FORMAT')) {
-            newURL += '&FORMAT=image/gif';
-        } else if (urlEls[i].startsWith('WIDTH')) {
-            newURL += '&WIDTH=' + width;
-        } else if (urlEls[i].startsWith('HEIGHT')) {
-            newURL += '&HEIGHT=' + height;
-        } else {
-            newURL += '&' + urlEls[i];
+    var i;
+    var urlEls;
+    var newURL;
+    if (isGoogleEarthAnim) {
+        urlEls = getGEarthURL().split('&');
+        newURL = urlEls[0];
+        for (i = 1; i < urlEls.length; i++) {
+            if (urlEls[i].startsWith('TIME=')) {
+                newURL += '&TIME=' + $('animationResolution').value
+            } else {
+                newURL += '&' + urlEls[i];
+            }
         }
+        // Load the KMZ file
+        window.location = newURL;
+    } else {
+        // Get a URL for a WMS request that covers the current map extent
+        urlEls = ncwms.getURL(getMapExtent()).split('&');
+        // Replace the parameters as needed.
+        var width = $('map').clientWidth;// / 2;
+        var height = $('map').clientHeight;// / 2;
+        newURL = urlEls[0];
+        for (i = 1; i < urlEls.length; i++) {
+            if (urlEls[i].startsWith('TIME=')) {
+                newURL += '&TIME=' + $('animationResolution').value
+            } else if (urlEls[i].startsWith('FORMAT')) {
+                newURL += '&FORMAT=image/gif';
+            } else if (urlEls[i].startsWith('WIDTH')) {
+                newURL += '&WIDTH=' + width;
+            } else if (urlEls[i].startsWith('HEIGHT')) {
+                newURL += '&HEIGHT=' + height;
+            } else {
+                newURL += '&' + urlEls[i];
+            }
+        }
+        // The animation will be displayed on the map
+        $('autoZoom').style.visibility = 'hidden';
+        $('hideAnimation').style.visibility = 'visible';
+        // We show the "please wait" image then immediately load the animation
+        $('throbber').style.visibility = 'visible'; // This will be hidden by animationLoaded()
+
+        // When the mapOverlay has been loaded we call animationLoaded() and place the image correctly
+        // on the map
+        $('mapOverlay').src = newURL;
+        $('mapOverlay').width = width;
+        $('mapOverlay').height = height;
     }
-    $('autoZoom').style.visibility = 'hidden';
-    $('hideAnimation').style.visibility = 'visible';
-    // We show the "please wait" image then immediately load the animation
-    $('throbber').style.visibility = 'visible'; // This will be hidden by animationLoaded()
-    
-    // When the mapOverlay has been loaded we call animationLoaded() and place the image correctly
-    // on the map
-    $('mapOverlay').src = newURL;
-    $('mapOverlay').width = width;
-    $('mapOverlay').height = height;
 }
 // Gets the current map extent, checking for out-of-range values
 function getMapExtent()
@@ -1357,19 +1383,29 @@ function setPermalinkURL()
 function setGEarthURL()
 {
     if (ncwms != null) {
+        if (timeSeriesSelected()) {
+            // We need to call a Javascript function to generate the timeseries URL
+            $('googleEarth').innerHTML = '<a href="#" onclick="javascript:createAnimation(true)">Open animation in Google Earth</a>';
+        } else {
+            $('googleEarth').innerHTML = '<a href="' + getGEarthURL() + '">Open in Google Earth</a>';
+        }
+    }
+}
+
+// Generates a URL for generating a GetMap request that returns KMZ for opening
+// in Google Earth.
+function getGEarthURL()
+{
+    var gEarthURL = null;
+    if (ncwms != null) {
         // Get a URL for a WMS request that covers the current map extent
         var mapBounds = map.getExtent();
         var urlEls = ncwms.getURL(mapBounds).split('&');
-        var gEarthURL = urlEls[0];
+        gEarthURL = urlEls[0];
         for (var i = 1; i < urlEls.length; i++) {
             if (urlEls[i].startsWith('FORMAT')) {
                 // Make sure the FORMAT is set correctly
                 gEarthURL += '&FORMAT=application/vnd.google-earth.kmz';
-            } else if (urlEls[i].startsWith('TIME') && timeSeriesSelected()) {
-                // If we can make an animation, do so
-                // TODO: this makes a full-temporal-resolution animation!
-                // Need to have more control over this.
-                gEarthURL += '&TIME=' + $('firstFrame').innerHTML + '/' + $('lastFrame').innerHTML;
             } else if (urlEls[i].startsWith('BBOX')) {
                 // Set the bounding box so that there are no transparent pixels around
                 // the edge of the image: i.e. find the intersection of the layer BBOX
@@ -1383,12 +1419,8 @@ function setGEarthURL()
                 gEarthURL += '&' + urlEls[i];
             }
         }
-        if (timeSeriesSelected()) {
-            $('googleEarth').innerHTML = '<a href="' + gEarthURL + '">Open animation in Google Earth</a>';
-        } else {
-            $('googleEarth').innerHTML = '<a href="' + gEarthURL + '">Open in Google Earth</a>';
-        }
     }
+    return gEarthURL;
 }
 
 // Loads a screenshot
