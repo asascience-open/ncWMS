@@ -119,8 +119,8 @@ final class CurvilinearGrid implements Iterable<Cell>
 
         this.ni = lonAxis.getShape(1);
         this.nj = lonAxis.getShape(0);
-        this.longitudes = new float[this.ni * this.nj]; //lonAxis.getCoordValues();
-        this.latitudes  = new float[this.ni * this.nj]; //latAxis.getCoordValues();
+        this.longitudes = new float[this.ni * this.nj];
+        this.latitudes  = new float[this.ni * this.nj];
 
         // Make sure all longitudes are in the range [-180,180] and find the
         // min and max lat and lon values

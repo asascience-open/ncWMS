@@ -141,6 +141,7 @@ public class MetadataLoader
         }
         
         this.datasetReloader.execute(new Runnable() {
+            @Override
             public void run() {
                 doReloadMetadata(ds);
             }}

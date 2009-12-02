@@ -425,6 +425,7 @@ public class MetadataController
                 if (Float.isNaN(max) || val > max) max = val;
             }
         }
+        log.debug("Got min-max: {},{}", min, max);
         return new float[]{min, max};
     }
 
