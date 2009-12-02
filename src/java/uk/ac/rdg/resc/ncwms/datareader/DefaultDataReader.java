@@ -365,28 +365,8 @@ public class DefaultDataReader extends DataReader
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                     double[] zValues = this.getZValues(zAxis, zPositive);
 
-                    // Set the bounding box
-                    // TODO: should take into account the cell bounds
-                    LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
-                    LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
-                    LatLonPoint upperRight = latLonRect.getUpperRightPoint();
-                    double minLon = lowerLeft.getLongitude();
-                    double maxLon = upperRight.getLongitude();
-                    double minLat = lowerLeft.getLatitude();
-                    double maxLat = upperRight.getLatitude();
-                    // Correct the bounding box in case of mistakes or in case it 
-                    // crosses the date line
-                    if (latLonRect.crossDateline() || minLon >= maxLon)
-                    {
-                        minLon = -180.0;
-                        maxLon = 180.0;
-                    }
-                    if (minLat >= maxLat)
-                    {
-                        minLat = -90.0;
-                        maxLat = 90.0;
-                    }
-                    double[] bbox = new double[]{minLon, minLat, maxLon, maxLat};
+                    // Get the bounding box
+                    double[] bbox = getBbox(coordSys);
 
                     // Now add every variable that has this coordinate system
                     for (GridDatatype grid : newGrids)
@@ -484,6 +464,41 @@ public class DefaultDataReader extends DataReader
     protected boolean isZPositive(GridCoordSystem coordSys)
     {
         return coordSys.isZPositive();
+    }
+
+    /**
+     * Gets the latitude-longitude bounding box of the given coordinate system
+     * in the form [minLon, minLat, maxLon, maxLat]
+     */
+    private static double[] getBbox(GridCoordSystem coordSys)
+    {
+        // TODO: should take into account the cell bounds
+        LatLonRect latLonRect = coordSys.getLatLonBoundingBox();
+        LatLonPoint lowerLeft = latLonRect.getLowerLeftPoint();
+        LatLonPoint upperRight = latLonRect.getUpperRightPoint();
+        double minLon = lowerLeft.getLongitude();
+        double maxLon = upperRight.getLongitude();
+        double minLat = lowerLeft.getLatitude();
+        double maxLat = upperRight.getLatitude();
+        // Correct the bounding box in case of mistakes or in case it
+        // crosses the date line
+        if (latLonRect.crossDateline() || minLon >= maxLon)
+        {
+            minLon = -180.0;
+            maxLon = 180.0;
+        }
+        if (minLat >= maxLat)
+        {
+            minLat = -90.0;
+            maxLat = 90.0;
+        }
+        // Sometimes the bounding boxes can be NaN, e.g. for a VerticalPerspectiveView
+        // that encompasses more than the Earth's disc
+        minLon = Double.isNaN(minLon) ? -180.0 : minLon;
+        minLat = Double.isNaN(minLat) ? -90.0  : minLat;
+        maxLon = Double.isNaN(maxLon) ?  180.0 : maxLon;
+        maxLat = Double.isNaN(maxLat) ?   90.0 : maxLat;
+        return new double[]{minLon, minLat, maxLon, maxLat};
     }
     
     /**
