@@ -359,7 +359,7 @@ public class DefaultDataReader extends DataReader
                 {
                     logger.debug("Creating coordinate system objects");
                     // Create an object that will map lat-lon points to nearest grid points
-                    HorizontalCoordSys horizCoordSys = HorizontalCoordSys.fromCoordSys(coordSys);
+                    HorizontalCoordSys horizCoordSys = getHorizontalCoordSys(coordSys);
                     
                     boolean zPositive = this.isZPositive(coordSys);
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
@@ -464,6 +464,17 @@ public class DefaultDataReader extends DataReader
     protected boolean isZPositive(GridCoordSystem coordSys)
     {
         return coordSys.isZPositive();
+    }
+
+    /**
+     * Gets a {@link HorizontalCoordSys} object from the given grid coordinate
+     * system.  The {@link HorizontalCoordSys} provides translations between
+     * latitude-longitude coordinates and grid indices.  Subclasses can override
+     * this to provide their own translations, e.g. for custom projections.
+     */
+    protected HorizontalCoordSys getHorizontalCoordSys(GridCoordSystem coordSys)
+    {
+        return HorizontalCoordSys.fromCoordSys(coordSys);
     }
 
     /**
