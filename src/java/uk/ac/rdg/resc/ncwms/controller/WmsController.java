@@ -133,6 +133,7 @@ public class WmsController extends AbstractController {
     private static final int LAYER_LIMIT = 1;
     private static final String FEATURE_INFO_XML_FORMAT = "text/xml";
     private static final String FEATURE_INFO_PNG_FORMAT = "image/png";
+
     // These objects will be injected by Spring
     private Config config;
     private MetadataStore metadataStore;
@@ -352,7 +353,7 @@ public class WmsController extends AbstractController {
         // TODO: make configurable in admin app
         String[] supportedCrsCodes = new String[]{
             "EPSG:4326", "CRS:84", // Plate Carree
-            "EPSG:41001", // Mercator (~ Google Maps)
+            "EPSG:41001", // Mercator (~ Google Maps)  TODO replace with real Google Maps code
             "EPSG:27700", // British National Grid
             // See http://nsidc.org/data/atlas/ogc_services.html for useful
             // stuff about polar stereographic projections

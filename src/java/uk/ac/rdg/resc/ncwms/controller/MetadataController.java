@@ -49,7 +49,6 @@ import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
@@ -75,7 +74,6 @@ public class MetadataController
     // These objects will be injected by Spring
     private Config config;
     private MetadataStore metadataStore;
-    private UsageLogger usageLogger;
     
     public ModelAndView handleRequest(HttpServletRequest request,
         HttpServletResponse response, UsageLogEntry usageLogEntry)
@@ -525,14 +523,6 @@ public class MetadataController
     public void setMetadataStore(MetadataStore metadataStore)
     {
         this.metadataStore = metadataStore;
-    }
-    
-    /**
-     * Called by Spring to inject the usage logger
-     */
-    public void setUsageLogger(UsageLogger usageLogger)
-    {
-        this.usageLogger = usageLogger;
     }
     
 }

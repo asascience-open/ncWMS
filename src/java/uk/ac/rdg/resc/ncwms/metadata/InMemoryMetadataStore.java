@@ -62,7 +62,7 @@ public class InMemoryMetadataStore extends MetadataStore
      * layer in the store.
      * @throws Exception if an error occurs reading from the persistent store
      */
-    public Layer getLayer(String datasetId, String layerId)
+    protected Layer getLayer(String datasetId, String layerId)
         throws Exception
     {
         Map<String, ? extends Layer> layersInDataset = this.layers.get(datasetId);

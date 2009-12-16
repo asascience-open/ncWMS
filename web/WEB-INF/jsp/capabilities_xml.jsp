@@ -111,7 +111,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <c:if test="${layer.taxisPresent}">
                         <Dimension name="time" units="ISO8601" multipleValues="true" current="true" default="${utils:dateTimeToISO8601(layer.defaultTValue)}">
                         <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
-                    </Dimension>
+                        </Dimension>
                     </c:if>
                     <c:forEach var="style" items="${layer.supportedStyles}">
                     <c:forEach var="paletteName" items="${paletteNames}">

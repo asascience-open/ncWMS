@@ -160,9 +160,6 @@ public class Config implements ApplicationContextAware
         // Set the reference to the metadata store, which is needed by the
         // Dataset object to read metadata
         config.metadataStore = metadataStore;
-        // The config object is needed by the metadata store when setting
-        // properties of the returned Layer objects.
-        metadataStore.setConfig(config);
         return config;
     }
     
@@ -325,6 +322,7 @@ public class Config implements ApplicationContextAware
      * we can set the admin password in the Users object that is used by Acegi.
      * This is called after the Config object has been created.
      */
+    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException
     {
         // Set the admin password in the Users bean, which we'll need to
