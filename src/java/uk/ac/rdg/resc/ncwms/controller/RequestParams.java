@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.controller;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
@@ -51,53 +53,24 @@ public class RequestParams
      * The Map matches parameter names (Strings) to parameter values (String
      * arrays).
      */
-    public RequestParams(Map httpRequestParamMap)
+    public RequestParams(Map<String, String[]> httpRequestParamMap)
     {
-        for (Object name : httpRequestParamMap.keySet())
+        for (String name : httpRequestParamMap.keySet())
         {
-            String[] values = (String[])httpRequestParamMap.get(name);
+            String[] values = httpRequestParamMap.get(name);
             assert values.length >= 1;
-            this.paramMap.put(unquotePlus(name.toString().trim()).toLowerCase(),
-                unquotePlus(values[0].trim()));
-        }
-    }
-    
-    /**
-     * Replaces URL escape sequences with their correct characters, and replaces
-     * plus signs with spaces.  Nearly a direct port of urllib.unquote_plus() in
-     * Python 2.3.
-     * @todo doesn't handle "%%" correctly as an escape sequence for "%"
-     */
-    private static final String unquotePlus(String s)
-    {
-        s = s.replaceAll("\\+", " ");
-        String[] items = s.split("%");
-        StringBuffer buf = new StringBuffer(items[0]);
-        for (int i = 1; i < items.length; i++)
-        {
-            System.out.println(items[i]);
-            // The first two characters of each item will be a hex representation
-            // of the ASCII code of the escaped character
-            if (items[i].length() >= 2)
+            try
             {
-                try
-                {
-                    int charNum = Integer.parseInt(items[i].substring(0, 2), 16);
-                    buf.append((char)charNum);
-                    buf.append(items[i].substring(2));
-                }
-                catch(NumberFormatException nfe)
-                {
-                    // It wasn't a valid hex code
-                    buf.append("%" + items[i]);
-                }
+                String key = URLDecoder.decode(name.trim(), "UTF-8").toLowerCase();
+                String value = URLDecoder.decode(values[0].trim(), "UTF-8");
+                this.paramMap.put(key, value);
             }
-            else
+            catch(UnsupportedEncodingException uee)
             {
-                buf.append("%" + items[i]);
+                // Shouldn't happen: UTF-8 should always be supported
+                throw new AssertionError(uee);
             }
         }
-        return buf.toString();
     }
     
     /**
