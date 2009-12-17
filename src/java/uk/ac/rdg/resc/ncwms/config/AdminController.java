@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.controller;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,13 +36,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
-import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.config.Contact;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.config.Server;
-import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.MetadataLoader;
 import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger;

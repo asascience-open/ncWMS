@@ -26,15 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Map;
 import org.joda.time.DateTime;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**

@@ -23,7 +23,7 @@
     <!-- An object that is used to store and read metadata about the variables
          that are being exposed through this server. Currently the
          InMemoryMetadataStore is the only one that works properly. -->
-    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.metadata.InMemoryMetadataStore"
+    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.config.InMemoryMetadataStore"
             init-method="init" destroy-method="close">
         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
     </bean>
@@ -50,7 +50,7 @@
           init-method="init"/>
     
     <!-- Object that handles the periodic refreshing of metadata. -->
-    <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.metadata.MetadataLoader"
+    <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.config.MetadataLoader"
             init-method="init" destroy-method="close">
         <property name="config"><ref local="config"/></property>
         <property name="metadataStore"><ref local="metadataStore"/></property>
@@ -70,18 +70,8 @@
             init-method="init">
         <property name="supportedMethods" value="GET"/>
         <property name="config"><ref local="config"/></property>
-        <property name="metadataStore"><ref local="metadataStore"/></property>
-        <property name="metadataController"><ref local="metadataController"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
         <property name="tileCache"><ref local="tileCache"/></property>
-    </bean>
-    
-    <!-- This Controller will handle all requests for the non-standard
-         metadata that are required by the Godiva2 site.  It is called from the
-         WmsController and therefore does not need a mapping to be set up here. -->
-    <bean id="metadataController" class="uk.ac.rdg.resc.ncwms.controller.MetadataController">
-        <property name="config"><ref local="config"/></property>
-        <property name="metadataStore"><ref local="metadataStore"/></property>
     </bean>
     
     <!-- This Controller is used to display the front page of the server, which
@@ -95,7 +85,7 @@
     <!-- This Controller is used to display the administrative pages of the server.
          The AdminController is a MultiActionController that uses a different method
          for each page under the /admin/ directory -->
-    <bean id="adminController" class="uk.ac.rdg.resc.ncwms.controller.AdminController">
+    <bean id="adminController" class="uk.ac.rdg.resc.ncwms.config.AdminController">
         <property name="supportedMethods" value="GET,POST"/>
         <property name="config"><ref local="config"/></property>
         <property name="metadataLoader"><ref local="metadataLoader"/></property>

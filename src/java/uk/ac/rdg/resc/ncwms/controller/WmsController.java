@@ -95,7 +95,7 @@ import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
 import uk.ac.rdg.resc.ncwms.graphics.KmzFormat;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.config.MetadataStore;
 import uk.ac.rdg.resc.ncwms.metadata.TimestepInfo;
 import uk.ac.rdg.resc.ncwms.metadata.VectorLayer;
 import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
@@ -134,17 +134,22 @@ public class WmsController extends AbstractController {
     private static final String FEATURE_INFO_XML_FORMAT = "text/xml";
     private static final String FEATURE_INFO_PNG_FORMAT = "image/png";
 
+    // This object handles requests for non-standard metadata
+    private MetadataController metadataController;
+
     // These objects will be injected by Spring
     private Config config;
-    private MetadataStore metadataStore;
     private UsageLogger usageLogger;
-    private MetadataController metadataController;
     private TileCache tileCache;
 
     /**
-     * Called automatically by Spring
+     * Called automatically by Spring after all the dependencies have been
+     * injected.
      */
     public void init() {
+        // Create a MetadataController for handling non-standard metadata request
+        this.metadataController = new MetadataController(this.config);
+
         // We initialize the ColorPalettes.  We need to do this from here
         // because we need a way to find out the real path of the 
         // directory containing the palettes.  Therefore we need a way of 
@@ -189,10 +194,7 @@ public class WmsController extends AbstractController {
         // Create an object that allows request parameters to be retrieved in
         // a way that is not sensitive to the case of the parameter NAMES
         // (but is sensitive to the case of the parameter VALUES).
-        @SuppressWarnings("unchecked") // We know in advance the cast below is safe
-        Map<String, String[]> httpRequestParams =
-                (Map<String, String[]>)httpServletRequest.getParameterMap();
-        RequestParams params = new RequestParams(httpRequestParams);
+        RequestParams params = new RequestParams(httpServletRequest.getParameterMap());
 
         try {
             // Check the REQUEST parameter to see if we're producing a capabilities
@@ -206,7 +208,8 @@ public class WmsController extends AbstractController {
             } else if (request.equals("GetFeatureInfo")) {
                 return getFeatureInfo(params, httpServletRequest, httpServletResponse,
                         usageLogEntry);
-            } // The REQUESTs below are non-standard and could be refactored into
+            }
+            // The REQUESTs below are non-standard and could be refactored into
             // a different servlet endpoint
             else if (request.equals("GetMetadata")) {
                 // This is a request for non-standard metadata.  (This will one
@@ -441,7 +444,7 @@ public class WmsController extends AbstractController {
                     WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
         }
         // TODO: support more than one layer (superimposition, difference, mask)
-        Layer layer = this.metadataStore.getLayerByUniqueName(layers[0]);
+        Layer layer = this.config.getLayerByUniqueName(layers[0]);
         usageLogEntry.setLayer(layer);
 
         // Check the dimensions of the image
@@ -652,7 +655,7 @@ public class WmsController extends AbstractController {
 
         // Get the layer we're interested in
         String layerName = dataRequest.getLayers()[0];
-        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+        Layer layer = this.config.getLayerByUniqueName(layerName);
         usageLogEntry.setLayer(layer);
         if (!layer.isQueryable() || !this.config.getServer().isAllowFeatureInfo()) {
             throw new LayerNotQueryableException(layerName);
@@ -853,7 +856,7 @@ public class WmsController extends AbstractController {
             // We're creating a legend with supporting text so we need to know
             // the colour scale range and the layer in question
             String layerName = params.getMandatoryString("layer");
-            Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+            Layer layer = this.config.getLayerByUniqueName(layerName);
 
             // We default to the layer's default palette if none is specified
             if (paletteName == null) {
@@ -897,7 +900,7 @@ public class WmsController extends AbstractController {
         // need to be created in the top-level KML
         List<TiledLayer> tiledLayers = new ArrayList<TiledLayer>();
         for (String layerName : params.getMandatoryString("layers").split(",")) {
-            Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+            Layer layer = this.config.getLayerByUniqueName(layerName);
             // The data will be displayed on Google Earth using tiles.  To take
             // best advantage of the tile cache, we want to make sure that the
             // tiles match those that will be generated by the Godiva2 site.
@@ -974,7 +977,7 @@ public class WmsController extends AbstractController {
 
     private ModelAndView getKMLRegion(RequestParams params,
             HttpServletRequest httpServletRequest) throws Exception {
-        Layer layer = this.metadataStore.getLayerByUniqueName(params.getMandatoryString("layer"));
+        Layer layer = this.config.getLayerByUniqueName(params.getMandatoryString("layer"));
         double[] dbox = WmsUtils.parseBbox(params.getMandatoryString("dbox"));
         // Calculate the bounding boxes of all the four sub-regions
         double[][] regionDBoxes = new double[4][4];
@@ -1022,7 +1025,7 @@ public class WmsController extends AbstractController {
 
         // Parse the request parameters
         String layerStr = params.getMandatoryString("layer");
-        Layer layer = this.metadataStore.getLayerByUniqueName(layerStr);
+        Layer layer = this.config.getLayerByUniqueName(layerStr);
         String crsCode = params.getMandatoryString("crs");
         String lineString = params.getMandatoryString("linestring");
         String outputFormat = params.getMandatoryString("format");
@@ -1286,13 +1289,6 @@ public class WmsController extends AbstractController {
      */
     public void setUsageLogger(UsageLogger usageLogger) {
         this.usageLogger = usageLogger;
-    }
-
-    /**
-     * Called by Spring to inject the metadata store
-     */
-    public void setMetadataStore(MetadataStore metadataStore) {
-        this.metadataStore = metadataStore;
     }
 
     /**

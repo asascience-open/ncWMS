@@ -53,11 +53,14 @@ public class RequestParams
      * The Map matches parameter names (Strings) to parameter values (String
      * arrays).
      */
-    public RequestParams(Map<String, String[]> httpRequestParamMap)
+    public RequestParams(Map<?, ?> httpRequestParamMap)
     {
-        for (String name : httpRequestParamMap.keySet())
+        @SuppressWarnings("unchecked")
+        Map<String, String[]> httpParamMap = (Map<String, String[]>)httpRequestParamMap;
+
+        for (String name : httpParamMap.keySet())
         {
-            String[] values = httpRequestParamMap.get(name);
+            String[] values = httpParamMap.get(name);
             assert values.length >= 1;
             try
             {

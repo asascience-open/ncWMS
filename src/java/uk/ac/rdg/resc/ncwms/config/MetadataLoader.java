@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -41,15 +41,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.unidata.io.RandomAccessFile;
-import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.controller.MetadataController;
 import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
 import uk.ac.rdg.resc.ncwms.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider;
+import uk.ac.rdg.resc.ncwms.metadata.LayerImpl;
+import uk.ac.rdg.resc.ncwms.metadata.VectorLayerImpl;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
 
 /**

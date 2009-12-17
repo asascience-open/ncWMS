@@ -50,7 +50,6 @@ import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
 import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
@@ -61,6 +60,10 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * metadata (i.e. fragments of GetCapabilities)... maybe.
  *
  * @todo Output exceptions in JSON format for display on web interface?
+ * @todo If we factor out {@link #findMinMax(uk.ac.rdg.resc.ncwms.metadata.Layer,
+ * int, int, uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid,
+ * uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry)}, we can make this class
+ * package-private.
  *
  * @author Jon Blower
  * $Revision$
@@ -71,9 +74,12 @@ public class MetadataController
 {
     private static final Logger log = LoggerFactory.getLogger(MetadataController.class);
 
-    // These objects will be injected by Spring
     private Config config;
-    private MetadataStore metadataStore;
+
+    public MetadataController(Config config)
+    {
+        this.config = config;
+    }
     
     public ModelAndView handleRequest(HttpServletRequest request,
         HttpServletResponse response, UsageLogEntry usageLogEntry)
@@ -296,7 +302,7 @@ public class MetadataController
         {
             throw new Exception("Must provide a value for the layerName parameter");
         }
-        Layer layer = this.metadataStore.getLayerByUniqueName(layerName);
+        Layer layer = this.config.getLayerByUniqueName(layerName);
         if (layer == null)
         {
             throw new Exception("There is no layer with the name " + layerName);
@@ -367,7 +373,7 @@ public class MetadataController
         // TODO: some of the code below is repetitive of WmsController: refactor?
         
         // Get the variable we're interested in
-        Layer layer = this.metadataStore.getLayerByUniqueName(dataRequest.getLayers()[0]);
+        Layer layer = this.config.getLayerByUniqueName(dataRequest.getLayers()[0]);
         
         // Get the grid onto which the data is being projected
         HorizontalGrid grid = new HorizontalGrid(dataRequest);
@@ -507,22 +513,6 @@ public class MetadataController
             builder.append("," + WmsUtils.dateTimeToISO8601(timesteps.get(i)));
         }
         return builder.toString();
-    }
-
-    /**
-     * Called by the Spring framework to inject the config object
-     */
-    public void setConfig(Config config)
-    {
-        this.config = config;
-    }
-
-    /**
-     * Called by Spring to inject the metadata store
-     */
-    public void setMetadataStore(MetadataStore metadataStore)
-    {
-        this.metadataStore = metadataStore;
     }
     
 }

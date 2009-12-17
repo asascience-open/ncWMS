@@ -26,12 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.metadata;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import org.joda.time.DateTime;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 
 /**
  * A MetadataStore that stores metadata in memory.  This is likely to be fast

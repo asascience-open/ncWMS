@@ -47,7 +47,8 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.metadata.MetadataStore;
+import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
+import uk.ac.rdg.resc.ncwms.metadata.Layer;
 import uk.ac.rdg.resc.ncwms.security.Users;
 
 /**
@@ -260,6 +261,15 @@ public class Config implements ApplicationContextAware
     public void setContact(Contact contact)
     {
         this.contact = contact;
+    }
+
+    /**
+     * Gets a Layer object with the given unique name.
+     */
+    public Layer getLayerByUniqueName(String uniqueLayerName)
+        throws LayerNotDefinedException, Exception
+    {
+        return this.metadataStore.getLayerByUniqueName(uniqueLayerName);
     }
     
     public Map<String, Dataset> getDatasets()
