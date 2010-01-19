@@ -107,6 +107,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 	      			<menu:dataset dataset="${datasets.ECOOP_MERCATOR_psy2v3_1week_forecast}" label="One Week Forecast"/>
 			</menu:folder>
 	        	<menu:dataset dataset="${datasets.ECOOP_PCOMS}"/>
+	        	<menu:dataset dataset="${datasets.ecoop_pol_irish}" label="NERC Irish Sea"/>
 	</menu:folder>
  
 	<menu:folder label="Mediterranean MOON">
@@ -122,8 +123,27 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 		       --%>
  	       </menu:folder>
 	    	<menu:folder label="University of Athens">
+			<%--
  			<menu:dataset dataset="${datasets.ECOOP_ALERMO}"/>
-     		</menu:folder>
+		       --%>
+         		<menu:folder label="ALERMO Model forecast">
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/ETA" label="sea_surface_height"/>
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/TONZ" label="sea_water_potential_temperature"/>
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/SONZ" label="sea_water_salinity"/>
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/UONZ" label="eastward_sea_water_velocity"/>
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/VONZ" label="northward_sea_water_velocity"/>
+     		   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="alermo/sea_water_velocity" label="sea_water_velocity"/>
+	        	</menu:folder>
+			<menu:folder label="NORTH AEGEAN">
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/ETA" label="sea_surface_height"/>
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/TONZ" label="sea_water_potential_temperature"/>
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/SONZ" label="sea_water_salinity"/>
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/UONZ" label="eastward_sea_water_velocity"/>
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/VONZ" label="northward_sea_water_velocity"/>
+	    	   		<menu:remoteLayer server="http://diavlos.oc.phys.uoa.gr/ncwms/wms" layerName="North%20Aegean/sea_water_velocity" label="sea_water_velocity"/>
+	        	</menu:folder>
+        	</menu:folder>
+
 	    	<menu:folder label="University of Cyprus">
  			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_daily_inst}"/>
 			<menu:dataset dataset="${datasets.ECOOP_CYPRUS_6h_avg}"/>
