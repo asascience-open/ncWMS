@@ -220,7 +220,8 @@ public class DefaultDataReader extends DataReader
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
      * @param lonLat The longitude and latitude of the point
      * @return an array of floating-point data values, one for each point in
-     * {@code tIndices}, in the same order.
+     * {@code tIndices}, in the same order.  Will return an array of NaNs if the
+     * data are outside the domain.
      * @throws Exception if an error occurs
      * @todo Validity checking on tIndices and layer.hasTAxis()?
      */
@@ -233,6 +234,14 @@ public class DefaultDataReader extends DataReader
         int firstTIndex = tIndices.get(0);
         int lastTIndex = tIndices.get(tIndices.size() - 1);
         int[] gridCoords = layer.getHorizontalCoordSys().lonLatToGrid(lonLat);
+        float[] tsData = new float[tIndices.size()];
+
+        if (gridCoords == null)
+        {
+            // the LonLatPosition is outside the domain
+            Arrays.fill(tsData, Float.NaN);
+            return tsData;
+        }
 
         // Prevent InvalidRangeExceptions if z or t axes are missing
         if (firstTIndex < 0 || lastTIndex < 0)
@@ -271,7 +280,6 @@ public class DefaultDataReader extends DataReader
             // Copy the data (which may include many points we don't need) to
             // the required array
             VariableDS var = grid.getVariable();
-            float[] tsData = new float[tIndices.size()];
             for (int i = 0; i < tIndices.size(); i++)
             {
                 int tIndex = tIndices.get(i) - firstTIndex;
