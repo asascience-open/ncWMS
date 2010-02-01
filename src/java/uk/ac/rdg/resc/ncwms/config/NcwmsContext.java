@@ -153,6 +153,7 @@ public class NcwmsContext implements ApplicationContextAware
     /**
      * Called automatically by Spring
      */
+    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException
     {
         this.applicationContext = applicationContext;
