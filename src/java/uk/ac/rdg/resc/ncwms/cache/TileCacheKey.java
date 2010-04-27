@@ -31,11 +31,11 @@ package uk.ac.rdg.resc.ncwms.cache;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
-import uk.ac.rdg.resc.ncwms.coordsys.CrsHelper;
-import uk.ac.rdg.resc.ncwms.datareader.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.coordsys.Longitude;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import uk.ac.rdg.resc.ncwms.coords.CrsHelper;
+import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
+import uk.ac.rdg.resc.ncwms.coords.Longitude;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
  * Key that is used to identify a particular data array (tile) in a
@@ -43,9 +43,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  *
  * @see TileCache
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class TileCacheKey implements Serializable
 {
@@ -69,6 +66,7 @@ public class TileCacheKey implements Serializable
     
     // TileCacheKeys are immutable so these properties can be stored to save
     // repeated recomputation:
+    // TODO: make transient or generate dynamically.  Improve algorithms!
     private String str;        // String representation of this key
     private int hashCode;      // Hash code for this key
     
@@ -110,7 +108,7 @@ public class TileCacheKey implements Serializable
         {
             // This is an OPeNDAP dataset or NcML aggregation, so we need
             // to store the last-modified time of the relevant Dataset
-            this.datasetLastModified = layer.getDataset().getLastUpdate().getMillis();
+            this.datasetLastModified = layer.getDataset().getLastUpdateTime().getMillis();
         }
         this.tIndex = tIndex;
         this.zIndex = zIndex;

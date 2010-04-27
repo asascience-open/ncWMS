@@ -29,6 +29,8 @@
 package uk.ac.rdg.resc.ncwms.cache;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -39,7 +41,6 @@ import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.ncwms.config.Config;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 
 /**
  * <p>Uses the <a href="http://ehcache.sf.net">EHCache</a> software to cache
@@ -83,56 +84,49 @@ import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
  * does the clean-up in a background thread using a least-recently-used (LRU)
  * algorithm.</p>
  *
- * <p>This object is created by the Spring framework, then injected into the
- * {@link uk.ac.rdg.resc.ncwms.controller.WmsController WmsController} and the
- * {@link uk.ac.rdg.resc.ncwms.controller.AdminController AdminController}.</p>
- *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class TileCache
 {
     private static final Logger logger = LoggerFactory.getLogger(TileCache.class);
     
     private static final String CACHE_NAME = "tilecache";
+    private static final Float[] EMPTY_FLOAT_ARRAY = new Float[0];
+
     private CacheManager cacheManager;
-    
-    // Injected by Spring to provide the location of the working directory
-    private NcwmsContext ncwmsContext;
-    // Injected by Spring to provide the configuration of the server
+
+    /** The location of the tile cache: will be injected by Spring */
+    private File cacheDirectory;
+
+    /** The Config object containing the cache configuration: will be injected by Spring */
     private Config ncwmsConfig;
-    
-    /**
-     * Called by the Spring framework to initialize the cache.  This will be
-     * called after all the set() methods have been called.
-     */
+
+    /** Creates a TileCache in the given working directory. */
     public void init()
     {
         // Setting the location of the disk store programmatically is tedious,
         // requiring the creation of lots of objects...
-        Configuration config = new Configuration();
+        Configuration tileCacheConfig = new Configuration();
         DiskStoreConfiguration diskStore = new DiskStoreConfiguration();
-        diskStore.setPath(new File(ncwmsContext.getWorkingDirectory(), "tilecache").getPath());
-        config.addDiskStore(diskStore);
-        config.addDefaultCache(new CacheConfiguration());
-        this.cacheManager = new CacheManager(config);
+        diskStore.setPath(this.cacheDirectory.getPath());
+        tileCacheConfig.addDiskStore(diskStore);
+        tileCacheConfig.addDefaultCache(new CacheConfiguration());
+        this.cacheManager = new CacheManager(tileCacheConfig);
         
         Cache tileCache = new Cache(
-            CACHE_NAME,                                           // Name for the cache
-            this.ncwmsConfig.getCache().getMaxNumItemsInMemory(), // Maximum number of elements in memory
-            MemoryStoreEvictionPolicy.LRU,                        // evict least-recently-used elements
-            this.ncwmsConfig.getCache().isEnableDiskStore(),      // Use the disk store?
-            "",                                                   // disk store path (ignored)
-            false,                                                // elements are not eternal
-            this.ncwmsConfig.getCache().getElementLifetimeMinutes() * 60, // Elements will last for this number of seconds in the cache
-            0,                                                    // Ignore time since last access/modification
-            this.ncwmsConfig.getCache().isEnableDiskStore(),      // Will persist cache to disk in between JVM restarts
-            1000,                                                 // number of seconds between clearouts of disk store
-            null,                                                 // no registered event listeners
-            null,                                                 // no bootstrap cache loader
-            this.ncwmsConfig.getCache().getMaxNumItemsOnDisk()    // Maximum number of elements on disk
+            CACHE_NAME,                                      // Name for the cache
+            ncwmsConfig.getCache().getMaxNumItemsInMemory(), // Maximum number of elements in memory
+            MemoryStoreEvictionPolicy.LRU,                   // evict least-recently-used elements
+            ncwmsConfig.getCache().isEnableDiskStore(),      // Use the disk store?
+            "",                                              // disk store path (ignored)
+            false,                                           // elements are not eternal
+            ncwmsConfig.getCache().getElementLifetimeMinutes() * 60, // Elements will last for this number of seconds in the cache
+            0,                                               // Ignore time since last access/modification
+            ncwmsConfig.getCache().isEnableDiskStore(),      // Will persist cache to disk in between JVM restarts
+            1000,                                            // number of seconds between clearouts of disk store
+            null,                                            // no registered event listeners
+            null,                                            // no bootstrap cache loader
+            ncwmsConfig.getCache().getMaxNumItemsOnDisk()    // Maximum number of elements on disk
         );
         
         this.cacheManager.addCache(tileCache);
@@ -140,9 +134,9 @@ public class TileCache
     }
     
     /**
-     * Called by Spring to shut down the cache
+     * Shuts down the cache
      */
-    public void close()
+    public void shutdown()
     {
         this.cacheManager.shutdown();
         logger.info("Tile cache shut down");
@@ -150,15 +144,10 @@ public class TileCache
     
     /**
      * Gets an array of data from this cache, returning null if there is no
-     * data matching the given key or of the cache is disabled.
+     * data matching the given key
      */
-    public float[] get(TileCacheKey key)
+    public List<Float> get(TileCacheKey key)
     {
-        if (!this.ncwmsConfig.getCache().isEnabled())
-        {
-            logger.debug("Tile cache is disabled");
-            return null;
-        }
         Cache cache = this.cacheManager.getCache(CACHE_NAME);
         Element el = cache.get(key);
         if (el == null)
@@ -169,36 +158,28 @@ public class TileCache
         else
         {
             logger.debug("Found in tile cache");
-            return (float[])el.getValue();
+            Float[] arr = (Float[])el.getValue();
+            return arr == null ? null : Arrays.asList(arr);
         }
     }
     
     /**
-     * Adds an array of data to this cache.  Does nothing if the cache is disabled.
+     * Adds an array of data to this cache.
      */
-    public void put(TileCacheKey key, float[] data)
+    public void put(TileCacheKey key, List<Float> data)
     {
-        if (!this.ncwmsConfig.getCache().isEnabled())
-        {
-            logger.debug("Tile cache is disabled: data not put into cache");
-            return;
-        }
-        this.cacheManager.getCache(CACHE_NAME).put(new Element(key, data));
+        Float[] arr = data.toArray(EMPTY_FLOAT_ARRAY);
+        this.cacheManager.getCache(CACHE_NAME).put(new Element(key, arr));
         logger.debug("Data put into tile cache: {}", key);
     }
-    
-    /**
-     * Called by Spring to set the context, which contains the location of
-     * the working directory of the server.
-     */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+
+    /** Called by Spring to set the directory for the cached tiles */
+    public void setCacheDirectory(File cacheDirectory)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.cacheDirectory = cacheDirectory;
     }
 
-    /**
-     * Called by Spring to set the configuration information for the server
-     */
+    /** Called by Spring to set the Config object */
     public void setConfig(Config config)
     {
         this.ncwmsConfig = config;

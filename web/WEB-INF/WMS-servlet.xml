@@ -11,73 +11,79 @@
 <beans xmlns='http://www.springframework.org/schema/beans'
        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
        xsi:schemaLocation='http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd'>
-    
+
     <!-- An object that stores the context of the ncWMS application.  This contains
          the location of the application's working directory, which defaults to
          $HOME/.ncWMS/, but can be overridden by uncommenting and setting the
          workingDirectory property. -->
     <bean id="ncwmsContext" class="uk.ac.rdg.resc.ncwms.config.NcwmsContext" init-method="init">
-        <!--<property name="workingDirectory" value="/users/resc/.ncWMS_debug"/>-->
+        <!--<property name="workingDirectory" value="/path/to/workingdirectory"/>-->
     </bean>
-          
-    <!-- An object that is used to store and read metadata about the variables
-         that are being exposed through this server. Currently the
-         InMemoryMetadataStore is the only one that works properly. -->
-    <bean id="metadataStore" class="uk.ac.rdg.resc.ncwms.config.InMemoryMetadataStore"
-            init-method="init" destroy-method="close">
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+
+    <!-- This bean extracts the properties from the context. The working directory
+         will be set with the property name "ncwms.workingDirectory". -->
+    <bean id="properties" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetObject"><ref local="ncwmsContext"/></property>
+        <property name="targetMethod" value="getProperties"/>
+    </bean>
+
+    <!-- This bean sets the properties of the ncWMS server from the context.
+         These properties can then be accessed elsewhere in this file using the
+         syntax ${propertyname}.  Therefore, the working directory of the ncWMS
+         server can be accessed using ${ncwms.workingDirectry}.
+
+         This may seem convoluted, but means that other beans that require
+         access to the ncWMS working directory (e.g. the tile cache and the usage
+         log) are decoupled from the ncwmsContext object, meaning that they can
+         be more easily reused in other environments (e.g. THREDDS). -->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	<property name="properties"><ref local="properties"/></property>
+        <property name="systemPropertiesModeName">
+            <value>SYSTEM_PROPERTIES_MODE_OVERRIDE</value>
+        </property>
     </bean>
     
     <!-- Configuration of this ncWMS server.  This gets the location of the 
-         config file from the ncwmsContext. -->
+         config file from the working directory set above. -->
     <bean id="config" class="uk.ac.rdg.resc.ncwms.config.Config"
-           factory-method="readConfig">
-        <constructor-arg ref="ncwmsContext"/>
-        <constructor-arg ref="metadataStore"/>
-    </bean>
-    
-    <!-- A cache for image data arrays -->
-    <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
-            init-method="init" destroy-method="close">
-         <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
-         <property name="config"><ref local="config"/></property>
+           factory-method="readConfig" destroy-method="shutdown">
+        <constructor-arg value="${ncwms.workingDirectory}/config.xml"/>
+        <property name="credentialsProvider"><ref local="credentialsProvider"/></property>
+        <property name="tileCache"><ref local="tileCache"/></property>
     </bean>
     
     <!-- Object that handles the provision of authentication credentials
          for OPeNDAP servers -->
     <bean id="credentialsProvider"
-          class="uk.ac.rdg.resc.ncwms.datareader.NcwmsCredentialsProvider"
+          class="uk.ac.rdg.resc.ncwms.config.NcwmsCredentialsProvider"
           init-method="init"/>
-    
-    <!-- Object that handles the periodic refreshing of metadata. -->
-    <bean id="metadataLoader" class="uk.ac.rdg.resc.ncwms.config.MetadataLoader"
+
+    <!-- Object that caches recently-extracted tiles of data, used to speed up
+         repeat GetMap requests -->
+    <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
             init-method="init" destroy-method="close">
+        <property name="cacheDirectory" value="${ncwms.workingDirectory}/tilecache"/>
         <property name="config"><ref local="config"/></property>
-        <property name="metadataStore"><ref local="metadataStore"/></property>
-        <property name="credentialsProvider"><ref local="credentialsProvider"/></property>
     </bean>
     
-    <!-- Object that handles logging of the usage of the ncWMS.
-         To switch off usage logging, use the DoNothingUsageLogger -->
-    <!--<bean id="usageLogger" class="uk.ac.rdg.resc.ncwms.log.DoNothingUsageLogger"/>-->
+    <!-- Object that handles logging of the usage of the ncWMS. -->
     <bean id="usageLogger" class="uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger"
             init-method="init" destroy-method="close">
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>        
+        <property name="usageLogDirectory" value="${ncwms.workingDirectory}/usagelog"/>
     </bean>
     
     <!-- This Controller will handle all the requests to the WMS -->
     <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController"
             init-method="init">
         <property name="supportedMethods" value="GET"/>
-        <property name="config"><ref local="config"/></property>
+        <property name="serverConfig"><ref local="config"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
-        <property name="tileCache"><ref local="tileCache"/></property>
     </bean>
     
     <!-- This Controller is used to display the front page of the server, which
          contains links to the Capabilities documents and sample images for each
          layer.  Mapped to index.jsp. -->
-    <bean id="frontPageController" class="uk.ac.rdg.resc.ncwms.controller.FrontPageController">
+    <bean id="frontPageController" class="uk.ac.rdg.resc.ncwms.config.FrontPageController">
         <property name="supportedMethods" value="GET"/>
         <property name="config"><ref local="config"/></property>
     </bean>
@@ -88,7 +94,6 @@
     <bean id="adminController" class="uk.ac.rdg.resc.ncwms.config.AdminController">
         <property name="supportedMethods" value="GET,POST"/>
         <property name="config"><ref local="config"/></property>
-        <property name="metadataLoader"><ref local="metadataLoader"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
         <property name="methodNameResolver"><ref local="adminMethodNameResolver"/></property>
     </bean>
@@ -98,7 +103,7 @@
             <value>
                 / = displayAdminPage
                 /index.jsp = displayAdminPage
-                /error.jsp = displayErrorPage
+                /datasetStatus.jsp = displayDatasetStatusPage
                 /loading.jsp = displayLoadingPage
                 /usage.jsp = displayUsagePage
                 /updateConfig = updateConfig
@@ -113,7 +118,7 @@
     <bean id="screenshotController" class="uk.ac.rdg.resc.ncwms.controller.ScreenshotController"
             init-method="init">
         <property name="supportedMethods" value="GET,POST"/>
-        <property name="ncwmsContext"><ref local="ncwmsContext"/></property>
+        <property name="screenshotCache" value="${ncwms.workingDirectory}/screenshots"/>
         <property name="methodNameResolver"><ref local="screenshotMethodNameResolver"/></property>
     </bean>
     <!-- This maps URL patterns to the methods of the screenshot controller -->
@@ -142,7 +147,7 @@
         </property>
     </bean>
     
-    <!-- Each Controller will return the name of a View that maps to a certain JSP.
+    <!-- Each Controller method will return the name of a View that maps to a certain JSP.
          For example, if a Controller returns a View name "hello_xml", the 
          ViewResolver will display /WEB-INF/jsp/hello_xml.jsp. -->
     <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">

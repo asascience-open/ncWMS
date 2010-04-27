@@ -1,7 +1,7 @@
 <%@page contentType="text/plain"%>
 <%@page pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
-<%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
+<%@taglib uri="/WEB-INF/taglib/wms/MenuMaker" prefix="menu"%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0
@@ -10,7 +10,6 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <%-- This file defines the menu structure for the ECOOP site.  This file will
      be loaded if someone loads up the godiva2 site with "menu=ECOOP" --%>
 <c:set var="pmlServer" value="http://ncof.pml.ac.uk/ncWMS/wms"/>
-<c:set var="esscServer" value="http://lovejoy.nerc-essc.ac.uk:8080/ncWMS/wms"/>
 <menu:folder label="ECOOP data visualization">
 
 	<menu:folder label="Baltic Region BOOS">

@@ -35,12 +35,12 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                         <tr>
                             <td>${layer.id}</td>
                             <td><input type="text" name="${layer.id}.title" value="${layer.title}"/></td>
-                            <td><input type="text" name="${layer.id}.scaleMin" value="${layer.colorScaleRange[0]}"/></td>
-                            <td><input type="text" name="${layer.id}.scaleMax" value="${layer.colorScaleRange[1]}"/></td>
+                            <td><input type="text" name="${layer.id}.scaleMin" value="${layer.approxValueRange.minimum}"/></td>
+                            <td><input type="text" name="${layer.id}.scaleMax" value="${layer.approxValueRange.maximum}"/></td>
                             <td>
                                 <select name="${layer.id}.palette">
                                     <c:forEach var="paletteName" items="${paletteNames}">
-                                        <option value="${paletteName}"<c:if test="${layer.defaultPaletteName == paletteName}"> selected="selected"</c:if>>${paletteName}</option>
+                                        <option value="${paletteName}"<c:if test="${layer.defaultColorPalette.name == paletteName}"> selected="selected"</c:if>>${paletteName}</option>
                                     </c:forEach>
                                 </select>
                             </td>

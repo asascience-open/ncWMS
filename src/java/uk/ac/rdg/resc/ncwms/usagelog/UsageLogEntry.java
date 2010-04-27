@@ -36,7 +36,7 @@ import uk.ac.rdg.resc.ncwms.controller.GetFeatureInfoRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapRequest;
 import uk.ac.rdg.resc.ncwms.controller.GetMapStyleRequest;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Object that is passed to a UsageLogger to log usage of the ncWMS system.

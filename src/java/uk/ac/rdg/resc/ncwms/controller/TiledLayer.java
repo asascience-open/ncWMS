@@ -29,7 +29,7 @@
 package uk.ac.rdg.resc.ncwms.controller;
 
 import java.util.List;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Simple class that stores a Layer object and associated top-level tiles,

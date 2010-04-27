@@ -34,7 +34,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
-import uk.ac.rdg.resc.ncwms.config.Config;
 import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
 
 /**
@@ -48,11 +47,12 @@ import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
 public class FrontPageController extends AbstractController
 {
     // These objects will be injected by Spring
-    private Config config;
+    private ServerConfig config;
     
     /**
      * Entry point for all requests to the WMS
      */
+    @Override
     protected ModelAndView handleRequestInternal(HttpServletRequest httpServletRequest,
         HttpServletResponse httpServletResponse) throws Exception
     {
@@ -65,7 +65,7 @@ public class FrontPageController extends AbstractController
     /**
      * Called by the Spring framework to inject the config object
      */
-    public void setConfig(Config config)
+    public void setConfig(ServerConfig config)
     {
         this.config = config;
     }

@@ -47,7 +47,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 
 /**
@@ -62,9 +61,6 @@ public class ScreenshotController extends MultiActionController
     /** We only need one random number generator */
     private static final Random RANDOM = new Random();
 
-    /** This is set by Spring so that we can find the location of the working directory */
-    protected NcwmsContext ncwmsContext;
-
     /** Directory where the screenshots will be stored (full path) */
     private File screenshotCache;
 
@@ -75,7 +71,6 @@ public class ScreenshotController extends MultiActionController
      */
     public void init() throws Exception
     {
-        this.screenshotCache = new File(ncwmsContext.getWorkingDirectory(), "screenshots");
         if (this.screenshotCache.exists())
         {
             if (this.screenshotCache.isDirectory())
@@ -395,11 +390,11 @@ public class ScreenshotController extends MultiActionController
     }
 
     /**
-     * Called by Spring to inject the context object
+     * Called by Spring to inject the location of the cache of screenshot images
      */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    public void setScreenshotCache(File screenshotCache)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.screenshotCache = screenshotCache;
     }
 
 }

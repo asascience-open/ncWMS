@@ -28,13 +28,15 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.text.DecimalFormatSymbols;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
-import uk.ac.rdg.resc.ncwms.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
+import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
+import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.ncwms.util.Ranges;
 
 /**
  * Contains fields that can be filled in to override values that are
@@ -44,6 +46,9 @@ import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
 @Root(name="variable")
 public class Variable
 {
+    // the decimal separator for the current locale
+    private static char DECIMAL_SEPARATOR = new DecimalFormatSymbols().getDecimalSeparator();
+
     @Attribute(name="id")
     private String id;
 
@@ -61,7 +66,7 @@ public class Variable
 
     private Dataset dataset;
 
-    private float[] colorScaleRange = null;
+    private Range<Float> colorScaleRange = null;
 
     private boolean logScaling = false;
 
@@ -74,21 +79,16 @@ public class Variable
     public void validate() throws PersistenceException
     {
         // Check the colour scale range
-        if (colorScaleRangeStr != null)
+        if (this.colorScaleRangeStr != null)
         {
-            String[] els = colorScaleRangeStr.split(",");
-            if (els.length != 2)
-            {
-                throw new PersistenceException("Invalid colorScaleRange attribute for variable " + this.id);
-            }
             try
             {
-                float min = Float.parseFloat(els[0]);
-                float max = Float.parseFloat(els[1]);
-                if (max < min) max = min;
-                this.colorScaleRange = new float[]{min, max};
+                this.colorScaleRange = parseColorScaleRangeString(this.colorScaleRangeStr);
+                // Make sure we are using the right format for the string that
+                // will be serialized to the config file
+                this.colorScaleRangeStr = formatColorScaleRange(this.colorScaleRange);
             }
-            catch(NumberFormatException nfe)
+            catch(Exception e)
             {
                 throw new PersistenceException("Invalid colorScaleRange attribute for variable " + this.id);
             }
@@ -111,6 +111,56 @@ public class Variable
         {
             throw new PersistenceException(iae.getMessage());
         }
+    }
+
+    private static Range<Float> parseColorScaleRangeString(String colorScaleRangeStr)
+            throws Exception
+    {
+        colorScaleRangeStr = colorScaleRangeStr.trim();
+
+        // First try splitting on a space character
+        String[] els = colorScaleRangeStr.split(" ");
+        if (els.length == 2)
+        {
+            return parseColorScaleRangeStrings(els[0], els[1]);
+        }
+        else if (els.length == 1)
+        {
+            // We are probably parsing a value from an old version of ncWMS that
+            // used a comma as a delimiter
+            els = colorScaleRangeStr.split(",");
+            if (els.length == 2)
+            {
+                return parseColorScaleRangeStrings(els[0], els[1]);
+            }
+            else if (els.length == 4)
+            {
+                // We are probably in a locale where the comma is used as the
+                // decimal separator
+                return parseColorScaleRangeStrings(
+                    els[0] + DECIMAL_SEPARATOR + els[1],
+                    els[2] + DECIMAL_SEPARATOR + els[3]
+                );
+            }
+        }
+        // We can't parse the string
+        throw new Exception();
+    }
+
+    private static Range<Float> parseColorScaleRangeStrings(String minStr, String maxStr)
+    {
+        float min = Float.parseFloat(minStr);
+        float max = Float.parseFloat(maxStr);
+        if (max < min) max = min;
+        return Ranges.newRange(min, max);
+    }
+
+    private static String formatColorScaleRange(Range<Float> colorScaleRange)
+    {
+        // In previous versions of ncWMS we used a comma as a separator,
+        // which caused problems in certain locales where a comma is used
+        // as a decimal separator
+        return String.format("%f %f", colorScaleRange.getMinimum(), colorScaleRange.getMaximum());
     }
 
     /**
@@ -152,29 +202,17 @@ public class Variable
      * set.
      * @return
      */
-    public float[] getColorScaleRange()
+    public Range<Float> getColorScaleRange()
     {
         return this.colorScaleRange;
     }
 
-    public void setColorScaleRange(float[] colorScaleRange)
+    public void setColorScaleRange(Range<Float> colorScaleRange)
     {
-        if (colorScaleRange == null)
-        {
-            this.colorScaleRange = null;
-            this.colorScaleRangeStr = null;
-            return;
-        }
-        if (colorScaleRange.length != 2)
-        {
-            throw new IllegalArgumentException("Colorscalerange must have two elements");
-        }
-        if (colorScaleRange[0] > colorScaleRange[1])
-        {
-            colorScaleRange[1] = colorScaleRange[0];
-        }
         this.colorScaleRange = colorScaleRange;
-        this.colorScaleRangeStr = colorScaleRange[0] + "," + colorScaleRange[1];
+        this.colorScaleRangeStr = colorScaleRange == null
+            ? null
+            : formatColorScaleRange(colorScaleRange);
     }
 
     public String getPaletteName()

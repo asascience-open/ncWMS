@@ -47,10 +47,9 @@ import org.slf4j.LoggerFactory;
 import org.h2.tools.Csv;
 import org.h2.tools.RunScript;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import uk.ac.rdg.resc.ncwms.config.NcwmsContext;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
  * UsageLogger that stores data in an H2 database.  The database is run in 
@@ -58,9 +57,6 @@ import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
  * database is thread-safe so we make no attempt at thread safety here.
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class H2UsageLogger implements UsageLogger
 {
@@ -82,8 +78,8 @@ public class H2UsageLogger implements UsageLogger
     private Connection conn;
     private DataSource dataSource;
     
-    // These properties will be injected by Spring
-    private NcwmsContext ncwmsContext;
+    // The directory in which we'll store the usage log: will be set by Spring
+    private File usageLogDir;
     
     /**
      * Called by Spring to initialize the database
@@ -91,7 +87,6 @@ public class H2UsageLogger implements UsageLogger
      */
     public void init() throws Exception
     {
-        File usageLogDir = new File(this.ncwmsContext.getWorkingDirectory(), "usagelog");
         // This will create the directory if it doesn't exist, throwing an
         // Exception if there was an error
         WmsUtils.createDirectory(usageLogDir);
@@ -146,11 +141,10 @@ public class H2UsageLogger implements UsageLogger
      * set the time to process the request, by taking System.currentTimeMs()
      * and subtracting logEntry.getRequestTime().
      */
+    @Override
     public void logUsage(UsageLogEntry logEntry)
     {
         long startLog = System.currentTimeMillis();
-        // Calculate the time to process the request
-        long timeToProcessRequest = startLog - logEntry.getRequestTime().getMillis();
         try
         {
             // Use of setObject allows entries to be null
@@ -241,11 +235,10 @@ public class H2UsageLogger implements UsageLogger
     }
 
     /**
-     * Will be called by Spring to set the context, which is used to find a
-     * place to put the database
+     * Will be called by Spring to set the directory for the usage log
      */
-    public void setNcwmsContext(NcwmsContext ncwmsContext)
+    public void setUsageLogDirectory(File usageLogDir)
     {
-        this.ncwmsContext = ncwmsContext;
+        this.usageLogDir = usageLogDir;
     }
 }

@@ -28,15 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
-import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import org.apache.oro.io.GlobFilenameFilter;
+import java.util.Set;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,32 +43,25 @@ import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
+import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
 
 /**
- * A dataset Java bean: contains a number of Layer objects.
+ * A dataset object in the ncWMS configuration system: contains a number of
+ * Layer objects, which are held in memory and loaded periodically, triggered
+ * by the {@link Config} object.
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
+ * @todo A lot of these methods can be made package-private
  */
 @Root(name="dataset")
-public class Dataset
+public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
 {
     private static final Logger logger = LoggerFactory.getLogger(Dataset.class);
-    
-    /**
-     * The state of a Dataset.
-     * NEEDS_REFRESH: Dataset is new or has changed and needs to be loaded
-     * SCHEDULED: Needs to be loaded and is in the queue
-     * LOADING: In the process of loading
-     * READY: Ready for use
-     * UPDATING: A previously-ready dataset is synchronizing with the disk
-     * ERROR: An error occurred when loading the dataset.
-     */
-    public static enum State { NEEDS_REFRESH, SCHEDULED, LOADING, READY, UPDATING, ERROR  };
     
     @Attribute(name="id")
     private String id; // Unique ID for this dataset
@@ -111,19 +101,33 @@ public class Dataset
     // The real set of all variables is in the variables Map.
     @ElementList(name="variables", type=Variable.class, required=false)
     private ArrayList<Variable> variableList = new ArrayList<Variable>();
+
+    private Config config;
     
-    private State state;     // State of this dataset.  Will be set in Config.readConfig()
+    private State state = State.NEEDS_REFRESH;     // State of this dataset.
     
     private Exception err;   // Set if there is an error loading the dataset
-    private StringBuffer loadingProgress = new StringBuffer(); // Used to express progress with loading
-                                         // the metadata for this dataset
-    private Config config;   // The Config object to which this belongs
+    private List<String> loadingProgress = new ArrayList<String>(); // Used to express progress with loading
+                                         // the metadata for this dataset,
+                                         // one line at a time
 
     /**
-     * This contains the map of dataset IDs to Dataset objects.  We use a
+     * This contains the map of variable IDs to Variable objects.  We use a
      * LinkedHashMap so that the order of datasets in the Map is preserved.
      */
     private Map<String, Variable> variables = new LinkedHashMap<String, Variable>();
+
+    /** The time at which this dataset's stored Layers were last updated, or
+     * null if the Layers have not yet been loaded */
+    private DateTime lastUpdateTime = null;
+
+    /** The Layers that belong to this dataset.  This will be loaded through the
+     * {@link #loadLayers()} method, which is called periodically by the
+     * {@link Config} object. */
+    private Map<String, LayerImpl> scalarLayers;
+
+    /** The VectorLayers generated from the scalarLayers */
+    private Map<String, VectorLayerImpl> vectorLayers;
 
     /**
      * Checks that the data we have read are valid.  Checks that there are no
@@ -160,6 +164,7 @@ public class Dataset
         }
     }
 
+    @Override
     public String getId()
     {
         return this.id;
@@ -179,26 +184,60 @@ public class Dataset
     {
         this.location = location.trim();
     }
+
+    /**
+     * Called when a new dataset is created to set up a back-link to the
+     * {@link Config} object.  This is only called by {@link Config}.
+     */
+    void setConfig(Config config)
+    {
+        this.config = config;
+    }
     
     /**
      * @return true if this dataset is ready for use
      */
+    @Override
     public synchronized boolean isReady()
     {
-        return this.disabled == false &&
-            (this.state == State.READY || this.state == State.UPDATING);
+        return !this.isDisabled() &&
+               (this.state == State.READY ||
+                this.state == State.UPDATING);
     }
 
     /**
-     * @return true if this dataset is in the process of being loaded
+     * @return true if this dataset is not ready because it is being loaded
      */
+    @Override
     public synchronized boolean isLoading()
     {
         return !this.isDisabled() &&
                (this.state == State.NEEDS_REFRESH ||
-                this.state == State.SCHEDULED ||
-                this.state == State.LOADING ||
-                this.state == State.UPDATING);
+                this.state == State.LOADING);
+    }
+
+    @Override
+    public boolean isError()
+    {
+        // Note that we don't use state == ERROR here because it's possible for
+        // a dataset to be loading and have an error from a previous loading
+        // attempt that an admin might want to see
+        return this.err != null;
+    }
+
+    /**
+     * If this Dataset has not been loaded correctly, this returns the Exception
+     * that was thrown.  If the dataset has no errors, this returns null.
+     */
+    @Override
+    public Exception getException()
+    {
+        return this.err;
+    }
+
+    public State getState()
+    {
+        return this.state;
     }
     
     /**
@@ -217,6 +256,7 @@ public class Dataset
     /**
      * @return the human-readable Title of this dataset
      */
+    @Override
     public String getTitle()
     {
         return this.title;
@@ -225,76 +265,6 @@ public class Dataset
     public void setTitle(String title)
     {
         this.title = title;
-    }
-    
-    /**
-     * @return true if the metadata from this dataset needs to be reloaded
-     * automatically via the periodic reloader in MetadataLoader.  Note that this
-     * does something more sophisticated than simply checking that
-     * this.state == NEEDS_REFRESH!
-     */
-    public boolean needsRefresh()
-    {
-        DateTime lastUpdate = this.getLastUpdate();
-        logger.debug("Last update time for dataset {} is {}", this.id, lastUpdate);
-        logger.debug("State of dataset {} is {}", this.id, this.state);
-        logger.debug("Disabled = {}", this.disabled);
-        if (this.disabled || this.state == State.SCHEDULED ||
-            this.state == State.LOADING || this.state == State.UPDATING)
-        {
-            return false;
-        }
-        else if (this.state == State.ERROR || this.state == State.NEEDS_REFRESH
-            || lastUpdate == null)
-        {
-            return true;
-        }
-        else if (this.updateInterval < 0)
-        {
-            return false; // We never update this dataset
-        }
-        else
-        {
-            // State = READY.  Check the age of the metadata
-            // Return true if we are after the next scheduled update
-            return new DateTime().isAfter(lastUpdate.plusMinutes(this.updateInterval));
-        }
-    }
-    
-    /**
-     * @return true if there is an error with this dataset
-     */
-    public boolean isError()
-    {
-        return this.state == State.ERROR;
-    }
-    
-    /**
-     * If this Dataset has not been loaded correctly, this returns the Exception
-     * that was thrown.  If the dataset has no errors, this returns null.
-     */
-    public Exception getException()
-    {
-        return this.state == State.ERROR ? this.err : null;
-    }
-    
-    /**
-     * Called by the MetadataReloader to set the error associated with this
-     * dataset
-     */
-    public void setException(Exception e)
-    {
-        this.err = e;
-    }
-    
-    public State getState()
-    {
-        return this.state;
-    }
-    
-    public void setState(State state)
-    {
-        this.state = state;
     }
     
     @Override
@@ -308,7 +278,7 @@ public class Dataset
         return dataReaderClass;
     }
 
-    public void setDataReaderClass(String dataReaderClass)
+    void setDataReaderClass(String dataReaderClass) throws Exception
     {
         this.dataReaderClass = dataReaderClass;
     }
@@ -324,52 +294,87 @@ public class Dataset
     /**
      * Sets the update interval for this dataset in minutes
      */
-    public void setUpdateInterval(int updateInterval)
+    void setUpdateInterval(int updateInterval)
     {
         this.updateInterval = updateInterval;
     }
-
-    public void setConfig(Config config)
+    
+    /**
+     * @return a DateTime object representing the time at which this dataset was
+     * last updated, or null if the dataset has never been loaded.
+     */
+    @Override
+    public DateTime getLastUpdateTime()
     {
-        this.config = config;
+        return this.lastUpdateTime;
+    }
+
+    /**
+     * Returns the layer in this dataset with the given id, or null if there is
+     * no layer in this dataset with the given id.
+     * @param layerId The layer identifier, unique within this dataset.  Note that
+     * this is distinct from the layer name, which is unique on the server.
+     * @return the layer in this dataset with the given id, or null if there is
+     * no layer in this dataset with the given id.
+     */
+    @Override
+    public Layer getLayerById(String layerId)
+    {
+        Layer layer = this.scalarLayers.get(layerId);
+        if (layer == null) layer = this.vectorLayers.get(layerId);
+        return layer;
     }
     
     /**
-     * @return a Date object representing the time at which this dataset was
-     * last updated, or null if this dataset has never been updated.  Delegates
-     * to {@link uk.ac.rdg.resc.ncwms.metadata.MetadataStore#getLastUpdateTime}
-     * (because the last update time is 
-     * stored with the metadata - which may or may not be persistent across
-     * server reboots, depending on the type of MetadataStore).
+     * @return a Set of all the layers in this dataset.
      */
-    public DateTime getLastUpdate()
+    @Override
+    public Set<Layer> getLayers()
     {
-        return this.config.getMetadataStore().getLastUpdateTime(this.id);
-    }
-    
-    /**
-     * @return a Collection of all the layers in this dataset.  A convenience
-     * method that reads from the metadata store.
-     * @throws Exception if there was an error reading from the store.
-     */
-    public Collection<? extends Layer> getLayers() throws Exception
-    {
-        return this.config.getMetadataStore().getLayersInDataset(this.id);
+        Set<Layer> allLayers = new LinkedHashSet<Layer>();
+        allLayers.addAll(this.scalarLayers.values());
+        allLayers.addAll(this.vectorLayers.values());
+        return allLayers;
     }
 
+    /**
+     * Returns true if this dataset has been disabled, which will make it
+     * invisible to the outside world.
+     * @return true if this dataset has been disabled
+     */
+    @Override
     public boolean isDisabled()
     {
         return disabled;
     }
 
+    /**
+     * Called by the admin application to hide a dataset completely from public
+     * view
+     * @param disabled
+     */
     public void setDisabled(boolean disabled)
     {
         this.disabled = disabled;
     }
 
+
+    /**
+     * Gets the copyright statement for this dataset, replacing "${year}" as
+     * appropriate with the current year.
+     * @return The copyright statement, or the empty string if no copyright
+     * statement has been set.
+     */
+    @Override
     public String getCopyrightStatement()
     {
-        return copyrightStatement;
+        if (this.copyrightStatement == null || this.copyrightStatement.trim().equals(""))
+        {
+            return "";
+        }
+        int currentYear = new DateTime().getYear();
+        // Don't forget to escape dollar signs and backslashes in the regexp
+        return this.copyrightStatement.replaceAll("\\$\\{year\\}", "" + currentYear);
     }
 
     public void setCopyrightStatement(String copyrightStatement)
@@ -377,7 +382,8 @@ public class Dataset
         this.copyrightStatement = copyrightStatement;
     }
 
-    public String getMoreInfo()
+    @Override
+    public String getMoreInfoUrl()
     {
         return moreInfo;
     }
@@ -390,31 +396,18 @@ public class Dataset
     /**
      * Gets an explanation of the current progress with loading this dataset.
      * Will be displayed in the admin application when isLoading() == true.
+     * Each element in the returned list is a stage in loading the dataset.
      */
-    public String getLoadingProgress()
+    public List<String> getLoadingProgress()
     {
-        return this.loadingProgress.toString();
+        return this.loadingProgress;
     }
 
-    /**
-     * Sets an explanation of the current progress with loading this dataset.
-     * Will be displayed in the admin application when isLoading() == true.
-     * Also logs the progress string to the debug stream.
-     */
-    public void setLoadingProgress(String progress)
+    private void appendLoadingProgress(String loadingProgress)
     {
-        this.loadingProgress = new StringBuffer(progress);
+        this.loadingProgress.add(loadingProgress);
     }
-
-    /**
-     * Adds a newline to the end of the {@link #getLoadingProgress() current
-     * loading progress} and appends the given string.
-     */
-    public void appendLoadingProgress(String progressUpdate)
-    {
-        this.loadingProgress.append("\n" + progressUpdate);
-    }
-
+    
     /**
      * Gets the configuration information for all the {@link Variable}s in this
      * dataset.  This information allows the system administrator to manually
@@ -436,89 +429,227 @@ public class Dataset
     }
 
     /**
-     * Gets a List of the files that comprise this dataset; if this dataset's
-     * location is a glob expression, this will be expanded.  This method
-     * recursively searches directories, allowing for glob expressions like
-     * {@code "c:\\data\\200[6-7]\\*\\1*\\A*.nc"}.  If this dataset's location
-     * is not a glob expression, this method will return a single-element list
-     * containing the dataset's {@link #getLocation() location}.
-     * @return a list of the full paths to files that comprise this dataset,
-     * or a single-element list containing the dataset's location.
-     * @throws Exception if the glob expression does not represent an absolute
-     * path
-     * @author Mike Grant, Plymouth Marine Labs; Jon Blower
+     * Forces this dataset to be refreshed the next time it has an opportunity
      */
-    public List<String> getFiles() throws Exception
+    void forceRefresh()
     {
-        if (WmsUtils.isOpendapLocation(this.location)) return Arrays.asList(this.location);
-        // Check that the glob expression is an absolute path.  Relative paths
-        // would cause unpredictable and platform-dependent behaviour so
-        // we disallow them.
-        // If ds.getLocation() is a glob expression this test will still work
-        // because we are not attempting to resolve the string to a real path.
-        File globFile = new File(this.location);
-        if (!globFile.isAbsolute())
+        this.err = null;
+        this.state = State.NEEDS_REFRESH;
+    }
+
+    /**
+     * Called by the scheduled reloader in the {@link Config} object to load
+     * the Layers from the data files and store them in memory.  This method
+     * is called periodially by the config object and is not called by any
+     * other client.  This is also the only method that can update the
+     * {@link #getState()} of the dataset.  Therefore we know that multiple
+     * threads will not be calling this method simultaneously and we don't
+     * have to synchronize anything.
+     */
+    void loadLayers()
+    {
+        this.loadingProgress = new ArrayList<String>();
+        // Include the id of the dataset in the thread for debugging purposes
+        // Comment this out to use the default thread names (e.g. "pool-2-thread-1")
+        Thread.currentThread().setName("load-metadata-" + this.id);
+
+        // Check to see if this dataset needs to have its metadata refreshed
+        if (!this.needsRefresh()) return;
+
+        // Now load the layers and manage the state of the dataset
+        try
         {
-            throw new Exception("Dataset location must be an absolute path");
+            // if lastUpdateTime == null, this dataset has never previously been loaded.
+            this.state = this.lastUpdateTime == null ? State.LOADING : State.UPDATING;
+
+            this.doLoadLayers();
+
+            // Update the state of this dataset
+            this.err = null;
+            this.state = State.READY;
+            this.lastUpdateTime = new DateTime();
+
+            logger.debug("Loaded metadata for {}", this.id);
+            
+            // Update the state of the config object
+            this.config.setLastUpdateTime(this.lastUpdateTime);
+            this.config.save();
         }
-
-        // Break glob pattern into path components.  To do this in a reliable
-        // and platform-independent way we use methods of the File class, rather
-        // than String.split().
-        List<String> pathComponents = new ArrayList<String>();
-        while (globFile != null)
+        catch (Exception e)
         {
-            // We "pop off" the last component of the glob pattern and place
-            // it in the first component of the pathComponents List.  We therefore
-            // ensure that the pathComponents end up in the right order.
-            File parent = globFile.getParentFile();
-            // For a top-level directory, getName() returns an empty string,
-            // hence we use getPath() in this case
-            String pathComponent = parent == null ? globFile.getPath() : globFile.getName();
-            pathComponents.add(0, pathComponent);
-            globFile = parent;
-        }
-
-        // We must have at least two path components: one directory and one
-        // filename or glob expression
-        List<File> searchPaths = new ArrayList<File>();
-        searchPaths.add(new File(pathComponents.get(0)));
-        int i = 1; // Index of the glob path component
-
-        while(i < pathComponents.size())
-        {
-            FilenameFilter globFilter = new GlobFilenameFilter(pathComponents.get(i));
-            List<File> newSearchPaths = new ArrayList<File>();
-            // Look for matches in all the current search paths
-            for (File dir : searchPaths)
+            this.state = State.ERROR;
+            // Reduce logging volume by only logging the error if it's a new
+            // type of exception.
+            if (this.err == null || this.err.getClass() != e.getClass())
             {
-                if (dir.isDirectory())
-                {
-                    // Workaround for automounters that don't make filesystems
-                    // appear unless they're poked
-                    // do a listing on searchpath/pathcomponent whether or not
-                    // it exists, then discard the results
-                    new File(dir, pathComponents.get(i)).list();
+                logger.error(e.getClass().getName() + " loading metadata for dataset "
+                    + this.id, e);
+            }
+            this.err = e;
+        }
+    }
+    
+    /**
+     * @return true if the metadata from this dataset needs to be reloaded.
+     */
+    private boolean needsRefresh()
+    {
+        // We don't use getLastUpdateTime(), because the dataset might not ever
+        // have been loaded, and so lastUpdate might be null. (getLastUpdateTime()
+        // is defined never to return null.)
+        logger.debug("Last update time for dataset {} is {}", this.id, this.lastUpdateTime);
+        logger.debug("State of dataset {} is {}", this.id, this.state);
+        logger.debug("Disabled = {}", this.disabled);
+        if (this.disabled || this.state == State.LOADING || this.state == State.UPDATING)
+        {
+            return false;
+        }
+        else if (this.state == State.NEEDS_REFRESH || this.state == State.ERROR)
+        {
+            return true;
+        }
+        else if (this.updateInterval < 0)
+        {
+            return false; // We never update this dataset
+        }
+        else
+        {
+            // State = READY.  Check the age of the metadata
+            // Return true if we are after the next scheduled update
+            return new DateTime().isAfter(this.lastUpdateTime.plusMinutes(this.updateInterval));
+        }
+    }
 
-                    for (File match : dir.listFiles(globFilter))
+    /**
+     * Does the job of loading the metadata from this dataset.
+     */
+    private void doLoadLayers() throws Exception
+    {
+        logger.debug("Getting data reader of type {}", this.dataReaderClass);
+        DataReader dr = DataReader.forName(this.dataReaderClass);
+        // Look for OPeNDAP datasets and update the credentials provider accordingly
+        this.config.updateCredentialsProvider(this);
+        // Read the metadata
+        this.scalarLayers = dr.getAllLayers(this.getLocation());
+        for (LayerImpl layer : this.scalarLayers.values())
+        {
+            layer.setDataset(this);
+            layer.setDataReader(dr);
+        }
+        this.appendLoadingProgress("loaded layers");
+        // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
+        this.findVectorQuantities();
+        this.appendLoadingProgress("found vector quantities");
+        // Look for overriding attributes in the configuration
+        this.readLayerConfig();
+        this.appendLoadingProgress("attributes overridden");
+        this.appendLoadingProgress("Finished loading metadata");
+    }
+
+    /**
+     * Searches through the collection of Layer objects, looking for
+     * pairs of quantities that represent the components of a vector, e.g.
+     * northward/eastward_sea_water_velocity.  Modifies the given Map
+     * in-place.
+     * @todo Only works for northward/eastward so far
+     */
+    private void findVectorQuantities()
+    {
+        // Now add the vector quantities to the collection of Layer objects
+        this.vectorLayers = new LinkedHashMap<String, VectorLayerImpl>();
+        for (VectorLayer vecLayer : WmsUtils.findVectorLayers(this.scalarLayers.values()))
+        {
+            this.vectorLayers.put(vecLayer.getId(), new VectorLayerImpl(this, vecLayer));
+        }
+    }
+
+    /**
+     * Read the configuration information from individual layers from the
+     * config file.
+     */
+    private void readLayerConfig()
+    {
+        for (Layer layer : this.getLayers()) // all the layers, scalars and vectors
+        {
+            // Load the Variable object from the config file or create a new
+            // one if it doesn't exist.
+            Variable var = this.getVariables().get(layer.getId());
+            if (var == null)
+            {
+                var = new Variable();
+                var.setId(layer.getId());
+                this.addVariable(var);
+            }
+
+            // If there is no title set for this layer in the config file, we
+            // use the title that was read by the DataReader.
+            if (var.getTitle() == null) var.setTitle(layer.getTitle());
+
+            // Set the colour scale range.  If this isn't specified in the
+            // config information, load an "educated guess" at the scale range
+            // from the source data.
+            if (var.getColorScaleRange() == null)
+            {
+                this.appendLoadingProgress("Reading min-max data for layer " + layer.getName());
+                Range<Float> valueRange;
+                try
+                {
+                    valueRange = WmsUtils.estimateValueRange(layer);
+                    if (valueRange.isEmpty())
                     {
-                        newSearchPaths.add(match);
+                        // We failed to get a valid range.  Just guess at a scale
+                        valueRange = Ranges.newRange(-50.0f, 50.0f);
+                    }
+                    else if (valueRange.getMinimum().equals(valueRange.getMaximum()))
+                    {
+                        // This happens occasionally if the above algorithm happens
+                        // to hit an area of uniform data.  We make sure that
+                        // the max is greater than the min.
+                        valueRange = Ranges.newRange(valueRange.getMinimum(),
+                            valueRange.getMaximum() + 1.0f);
+                    }
+                    else
+                    {
+                        // Set the scale range of the layer, factoring in a 10% expansion
+                        // to deal with the fact that the sample data we read might
+                        // not be representative
+                        float diff = valueRange.getMaximum() - valueRange.getMinimum();
+                        valueRange = Ranges.newRange(
+                            valueRange.getMinimum() - 0.05f * diff,
+                            valueRange.getMaximum() + 0.05f * diff
+                        );
                     }
                 }
+                catch(Exception e)
+                {
+                    logger.error("Error reading min-max from layer " + layer.getId()
+                        + " in dataset " + this.id, e);
+                    valueRange = Ranges.newRange(-50.0f, 50.0f);
+                }
+                var.setColorScaleRange(valueRange);
             }
-            // Next time we'll search based on these new matches and will use
-            // the next globComponent
-            searchPaths = newSearchPaths;
-            i++;
         }
-
-        // Now we've done all our searching, we'll only retain the files from
-        // the list of search paths
-        List<String> filePaths = new ArrayList<String>();
-        for (File path : searchPaths)
-        {
-            if (path.isFile()) filePaths.add(path.getPath());
-        }
-        return filePaths;
     }
+
+    /**
+     * The state of a Dataset.
+     */
+    public static enum State {
+
+        /** Dataset is new or has changed and needs to be loaded */
+        NEEDS_REFRESH,
+
+        /** In the process of loading */
+        LOADING,
+
+        /** Ready for use */
+        READY,
+
+        /** Dataset is ready but is internally sychronizing its metadata */
+        UPDATING,
+
+        /** An error occurred when loading the dataset. */
+        ERROR;
+
+    };
 }

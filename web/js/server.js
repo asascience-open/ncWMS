@@ -142,10 +142,11 @@ function getTimesteps(url, params) {
         urlparams: {
             item: 'timesteps',
             layerName: params.layerName,
-            day: params.day
+            // TODO: Hack! Use date only and adjust server-side logic
+            day: params.day + 'T00:00:00Z'
         },
         onSuccess: function(timesteps) {
-            params.callback(timesteps.timesteps);
+            params.callback(params.day, timesteps.timesteps);
         }
     });
 }

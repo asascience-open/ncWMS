@@ -1,6 +1,6 @@
 <%@page contentType="text/plain"%>
 <%@page pageEncoding="UTF-8"%>
-<%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
+<%@taglib uri="/WEB-INF/taglib/wms/MenuMaker" prefix="menu"%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0

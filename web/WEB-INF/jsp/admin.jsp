@@ -2,7 +2,7 @@
 <%@page pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
-<%@taglib uri="/WEB-INF/taglib/wmsUtils" prefix="utils"%> <%-- tag library for useful utility functions --%>
+<%@taglib uri="/WEB-INF/taglib/wms/wmsUtils" prefix="utils"%> <%-- tag library for useful utility functions --%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0
@@ -24,7 +24,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
     <p><a href="../godiva2.html">Godiva2 interface</a></p>
     <c:choose>
-        <c:when test="${config.server.allowGlobalCapabilities}">
+        <c:when test="${config.allowsGlobalCapabilities}">
             <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.3.0">WMS 1.3.0 Capabilities</a></p>
             <p><a href="../wms?SERVICE=WMS&amp;REQUEST=GetCapabilities&amp;VERSION=1.1.1">WMS 1.1.1 Capabilities</a></p>
         </c:when>
@@ -44,58 +44,52 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <table border="1">
         <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
 
-            <c:forEach var="dataset" items="${config.datasets}">
-                <tr<c:if test="${dataset.value.disabled}"> bgcolor="lightgrey"</c:if>>
+            <c:forEach var="datasetEntry" items="${config.allDatasets}">
+                <c:set var="dataset" value="${datasetEntry.value}"/>
+                <tr<c:if test="${dataset.disabled}"> bgcolor="lightgrey"</c:if>>
                     <td>
-                        <c:if test="${dataset.value.ready}">
-                            <a href="editVariables?dataset=${dataset.value.id}">edit</a>
+                        <c:if test="${dataset.ready}">
+                            <a href="editVariables?dataset=${dataset.id}">edit</a>
                         </c:if>
                     </td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.id" value="${dataset.value.id}"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.title" value="${dataset.value.title}"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.location" value="${dataset.value.location}"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.id" value="${dataset.id}"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.title" value="${dataset.title}"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.location" value="${dataset.location}"/></td>
                     <td>
                         <c:choose>
-                            <c:when test="${dataset.value.error}">
-                                <a target="_blank" href="error.jsp?dataset=${dataset.value.id}">${dataset.value.state}</a>
+                            <c:when test="${dataset.error or dataset.loading}">
+                                <a target="_blank" href="datasetStatus.jsp?dataset=${dataset.id}">${dataset.state}</a>
                             </c:when>
                             <c:otherwise>
-                                <c:choose>
-                                    <c:when test="${dataset.value.loading}">
-                                        <a target="_blank" href="loading.jsp?dataset=${dataset.value.id}">${dataset.value.state}</a>
-                                    </c:when>
-                                    <c:otherwise>
-                                        ${dataset.value.state}
-                                    </c:otherwise>
-                                </c:choose>
+                                ${dataset.state}
                             </c:otherwise>
                         </c:choose>
                     </td>
                     <td>
                         <c:choose>
-                            <c:when test="${empty dataset.value.lastUpdate}">never</c:when>
-                            <c:otherwise>${utils:dateTimeToISO8601(dataset.value.lastUpdate)}</c:otherwise>
+                            <c:when test="${empty dataset.lastUpdateTime}">never</c:when>
+                            <c:otherwise>${utils:dateTimeToISO8601(dataset.lastUpdateTime)}</c:otherwise>
                         </c:choose>
                     </td>
                     <td>
-                        <select name="dataset.${dataset.value.id}.updateinterval">
-                            <option value="-1"<c:if test="${dataset.value.updateInterval < 0}"> selected="selected"</c:if>>Never</option>
-                            <option value="1"<c:if test="${dataset.value.updateInterval == 1}"> selected="selected"</c:if>>Every minute</option>
-                            <option value="10"<c:if test="${dataset.value.updateInterval == 10}"> selected="selected"</c:if>>Every 10 minutes</option>
-                            <option value="30"<c:if test="${dataset.value.updateInterval == 30}"> selected="selected"</c:if>>Every half hour</option>
-                            <option value="60"<c:if test="${dataset.value.updateInterval == 60}"> selected="selected"</c:if>>Hourly</option>
-                            <option value="360"<c:if test="${dataset.value.updateInterval == 360}"> selected="selected"</c:if>>Every 6 hours</option>
-                            <option value="720"<c:if test="${dataset.value.updateInterval == 720}"> selected="selected"</c:if>>Every 12 hours</option>
-                            <option value="1440"<c:if test="${dataset.value.updateInterval == 1440}"> selected="selected"</c:if>>Daily</option>
+                        <select name="dataset.${dataset.id}.updateinterval">
+                            <option value="-1"<c:if test="${dataset.updateInterval < 0}"> selected="selected"</c:if>>Never</option>
+                            <option value="1"<c:if test="${dataset.updateInterval == 1}"> selected="selected"</c:if>>Every minute</option>
+                            <option value="10"<c:if test="${dataset.updateInterval == 10}"> selected="selected"</c:if>>Every 10 minutes</option>
+                            <option value="30"<c:if test="${dataset.updateInterval == 30}"> selected="selected"</c:if>>Every half hour</option>
+                            <option value="60"<c:if test="${dataset.updateInterval == 60}"> selected="selected"</c:if>>Hourly</option>
+                            <option value="360"<c:if test="${dataset.updateInterval == 360}"> selected="selected"</c:if>>Every 6 hours</option>
+                            <option value="720"<c:if test="${dataset.updateInterval == 720}"> selected="selected"</c:if>>Every 12 hours</option>
+                            <option value="1440"<c:if test="${dataset.updateInterval == 1440}"> selected="selected"</c:if>>Daily</option>
                         </select>
                     </td>
-                    <td><input type="checkbox" name="dataset.${dataset.value.id}.refresh"/></td>
-                    <td><input type="checkbox" name="dataset.${dataset.value.id}.disabled"<c:if test="${dataset.value.disabled}"> checked="checked"</c:if>/></td>
-                    <td><input type="checkbox" name="dataset.${dataset.value.id}.queryable"<c:if test="${dataset.value.queryable}"> checked="checked"</c:if>/></td>
-                    <td><input type="checkbox" name="dataset.${dataset.value.id}.remove"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.reader" value="${dataset.value.dataReaderClass}"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.moreinfo" value="${dataset.value.moreInfo}"/></td>
-                    <td><input type="text" name="dataset.${dataset.value.id}.copyright" value="${dataset.value.copyrightStatement}"/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.refresh"/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.disabled"<c:if test="${dataset.disabled}"> checked="checked"</c:if>/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.queryable"<c:if test="${dataset.queryable}"> checked="checked"</c:if>/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.remove"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.reader" value="${dataset.dataReaderClass}"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.moreinfo" value="${dataset.moreInfoUrl}"/></td>
+                    <td><input type="text" name="dataset.${dataset.id}.copyright" value="${dataset.copyrightStatement}"/></td>
                 </tr>
             </c:forEach>
             <%-- Now add lines for the user to add new datasets --%>

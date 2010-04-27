@@ -28,8 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.usagelog;
 
-import javax.sql.DataSource;
-
 /**
  * Interface describing a class that logs usage of the ncWMS server.  This
  * will log requests for images and metadata.  Note that all entries use the
@@ -38,9 +36,6 @@ import javax.sql.DataSource;
  * for everything?
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public interface UsageLogger
 {
@@ -52,12 +47,4 @@ public interface UsageLogger
      * and subtracting logEntry.getRequestTime().
      */
     public void logUsage(UsageLogEntry logEntry);
-    
-    /**
-     * Gets a JDBC DataSource object for accessing the usage log directly.
-     * @return the DataSource object.  Subclasses may choose to return a new
-     * DataSource with each invocation, or may choose to return the same
-     * object each time.
-     */
-    public DataSource getDataSource();
 }

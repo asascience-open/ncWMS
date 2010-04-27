@@ -29,10 +29,21 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,22 +57,30 @@ import org.simpleframework.xml.load.Validate;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import uk.ac.rdg.resc.ncwms.config.Dataset.State;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import ucar.nc2.dataset.NetcdfDataset;
+import ucar.unidata.io.RandomAccessFile;
+import uk.ac.rdg.resc.ncwms.cache.TileCache;
+import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
+import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.security.Users;
+import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
+import uk.ac.rdg.resc.ncwms.controller.AbstractServerConfig;
+import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
+import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
 
 /**
- * Configuration of the server.  We use Simple XML Serialization
- * (http://simple.sourceforge.net/) to convert to and from XML.
+ * <p>Configuration of the ncWMS server.  We use Simple XML Serialization
+ * (http://simple.sourceforge.net/) to convert to and from XML.</p>
+ * <p>This implements {@link ServerConfig}, which is the general interface
+ * for providing access to server metadata and data.  (ServerConfig can be
+ * implemented by other configuration systems and catalogs, e.g. THREDDS.)</p>
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 @Root(name="config")
-public class Config implements ApplicationContextAware
+public class Config extends AbstractServerConfig implements ApplicationContextAware
 {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     
@@ -89,17 +108,27 @@ public class Config implements ApplicationContextAware
     
     // Time of the last update to this configuration or any of the contained
     // metadata
-    private DateTime lastUpdateTime = new DateTime();
+    private DateTime lastUpdateTime;
     
     private File configFile; // Location of the file from which this information has been read
+
+    // Cache of recently-extracted data arrays: will be set by Spring
+    private TileCache tileCache;
     
-    private MetadataStore metadataStore; // Gives access to metadata
+    // Will be injected by Spring: handles authenticated OPeNDAP calls
+    private NcwmsCredentialsProvider credentialsProvider;
     
     /**
      * This contains the map of dataset IDs to Dataset objects.  We use a 
      * LinkedHashMap so that the order of datasets in the Map is preserved.
      */
     private Map<String, Dataset> datasets = new LinkedHashMap<String, Dataset>();
+
+    /** The scheduler that will handle the background (re)loading of datasets */
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+    /** Contains handles to background threads that can be used to cancel reloading of datasets.
+      * Maps dataset Ids to Future objects*/
+    private Map<String, ScheduledFuture<?>> futures = new HashMap<String, ScheduledFuture<?>>();
     
     /**
      * Private constructor.  This prevents other classes from creating
@@ -108,19 +137,14 @@ public class Config implements ApplicationContextAware
     private Config() {}
     
     /**
-     * Reads configuration information from the file location given by the
-     * provided Context object
-     * @param ncwmsContext object containing the context of this ncWMS application
-     * (including the location of the config file)
-     * @param metadataStore object that is used to read metadata from a store.
-     * We need this here to set the state of each Dataset, based upon the last
-     * update time.
+     * Reads configuration information from the given working directory
+     * @param workingDirectory The ncWMS working directory, which must contain
+     * config.xml
      */
-    public static Config readConfig(NcwmsContext ncwmsContext,
-        MetadataStore metadataStore) throws Exception
+    public static Config readConfig(File configFile) throws Exception
     {
         Config config;
-        File configFile = ncwmsContext.getConfigFile();
+
         if (configFile.exists())
         {
             config = new Persister().read(Config.class, configFile);
@@ -136,31 +160,36 @@ public class Config implements ApplicationContextAware
             logger.debug("Created new configuration object and saved to {}",
                 configFile.getPath());
         }
-        
-        // Now set the state of each Dataset, based on the last update time in
-        // the metadata store
-        for (Dataset ds : config.getDatasets().values())
+
+        config.lastUpdateTime = new DateTime();
+
+        // Initialize the cache of NetcdfDatasets.  Hold between 50 and 500
+        // datasets, clearing out the cache every 5 minutes.  If the number of
+        // individual files in the cache exceeds the limit, the least-recently-used
+        // files will be closed in the clearout process.
+        // **NOTE** the age of the files in the cache is not taken into account,
+        // therefore the cache could hold on to files forever.  The only way
+        // to expire out-of-date information is to set a recheckEvery parameter
+        // in an NcML aggregation.  It is not possible currently to expire
+        // information based on time for single NetCDF files or OPeNDAP datasets.
+        // Therefore the DefaultDataReader only uses this cache for NcML aggregations.
+        // TODO: move the initialization of the cache to the DefaultDataReader?
+        NetcdfDataset.initNetcdfFileCache(50, 500, 500, 5 * 60);
+        logger.debug("NetcdfDatasetCache initialized");
+        if (logger.isDebugEnabled())
         {
-            // Read the time at which this dataset was last updated from the
-            // metadata store
-            DateTime lastUpdate = metadataStore.getLastUpdateTime(ds.getId());
-            if (lastUpdate == null)
-            {
-                // The dataset has never been loaded
-                ds.setState(State.NEEDS_REFRESH);
-            }
-            else
-            {
-                // The metadata are already present in the database. We say that this
-                // dataset is ready for use, allowing the periodic reloader
-                // (see MetadataLoader) to refresh the metadata when necessary.
-                ds.setState(State.READY);
-            }
+            // Allows us to see how many RAFs are in the NetcdfFileCache at
+            // any one time
+            RandomAccessFile.setDebugLeaks(true);
         }
-        
-        // Set the reference to the metadata store, which is needed by the
-        // Dataset object to read metadata
-        config.metadataStore = metadataStore;
+
+        // Set up background threads to reload dataset metadata
+        for (Dataset ds : config.datasets.values())
+        {
+            ds.setConfig(config);
+            config.scheduleReloading(ds);
+        }
+
         return config;
     }
     
@@ -202,32 +231,54 @@ public class Config implements ApplicationContextAware
     
     /**
      * Called when we have checked that the configuration is valid.  Populates
-     * the datasets hashmap, loads the datasets from the THREDDS catalog and 
-     * populates the hashmap of third-party layer providers.
+     * the datasets hashmap.
+     * @todo load the datasets from the THREDDS catalog and
+     * populate the hashmap of third-party layer providers.)
      */
     @Commit
     public void build()
     {
         for (Dataset ds : this.datasetList)
         {
-            ds.setConfig(this);
-            // The state of the datasets is set based on the contents of the
-            // metadata store: see MetadataStore.init()
             this.datasets.put(ds.getId(), ds);
         }
     }
     
-    public void setLastUpdateTime(DateTime date)
+    void setLastUpdateTime(DateTime date)
     {
         if (date.isAfter(this.lastUpdateTime))
         {
             this.lastUpdateTime = date;
         }
     }
+
+    /**
+     * Schedules the regular reloading of the given dataset
+     */
+    private void scheduleReloading(final Dataset ds)
+    {
+        Runnable reloader = new Runnable() {
+            @Override public void run() {
+                ds.loadLayers();
+                // Here we're checking for leaks of open file handles
+                logger.debug("num RAFs open = {}", RandomAccessFile.getOpenFiles().size());
+            }
+        };
+        ScheduledFuture<?> future = this.scheduler.scheduleWithFixedDelay(
+            reloader,            // The reloading task to run
+            0,                   // Schedule the first run immediately
+            1, TimeUnit.SECONDS  // Schedule each subsequent run 1 second after
+                                 // the previous one finished.
+        );
+        // We need to keep a handle to the Future object so we can cancel it
+        this.futures.put(ds.getId(), future);
+        logger.debug("Scheduled auto-reloading of dataset {}", ds.getId());
+    }
     
     /**
      * @return the time at which this configuration was last updated
      */
+    @Override
     public DateTime getLastUpdateTime()
     {
         return this.lastUpdateTime;
@@ -264,17 +315,68 @@ public class Config implements ApplicationContextAware
     }
 
     /**
-     * Gets a Layer object with the given unique name.
+     * {@inheritDoc}
+     * <p>This implementation uses a {@link TileCache} to store data arrays,
+     * speeding up repeat requests.</p>
      */
-    public Layer getLayerByUniqueName(String uniqueLayerName)
-        throws LayerNotDefinedException, Exception
+    @Override
+    public List<Float> readDataGrid(ScalarLayer layer, DateTime dateTime,
+        double elevation, HorizontalGrid grid, UsageLogEntry usageLogEntry)
+        throws InvalidDimensionValueException, IOException
     {
-        return this.metadataStore.getLayerByUniqueName(uniqueLayerName);
+        // We know that this Config object only returns LayerImpl objects
+        LayerImpl layerImpl = (LayerImpl)layer;
+        // Find which file contains this time, and which index it is within the file
+        LayerImpl.FilenameAndTimeIndex fti = layerImpl.findAndCheckFilenameAndTimeIndex(dateTime);
+        // Find the z index within the file
+        int zIndex = layerImpl.findAndCheckElevationIndex(elevation);
+
+        // Create a key for searching the cache
+        TileCacheKey key = new TileCacheKey(
+            fti.filename,
+            layer,
+            grid,
+            fti.tIndexInFile,
+            zIndex
+        );
+
+        List<Float> data = null;
+        // Search the cache.  Returns null if key is not found
+        if (this.cache.isEnabled()) data = this.tileCache.get(key);
+
+        // Record whether or not we got a hit in the cache
+        usageLogEntry.setUsedCache(data != null);
+
+        if (data == null)
+        {
+            // We didn't get any data from the cache, so we have to read from
+            // the source data.
+            data = layerImpl.readPointList(fti, zIndex, grid);
+            // Put the data in the tile cache
+            if (this.cache.isEnabled()) this.tileCache.put(key, data);
+        }
+
+        return data;
     }
-    
-    public Map<String, Dataset> getDatasets()
+
+    /**
+     * Gets an unmodifiable Map of dataset IDs to Dataset objects for all datasets
+     * on this server.
+     */
+    @Override
+    public Map<String, Dataset> getAllDatasets()
     {
-        return this.datasets;
+        return Collections.unmodifiableMap(this.datasets);
+    }
+
+    /**
+     * Returns the dataset with the given ID, or null if there is no available
+     * dataset with the given id.
+     */
+    @Override
+    public Dataset getDatasetById(String datasetId)
+    {
+        return this.datasets.get(datasetId);
     }
     
     public synchronized void addDataset(Dataset ds)
@@ -282,49 +384,177 @@ public class Config implements ApplicationContextAware
         ds.setConfig(this);
         this.datasetList.add(ds);
         this.datasets.put(ds.getId(), ds);
+        this.scheduleReloading(ds);
     }
     
     public synchronized void removeDataset(Dataset ds)
     {
         this.datasetList.remove(ds);
         this.datasets.remove(ds.getId());
+        // Cancel the auto-reloading of this dataset
+        ScheduledFuture<?> future = this.futures.remove(ds.getId());
+        // We allow the reloading task to be interrupted
+        if (future != null) future.cancel(true);
     }
     
     public synchronized void changeDatasetId(Dataset ds, String newId)
     {
-        this.datasets.remove(ds.getId());
+        String oldId = ds.getId();
+        this.datasets.remove(oldId);
+        ScheduledFuture<?> future = this.futures.remove(oldId);
         ds.setId(newId);
         this.datasets.put(newId, ds);
+        this.futures.put(newId, future);
+        logger.debug("Changed dataset with ID {} to {}", oldId, newId);
     }
     
     /**
-     * Used by Dataset to provide a method to get variables
-     */
-    MetadataStore getMetadataStore()
-    {
-        return this.metadataStore;
-    }
-    
-    /**
-     * If s is whitespace only or empty, returns a space, otherwise returns s.
+     * If s is whitespace-only or empty, returns a space, otherwise returns s.
      * This is to work around problems with the Simple XML software, which throws
      * an Exception if it tries to read an empty field from an XML file.
      */
-    public static String checkEmpty(String s)
+    static String checkEmpty(String s)
     {
         if (s == null) return " ";
         s = s.trim();
         return s.equals("") ? " " : s;
     }
     
+    /**
+     * If the given dataset is an OPeNDAP location, this looks for
+     * a username and password and, if it finds one, updates the
+     * credentials provider.  This is called whenever a dataset's metadata is
+     * being loaded (i.e. by {@link Dataset#loadLayers()}.  We must keep checking
+     * the dataset location in case it has been changed by the admin app.
+     */
+    void updateCredentialsProvider(Dataset ds)
+    {
+        logger.debug("Called updateCredentialsProvider, {}", ds.getLocation());
+        if (WmsUtils.isOpendapLocation(ds.getLocation()))
+        {
+            // Make sure the URL starts with "http://" or the
+            // URL parsing might not work
+            // (TODO: register dods:// as a valid protocol?)
+            String newLoc = "http" + ds.getLocation().substring(4);
+            try
+            {
+                URL url = new URL(newLoc);
+                String userInfo = url.getUserInfo();
+                logger.debug("user info = {}", userInfo);
+                if (userInfo != null)
+                {
+                    this.credentialsProvider.addCredentials(
+                        url.getHost(),
+                        url.getPort() >= 0 ? url.getPort() : url.getDefaultPort(),
+                        userInfo);
+                }
+                // Change the location to "dods://..." so that the Java NetCDF
+                // library knows to use the OPeNDAP protocol rather than plain
+                // http
+                ds.setLocation("dods" + newLoc.substring(4));
+            }
+            catch(MalformedURLException mue)
+            {
+                logger.warn(newLoc + " is not a valid url");
+            }
+        }
+    }
+
+    /**
+     * Called by the Spring framework to clean up this object.  Closes all
+     * background threads.
+     */
+    public void shutdown()
+    {
+        this.scheduler.shutdownNow(); // Tries its best to stop ongoing threads
+        NetcdfDataset.shutdown();
+        this.tileCache.shutdown();
+        logger.info("Cleaned up Config object");
+    }
+
+    @Override
+    public String getTitle() {
+        return this.server.getTitle();
+    }
+
+    @Override
+    public String getAbstract() {
+        return this.server.getAbstract();
+    }
+
+    @Override
+    public int getMaxImageWidth() {
+        return this.server.getMaxImageWidth();
+    }
+
+    @Override
+    public int getMaxImageHeight() {
+        return this.server.getMaxImageHeight();
+    }
+
+    @Override
+    public Set<String> getKeywords() {
+        String[] keysArray = this.server.getKeywords().split(",");
+        // preserves iteration order
+        Set<String> keywords = new LinkedHashSet<String>(keysArray.length);
+        for (String keyword : keysArray) {
+            keywords.add(keyword);
+        }
+        return keywords;
+    }
+
+    @Override
+    public boolean getAllowsGlobalCapabilities() {
+        return this.server.isAllowGlobalCapabilities();
+    }
+
+    @Override
+    public String getServiceProviderUrl() {
+        return this.server.getUrl();
+    }
+
+    @Override
+    public String getContactName() {
+        return this.contact.getName();
+    }
+
+    @Override
+    public String getContactEmail() {
+        return this.contact.getEmail();
+    }
+
+    @Override
+    public String getContactOrganization() {
+        return this.contact.getOrg();
+    }
+
+    @Override
+    public String getContactTelephone() {
+        return this.contact.getTel();
+    }
+
+    /** Not used. */
     public String getThreddsCatalogLocation()
     {
         return this.threddsCatalogLocation;
     }
-    
+
+    /** Not used. */
     public void setThreddsCatalogLocation(String threddsCatalogLocation)
     {
         this.threddsCatalogLocation = checkEmpty(threddsCatalogLocation);
+    }
+
+    /** Called by Spring to set the credentials provider */
+    public void setCredentialsProvider(NcwmsCredentialsProvider credentialsProvider)
+    {
+        this.credentialsProvider = credentialsProvider;
+    }
+
+    /** Called by Spring to set the tile cache */
+    public void setTileCache(TileCache tileCache)
+    {
+        this.tileCache = tileCache;
     }
 
     /**

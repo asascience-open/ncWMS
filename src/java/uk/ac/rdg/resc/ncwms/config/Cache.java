@@ -36,9 +36,6 @@ import org.simpleframework.xml.Root;
  * Configuration for the {@link uk.ac.rdg.resc.ncwms.cache.TileCache TileCache}.
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 @Root(name="cache")
 public class Cache

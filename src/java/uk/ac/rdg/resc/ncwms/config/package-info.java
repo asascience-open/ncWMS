@@ -27,9 +27,12 @@
  */
 
 /**
- * Classes in this package are used in the configuration of an ncWMS server.
- * The {@link uk.ac.rdg.resc.ncwms.config.Config} class is the most important class here and contains
- * all the configuration information.  The {@link uk.ac.rdg.resc.ncwms.config.NcwmsContext} class 
- * contains the context, e.g. the working directory of the server.
+ * <p>Classes in this package are used in the configuration of an ncWMS server
+ * and are not used by THREDDS-WMS.
+ * The {@link uk.ac.rdg.resc.ncwms.config.Config} class is the entry point to
+ * the configuration information.  The {@link uk.ac.rdg.resc.ncwms.config.NcwmsContext} class
+ * contains the context, e.g. the working directory of the server.</p>
+ * @todo FrontPageController is not really part of the config system, but it is
+ * specific to ncWMS.
  */
 package uk.ac.rdg.resc.ncwms.config;

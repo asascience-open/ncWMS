@@ -1,6 +1,6 @@
 <%@page contentType="text/xml"%><%--application/vnd.google-earth.kml+xml"--%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8"?>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
-<%@taglib uri="/WEB-INF/taglib/wms2kml" prefix="wms2kml"%>
+<%@taglib uri="/WEB-INF/taglib/wms/wms2kml" prefix="wms2kml"%>
 <%-- Creates the top-level KML to wrap the WMS
 
      Arguments passed in to this JSP:

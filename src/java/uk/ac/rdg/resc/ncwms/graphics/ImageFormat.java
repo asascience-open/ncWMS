@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.imageio.ImageIO;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Abstract superclass for all image formats.  Only one instance of each subclass

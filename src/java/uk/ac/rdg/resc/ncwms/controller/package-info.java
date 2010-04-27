@@ -27,7 +27,8 @@
  */
 
 /**
- * This package contains the Controllers of ncWMS, which are the classes that
+ * <p><b>TODO: rework this!  The classes have been refactored!</b></p>
+ * <p>This package contains the Controllers of ncWMS, which are the classes that
  * handle user requests (these are the main entry points to the ncWMS application
  * from the point of view of the end user).  The {@link uk.ac.rdg.resc.ncwms.controller.WmsController}
  * handles the requests for WMS operations (GetCapabilities, GetMap, GetFeatureInfo).
@@ -37,6 +38,6 @@
  * document is not suitable).  The {@link uk.ac.rdg.resc.ncwms.controller.FrontPageController}
  * handles requests for the ncWMS "Front Page", which is a simple diagnostic page that
  * provides links to the Capabilities document, the Godiva2 application, the admin
- * application and sample GetMap and GetFeatureInfo requests.
+ * application and sample GetMap and GetFeatureInfo requests.</p>
  */
 package uk.ac.rdg.resc.ncwms.controller;

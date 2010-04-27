@@ -4,9 +4,7 @@
 
 var map = null;
 var calendar = null; // The calendar object
-var selectedDate = null;
-var datesWithData = null; // Will be populated with the dates on which we have data
-                          // for the currently-selected variable
+var basicDateSelector = null; // Basic date selector (year, month, day drop-downs)
 var isoTValue = null; // The currently-selected t value (ISO8601)
 var scaleMinVal;
 var scaleMaxVal;
@@ -451,29 +449,6 @@ function addNodes(parentNode, layerArray)
     }
 }
 
-// Function that is used by the calendar to see whether a date should be disabled
-function isDateDisabled(date, year, month, day)
-{
-    // datesWithData is a hash of year numbers mapped to a hash of month numbers
-    // to an array of day numbers, i.e. {2007 : {0 : [3,4,5]}}.
-    // Month numbers are zero-based.
-    if (datesWithData == null ||
-        datesWithData[year] == null || 
-        datesWithData[year][month] == null) {
-        // No data for this year or month
-        return true;
-    }
-    // Cycle through the array of days for this month, looking for the one we want
-    var numDays = datesWithData[year][month].length;
-    for (var d = 0; d < numDays; d++) {
-        if (datesWithData[year][month][d] == day) {
-            return false; // We have data for this day
-        }
-    }
-    // If we've got this far, we've found no data
-    return true;
-}
-
 // Event handler for when a user clicks on a map
 function getFeatureInfo(e)
 {
@@ -680,8 +655,8 @@ function layerSelected(layerDetails)
             layerDetails.scaleRange.length > 1 &&
             layerDetails.scaleRange[0] != layerDetails.scaleRange[1] &&
             !scaleLocked) {
-        scaleMinVal = layerDetails.scaleRange[0];
-        scaleMaxVal = layerDetails.scaleRange[1];
+        scaleMinVal = parseFloat(layerDetails.scaleRange[0]);
+        scaleMaxVal = parseFloat(layerDetails.scaleRange[1]);
         $('scaleMin').value = scaleMinVal.toPrecision(4);
         $('scaleMax').value = scaleMaxVal.toPrecision(4);
         gotScaleRange = true;
@@ -726,81 +701,139 @@ function layerSelected(layerDetails)
     editingToolbar.div.style.visibility = 'visible';
 
     // Now set up the calendar control
-    if (layerDetails.datesWithData == null) {
+    if (layerDetails.datesWithData == null)
+    {
         // There is no calendar data.  Just update the map
         if (calendar != null) calendar.hide();
         $('date').innerHTML = '';
         $('time').innerHTML = '';
         $('utc').style.visibility = 'hidden';
         updateMap();
-    } else {
-        datesWithData = layerDetails.datesWithData; // Tells the calendar which dates to disable
-        if (calendar == null) {
-            // Set up the calendar
-            calendar = Calendar.setup({
-                flat : 'calendar', // ID of the parent element
-                align : 'bl', // Aligned to top-left of parent element
-                weekNumbers : false,
-                flatCallback : dateSelected
-            });
-            // For some reason, if we add this to setup() things don't work
-            // as expected (dates not selectable on web page when first loaded).
-            calendar.setDateStatusHandler(isDateDisabled);
-        }
-        // Set the range of valid years in the calendar.  Look through
-        // the years for which we have data, finding the min and max
-        var minYear = 100000000;
-        var maxYear = -100000000;
-        for (var year in datesWithData) {
-            if (typeof datesWithData[year] != 'function') { // avoid built-in functions
-                if (year < minYear) minYear = year;
-                if (year > maxYear) maxYear = year;
+    }
+    else
+    {
+        var datesWithData = layerDetails.datesWithData; // Tells the calendar which dates to disable
+        var selectedDate = layerDetails.nearestTime;
+
+        if (layerDetails.timeAxisUnits == null || layerDetails.timeAxisUnits == "ISO8601")
+        {
+            // TODO: link up with CSS
+            $('panelText').style.width = "390px";
+            if (calendar == null) {
+                // Set up the calendar
+                calendar = Calendar.setup({
+                    flat : 'calendar', // ID of the parent element
+                    align : 'bl', // Aligned to top-left of parent element
+                    weekNumbers : false,
+                    flatCallback : dateSelected
+                });
+                // For some reason, if we add this to setup() things don't work
+                // as expected (dates not selectable on web page when first loaded).
+                calendar.setDateStatusHandler(isDateDisabled);
             }
+            // Find the range of valid years.
+            var minYear = 100000000;
+            var maxYear = -100000000;
+            for (var year in datesWithData) {
+                if (typeof datesWithData[year] != 'function') { // avoid built-in functions
+                    if (year < minYear) minYear = year;
+                    if (year > maxYear) maxYear = year;
+                }
+            }
+            calendar.setRange(minYear, maxYear);
+
+            // Under Internet Explorer 7 (possibly other versions too) the calendar
+            // behaves oddly for early dates (e.g. year = 0031).  Therefore we
+            // don't use calendar.date to get the selected date, and we pass a clone
+            // of the selected date to the calendar to protect against mutation.
+            calendar.setDate(new Date(selectedDate.getTime()));
+
+            // N.B. For some reason the call to show() seems sometimes to toggle the
+            // visibility of the zValues selector.  Hence we set this visibility
+            // below, in updateMap()
+            calendar.show();
+            // Manually refresh the calendar to ensure that the correct dates are disabled
+            calendar.refresh();
+
+            // Pretend we clicked the calendar
+            dateSelected(calendar, true);
         }
-        calendar.setRange(minYear, maxYear);
+        else
+        {
+            // We can't use the fancy DHTML calendar for unusual calendar systems
+            // so we'll set up a very simple system of drop-down boxes
+            if (calendar != null) calendar.hide();
+            // Widen the panel text to accommodate the calendar
+            $('panelText').style.width = "512px";
+            $('date').innerHTML = '<b>Date/time: </b>';
+            
+            if (basicDateSelector == null) {
+                basicDateSelector = new BasicDateSelector({
+                    el: $('date'),
+                    // Called when the selected date changes
+                    callback: function(year, month, day) {
+                        // Create an ISO representation of the day and load
+                        // the timesteps
+                        loadTimesteps(year + '-' + month + '-' + day);
+                    }
+                });
+            }
+            basicDateSelector.setup(datesWithData, layerDetails.nearestTimeIso);
+            basicDateSelector.show($('date'));
 
-        // Under Internet Explorer 7 (possibly other versions too) the calendar
-        // behaves oddly for early dates (e.g. year = 0031).  Therefore we
-        // don't use calendar.date to get the selected date, and we pass a clone
-        // of the selected date to the calendar to protect against mutation.
-        selectedDate = layerDetails.nearestTime;
-        calendar.setDate(new Date(selectedDate.getTime()));
-
-        // N.B. For some reason the call to show() seems sometimes to toggle the
-        // visibility of the zValues selector.  Hence we set this visibility
-        // below, in updateMap()
-        calendar.show();
-        // Load the timesteps for this date
-        loadTimesteps();
+            loadTimesteps(makeIsoDate(selectedDate));
+        }
     }
 }
 
-// Function that is called when a user clicks on a date in the calendar
-function dateSelected(cal)
+// Function that is used by the calendar to see whether a date should be disabled
+function isDateDisabled(date, year, month, day)
 {
-    if (cal.dateClicked) {
-        selectedDate = new Date(calendar.date.getTime());
-        loadTimesteps();
+    var datesWithData = activeLayer.datesWithData;
+    // datesWithData is a hash of year numbers mapped to a hash of month numbers
+    // to an array of day numbers, i.e. {2007 : {0 : [3,4,5]}}.
+    // Month numbers are zero-based.
+    if (datesWithData == null ||
+        datesWithData[year] == null ||
+        datesWithData[year][month] == null) {
+        // No data for this year or month
+        return true;
+    }
+    // Cycle through the array of days for this month, looking for the one we want
+    var numDays = datesWithData[year][month].length;
+    for (var d = 0; d < numDays; d++) {
+        if (datesWithData[year][month][d] == day) {
+            return false; // We have data for this day
+        }
+    }
+    // If we've got this far, we've found no data
+    return true;
+}
+
+// Function that is called when a user clicks on a date in the calendar
+function dateSelected(cal, force)
+{
+    if (cal.dateClicked || force) {
+        var selectedDate = new Date(cal.date.getTime());
+        // Print out date, e.g. "15 Oct 2007"
+        var prettyPrintDate = selectedDate.getFullYear() == 0
+            ? selectedDate.print('%d %b 0000')
+            : selectedDate.print('%d %b %Y');
+        $('date').innerHTML = '<b>Date/time: </b>' + prettyPrintDate;
+        loadTimesteps(makeIsoDate(selectedDate));
     }
 }
 
 // Updates the time selector control.  Finds all the timesteps that occur on
 // the same day as the currently-selected date.  Called from the calendar
 // control when the user selects a new date
-function loadTimesteps()
+function loadTimesteps(selectedIsoDate)
 {
-    // Print out date, e.g. "15 Oct 2007"
-    var prettyPrintDate = selectedDate.getFullYear() == 0
-        ? selectedDate.print('%d %b 0000')
-        : selectedDate.print('%d %b %Y');
-    $('date').innerHTML = '<b>Date/time: </b>' + prettyPrintDate;
-
     // Get the timesteps for this day
     getTimesteps(activeLayer.server, {
         callback: updateTimesteps,
         layerName: activeLayer.id,
-        // TODO: Hack! Use date only and adjust server-side logic
-        day: makeIsoDate(selectedDate) + 'T00:00:00Z'
+        day: selectedIsoDate
     });
 }
 
@@ -819,7 +852,7 @@ function makeIsoDate(date)
 }
 
 // Called when we have received the timesteps from the server
-function updateTimesteps(times)
+function updateTimesteps(selectedIsoDate, times)
 {
     // We'll get back a JSON array of ISO8601 times ("hh:mm:ss", UTC, no date information)
     // First we load the currently-selected time (if there is one)
@@ -832,7 +865,7 @@ function updateTimesteps(times)
     var s = '<select id="tValues" onchange="javascript:updateMap()">';
     for (var i = 0; i < times.length; i++) {
         // Construct the full ISO Date-time
-        var isoDateTime = makeIsoDate(selectedDate) + 'T' + times[i];// + 'Z';
+        var isoDateTime = selectedIsoDate + 'T' + times[i];// + 'Z';
         // Strip off the trailing "Z" and any zero-length milliseconds
         var stopIndex = times[i].length;
         if (times[i].endsWith('.000Z')) {

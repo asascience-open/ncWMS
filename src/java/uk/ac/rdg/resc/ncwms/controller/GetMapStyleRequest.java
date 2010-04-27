@@ -30,6 +30,8 @@ package uk.ac.rdg.resc.ncwms.controller;
 
 import java.awt.Color;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
+import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.ncwms.util.Ranges;
 
 /**
  * Contains those portions of a GetMap request that pertain to styling and
@@ -51,7 +53,7 @@ public class GetMapStyleRequest
     private Boolean logarithmic; // True if we're using a log scale, false if linear and null if not specified
     // These are the data values that correspond with the extremes of the
     // colour scale
-    private ColorScaleRange colorScaleRange;
+    private Range<Float> colorScaleRange;
     
     /**
      * Creates a new instance of GetMapStyleRequest from the given parameters
@@ -95,9 +97,37 @@ public class GetMapStyleRequest
     /**
      * Gets the ColorScaleRange object requested by the client
      */
-    static ColorScaleRange getColorScaleRange(RequestParams params) throws WmsException
+    static Range<Float> getColorScaleRange(RequestParams params) throws WmsException
     {
-        return new ColorScaleRange(params.getString("colorscalerange"));
+        String csr = params.getString("colorscalerange");
+        if (csr == null || csr.equalsIgnoreCase("default"))
+        {
+            // The client wants the layer's default scale range to be used
+            return null;
+        }
+        else if (csr.equalsIgnoreCase("auto"))
+        {
+            // The client wants the image to be scaled according to the image's
+            // own min and max values (giving maximum contrast)
+            return Ranges.emptyRange();
+        }
+        else
+        {
+            // The client has specified an explicit colour scale range
+            try
+            {
+                String[] scaleEls = csr.split(",");
+                if (scaleEls.length != 2) throw new Exception();
+                float scaleMin = Float.parseFloat(scaleEls[0]);
+                float scaleMax = Float.parseFloat(scaleEls[1]);
+                if (Float.compare(scaleMin, scaleMax) > 0) throw new Exception();
+                return Ranges.newRange(scaleMin, scaleMax);
+            }
+            catch(Exception e)
+            {
+                throw new WmsException("Invalid format for COLORSCALERANGE");
+            }
+        }
     }
 
     /**
@@ -176,7 +206,14 @@ public class GetMapStyleRequest
         return opacity;
     }
 
-    public ColorScaleRange getColorScaleRange()
+    /**
+     * Gets the values that will correspond with the extremes of the colour 
+     * scale.  Returns null if the client has not specified a scale range or
+     * if the default scale range is to be used.  Returns an empty Range if
+     * the client wants the image to be auto-scaled according to the image's own
+     * min and max values.
+     */
+    public Range<Float> getColorScaleRange()
     {
         return this.colorScaleRange;
     }

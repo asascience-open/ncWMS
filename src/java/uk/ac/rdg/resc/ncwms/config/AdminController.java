@@ -36,25 +36,21 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.styles.ColorPalette;
-import uk.ac.rdg.resc.ncwms.usagelog.UsageLogger;
+import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger;
+import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Displays the administrative pages of the ncWMS application (i.e. /admin/*)
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class AdminController extends MultiActionController
 {
     // These will be injected by Spring
-    private MetadataLoader metadataLoader;
     private Config config;
-    private UsageLogger usageLogger;
+    private H2UsageLogger usageLogger;
     
     /**
      * Displays the administrative web page
@@ -66,12 +62,12 @@ public class AdminController extends MultiActionController
     }
     
     /**
-     * Displays the errors associated with a particular dataset
+     * Displays the status of a particular dataset
      */
-    public ModelAndView displayErrorPage(HttpServletRequest request,
+    public ModelAndView displayDatasetStatusPage(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        return new ModelAndView("admin_error", "dataset", this.getDataset(request));
+        return new ModelAndView("admin_datasetStatus", "dataset", this.getDataset(request));
     }
 
     /**
@@ -98,7 +94,7 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("Must provide a dataset id");
         }
-        Dataset dataset = this.config.getDatasets().get(datasetId);
+        Dataset dataset = this.config.getAllDatasets().get(datasetId);
         if (dataset == null)
         {
             throw new Exception("There is no dataset with id " + datasetId);
@@ -122,14 +118,9 @@ public class AdminController extends MultiActionController
     public void downloadUsageLog(HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
-        if (!(this.usageLogger instanceof H2UsageLogger))
-        {
-            throw new Exception("Cannot download usage log: operation is not supported by the usage logger");
-        }
-        H2UsageLogger h2logger = (H2UsageLogger)this.usageLogger;
         response.setContentType("application/excel");
         response.setHeader("Content-Disposition", "inline; filename=usageLog.csv");
-        h2logger.writeCsv(response.getOutputStream());
+        this.usageLogger.writeCsv(response.getOutputStream());
     }
     
     /**
@@ -163,7 +154,7 @@ public class AdminController extends MultiActionController
             List<Dataset> datasetsToRemove = new ArrayList<Dataset>(); 
             // Keeps track of dataset IDs that have been changed
             Map<Dataset, String> changedIds = new HashMap<Dataset, String>();
-            for (Dataset ds : this.config.getDatasets().values())
+            for (Dataset ds : this.config.getAllDatasets().values())
             {
                 boolean refreshDataset = false;
                 if (request.getParameter("dataset." + ds.getId() + ".remove") != null)
@@ -212,7 +203,7 @@ public class AdminController extends MultiActionController
                 }
                 if (refreshDataset)
                 {
-                    this.metadataLoader.scheduleMetadataReload(ds);
+                    ds.forceRefresh();
                 }
             }
             // Now we can remove the datasets
@@ -226,7 +217,7 @@ public class AdminController extends MultiActionController
                 config.changeDatasetId(ds, changedIds.get(ds));
                 // Force a refresh of the dataset.  We do this in case the 
                 // new ID happens to be the same as an existing dataset.
-                this.metadataLoader.scheduleMetadataReload(ds);
+                ds.forceRefresh();
             }
             
             // Now look for the new datasets. The logic below means that we don't have
@@ -248,8 +239,9 @@ public class AdminController extends MultiActionController
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
                     ds.setMoreInfo(request.getParameter("dataset.new" + i + ".moreinfo"));
                     ds.setCopyrightStatement(request.getParameter("dataset.new" + i + ".copyright"));
+                    // addDataset() contains code to ensure that the dataset
+                    // loads its metadata at the next opportunity
                     config.addDataset(ds);
-                    this.metadataLoader.scheduleMetadataReload(ds);
                 }
                 i++;
             }
@@ -293,7 +285,7 @@ public class AdminController extends MultiActionController
         {
             throw new Exception("Must specify a dataset id");
         }
-        Dataset ds = this.config.getDatasets().get(datasetID);
+        Dataset ds = this.config.getAllDatasets().get(datasetID);
         if (ds == null)
         {
             throw new Exception("Must specify a valid dataset id");
@@ -317,7 +309,7 @@ public class AdminController extends MultiActionController
         // We only take action if the user pressed "save"
         if (request.getParameter("save") != null)
         {
-            Dataset ds = this.config.getDatasets().get(request.getParameter("dataset.id"));
+            Dataset ds = this.config.getAllDatasets().get(request.getParameter("dataset.id"));
             for (Layer layer : ds.getLayers())
             {
                 String newTitle = request.getParameter(layer.getId() + ".title").trim();
@@ -325,13 +317,12 @@ public class AdminController extends MultiActionController
                 // TODO: nicer error handling
                 float min = Float.parseFloat(request.getParameter(layer.getId() + ".scaleMin").trim());
                 float max = Float.parseFloat(request.getParameter(layer.getId() + ".scaleMax").trim());
-                float[] colorScaleRange = new float[]{min, max};
                 // Get the variable config info. This should not be null,
                 // as we will have created it in MetadataLoader.checkAttributeOverrides()
                 // if it wasn't in the config file itself.
                 Variable var = ds.getVariables().get(layer.getId());
                 var.setTitle(newTitle);
-                var.setColorScaleRange(colorScaleRange);
+                var.setColorScaleRange(Ranges.newRange(min, max));
                 var.setPaletteName(request.getParameter(layer.getId() + ".palette"));
                 var.setScaling(request.getParameter(layer.getId() + ".scaling"));
             }
@@ -342,14 +333,6 @@ public class AdminController extends MultiActionController
         // press refresh in their browser without resubmitting the new config information.
         // TODO: ... although it probably doesn't really matter if they do.  Does it?
         response.sendRedirect("index.jsp");
-    }
-    
-    /**
-     * Called by Spring to inject the metadata loading object
-     */
-    public void setMetadataLoader(MetadataLoader metadataLoader)
-    {
-        this.metadataLoader = metadataLoader;
     }
     
     /**
@@ -364,7 +347,7 @@ public class AdminController extends MultiActionController
     /**
      * Called by Spring to inject the usage logger
      */
-    public void setUsageLogger(UsageLogger usageLogger)
+    public void setUsageLogger(H2UsageLogger usageLogger)
     {
         this.usageLogger = usageLogger;
     }

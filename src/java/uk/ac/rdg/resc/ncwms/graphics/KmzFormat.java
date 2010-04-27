@@ -38,8 +38,8 @@ import javax.imageio.ImageIO;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.rdg.resc.ncwms.metadata.Layer;
-import uk.ac.rdg.resc.ncwms.utils.WmsUtils;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Creates KMZ files for importing into Google Earth.  Only one instance of this class
@@ -117,15 +117,16 @@ public class KmzFormat extends ImageFormat
                 // We must make sure the ISO8601 timestamp is full and includes
                 // seconds, otherwise Google Earth gets confused.  This is why we
                 // convert to a DateTime and back again.
-                DateTime dt = WmsUtils.iso8601ToDateTime(tValues.get(frameIndex));
+                // TODO: not sure if this will work for 360-day calendars...
+                DateTime dt = WmsUtils.iso8601ToDateTime(tValues.get(frameIndex), layer.getChronology());
                 timestamp = WmsUtils.dateTimeToISO8601(dt);
                 kml.append("<TimeStamp><when>" + timestamp + "</when></TimeStamp>");
             }
-            if (zValue != null && !zValue.equals("") && layer.getZvalues() != null)
+            if (zValue != null && !zValue.equals("") && layer.getElevationValues() != null)
             {
                 z = "";
                 if (timestamp != null) z += "<br />";
-                z += "Elevation: " + zValue + " " + layer.getZunits();
+                z += "Elevation: " + zValue + " " + layer.getElevationUnits();
             }
             kml.append("<name>");
             if (timestamp == null && z == null)

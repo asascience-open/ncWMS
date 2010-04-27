@@ -1,6 +1,6 @@
 <%@page contentType="application/json"%>
 <%@page pageEncoding="UTF-8"%>
-<%@taglib uri="/WEB-INF/taglib/MenuMaker" prefix="menu"%>
+<%@taglib uri="/WEB-INF/taglib/wms/MenuMaker" prefix="menu"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
