@@ -73,6 +73,7 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
+import uk.ac.rdg.resc.ncwms.config.MetadataController;
 import uk.ac.rdg.resc.ncwms.coords.CrsHelper;
 import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.coords.LonLatPosition;
@@ -84,8 +85,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidUpdateSequence;
-import uk.ac.rdg.resc.ncwms.exceptions.LayerNotQueryableException;
-import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
+import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.Wms1_1_1Exception;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.ImageFormat;
@@ -103,7 +103,7 @@ import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
 
 /**
  * <p>This Controller is the entry point for all standard WMS operations
- * (GetMap, GetCapabilities, GetFeatureInfo).  Only one WmsController object 
+ * (GetMap, GetCapabilities, GetFeatureInfo).  Only one AbstractWmsController object
  * is created.  Spring manages the creation of this object and the injection 
  * of the objects that it needs (i.e. its dependencies), such as the
  * {@linkplain ServerConfig configuration object}.
@@ -121,9 +121,9 @@ import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
  *
  * @author Jon Blower
  */
-public class WmsController extends AbstractController {
+public abstract class AbstractWmsController extends AbstractController {
 
-    private static final Logger log = LoggerFactory.getLogger(WmsController.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractWmsController.class);
     /**
      * The maximum number of layers that can be requested in a single GetMap
      * operation
@@ -132,29 +132,22 @@ public class WmsController extends AbstractController {
     private static final String FEATURE_INFO_XML_FORMAT = "text/xml";
     private static final String FEATURE_INFO_PNG_FORMAT = "image/png";
 
-    // This object handles requests for non-standard metadata
-    private MetadataController metadataController;
-
     // These objects will be injected by Spring
-    private ServerConfig serverConfig;
-    private UsageLogger usageLogger;
+    protected ServerConfig serverConfig;
+    protected UsageLogger usageLogger;
 
     /**
      * Called automatically by Spring after all the dependencies have been
      * injected.
      */
     public void init() {
-        // Create a MetadataController for handling non-standard metadata request
-        this.metadataController = new MetadataController(this.serverConfig);
-
         // We initialize the ColorPalettes.  We need to do this from here
         // because we need a way to find out the real path of the 
         // directory containing the palettes.  Therefore we need a way of 
         // getting at the ServletContext object, which isn't available from
         // the ColorPalette class.
-        String paletteLocation = this.getWebApplicationContext()
-            .getServletContext().getRealPath("/WEB-INF/conf/palettes");
-        File paletteLocationDir = new File(paletteLocation);
+        File paletteLocationDir = this.serverConfig.getPaletteFilesLocation(
+            this.getServletContext());
         if (paletteLocationDir.exists() && paletteLocationDir.isDirectory()) {
             ColorPalette.loadPalettes(paletteLocationDir);
         } else {
@@ -199,44 +192,8 @@ public class WmsController extends AbstractController {
             // document, a map or a FeatureInfo
             String request = params.getMandatoryString("request");
             usageLogEntry.setWmsOperation(request);
-            if (request.equals("GetCapabilities")) {
-                return getCapabilities(params, httpServletRequest, usageLogEntry);
-            } else if (request.equals("GetMap")) {
-                return getMap(params, httpServletResponse, usageLogEntry);
-            } else if (request.equals("GetFeatureInfo")) {
-                return getFeatureInfo(params, httpServletRequest, httpServletResponse,
-                        usageLogEntry);
-            }
-            // The REQUESTs below are non-standard and could be refactored into
-            // a different servlet endpoint
-            else if (request.equals("GetMetadata")) {
-                // This is a request for non-standard metadata.  (This will one
-                // day be replaced by queries to Capabilities fragments, if possible.)
-                // Delegate to the MetadataController
-                return this.metadataController.handleRequest(httpServletRequest,
-                        httpServletResponse, usageLogEntry);
-            } else if (request.equals("GetLegendGraphic")) {
-                // This is a request for an image that contains the colour scale
-                // and range for a given layer
-                return getLegendGraphic(params, httpServletResponse);
-            /*} else if (request.equals("GetKML")) {
-                // This is a request for a KML document that allows the selected
-                // layer(s) to be displayed in Google Earth in a manner that 
-                // supports region-based overlays.  Note that this is distinct
-                // from simply setting "KMZ" as the output format of a GetMap
-                // request: GetKML will give generally better results, but relies
-                // on callbacks to this server.  Requesting KMZ files from GetMap
-                // returns a standalone KMZ file.
-                return getKML(params, httpServletRequest);
-            } else if (request.equals("GetKMLRegion")) {
-                // This is a request for a particular sub-region from Google Earth.
-                logUsage = false; // We don't log usage for this operation
-                return getKMLRegion(params, httpServletRequest); */
-            } else if (request.equals("GetTransect")) {
-                return getTransect(params, httpServletResponse, usageLogEntry);
-            } else {
-                throw new OperationNotSupportedException(request);
-            }
+            return this.dispatchWmsRequest(request, params, httpServletRequest,
+                    httpServletResponse, usageLogEntry);
         } catch (WmsException wmse) {
             // We don't log these errors
             usageLogEntry.setException(wmse);
@@ -277,16 +234,47 @@ public class WmsController extends AbstractController {
     }
 
     /**
+     * Object that returns a Layer given a layer Name, which is unique within a
+     * Capabilities document
+     */
+    public static interface LayerFactory
+    {
+        /**
+         * Returns a Layer given a layer Name, which is unique within a
+         * Capabilities document
+         */
+        public Layer getLayer(String layerName) throws LayerNotDefinedException;
+    }
+
+    /**
+     * Dispatches the request to the relevant methods (e.g. getCapabilities(),
+     * getMap()).  Subclasses can override this to perform any pre- or post-
+     * processing before/after calling these handlers.
+     * @param request The value of the REQUEST parameter from the client, e.g.
+     * "GetCapabilities".  Will never be null.
+     * @todo Use an enum instead of the request string
+     */
+    protected abstract ModelAndView dispatchWmsRequest(String request,
+        RequestParams params, HttpServletRequest httpServletRequest,
+        HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
+        throws Exception;
+
+    /**
      * Executes the GetCapabilities operation, returning a ModelAndView for
      * display of the information as an XML document.  If the user has
      * requested VERSION=1.1.1 the information will be rendered using
      * <tt>web/WEB-INF/jsp/capabilities_xml_1_1_1.jsp</tt>.  If the user
      * specifies VERSION=1.3.0 (or does not specify a version) the information
      * will be rendered using <tt>web/WEB-INF/jsp/capabilities_xml.jsp</tt>.
+     * @param datasets The collection of datasets to include in the Capabilities
+     * document.  Must not be null
+     * @param lastUpdateTime The last update time of this Capabilities document,
+     * or null if unknown
      * @throws IOException if there was an i/o error getting the dataset(s) from
      * the underlying data store
      */
-    protected ModelAndView getCapabilities(RequestParams params,
+    protected ModelAndView getCapabilities(Collection<? extends Dataset> datasets,
+            DateTime lastUpdateTime, RequestParams params,
             HttpServletRequest httpServletRequest, UsageLogEntry usageLogEntry)
             throws WmsException, IOException {
         // Check the SERVICE parameter
@@ -306,42 +294,6 @@ public class WmsController extends AbstractController {
         // format if the client has requested an unknown format.  Hence we do
         // nothing here.
 
-        // The DATASET parameter is an optional parameter that allows a 
-        // Capabilities document to be generated for a single dataset only
-        String datasetId = params.getString("dataset");
-        Collection<? extends Dataset> datasets;
-        DateTime lastUpdate;
-        if (datasetId == null || datasetId.trim().equals("")) {
-            // No specific dataset has been chosen so we create a Capabilities
-            // document including every dataset.
-            // First we check to see that the system admin has allowed us to
-            // create a global Capabilities doc (this can be VERY large)
-            Map<String, ? extends Dataset> allDatasets = this.serverConfig.getAllDatasets();
-            if (this.serverConfig.getAllowsGlobalCapabilities() && allDatasets != null) {
-                datasets = allDatasets.values();
-            } else {
-                throw new WmsException("Cannot create a Capabilities document "
-                    + "that includes all datasets on this server. "
-                    + "You must specify a dataset identifier with &amp;DATASET=");
-            }
-            // The last update time for the Capabilities doc is the last time
-            // any of the datasets were updated
-            lastUpdate = this.serverConfig.getLastUpdateTime();
-        } else {
-            // Look for this dataset
-            Dataset ds = this.serverConfig.getDatasetById(datasetId);
-            if (ds == null) {
-                throw new WmsException("There is no dataset with ID " + datasetId);
-            } else if (!ds.isReady()) {
-                throw new WmsException("The dataset with ID " + datasetId +
-                    " is not ready for use");
-            }
-            datasets = Arrays.asList(ds);
-            // The last update time for the Capabilities doc is the last time
-            // this particular dataset was updated
-            lastUpdate = ds.getLastUpdateTime();
-        }
-
         // Do UPDATESEQUENCE negotiation according to WMS 1.3.0 spec (sec 7.2.3.5)
         String updateSeqStr = params.getString("updatesequence");
         if (updateSeqStr != null) {
@@ -358,9 +310,9 @@ public class WmsController extends AbstractController {
             // because updateSequence is read using UTC, whereas lastUpdate is
             // created in the server's time zone, meaning that the Chronologies
             // are different.
-            if (updateSequence.isEqual(lastUpdate)) {
+            if (updateSequence.isEqual(lastUpdateTime)) {
                 throw new CurrentUpdateSequence(updateSeqStr);
-            } else if (updateSequence.isAfter(lastUpdate)) {
+            } else if (updateSequence.isAfter(lastUpdateTime)) {
                 throw new InvalidUpdateSequence(updateSeqStr +
                         " is later than the current server updatesequence value");
             }
@@ -369,7 +321,8 @@ public class WmsController extends AbstractController {
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.serverConfig);
         models.put("datasets", datasets);
-        models.put("lastUpdate", lastUpdate);
+        // We use the current time if the last update time is unknown
+        models.put("lastUpdate", lastUpdateTime == null ? new DateTime() : lastUpdateTime);
         models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
         // Show only a subset of the CRS codes that we are likely to use.
         // Otherwise Capabilities doc gets very large indeed.
@@ -440,13 +393,15 @@ public class WmsController extends AbstractController {
      * @see uk.ac.rdg.resc.ncwms.datareader.DefaultDataReader#read DefaultDataReader.read()
      * @todo Separate Model and View code more cleanly
      */
-    protected ModelAndView getMap(RequestParams params,
+    protected ModelAndView getMap(RequestParams params, LayerFactory layerFactory,
             HttpServletResponse httpServletResponse, UsageLogEntry usageLogEntry)
-            throws WmsException, Exception {
+            throws WmsException, Exception
+    {
         // Parse the URL parameters
         GetMapRequest getMapRequest = new GetMapRequest(params);
-        GetMapStyleRequest styleRequest = getMapRequest.getStyleRequest();
         usageLogEntry.setGetMapRequest(getMapRequest);
+
+        GetMapStyleRequest styleRequest = getMapRequest.getStyleRequest();
 
         // Get the ImageFormat object corresponding with the requested MIME type
         String mimeType = getMapRequest.getStyleRequest().getImageFormat();
@@ -454,14 +409,6 @@ public class WmsController extends AbstractController {
         ImageFormat imageFormat = ImageFormat.get(mimeType);
 
         GetMapDataRequest dr = getMapRequest.getDataRequest();
-        String[] layers = dr.getLayers();
-        if (layers.length > LAYER_LIMIT) {
-            throw new WmsException("You may only request a maximum of " +
-                WmsController.LAYER_LIMIT + " layer(s) simultaneously from this server");
-        }
-        // TODO: support more than one layer (superimposition, difference, mask)
-        Layer layer = this.serverConfig.getLayerByUniqueName(layers[0]);
-        usageLogEntry.setLayer(layer);
 
         // Check the dimensions of the image
         if (dr.getHeight() > this.serverConfig.getMaxImageHeight() ||
@@ -470,6 +417,10 @@ public class WmsController extends AbstractController {
                 + this.serverConfig.getMaxImageWidth() + "x"
                 + this.serverConfig.getMaxImageHeight());
         }
+
+        String layerName = getLayerName(dr);
+        Layer layer = layerFactory.getLayer(layerName);
+        usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
         HorizontalGrid grid = new HorizontalGrid(dr.getCrsCode(), dr.getWidth(),
@@ -518,11 +469,11 @@ public class WmsController extends AbstractController {
             if (layer instanceof ScalarLayer) {
                 // Note that if the layer doesn't have a time axis, timeValue==null but this
                 // will be ignored by readPointList()
-                picData.add(this.serverConfig.readDataGrid((ScalarLayer)layer, timeValue, zValue, grid, usageLogEntry));
+                picData.add(this.readDataGrid((ScalarLayer)layer, timeValue, zValue, grid, usageLogEntry));
             } else if (layer instanceof VectorLayer) {
                 VectorLayer vecLayer = (VectorLayer)layer;
-                picData.add(this.serverConfig.readDataGrid(vecLayer.getEastwardComponent(),  timeValue, zValue, grid, usageLogEntry));
-                picData.add(this.serverConfig.readDataGrid(vecLayer.getNorthwardComponent(), timeValue, zValue, grid, usageLogEntry));
+                picData.add(this.readDataGrid(vecLayer.getEastwardComponent(),  timeValue, zValue, grid, usageLogEntry));
+                picData.add(this.readDataGrid(vecLayer.getNorthwardComponent(), timeValue, zValue, grid, usageLogEntry));
             } else {
                 throw new IllegalStateException("Unrecognized layer type");
             }
@@ -559,16 +510,41 @@ public class WmsController extends AbstractController {
     }
 
     /**
+     * Utility method for getting the layer name (unique within a Capabilities
+     * document) from the given GetMapRequest, checking that there is only one
+     * layer in the request
+     */
+    private static String getLayerName(GetMapDataRequest getMapDataRequest) throws WmsException
+    {
+        // Find which layer the user is requesting
+        String[] layers = getMapDataRequest.getLayers();
+        if (layers.length == 0)
+        {
+            throw new WmsException("Must provide a value for the LAYERS parameter");
+        }
+        // TODO: support more than one layer (superimposition, difference, mask)
+        if (layers.length > LAYER_LIMIT)
+        {
+            throw new WmsException("You may only create a map from " +
+                    LAYER_LIMIT  + " layer(s) at a time");
+        }
+        return layers[0];
+    }
+
+    /**
      * Executes the GetFeatureInfo operation
      * @throws WmsException if the user has provided invalid parameters
      * @throws Exception if an internal error occurs
      * @todo Separate Model and View code more cleanly
      */
-    protected ModelAndView getFeatureInfo(RequestParams params,
+    protected ModelAndView getFeatureInfo(
+            RequestParams params,
+            LayerFactory layerFactory,
             HttpServletRequest httpServletRequest,
             HttpServletResponse httpServletResponse,
             UsageLogEntry usageLogEntry)
-            throws WmsException, Exception {
+            throws WmsException, Exception
+    {
         // Look to see if we're requesting data from a remote server
         String url = params.getString("url");
         if (url != null && !url.trim().equals("")) {
@@ -579,6 +555,7 @@ public class WmsController extends AbstractController {
 
         GetFeatureInfoRequest request = new GetFeatureInfoRequest(params);
         usageLogEntry.setGetFeatureInfoRequest(request);
+
         GetFeatureInfoDataRequest dr = request.getDataRequest();
 
         // Check the feature count
@@ -593,13 +570,9 @@ public class WmsController extends AbstractController {
                     request.getOutputFormat() + " is not valid for GetFeatureInfo");
         }
 
-        // Get the layer we're interested in
-        String layerName = dr.getLayers()[0];
-        Layer layer = this.serverConfig.getLayerByUniqueName(layerName);
+        String layerName = getLayerName(dr);
+        Layer layer = layerFactory.getLayer(layerName);
         usageLogEntry.setLayer(layer);
-        if (!layer.isQueryable()) {
-            throw new LayerNotQueryableException(layerName);
-        }
 
         // Get the grid onto which the data is being projected
         HorizontalGrid grid = new HorizontalGrid(dr.getCrsCode(), dr.getWidth(),
@@ -769,8 +742,9 @@ public class WmsController extends AbstractController {
      * Creates and returns a PNG image with the colour scale and range for 
      * a given Layer
      */
-    private ModelAndView getLegendGraphic(RequestParams params,
-            HttpServletResponse httpServletResponse) throws Exception {
+    protected ModelAndView getLegendGraphic(RequestParams params,
+            LayerFactory layerFactory, HttpServletResponse httpServletResponse)
+            throws Exception {
         BufferedImage legend;
 
         // numColourBands defaults to 254 (the maximum) if not set
@@ -792,7 +766,7 @@ public class WmsController extends AbstractController {
             // We're creating a legend with supporting text so we need to know
             // the colour scale range and the layer in question
             String layerName = params.getMandatoryString("layer");
-            Layer layer = this.serverConfig.getLayerByUniqueName(layerName);
+            Layer layer = layerFactory.getLayer(layerName);
 
             // We default to the layer's default palette if none is specified
             ColorPalette palette = paletteName == null
@@ -952,12 +926,14 @@ public class WmsController extends AbstractController {
      * XML format.
      * @todo this method is too long, refactor!
      */
-    private ModelAndView getTransect(RequestParams params, HttpServletResponse response,
-            UsageLogEntry usageLogEntry) throws Exception {
-
+    protected ModelAndView getTransect(RequestParams params, LayerFactory layerFactory,
+            HttpServletResponse response, UsageLogEntry usageLogEntry)
+            throws Exception
+    {
         // Parse the request parameters
         String layerStr = params.getMandatoryString("layer");
-        Layer layer = this.serverConfig.getLayerByUniqueName(layerStr);
+        Layer layer = layerFactory.getLayer(layerStr);
+
         String crsCode = params.getMandatoryString("crs");
         String lineString = params.getMandatoryString("linestring");
         String outputFormat = params.getMandatoryString("format");
@@ -1155,8 +1131,9 @@ public class WmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the provided z value is not
      * a valid number, or if zValue is null and the layer does not support
      * a default elevation value
+     * @todo Move to a utility class?
      */
-    static double getElevationValue(String zValue, Layer layer) throws InvalidDimensionValueException
+    public static double getElevationValue(String zValue, Layer layer) throws InvalidDimensionValueException
     {
         if (layer.getElevationValues().isEmpty()) return Double.NaN;
         if (zValue == null)
@@ -1192,8 +1169,9 @@ public class WmsController extends AbstractController {
      * a single null element if the layer does not have a time axis.
      * @throws InvalidDimensionValueException if the time string cannot be parsed,
      * or if any of the requested times are not valid times for the layer
+     * @todo Move to a utility class?
      */
-    static List<DateTime> getTimeValues(String timeString, Layer layer)
+    public static List<DateTime> getTimeValues(String timeString, Layer layer)
             throws InvalidDimensionValueException {
 
         // If the layer does not have a time axis return a List containing
@@ -1232,8 +1210,9 @@ public class WmsController extends AbstractController {
      * checking that the time is valid for the given layer.
      * @throws InvalidDimensionValueException if the layer does not contain
      * the given time, or if the given ISO8601 string is not valid.
+     * @todo move to a utility class?
      */
-    static int findTIndex(String isoDateTime, Layer layer)
+    public static int findTIndex(String isoDateTime, Layer layer)
         throws InvalidDimensionValueException
     {
         DateTime target = isoDateTime.equals("current")
@@ -1292,6 +1271,46 @@ public class WmsController extends AbstractController {
     }
 
     /**
+     * Reads a grid of data from the given layer, used by the GetMap operation.
+     * <p>This implementation simply defers to {@link
+     * ScalarLayer#readPointList(org.joda.time.DateTime, double,
+     * uk.ac.rdg.resc.ncwms.datareader.PointList) layer.readPointList()},
+     * ignoring the usage log entry.  No data are cached.  Other implementations
+     * may choose to implement in a different way, perhaps to allow for caching
+     * of the data.  If implementations return cached data they must indicate
+     * this by setting {@link UsageLogEntry#setUsedCache(boolean)}.</p>
+     * @param layer The layer containing the data
+     * @param time The time instant for which we require data.  If this does not
+     * match a time instant in {@link Layer#getTimeValues()} an {@link InvalidDimensionValueException}
+     * will be thrown.  (If this Layer has no time axis, this parameter will be ignored.)
+     * @param elevation The elevation for which we require data (in the
+     * {@link Layer#getElevationUnits() units of this Layer's elevation axis}).  If
+     * this does not match a valid {@link Layer#getElevationValues() elevation value}
+     * in this Layer, this method will throw an {@link InvalidDimensionValueException}.
+     * (If this Layer has no elevation axis, this parameter will be ignored.)
+     * @param grid The grid of points, one point per pixel in the image that will
+     * be created in the GetMap operation
+     * @param usageLogEntry
+     * @return a List of data values, one for each point in
+     * the {@code grid}, in the same order.
+     * @throws InvalidDimensionValueException if {@code dateTime} or {@code elevation}
+     * do not represent valid values along the time and elevation axes.
+     * @throws IOException if there was an error reading from the data source
+     */
+    protected List<Float> readDataGrid(ScalarLayer layer, DateTime dateTime,
+        double elevation, HorizontalGrid grid, UsageLogEntry usageLogEntry)
+        throws InvalidDimensionValueException, IOException
+    {
+        return layer.readPointList(dateTime, elevation, grid);
+    }
+
+    /**
+     * Called by Spring to shutdown the controller.  This implementation does
+     * nothing: subclasses should override if necessary to free resources.
+     */
+    public void shutdown() {}
+
+    /**
      * Called by the Spring framework to inject the object that represents the
      * server's configuration.
      */
@@ -1304,85 +1323,5 @@ public class WmsController extends AbstractController {
      */
     public void setUsageLogger(UsageLogger usageLogger) {
         this.usageLogger = usageLogger;
-    }
-
-    /**
-     * Represents a WMS version number.
-     */
-    private static final class WmsVersion implements Comparable<WmsVersion> {
-
-        private Integer value; // Numerical value of the version number,
-        // used for comparisons
-        private String str;
-        private int hashCode;
-        public static final WmsVersion VERSION_1_1_1 = new WmsVersion("1.1.1");
-        public static final WmsVersion VERSION_1_3_0 = new WmsVersion("1.3.0");
-
-        /**
-         * Creates a new WmsVersion object based on the given String
-         * (e.g. "1.3.0")
-         * @throws IllegalArgumentException if the given String does not represent
-         * a valid WMS version number
-         */
-        public WmsVersion(String versionStr) {
-            String[] els = versionStr.split("\\.");  // regex: split on full stops
-            if (els.length != 3) {
-                throw new IllegalArgumentException(versionStr +
-                        " is not a valid WMS version number");
-            }
-            int x, y, z;
-            try {
-                x = Integer.parseInt(els[0]);
-                y = Integer.parseInt(els[1]);
-                z = Integer.parseInt(els[2]);
-            } catch (NumberFormatException nfe) {
-                throw new IllegalArgumentException(versionStr +
-                        " is not a valid WMS version number");
-            }
-            if (y > 99 || z > 99) {
-                throw new IllegalArgumentException(versionStr +
-                        " is not a valid WMS version number");
-            }
-            // We can calculate all these values up-front as this object is
-            // immutable
-            this.str = x + "." + y + "." + z;
-            this.value = (100 * 100 * x) + (100 * y) + z;
-            this.hashCode = 7 + 79 * this.value.hashCode();
-        }
-
-        /**
-         * Compares this WmsVersion with the specified Version for order.  Returns a
-         * negative integer, zero, or a positive integer as this Version is less
-         * than, equal to, or greater than the specified Version.
-         */
-        @Override
-        public int compareTo(WmsVersion otherVersion) {
-            return this.value.compareTo(otherVersion.value);
-        }
-
-        /**
-         * @return String representation of this version, e.g. "1.3.0"
-         */
-        @Override
-        public String toString() {
-            return this.str;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (obj instanceof WmsVersion) {
-                final WmsVersion other = (WmsVersion) obj;
-                return this.value.equals(other.value);
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return this.hashCode;
-        }
     }
 }

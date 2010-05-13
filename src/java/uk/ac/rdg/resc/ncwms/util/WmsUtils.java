@@ -30,7 +30,6 @@ package uk.ac.rdg.resc.ncwms.util;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -196,39 +195,11 @@ public class WmsUtils
      * Creates a unique name for a Layer (for display in the Capabilities
      * document) based on a dataset ID and a Layer ID that is unique within a
      * dataset.  Matches up with {@link #parseUniqueLayerName(java.lang.String)}.
+     * @todo doesn't belong in generic WmsUtils: specific to ncWMS
      */
     public static String createUniqueLayerName(String datasetId, String layerId)
     {
         return datasetId + "/" + layerId;
-    }
-    
-    /**
-     * Parses a unique layer name and returns a two-element String array containing
-     * the dataset id (first element) and the layer id (second element).  Matches
-     * up with {@link #createUniqueLayerName(java.lang.String, java.lang.String)}.
-     * This method does not check for the existence or otherwise of the dataset
-     * or layer.
-     * @throws ParseException if the provided layer name is not in the correct
-     * format.
-     */
-    public static String[] parseUniqueLayerName(String uniqueLayerName)
-        throws ParseException
-    {
-        String[] els = new String[2];
-        
-        int slashIndex = uniqueLayerName.lastIndexOf("/");
-        if(slashIndex > 0)
-        {
-            els[0] = uniqueLayerName.substring(0, slashIndex);
-            els[1] = uniqueLayerName.substring(slashIndex + 1);
-            return els;
-        }
-        else
-        {
-            // We don't bother looking for the position in the string where the
-            // parse error occurs
-            throw new ParseException(uniqueLayerName + " is not in the correct format", -1);
-        }
     }
     
     /**

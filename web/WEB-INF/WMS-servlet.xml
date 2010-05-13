@@ -49,7 +49,6 @@
            factory-method="readConfig" destroy-method="shutdown">
         <constructor-arg value="${ncwms.workingDirectory}/config.xml"/>
         <property name="credentialsProvider"><ref local="credentialsProvider"/></property>
-        <property name="tileCache"><ref local="tileCache"/></property>
     </bean>
     
     <!-- Object that handles the provision of authentication credentials
@@ -73,9 +72,10 @@
     </bean>
     
     <!-- This Controller will handle all the requests to the WMS -->
-    <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.controller.WmsController"
-            init-method="init">
+    <bean id="wmsController" class="uk.ac.rdg.resc.ncwms.config.NcwmsController"
+            init-method="init" destroy-method="shutdown">
         <property name="supportedMethods" value="GET"/>
+        <property name="tileCache"><ref local="tileCache"/></property>
         <property name="serverConfig"><ref local="config"/></property>
         <property name="usageLogger"><ref local="usageLogger"/></property>
     </bean>

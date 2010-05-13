@@ -39,9 +39,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
  * are not case sensitive.
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class RequestParams
 {

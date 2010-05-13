@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.controller;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,7 +46,12 @@ import org.joda.time.Period;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
+import uk.ac.rdg.resc.ncwms.controller.AbstractWmsController;
+import uk.ac.rdg.resc.ncwms.controller.AbstractWmsController.LayerFactory;
+import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
+import uk.ac.rdg.resc.ncwms.controller.RequestParams;
 import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
+import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
@@ -65,15 +70,17 @@ import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
  *
  * @author Jon Blower
  */
-class MetadataController
+public class MetadataController
 {
     private static final Logger log = LoggerFactory.getLogger(MetadataController.class);
 
-    private ServerConfig serverConfig;
+    private final Config serverConfig;
+    private final LayerFactory layerFactory;
 
-    public MetadataController(ServerConfig serverConfig)
+    public MetadataController(Config serverConfig, LayerFactory layerFactory)
     {
         this.serverConfig = serverConfig;
+        this.layerFactory = layerFactory;
     }
     
     public ModelAndView handleRequest(HttpServletRequest request,
@@ -134,8 +141,9 @@ class MetadataController
      * @param request Http request object.  All query string parameters (except "&url=")
      * will be copied from this request object to the request to the third party server.
      * @param response Http response object
+     * @todo move to a utility class?
      */
-    static void proxyRequest(String url, HttpServletRequest request,
+    public static void proxyRequest(String url, HttpServletRequest request,
         HttpServletResponse response) throws Exception
     {
         // Download the data from the remote URL
@@ -282,19 +290,14 @@ class MetadataController
      * Exception if it doesn't exist or if there was a problem reading from the
      * data store.
      */
-    private Layer getLayer(HttpServletRequest request) throws Exception
+    private Layer getLayer(HttpServletRequest request) throws LayerNotDefinedException
     {
         String layerName = request.getParameter("layerName");
         if (layerName == null)
         {
-            throw new Exception("Must provide a value for the layerName parameter");
+            throw new LayerNotDefinedException("null");
         }
-        Layer layer = this.serverConfig.getLayerByUniqueName(layerName);
-        if (layer == null)
-        {
-            throw new Exception("There is no layer with the name " + layerName);
-        }
-        return layer;
+        return this.layerFactory.getLayer(layerName);
     }
     
     /**
@@ -360,7 +363,7 @@ class MetadataController
         GetMapDataRequest dr = new GetMapDataRequest(params, "1.3.0");
         
         // Get the variable we're interested in
-        Layer layer = this.serverConfig.getLayerByUniqueName(dr.getLayers()[0]);
+        Layer layer = this.layerFactory.getLayer(dr.getLayers()[0]);
         usageLogEntry.setLayer(layer);
         
         // Get the grid onto which the data is being projected
@@ -368,10 +371,10 @@ class MetadataController
                 dr.getHeight(), dr.getBbox());
         
         // Get the value on the z axis
-        double zValue = WmsController.getElevationValue(dr.getElevationString(), layer);
+        double zValue = AbstractWmsController.getElevationValue(dr.getElevationString(), layer);
         
         // Get the requested timestep (taking the first only if an animation is requested)
-        DateTime tValue = WmsController.getTimeValues(dr.getTimeString(), layer).get(0);
+        DateTime tValue = AbstractWmsController.getTimeValues(dr.getTimeString(), layer).get(0);
         
         // Now read the data and calculate the minimum and maximum values
         List<Float> magnitudes;
@@ -414,8 +417,8 @@ class MetadataController
         }
 
         // Find the start and end indices along the time axis
-        int startIndex = WmsController.findTIndex(startStr, layer);
-        int endIndex = WmsController.findTIndex(endStr, layer);
+        int startIndex = AbstractWmsController.findTIndex(startStr, layer);
+        int endIndex = AbstractWmsController.findTIndex(endStr, layer);
         List<DateTime> tValues = layer.getTimeValues();
 
         // E.g.: {

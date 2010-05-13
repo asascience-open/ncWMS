@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -44,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import javax.servlet.ServletContext;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,15 +59,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.unidata.io.RandomAccessFile;
-import uk.ac.rdg.resc.ncwms.cache.TileCache;
-import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.security.Users;
-import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
-import uk.ac.rdg.resc.ncwms.controller.AbstractServerConfig;
-import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
 import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
 
 /**
@@ -80,7 +73,7 @@ import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
  * @author Jon Blower
  */
 @Root(name="config")
-public class Config extends AbstractServerConfig implements ApplicationContextAware
+public class Config implements ServerConfig, ApplicationContextAware
 {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     
@@ -111,9 +104,6 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
     private DateTime lastUpdateTime;
     
     private File configFile; // Location of the file from which this information has been read
-
-    // Cache of recently-extracted data arrays: will be set by Spring
-    private TileCache tileCache;
     
     // Will be injected by Spring: handles authenticated OPeNDAP calls
     private NcwmsCredentialsProvider credentialsProvider;
@@ -173,7 +163,7 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
         // in an NcML aggregation.  It is not possible currently to expire
         // information based on time for single NetCDF files or OPeNDAP datasets.
         // Therefore the DefaultDataReader only uses this cache for NcML aggregations.
-        // TODO: move the initialization of the cache to the DefaultDataReader?
+        // TODO: move the initialization of the cache to the NcwmsController?
         NetcdfDataset.initNetcdfFileCache(50, 500, 500, 5 * 60);
         logger.debug("NetcdfDatasetCache initialized");
         if (logger.isDebugEnabled())
@@ -315,55 +305,9 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
     }
 
     /**
-     * {@inheritDoc}
-     * <p>This implementation uses a {@link TileCache} to store data arrays,
-     * speeding up repeat requests.</p>
-     */
-    @Override
-    public List<Float> readDataGrid(ScalarLayer layer, DateTime dateTime,
-        double elevation, HorizontalGrid grid, UsageLogEntry usageLogEntry)
-        throws InvalidDimensionValueException, IOException
-    {
-        // We know that this Config object only returns LayerImpl objects
-        LayerImpl layerImpl = (LayerImpl)layer;
-        // Find which file contains this time, and which index it is within the file
-        LayerImpl.FilenameAndTimeIndex fti = layerImpl.findAndCheckFilenameAndTimeIndex(dateTime);
-        // Find the z index within the file
-        int zIndex = layerImpl.findAndCheckElevationIndex(elevation);
-
-        // Create a key for searching the cache
-        TileCacheKey key = new TileCacheKey(
-            fti.filename,
-            layer,
-            grid,
-            fti.tIndexInFile,
-            zIndex
-        );
-
-        List<Float> data = null;
-        // Search the cache.  Returns null if key is not found
-        if (this.cache.isEnabled()) data = this.tileCache.get(key);
-
-        // Record whether or not we got a hit in the cache
-        usageLogEntry.setUsedCache(data != null);
-
-        if (data == null)
-        {
-            // We didn't get any data from the cache, so we have to read from
-            // the source data.
-            data = layerImpl.readPointList(fti, zIndex, grid);
-            // Put the data in the tile cache
-            if (this.cache.isEnabled()) this.tileCache.put(key, data);
-        }
-
-        return data;
-    }
-
-    /**
      * Gets an unmodifiable Map of dataset IDs to Dataset objects for all datasets
      * on this server.
      */
-    @Override
     public Map<String, Dataset> getAllDatasets()
     {
         return Collections.unmodifiableMap(this.datasets);
@@ -373,7 +317,6 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
      * Returns the dataset with the given ID, or null if there is no available
      * dataset with the given id.
      */
-    @Override
     public Dataset getDatasetById(String datasetId)
     {
         return this.datasets.get(datasetId);
@@ -468,7 +411,6 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
     {
         this.scheduler.shutdownNow(); // Tries its best to stop ongoing threads
         NetcdfDataset.shutdown();
-        this.tileCache.shutdown();
         logger.info("Cleaned up Config object");
     }
 
@@ -503,7 +445,6 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
         return keywords;
     }
 
-    @Override
     public boolean getAllowsGlobalCapabilities() {
         return this.server.isAllowGlobalCapabilities();
     }
@@ -551,12 +492,6 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
         this.credentialsProvider = credentialsProvider;
     }
 
-    /** Called by Spring to set the tile cache */
-    public void setTileCache(TileCache tileCache)
-    {
-        this.tileCache = tileCache;
-    }
-
     /**
      * Called automatically by Spring.  When we have the application context
      * we can set the admin password in the Users object that is used by Acegi.
@@ -577,6 +512,11 @@ public class Config extends AbstractServerConfig implements ApplicationContextAw
             logger.debug("Setting admin password in Users object");
             users.setAdminPassword(this.server.getAdminPassword());
         }
+    }
+
+    @Override
+    public File getPaletteFilesLocation(ServletContext context) {
+        return new File(context.getRealPath("/WEB-INF/conf/palettes"));
     }
     
 }
