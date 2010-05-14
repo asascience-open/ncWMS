@@ -66,35 +66,35 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itzocrtx" label="Ice zonal current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Mediterranean 1/12 degree">
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/sossheig" label="sea_surface_height_above_geoid"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vozocrtx" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med12/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - Indian Ocean">
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/sossheig" label="sea_surface_height_above_geoid"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vozocrtx" label="sea_surface_height_above_geoid"/>
+	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/sossheig" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_indian/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - Mediterranean">
 	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/sossheig" label="sea_surface_height_above_geoid"/>
-	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vosaline" label="sea_water_potential_temperature"/>
-	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/votemper" label="northward_sea_water_velocity"/>
-	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vomecrty" label="eastward_sea_water_velocity"/>
-	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vozocrtx" label="sea_surface_height_above_geoid"/>
+	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vosaline" label="sea_water_salinity"/>
+	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/votemper" label="sea_water_potential_temperature"/>
+	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vomecrty" label="northward_sea_water_velocity"/>
+	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/vozocrtx" label="eastward_sea_water_velocity"/>
 	      <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_med/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - Global Ocean">
@@ -102,11 +102,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_global/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
           <menu:folder label="Global - Southern Ocean">
@@ -114,11 +114,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_southern/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
           <menu:folder label="Global - Arctic Ocean">
@@ -126,11 +126,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_arctic/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
           <menu:folder label="Global - North Atlantic">
@@ -138,11 +138,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natlantic/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - North Pacific">
@@ -150,11 +150,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_npacific/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - South Atlantic">
@@ -162,11 +162,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/iiceconc" label="sea_ice_area_fraction"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/iicethic" label="sea_ice_thickness"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/itmecrty" label="Ice meridional current"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/itzocrtx" label="sea_water_salinity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vozocrtx" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/itzocrtx" label="sea_ice_zonal_current"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_satlantic/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - South Pacific">
@@ -174,27 +174,27 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/iiceconc" label="sea_ice_area_fraction"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/iicethic" label="sea_ice_thickness"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/itmecrty" label="Ice meridional current"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/itzocrtx" label="sea_water_salinity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vozocrtx" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/itzocrtx" label="sea_ice_zonal_current"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_spacific/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
          <menu:folder label="Global - Tropical Atlantic">
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/sossheig" label="sea_surface_height_above_geoid"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vozocrtx" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tatlantic/sea_water_velocity" label="sea_water_velocity"/>
         </menu:folder>
   	 <menu:folder label="Global - Tropical Pacific">
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/sossheig" label="sea_surface_height_above_geoid"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vosaline" label="sea_water_potential_temperature"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/votemper" label="northward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vomecrty" label="eastward_sea_water_velocity"/>
-              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vozocrtx" label="sea_surface_height_above_geoid"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vosaline" label="sea_water_salinity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/votemper" label="sea_water_potential_temperature"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vomecrty" label="northward_sea_water_velocity"/>
+              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/vozocrtx" label="eastward_sea_water_velocity"/>
               <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_tpacific/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
      </menu:folder>
@@ -208,11 +208,11 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iiceconc" label="sea_ice_area_fraction"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/iicethic" label="sea_ice_thickness"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itmecrty" label="Ice meridional current"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itzocrtx" label="sea_water_salinity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vosaline" label="sea_water_potential_temperature"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/votemper" label="northward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vomecrty" label="eastward_sea_water_velocity"/>
-             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vozocrtx" label="sea_surface_height_above_geoid"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/itzocrtx" label="sea_ice_zonal_current"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vosaline" label="sea_water_salinity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/votemper" label="sea_water_potential_temperature"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vomecrty" label="northward_sea_water_velocity"/>
+             <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/vozocrtx" label="eastward_sea_water_velocity"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="glo_natl12/sea_water_velocity" label="sea_water_velocity"/>
          </menu:folder>
   	  <menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
