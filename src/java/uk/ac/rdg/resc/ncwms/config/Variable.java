@@ -28,7 +28,6 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
-import java.text.DecimalFormatSymbols;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.PersistenceException;
@@ -37,6 +36,7 @@ import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.Range;
 import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Contains fields that can be filled in to override values that are
@@ -46,9 +46,6 @@ import uk.ac.rdg.resc.ncwms.util.Ranges;
 @Root(name="variable")
 public class Variable
 {
-    // the decimal separator for the current locale
-    private static char DECIMAL_SEPARATOR = new DecimalFormatSymbols().getDecimalSeparator();
-
     @Attribute(name="id")
     private String id;
 
@@ -137,9 +134,11 @@ public class Variable
             {
                 // We are probably in a locale where the comma is used as the
                 // decimal separator
+                // We must use full stops as the decimal separator in all locales
+                // because Float.parseFloat() is not localized
                 return parseColorScaleRangeStrings(
-                    els[0] + DECIMAL_SEPARATOR + els[1],
-                    els[2] + DECIMAL_SEPARATOR + els[3]
+                    els[0] + "." + els[1],
+                    els[2] + "." + els[3]
                 );
             }
         }
