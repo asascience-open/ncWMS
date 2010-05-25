@@ -122,6 +122,14 @@ public final class NcwmsController extends AbstractWmsController
         }
         else if (request.equals("GetFeatureInfo"))
         {
+            // Look to see if we're requesting data from a remote server
+            String url = params.getString("url");
+            if (url != null && !url.trim().equals(""))
+            {
+                usageLogEntry.setRemoteServerUrl(url);
+                MetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
+                return null;
+            }
             return getFeatureInfo(params, LAYER_FACTORY, httpServletRequest,
                     httpServletResponse, usageLogEntry);
         }

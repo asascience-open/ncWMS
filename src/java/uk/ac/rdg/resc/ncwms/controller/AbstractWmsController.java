@@ -73,7 +73,6 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
-import uk.ac.rdg.resc.ncwms.config.MetadataController;
 import uk.ac.rdg.resc.ncwms.coords.CrsHelper;
 import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.coords.LonLatPosition;
@@ -148,7 +147,8 @@ public abstract class AbstractWmsController extends AbstractController {
         // the ColorPalette class.
         File paletteLocationDir = this.serverConfig.getPaletteFilesLocation(
             this.getServletContext());
-        if (paletteLocationDir.exists() && paletteLocationDir.isDirectory()) {
+        if (paletteLocationDir != null && paletteLocationDir.exists()
+                && paletteLocationDir.isDirectory()) {
             ColorPalette.loadPalettes(paletteLocationDir);
         } else {
             log.info("Directory of palette files does not exist or is not a directory");
@@ -545,14 +545,6 @@ public abstract class AbstractWmsController extends AbstractController {
             UsageLogEntry usageLogEntry)
             throws WmsException, Exception
     {
-        // Look to see if we're requesting data from a remote server
-        String url = params.getString("url");
-        if (url != null && !url.trim().equals("")) {
-            usageLogEntry.setRemoteServerUrl(url);
-            MetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
-            return null;
-        }
-
         GetFeatureInfoRequest request = new GetFeatureInfoRequest(params);
         usageLogEntry.setGetFeatureInfoRequest(request);
 
