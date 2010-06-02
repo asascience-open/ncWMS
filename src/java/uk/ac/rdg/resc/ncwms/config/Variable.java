@@ -36,7 +36,6 @@ import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.Range;
 import uk.ac.rdg.resc.ncwms.util.Ranges;
-import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Contains fields that can be filled in to override values that are
@@ -119,7 +118,11 @@ public class Variable
         String[] els = colorScaleRangeStr.split(" ");
         if (els.length == 2)
         {
-            return parseColorScaleRangeStrings(els[0], els[1]);
+            // Guard against the case in which commas are used as decimal separators
+            return parseColorScaleRangeStrings(
+                els[0].replace(',', '.'),
+                els[1].replace(',', '.')
+            );
         }
         else if (els.length == 1)
         {
@@ -128,6 +131,8 @@ public class Variable
             els = colorScaleRangeStr.split(",");
             if (els.length == 2)
             {
+                // The elements probably use full stops (periods) as the decimal
+                // separator
                 return parseColorScaleRangeStrings(els[0], els[1]);
             }
             else if (els.length == 4)
