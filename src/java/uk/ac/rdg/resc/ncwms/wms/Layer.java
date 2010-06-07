@@ -60,9 +60,9 @@ public interface Layer
     public String getAbstract();
 
     /**
-     * Returns an identifier for this layer that is unique <b>on this server</b>.
-     * This is used in the display of Layers in a Capabilities document and in
-     * GetMap requests).
+     * Returns an identifier for this layer that is unique <b>within a
+     * Capabilities document</b>.  This is used as an identifier in GetMap
+     * and other layer-specific requests.
      * @return an identifier for this layer that is unique on this server.
      */
     public String getName();

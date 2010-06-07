@@ -60,9 +60,6 @@ import uk.ac.rdg.resc.ncwms.util.WmsUtils;
  */
 public class H2UsageLogger implements UsageLogger
 {
-    /**
-     * The log4j logging system
-     */
     private static final Logger logger = LoggerFactory.getLogger(H2UsageLogger.class);
     
     private static final String INSERT_COMMAND = "INSERT INTO usage_log(request_time, client_ip, " +
