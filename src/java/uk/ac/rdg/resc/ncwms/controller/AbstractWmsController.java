@@ -139,7 +139,7 @@ public abstract class AbstractWmsController extends AbstractController {
      * Called automatically by Spring after all the dependencies have been
      * injected.
      */
-    public void init() {
+    public void init() throws Exception {
         // We initialize the ColorPalettes.  We need to do this from here
         // because we need a way to find out the real path of the 
         // directory containing the palettes.  Therefore we need a way of 

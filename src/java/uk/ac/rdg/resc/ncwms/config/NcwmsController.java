@@ -97,7 +97,7 @@ public final class NcwmsController extends AbstractWmsController
      * injected.
      */
     @Override
-    public void init()
+    public void init() throws Exception
     {
         // Create a MetadataController for handling non-standard metadata request
         this.metadataController = new MetadataController(this.getConfig(), LAYER_FACTORY);
