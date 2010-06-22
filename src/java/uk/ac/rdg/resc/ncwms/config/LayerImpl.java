@@ -40,6 +40,7 @@ import uk.ac.rdg.resc.ncwms.coords.PointList;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.AbstractTimeAggregatedLayer;
 
 /**
@@ -184,10 +185,15 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
         final String filename;
         final int tIndexInFile;
         if (tIndex < 0) {
-            // This layer has no time dimension.  It's possible that the dataset's
-            // location is a glob expression, so we expand it and take the first
-            // element.
-            filename = DataReader.expandGlobExpression(this.dataset.getLocation()).get(0).getPath();
+            // This layer has no time dimension.
+            final String location = this.dataset.getLocation();
+            if (WmsUtils.isOpendapLocation(location)) {
+                filename = location;
+            } else {
+                //  It's possible that the dataset's location is a glob
+                // expression, so we expand it and take the first element.
+                filename = DataReader.expandGlobExpression(location).get(0).getPath();
+            }
             tIndexInFile = tIndex;
         } else {
             TimestepInfo tInfo = this.timesteps.get(tIndex);
