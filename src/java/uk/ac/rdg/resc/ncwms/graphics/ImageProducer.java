@@ -92,6 +92,7 @@ public final class ImageProducer
     // The inner List<Float> is the data for a single vector component
     // The middle List contains the two vector components
     // The outer List contains data for each animation frame
+    // Will be null if the colour scale has been set manually
     private List<List<List<Float>>> frameData; // YUCK!!!
     private List<String> labels;
 
@@ -140,16 +141,16 @@ public final class ImageProducer
         else
         {
             logger.debug("Scale is set, so rendering image");
-            this.renderedFrames.add(this.createImage(data, label));
+            this.createImage(data, label);
         }
     }
     
     /**
-     * Creates and returns a single frame as an Image, based on the given data.
+     * Creates a single frame as an Image, based on the given data.
      * Adds the label if one has been set.  The scale must be set before
-     * calling this method.
+     * calling this method.  Adds the frame to the internal list of rendered frames.
      */
-    private BufferedImage createImage(List<List<Float>> data, String label)
+    private void createImage(List<List<Float>> data, String label)
     {
         // Create the pixel array for the frame
         byte[] pixels = new byte[this.picWidth * this.picHeight];
@@ -225,7 +226,7 @@ public final class ImageProducer
             }
         }
         
-        return image;
+        this.renderedFrames.add(image);
     }
     
     /**
@@ -278,7 +279,7 @@ public final class ImageProducer
             for (int i = 0; i < this.frameData.size(); i++)
             {
                 logger.debug("    ... rendering frame {}", i);
-                this.renderedFrames.add(this.createImage(this.frameData.get(i), this.labels.get(i)));
+                this.createImage(this.frameData.get(i), this.labels.get(i));
             }
         }
         return this.renderedFrames;

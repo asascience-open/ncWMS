@@ -121,8 +121,8 @@ public abstract class ImageFormat
     
     /**
      * Returns true if this image format needs an accompanying legend.  This 
-     * default implementation returns false, but subclasses can override
-     * (see {@link KmzFormat}).
+     * default implementation returns false, but subclasses can override.
+     * @see KmzFormat
      */
     public abstract boolean requiresLegend();
     
@@ -130,10 +130,7 @@ public abstract class ImageFormat
      * Writes the given list of {@link java.awt.BufferedImage}s to the given
      * OutputStream.  If this ImageFormat doesn't support animations then the
      * given list of frames should only contain one entry, otherwise an
-     * IllegalArgumentException will be thrown.  This default implementation
-     * simply defers to writeImage(frames, out), i.e. most of the parameters
-     * are ignored.  Subclasses can override if they need to handle more of
-     * these parameters.
+     * IllegalArgumentException will be thrown.
      * @param frames List of BufferedImages to render into an image
      * @param out The OutputStream to which the image will be written
      * @param layer the Layer object representing the image(s)
