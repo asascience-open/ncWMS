@@ -249,6 +249,8 @@ public class Config implements ServerConfig, ApplicationContextAware
     {
         Runnable reloader = new Runnable() {
             @Override public void run() {
+                // This will check to see if the metadata need reloading, then
+                // go ahead if so.
                 ds.loadLayers();
                 // Here we're checking for leaks of open file handles
                 logger.debug("num RAFs open = {}", RandomAccessFile.getOpenFiles().size());
@@ -259,6 +261,8 @@ public class Config implements ServerConfig, ApplicationContextAware
             0,                   // Schedule the first run immediately
             1, TimeUnit.SECONDS  // Schedule each subsequent run 1 second after
                                  // the previous one finished.
+                                 // Hence the dataset will be polled once every
+                                 // second.
         );
         // We need to keep a handle to the Future object so we can cancel it
         this.futures.put(ds.getId(), future);

@@ -107,6 +107,8 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     private State state = State.NEEDS_REFRESH;     // State of this dataset.
     
     private Exception err;   // Set if there is an error loading the dataset
+    private int numErrorsInARow = 0; // The number of consecutive times we've
+                                     // seen an error when loading a dataset
     private List<String> loadingProgress = new ArrayList<String>(); // Used to express progress with loading
                                          // the metadata for this dataset,
                                          // one line at a time
@@ -117,9 +119,13 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
      */
     private Map<String, Variable> variables = new LinkedHashMap<String, Variable>();
 
-    /** The time at which this dataset's stored Layers were last updated, or
-     * null if the Layers have not yet been loaded */
-    private DateTime lastUpdateTime = null;
+    /** The time at which this dataset's stored Layers were last successfully 
+     * updated, or null if the Layers have not yet been loaded */
+    private DateTime lastSuccessfulUpdateTime = null;
+
+    /** The time at which we last got an error when updating the dataset's
+        metadata, or null if we've never seen an error */
+    private DateTime lastFailedUpdateTime = null;
 
     /** The Layers that belong to this dataset.  This will be loaded through the
      * {@link #loadLayers()} method, which is called periodically by the
@@ -306,7 +312,7 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     @Override
     public DateTime getLastUpdateTime()
     {
-        return this.lastUpdateTime;
+        return this.lastSuccessfulUpdateTime;
     }
 
     /**
@@ -453,31 +459,37 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
         // Comment this out to use the default thread names (e.g. "pool-2-thread-1")
         Thread.currentThread().setName("load-metadata-" + this.id);
 
-        // Check to see if this dataset needs to have its metadata refreshed
-        if (!this.needsRefresh()) return;
-
         // Now load the layers and manage the state of the dataset
         try
         {
+            // Check to see if this dataset needs to have its metadata refreshed
+            // We do this inside the try clause in case needsRefresh() throws a
+            // runtime exception
+            if (!this.needsRefresh()) return;
+
             // if lastUpdateTime == null, this dataset has never previously been loaded.
-            this.state = this.lastUpdateTime == null ? State.LOADING : State.UPDATING;
+            this.state = this.lastSuccessfulUpdateTime == null ? State.LOADING : State.UPDATING;
 
             this.doLoadLayers();
 
-            // Update the state of this dataset
+            // Update the state of this dataset.  If we've got this far there
+            // were no errors.
             this.err = null;
+            this.numErrorsInARow = 0;
             this.state = State.READY;
-            this.lastUpdateTime = new DateTime();
+            this.lastSuccessfulUpdateTime = new DateTime();
 
             logger.debug("Loaded metadata for {}", this.id);
             
             // Update the state of the config object
-            this.config.setLastUpdateTime(this.lastUpdateTime);
+            this.config.setLastUpdateTime(this.lastSuccessfulUpdateTime);
             this.config.save();
         }
         catch (Exception e)
         {
             this.state = State.ERROR;
+            this.numErrorsInARow++;
+            this.lastFailedUpdateTime = new DateTime();
             // Reduce logging volume by only logging the error if it's a new
             // type of exception.
             if (this.err == null || this.err.getClass() != e.getClass())
@@ -494,19 +506,30 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
      */
     private boolean needsRefresh()
     {
-        // We don't use getLastUpdateTime(), because the dataset might not ever
-        // have been loaded, and so lastUpdate might be null. (getLastUpdateTime()
-        // is defined never to return null.)
-        logger.debug("Last update time for dataset {} is {}", this.id, this.lastUpdateTime);
+        logger.debug("Last update time for dataset {} is {}", this.id, this.lastSuccessfulUpdateTime);
         logger.debug("State of dataset {} is {}", this.id, this.state);
         logger.debug("Disabled = {}", this.disabled);
         if (this.disabled || this.state == State.LOADING || this.state == State.UPDATING)
         {
             return false;
         }
-        else if (this.state == State.NEEDS_REFRESH || this.state == State.ERROR)
+        else if (this.state == State.NEEDS_REFRESH)
         {
             return true;
+        }
+        else if (this.state == State.ERROR)
+        {
+            // We implement an exponential backoff for reloading datasets that have
+            // errors, which saves repeatedly hammering remote servers
+            double delaySeconds = Math.pow(2, this.numErrorsInARow);
+            // The maximum interval between refreshes is 10 minutes
+            delaySeconds = Math.min(delaySeconds, 10 * 60);
+            // lastFailedUpdateTime should never be null: this is defensive
+            boolean needsRefresh = this.lastFailedUpdateTime == null
+                ? true
+                : new DateTime().isAfter(this.lastFailedUpdateTime.plusSeconds((int)delaySeconds));
+            logger.debug("delay = {} seconds, needsRefresh = {}", delaySeconds, needsRefresh);
+            return needsRefresh;
         }
         else if (this.updateInterval < 0)
         {
@@ -516,7 +539,7 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
         {
             // State = READY.  Check the age of the metadata
             // Return true if we are after the next scheduled update
-            return new DateTime().isAfter(this.lastUpdateTime.plusMinutes(this.updateInterval));
+            return new DateTime().isAfter(this.lastSuccessfulUpdateTime.plusMinutes(this.updateInterval));
         }
     }
 
