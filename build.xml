@@ -64,9 +64,21 @@
     -->
     <target name="source-release" description="Zips up the source code, minus any .svn directories">
         <zip
+            compress="true"
             destfile="dist/src.zip"
             basedir="."
-            excludes="dist/**, build/**, **/.svn"
+            excludes="dist/**, build/**, **/.svn, catalog.xml"
         />
+    </target>
+
+    <target name="jar-for-THREDDS" depends="-post-compile" description="Creates an ncWMS.jar file for use in the THREDDS Data Server">
+        <jar
+            compress="true"
+            basedir="build/web/WEB-INF/classes"
+            destfile="dist/ncwms.jar"
+            excludes="uk/ac/rdg/resc/ncwms/cache/**,
+                      uk/ac/rdg/resc/ncwms/config/**,
+                      uk/ac/rdg/resc/ncwms/security/**"
+         />
     </target>
 </project>
