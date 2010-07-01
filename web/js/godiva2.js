@@ -295,7 +295,7 @@ function populateAutoLoad(windowLocation)
     if (queryString != null) {
         var kvps = queryString.split('&');
         for (var i = 0; i < kvps.length; i++) {
-            keyAndVal = kvps[i].split('=');
+            var keyAndVal = kvps[i].split('=');
             if (keyAndVal.length > 1) {
                 var key = keyAndVal[0].toLowerCase();
                 if (key == 'layer') {
@@ -312,6 +312,9 @@ function populateAutoLoad(windowLocation)
                 } else if (key == 'menu') {
                     // we load a specific menu instead of the default
                     menu = keyAndVal[1];
+                } else if (key == 'server') {
+                    // We can load datasets from a remote ncWMS or THREDDS server
+                    servers = [keyAndVal[1]];
                 } else if (key == 'debugmode') {
                     debugMode = keyAndVal[1] == 'true';
                 }

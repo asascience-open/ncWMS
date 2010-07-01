@@ -58,7 +58,7 @@ import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
 public final class NcwmsController extends AbstractWmsController
 {
     // This object handles requests for non-standard metadata
-    private MetadataController metadataController;
+    private NcwmsMetadataController metadataController;
 
     // Cache of recently-extracted data arrays: will be set by Spring
     private TileCache tileCache;
@@ -99,8 +99,8 @@ public final class NcwmsController extends AbstractWmsController
     @Override
     public void init() throws Exception
     {
-        // Create a MetadataController for handling non-standard metadata request
-        this.metadataController = new MetadataController(this.getConfig(), LAYER_FACTORY);
+        // Create a NcwmsMetadataController for handling non-standard metadata request
+        this.metadataController = new NcwmsMetadataController(this.getConfig(), LAYER_FACTORY);
         super.init();
     }
 
@@ -127,7 +127,7 @@ public final class NcwmsController extends AbstractWmsController
             if (url != null && !url.trim().equals(""))
             {
                 usageLogEntry.setRemoteServerUrl(url);
-                MetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
+                NcwmsMetadataController.proxyRequest(url, httpServletRequest, httpServletResponse);
                 return null;
             }
             return getFeatureInfo(params, LAYER_FACTORY, httpServletRequest,
@@ -139,7 +139,7 @@ public final class NcwmsController extends AbstractWmsController
         {
             // This is a request for non-standard metadata.  (This will one
             // day be replaced by queries to Capabilities fragments, if possible.)
-            // Delegate to the MetadataController
+            // Delegate to the NcwmsMetadataController
             return this.metadataController.handleRequest(httpServletRequest,
                     httpServletResponse, usageLogEntry);
         }

@@ -3,6 +3,7 @@
 <%@taglib uri="/WEB-INF/taglib/wms/MenuMaker" prefix="menu"%>
 <%@attribute name="dataset" required="true" type="uk.ac.rdg.resc.ncwms.wms.Dataset" description="The dataset object to display"%>
 <%@attribute name="label" description="Optional: can be used to override the title of the dataset"%>
+
 <c:set var="title" value="${dataset.title}"/>
 <c:if test="${not empty label}">
     <c:set var="title" value="${label}"/>
@@ -13,7 +14,7 @@
 <c:if test="${dataset.ready}">
     <menu:folder label="${title}">
         <c:forEach items="${dataset.layers}" var="layer">
-            <menu:layer dataset="${dataset}" id="${layer.id}" label="${layer.title}"/>
+            <menu:layer dataset="${dataset}" name="${layer.name}" label="${layer.title}"/>
         </c:forEach>
     </menu:folder>
 </c:if>
