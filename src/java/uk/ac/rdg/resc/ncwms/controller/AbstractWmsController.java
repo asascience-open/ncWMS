@@ -739,7 +739,7 @@ public abstract class AbstractWmsController extends AbstractController {
             throws Exception {
         BufferedImage legend;
 
-        // numColourBands defaults to 254 (the maximum) if not set
+        // numColourBands defaults to ColorPalette.MAX_NUM_COLOURS if not set
         int numColourBands = GetMapStyleRequest.getNumColourBands(params);
 
         String paletteName = params.getString("palette");

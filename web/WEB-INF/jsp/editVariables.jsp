@@ -27,7 +27,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             
             <table border="1">
                 <thead>
-                    <tr><th rowspan="2">Variable ID</th><th rowspan="2">Title</th><th colspan="2">Default colour scale range</th><th rowspan="2">Default palette</th><th rowspan="2">Default scaling</th></tr>
+                    <tr><th rowspan="2">Variable ID</th><th rowspan="2">Title</th><th colspan="2">Default colour scale range</th><th rowspan="2">Default palette</th><th>Default number of colour bands</th><th rowspan="2">Default scaling</th></tr>
                     <tr><th>Min</th><th>Max</th></tr>
                 </thead>
                 <tbody>
@@ -44,6 +44,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                                     </c:forEach>
                                 </select>
                             </td>
+                            <td><input type="text" name="${layer.id}.numColorBands" value="${layer.defaultNumColorBands}"/></td>
                             <td>
                                 <select name="${layer.id}.scaling">
                                     <option value="linear"<c:if test="${not layer.logScaling}"> selected="selected"</c:if>>linear</option>

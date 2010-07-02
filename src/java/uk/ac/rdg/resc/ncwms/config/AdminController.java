@@ -324,6 +324,7 @@ public class AdminController extends MultiActionController
                 var.setTitle(newTitle);
                 var.setColorScaleRange(Ranges.newRange(min, max));
                 var.setPaletteName(request.getParameter(layer.getId() + ".palette"));
+                var.setNumColorBands(Integer.parseInt(request.getParameter(layer.getId() + ".numColorBands")));
                 var.setScaling(request.getParameter(layer.getId() + ".scaling"));
             }
             // Saves the new configuration information to disk

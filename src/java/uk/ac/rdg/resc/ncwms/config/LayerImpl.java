@@ -133,6 +133,12 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
         return ColorPalette.get(this.getVariable().getPaletteName());
     }
 
+    @Override
+    public int getDefaultNumColorBands()
+    {
+        return this.getVariable().getNumColorBands();
+    }
+
     /**
      * Gets the {@link Variable} object that is associated with this Layer.
      * The Variable object allows the sysadmin to override certain properties.

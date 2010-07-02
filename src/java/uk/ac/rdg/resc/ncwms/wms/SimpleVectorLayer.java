@@ -137,6 +137,9 @@ public class SimpleVectorLayer implements VectorLayer
     public boolean isLogScaling() { return this.east.isLogScaling(); }
 
     @Override
+    public int getDefaultNumColorBands() { return this.east.getDefaultNumColorBands(); }
+
+    @Override
     public Range<Float> getApproxValueRange()
     {
         try

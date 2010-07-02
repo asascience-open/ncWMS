@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.controller;
 
 import java.awt.Color;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
+import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.Range;
 import uk.ac.rdg.resc.ncwms.util.Ranges;
 
@@ -131,21 +132,18 @@ public class GetMapStyleRequest
     }
 
     /**
-     * Gets the number of colour bands requested by the client, or 254 if none
-     * has been set or the requested number was bigger than 254.
+     * Gets the number of colour bands requested by the client, or {@link ColorPalette#MAX_NUM_COLOURS} if none
+     * has been set or the requested number was bigger than {@link ColorPalette#MAX_NUM_COLOURS}.
      * @param params The RequestParams object from the client.
-     * @return the requested number of colour bands, or 254 if none has been
-     * set or the requested number was bigger than 254.
+     * @return the requested number of colour bands, or {@link ColorPalette#MAX_NUM_COLOURS} if none has been
+     * set or the requested number was bigger than {@link ColorPalette#MAX_NUM_COLOURS}.
      * @throws WmsException if the client requested a negative number of colour
      * bands
      */
     static int getNumColourBands(RequestParams params) throws WmsException
     {
-        int numColourBands = params.getPositiveInt("numcolorbands", 254);
-        // 254 is the maximum number of colours we can support in a palette.
-        // One would be hard pushed to distinguish more colours than this in a
-        // typical scenario anyway.
-        if (numColourBands > 254) numColourBands = 254;
+        int numColourBands = params.getPositiveInt("numcolorbands", ColorPalette.MAX_NUM_COLOURS);
+        if (numColourBands > ColorPalette.MAX_NUM_COLOURS) numColourBands = ColorPalette.MAX_NUM_COLOURS;
         return numColourBands;
     }
     

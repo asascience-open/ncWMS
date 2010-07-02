@@ -131,11 +131,11 @@ window.onload = function()
     var ol_wms = new OpenLayers.Layer.WMS1_1_1( "OpenLayers WMS", 
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic'});
     var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite' });
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite'});
     var osm_wms = new OpenLayers.Layer.WMS1_1_1( "Openstreetmap", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map' });
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map'});
     var human_wms = new OpenLayers.Layer.WMS1_1_1( "Human Footprint", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot' });
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot'});
     var demis_wms = new OpenLayers.Layer.WMS1_1_1( "Demis WMS",
         "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE", {layers:
         'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'});
@@ -664,6 +664,37 @@ function layerSelected(layerDetails)
         $('scaleMax').value = scaleMaxVal.toPrecision(4);
         gotScaleRange = true;
     }
+
+    // (Re)set the selector of the number of colour bands
+    var numColorBandsOptions = [10, 20, 50, 100, 254];
+    var selectedColorBandsValue = numColorBandsOptions[numColorBandsOptions.length - 1];
+    // Add an extra option and select it if it's the default for the selected layer
+    if (typeof layerDetails.numColorBands != 'undefined' && !scaleLocked) {
+        // Add the number of colour bands to the select box if not already present
+        var numBands = parseInt(layerDetails.numColorBands);
+        if (!isNaN(numBands)) {
+            var contains = false;
+            for (var i = 0; i < numColorBandsOptions.length; i++) {
+                if (numBands == numColorBandsOptions[i]) {
+                    contains = true;
+                    break;
+                }
+            }
+            if (!contains) {
+                // Add to the end of the array
+                numColorBandsOptions.push(numBands);
+                // Sort the array in ascending order
+                numColorBandsOptions.sort(function(a,b){return a - b});
+            }
+            selectedColorBandsValue = numBands;
+        }
+    }
+    // Now create the select box
+    $('numColorBands').options.length = 0;
+    for (var k = 0; k < numColorBandsOptions.length; k++) {
+        $('numColorBands').options[k] = new Option(numColorBandsOptions[k], numColorBandsOptions[k]);
+    }
+    $('numColorBands').value = selectedColorBandsValue;
 
     // Set the auto-zoom box
     bbox = layerDetails.bbox;

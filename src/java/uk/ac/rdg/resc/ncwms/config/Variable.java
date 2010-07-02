@@ -60,6 +60,9 @@ public class Variable
     @Attribute(name="scaling", required=false)
     private String scaling = "linear";  // TODO Should be an enum really
 
+    @Attribute(name="numColorBands", required=false)
+    private int numColorBands = ColorPalette.MAX_NUM_COLOURS;
+
     private Dataset dataset;
 
     private Range<Float> colorScaleRange = null;
@@ -107,6 +110,9 @@ public class Variable
         {
             throw new PersistenceException(iae.getMessage());
         }
+
+        // Check that the default number of color bands is within range
+        if (this.numColorBands > ColorPalette.MAX_NUM_COLOURS) this.numColorBands = ColorPalette.MAX_NUM_COLOURS;
     }
 
     private static Range<Float> parseColorScaleRangeString(String colorScaleRangeStr)
@@ -235,6 +241,22 @@ public class Variable
     public boolean isLogScaling()
     {
         return this.logScaling;
+    }
+
+    /**
+     * Returns the number of colour bands to use when creating images of this
+     * variable.
+     */
+    public int getNumColorBands()
+    {
+        return this.numColorBands;
+    }
+
+    public void setNumColorBands(int numColorBands)
+    {
+        if (numColorBands < 0) this.numColorBands = 5;
+        else if (numColorBands > ColorPalette.MAX_NUM_COLOURS) this.numColorBands = ColorPalette.MAX_NUM_COLOURS;
+        else this.numColorBands = numColorBands;
     }
 
     /**
