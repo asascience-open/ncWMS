@@ -80,6 +80,21 @@ public final class CdmUtils
 {
     private static final Logger logger = LoggerFactory.getLogger(CdmUtils.class);
 
+    /** A Range of (0,0).  Commonly used so we create a single object to re-use */
+    static final Range ZERO_RANGE;
+
+    static
+    {
+        try
+        {
+            ZERO_RANGE = new Range(0, 0);
+        }
+        catch(InvalidRangeException ire)
+        {
+            // Won't happen so we do nothing
+        }
+    }
+
     /** Enforce non-instantiability */
     private CdmUtils() { throw new AssertionError(); }
 
@@ -382,10 +397,8 @@ public final class CdmUtils
         try
         {
             // Prevent InvalidRangeExceptions for ranges we're not going to use anyway
-            if (tIndex < 0) tIndex = 0;
-            if (zIndex < 0) zIndex = 0;
-            Range tRange = new Range(tIndex, tIndex);
-            Range zRange = new Range(zIndex, zIndex);
+            Range tRange = tIndex < 0 ? ZERO_RANGE : new Range(tIndex, tIndex);
+            Range zRange = zIndex < 0 ? ZERO_RANGE : new Range(zIndex, zIndex);
 
             // Create an list to hold the data, filled with nulls
             List<Float> picData = nullArrayList(pointList.size());

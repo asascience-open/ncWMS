@@ -40,6 +40,8 @@ import ucar.ma2.Range;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 
+import static uk.ac.rdg.resc.ncwms.cdm.CdmUtils.ZERO_RANGE;
+
 /**
  * <p>Defines different strategies for reading data from files. The grid below represents the source
  * data.  Black grid squares represent data points that must be read from the source
@@ -122,7 +124,7 @@ public enum DataReadingStrategy {
                 // Read a chunk of data - values will not be unpacked or
                 // checked for missing values yet
                 logger.debug("tRange: {}, zRange: {}, yRange: {}, xRange: {}", new Object[]{tRange, zRange, yRange, xRange});
-                GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+                GridDatatype subset = grid.makeSubset(ZERO_RANGE, ZERO_RANGE, tRange, zRange, yRange, xRange);
                 logger.debug("Subset shape = {}", Arrays.toString(subset.getShape()));
                 // Read all of the x-y data in this subset
                 Array xySlice = subset.readDataSlice(0, 0, -1, -1);
@@ -170,7 +172,7 @@ public enum DataReadingStrategy {
             logger.debug("tRange: {}, zRange: {}, yRange: {}, xRange: {}", new
                 Object[] {tRange, zRange, yRange, xRange});
             long start = System.currentTimeMillis();
-            GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+            GridDatatype subset = grid.makeSubset(ZERO_RANGE, ZERO_RANGE, tRange, zRange, yRange, xRange);
             // Read all of the x-y data in this subset
             Array xySlice = subset.readDataSlice(0, 0, -1, -1);
             logger.debug("Shape of xySlice = {}", Arrays.toString(xySlice.getShape()));
@@ -234,7 +236,7 @@ public enum DataReadingStrategy {
                 for (int i : pixelMap.getIIndices(j))
                 {
                     Range xRange = new Range(i, i);
-                    GridDatatype subset = grid.makeSubset(null, null, tRange, zRange, yRange, xRange);
+                    GridDatatype subset = grid.makeSubset(ZERO_RANGE, ZERO_RANGE, tRange, zRange, yRange, xRange);
                     // Read all of the x-y data in this subset
                     Array xySlice = subset.readDataSlice(0, 0, -1, -1);
                     Index index = xySlice.getIndex();
