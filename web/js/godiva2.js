@@ -164,10 +164,6 @@ window.onload = function()
         {
             wrapDateLine: false,
             transitionEffect: 'resize',
-            /*/projection: 'EPSG:3408', // NSIDC EASE-Grid North
-            maxExtent: new OpenLayers.Bounds(-9036842.762, -9036842.762,
-                9036842.762, 9036842.762),
-            maxResolution: 2 * 9036842.762 / 256*/
             projection: 'EPSG:32661',
             maxExtent: polarWindow,
             maxResolution: polarMaxResolution
@@ -183,10 +179,6 @@ window.onload = function()
         {
             wrapDateLine: false,
             transitionEffect: 'resize',
-            /*/projection: 'EPSG:3409', // NSIDC EASE-Grid South
-            maxExtent: new OpenLayers.Bounds(-9036842.762, -9036842.762,
-                9036842.762, 9036842.762),
-            maxResolution: 2 * 9036842.762 / 256*/
             projection: 'EPSG:32761',
             maxExtent: polarWindow,
             maxResolution: polarMaxResolution
