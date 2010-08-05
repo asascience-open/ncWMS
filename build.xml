@@ -71,7 +71,8 @@
         />
     </target>
 
-    <target name="jar-for-THREDDS" depends="-post-compile" description="Creates an ncWMS.jar file for use in the THREDDS Data Server">
+    <target name="jar-for-THREDDS" depends="compile" description="Creates an ncWMS.jar file for use in the THREDDS Data Server">
+        <mkdir dir="dist"/>
         <jar
             compress="true"
             basedir="build/web/WEB-INF/classes"
