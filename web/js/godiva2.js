@@ -127,18 +127,14 @@ window.onload = function()
             });
         }
     });
-
-    var ol_wms = new OpenLayers.Layer.WMS1_1_1( "OpenLayers WMS", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic'});
     var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'satellite'});
-    var osm_wms = new OpenLayers.Layer.WMS1_1_1( "Openstreetmap", 
-        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'osm-map'});
+        "http://wms-basemaps.appspot.com/wms", {layers: 'bluemarble_file', format: 'image/jpeg'});
+    var srtm_dem = new OpenLayers.Layer.WMS( "SRTM DEM",
+        "http://iceds.ge.ucl.ac.uk/cgi-bin/icedswms?", {layers:'bluemarble,srtm30'}, {wrapDateLine: true});
+    var ol_wms = new OpenLayers.Layer.WMS1_1_1( "OpenLayers WMS",
+        "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'basic'});
     var human_wms = new OpenLayers.Layer.WMS1_1_1( "Human Footprint", 
         "http://labs.metacarta.com/wms-c/Basic.py?", {layers: 'hfoot'});
-    var demis_wms = new OpenLayers.Layer.WMS1_1_1( "Demis WMS",
-        "http://www2.Demis.nl/MapServer/Request.asp?WRAPDATELINE=TRUE", {layers:
-        'Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports'});
         
     // Now for the polar stereographic layers, one for each pole.  We do this
     // as an Untiled layer because, for some reason, if we use a tiled layer
@@ -158,12 +154,12 @@ window.onload = function()
     var windowLow = centre - 2 * halfSideLength;
     var windowHigh = centre + 2 * halfSideLength;
     var polarWindow = new OpenLayers.Bounds(windowLow, windowLow, windowHigh, windowHigh);
-    var northPoleBaseLayer = new OpenLayers.Layer.WMS.Untiled(
+    var northPoleBaseLayer = new OpenLayers.Layer.WMS1_1_1(
         "North polar stereographic",
-        "http://nsidc.org/cgi-bin/atlas_north",
+        "http://wms-basemaps.appspot.com/wms",
         {
-            layers: 'country_borders,arctic_circle',
-            format: 'image/png'
+            layers: 'bluemarble_file',
+            format: 'image/jpeg'
         },
         {
             wrapDateLine: false,
@@ -177,12 +173,12 @@ window.onload = function()
             maxResolution: polarMaxResolution
         }
     );
-    var southPoleBaseLayer = new OpenLayers.Layer.WMS.Untiled(
+    var southPoleBaseLayer = new OpenLayers.Layer.WMS1_1_1(
         "South polar stereographic",
-        "http://nsidc.org/cgi-bin/atlas_south",
+        "http://wms-basemaps.appspot.com/wms",
         {
-            layers: 'country_borders,antarctic_circle',
-            format: 'image/png'
+            layers: 'bluemarble_file',
+            format: 'image/jpeg'
         },
         {
             wrapDateLine: false,
@@ -208,9 +204,9 @@ window.onload = function()
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);*/
     
-    map.addLayers([bluemarble_wms, demis_wms, ol_wms, osm_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer, drawinglayer/*, seazone_wms, essi_wms*/]);
+    map.addLayers([bluemarble_wms, srtm_dem, ol_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer, drawinglayer/*, seazone_wms, essi_wms*/]);
     
-    map.setBaseLayer(demis_wms);
+    map.setBaseLayer(bluemarble_wms);
     projectionCode = map.baseLayer.projection.getCode();
 
     // Make sure the Google Earth and Permalink links are kept up to date when
