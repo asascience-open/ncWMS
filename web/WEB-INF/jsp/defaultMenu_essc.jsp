@@ -10,7 +10,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 <%--
      Displays the hierarchy of layers from this server as a JSON object
      See MetadataController.showLayerHierarchy().
-     
+
      Data (models) passed in to this page:
          serverTitle = String: title for this server
          datasets = Map<String, Dataset>: all the datasets in this server
@@ -26,7 +26,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
  	 <menu:dataset dataset="${datasets.NCOF_AMM}"/>
         <menu:dataset dataset="${datasets.NCOF_IRISH}"/>
 	 <menu:dataset dataset="${datasets.NCOF_WAVES}"/>
-    
+
          <menu:folder label="OSTIA GMPE">
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="ostia_gmpe/analysed_sst" label="sea_surface_temperature"/>
              <menu:remoteLayer server="http://data.ncof.co.uk:8080/ncWMS/wms" layerName="ostia_gmpe/std" label="Standard deviation of input analyses"/>
@@ -217,7 +217,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          </menu:folder>
   	  <menu:dataset dataset="${datasets.MED_ANALYSES_ITALY}"/>
          <menu:dataset dataset="${datasets.NCOF_MRCS}"/>
- 	  <%--	
+ 	  <%--
 		<menu:dataset dataset="${datasets.MERSEA_GLOBAL}"/>
   		<menu:dataset dataset="${datasets.MERSEA_MED_V}"/>
          	<menu:dataset dataset="${datasets.MERSEA_MED_U}"/>
@@ -381,14 +381,14 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
          </menu:folder>
      </menu:folder>
-   
+
 
      <menu:folder label="Observations">
          <menu:folder label="Ocean">
          <menu:folder label="GODAE SST analyses">
             <menu:dataset dataset="${datasets.OSTIA}" label="OSTIA (UKMO)"/>
             <menu:dataset dataset="${datasets.EUR_ODYSSEA}" label="ODYSSEA (FR)"/>
-	  <%--	
+	  <%--
             <menu:dataset dataset="${datasets.NAVO_SST}" label="NAVO (US Navy)"/>
             <menu:dataset dataset="${datasets.NCDC_AVHRR_AMSR_OI}" label="NCDC (Reynolds)"/>
             <menu:dataset dataset="${datasets.REMSS_mw_ir_OI}" label="RemSS (Remote Sens. Sys.)"/>

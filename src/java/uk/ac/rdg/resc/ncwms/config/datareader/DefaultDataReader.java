@@ -28,24 +28,28 @@
 
 package uk.ac.rdg.resc.ncwms.config.datareader;
 
-import uk.ac.rdg.resc.ncwms.coords.PointList;
 import java.io.IOException;
-import java.util.EnumSet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.joda.time.DateTime;
+import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ucar.nc2.Attribute;
+import ucar.nc2.Variable;
+import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.NetcdfDataset.Enhance;
+import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
-import uk.ac.rdg.resc.ncwms.cdm.AbstractScalarLayerBuilder;
-import uk.ac.rdg.resc.ncwms.cdm.CdmUtils;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.cdm.CdmUtils;
 import uk.ac.rdg.resc.ncwms.config.LayerImpl;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
@@ -57,16 +61,6 @@ import uk.ac.rdg.resc.ncwms.wms.Layer;
 public class DefaultDataReader extends DataReader
 {
     private static final Logger logger = LoggerFactory.getLogger(DefaultDataReader.class);
-    // We'll use this logger to output performance information
-    private static final Logger benchmarkLogger = LoggerFactory.getLogger("ncwms.benchmark");
-
-    /**
-     * Enumeration of enhancements we want to perform when opening NetcdfDatasets
-     * Read the coordinate systems but don't automatically process
-     * scale/missing/offset when reading data, for efficiency reasons.
-     */
-    private static final Set<Enhance> DATASET_ENHANCEMENTS =
-        EnumSet.of(Enhance.ScaleMissingDefer, Enhance.CoordSystems);
 
     /**
      * Reads data from a NetCDF file.  Reads data for a single timestep only.
@@ -75,14 +69,11 @@ public class DefaultDataReader extends DataReader
      * Missing values (e.g. land pixels in oceanography data) will be represented
      * by null.
      *
-     * <p>The actual reading of data is performed in {@link #populatePixelArray
-     * populatePixelArray()}</p>
-     *
      * @param filename Location of the file, NcML aggregation or OPeNDAP URL
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param pointList The list of real-world x-y points for which we need data.
+     * @param domain The list of real-world x-y points for which we need data.
      * In the case of a GetMap operation this will usually be a {@link HorizontalGrid}.
      * @return an array of floating-point data values, one for each point in
      * the {@code pointList}, in the same order.
@@ -90,66 +81,26 @@ public class DefaultDataReader extends DataReader
      */
     @Override
     public List<Float> read(String filename, Layer layer, int tIndex, int zIndex,
-        PointList pointList) throws IOException
+        Domain<HorizontalPosition> domain) throws IOException
     {
         NetcdfDataset nc = null;
         try
         {
-            long start = System.currentTimeMillis();
-            
             // Open the dataset, using the cache for NcML aggregations
             nc = openDataset(filename);
-            long openedDS = System.currentTimeMillis();
-            logger.debug("Opened NetcdfDataset in {} milliseconds", (openedDS - start));
-
-            // Get a GridDataset object, since we know this is a grid
-            GridDataset gd = CdmUtils.getGridDataset(nc);
-            
-            logger.debug("Getting GridDatatype with id {}", layer.getId());
-            GridDatatype gridData = gd.findGridDatatype(layer.getId());
-            logger.debug("filename = {}, gg = {}", filename, gridData.toString());
-
-            return CdmUtils.readPointList(
-                gridData,           // The grid of data to read from
-                layer.getHorizontalCoordSys(),
+            // Read and return the data
+            return CdmUtils.readHorizontalPoints(
+                nc,
+                layer.getId(),           // The grid of data to read from
+                layer.getHorizontalGrid(),
                 tIndex,
                 zIndex,
-                pointList,
-                CdmUtils.getOptimumDataReadingStrategy(nc),
-                CdmUtils.isScaleMissingDeferred(nc)
+                domain
             );
-
-            // Write to the benchmark logger (if enabled in log4j.properties)
-            // Headings are written in NcwmsContext.init()
-            /*if (pixelMap.getNumUniqueIJPairs() > 1)
-            {
-                // Don't log single-pixel (GetFeatureInfo) requests
-                benchmarkLogger.info
-                (
-                    layer.getDataset().getId() + "," +
-                    layer.getId() + "," +
-                    this.getClass().getSimpleName() + "," +
-                    pointList.size() + "," +
-                    pixelMap.getNumUniqueIJPairs() + "," +
-                    pixelMap.getSumRowLengths() + "," +
-                    pixelMap.getBoundingBoxSize() + "," +
-                    (after - before)
-                );
-            }*/
         }
         finally
         {
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
+            closeDataset(nc);
         }
     }
 
@@ -189,33 +140,19 @@ public class DefaultDataReader extends DataReader
         {
             // Open the dataset, using the cache for NcML aggregations
             nc = openDataset(filename);
-            GridDataset gd = CdmUtils.getGridDataset(nc);
-            GridDatatype grid = gd.findGridDatatype(layer.getId());
-            
             // Read and return the data
             return CdmUtils.readTimeseries(
-                grid,
-                layer.getHorizontalCoordSys(),
+                nc,
+                layer.getId(),
+                layer.getHorizontalGrid(),
                 tIndices,
                 zIndex,
-                xy,
-                CdmUtils.isScaleMissingDeferred(nc)
+                xy
             );
         }
         finally
         {
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
-
+            closeDataset(nc);
         }
     }
     
@@ -230,8 +167,8 @@ public class DefaultDataReader extends DataReader
      * @throws IOException if there was an error reading from the data source
      */
     @Override
-    protected void findAndUpdateLayers(String location,
-        Map<String, LayerImpl> layers) throws IOException
+    protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
+            throws IOException
     {
         logger.debug("Finding layers in {}", location);
         
@@ -242,50 +179,152 @@ public class DefaultDataReader extends DataReader
             nc = openDataset(location);
             GridDataset gd = CdmUtils.getGridDataset(nc);
 
-            LayerImplBuilder layerBuilder = new LayerImplBuilder(location);
-            CdmUtils.findAndUpdateLayers(gd, layerBuilder, layers);
+            if (gd == null)           throw new NullPointerException("GridDataset can't be null");
+            if (layers == null)       throw new NullPointerException("layers can't be null");
+
+            // Search through all coordinate systems, creating appropriate metadata
+            // for each.  This allows metadata objects to be shared among Layer objects,
+            // saving memory.
+            for (Gridset gridset : gd.getGridsets())
+            {
+                GridCoordSystem coordSys = gridset.getGeoCoordSystem();
+
+                // Look for new variables in this coordinate system.
+                List<GridDatatype> grids = gridset.getGrids();
+                List<GridDatatype> newGrids = new ArrayList<GridDatatype>();
+                for (GridDatatype grid : grids)
+                {
+                    if (layers.containsKey(grid.getName()))
+                    {
+                        logger.debug("We already have data for {}", grid.getName());
+                    }
+                    else
+                    {
+                        // We haven't seen this variable before so we must create
+                        // a Layer object later
+                        logger.debug("{} is a new grid", grid.getName());
+                        newGrids.add(grid);
+                    }
+                }
+
+                // We only create all the coordsys-related objects if we have
+                // new Layers to create
+                if (!newGrids.isEmpty())
+                {
+                    logger.debug("Creating coordinate system objects");
+                    // Create an object that will map lat-lon points to nearest grid points
+                    HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
+
+                    boolean zPositive = coordSys.isZPositive();
+                    CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+                    List<Double> zValues = getZValues(zAxis, zPositive);
+
+                    // Get the bounding box
+                    GeographicBoundingBox bbox = CdmUtils.getBbox(coordSys.getLatLonBoundingBox());
+
+                    // Now add every variable that has this coordinate system
+                    for (GridDatatype grid : newGrids)
+                    {
+                        logger.debug("Creating new Layer object for {}", grid.getName());
+                        LayerImpl layer = new LayerImpl(grid.getName());
+                        layer.setTitle(getLayerTitle(grid.getVariable()));
+                        layer.setAbstract(grid.getDescription());
+                        layer.setUnits(grid.getUnitsString());
+                        layer.setHorizontalGrid(horizGrid);
+                        layer.setGeographicBoundingBox(bbox);
+
+                        if (zAxis != null)
+                        {
+                            layer.setElevationValues(zValues);
+                            layer.setElevationPositive(zPositive);
+                            layer.setElevationUnits(zAxis.getUnitsString());
+                        }
+
+                        // Add this layer to the Map
+                        layers.put(layer.getId(), layer);
+                    }
+                }
+
+                // Now we add the new timestep information for *all* grids
+                // in this Gridset
+                List<DateTime> timesteps;
+                if (coordSys.hasTimeAxis1D()) {
+                    timesteps = CdmUtils.getTimesteps(coordSys.getTimeAxis1D());
+                } else {
+                    timesteps = Collections.emptyList();
+                }
+                for (GridDatatype grid : grids)
+                {
+                    LayerImpl layer = layers.get(grid.getName());
+                    for (int i = 0, len = timesteps.size(); i < len; i++)
+                    {
+                        layer.addTimestepInfo(timesteps.get(i), location, i);
+                    }
+                }
+            }
         }
         finally
         {
             logger.debug("In finally clause");
-            if (nc != null)
-            {
-                try
-                {
-                    nc.close();
-                    logger.debug("NetCDF file closed");
-                }
-                catch (IOException ex)
-                {
-                    logger.error("IOException closing " + nc.getLocation(), ex);
-                }
-            }
+            closeDataset(nc);
         }
     }
 
-    private static final class LayerImplBuilder extends AbstractScalarLayerBuilder<LayerImpl>
+    /**
+     * @return the value of the standard_name attribute of the variable,
+     * or the long_name if it does not exist, or the unique id if neither of
+     * these attributes exist.
+     */
+    private static String getLayerTitle(Variable var)
     {
-        private final String location;
-
-        public LayerImplBuilder(String location) {
-            this.location = location;
-        }
-
-        @Override
-        public LayerImpl newLayer(String id) {
-            return new LayerImpl(id);
-        }
-
-        @Override
-        public void setTimeValues(LayerImpl layer, List<DateTime> times) {
-            for (int i = 0; i < times.size(); i++) {
-                layer.addTimestepInfo(times.get(i), this.location, i);
+        Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
+        if (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
+        {
+            Attribute longNameAtt = var.findAttributeIgnoreCase("long_name");
+            if (longNameAtt == null || longNameAtt.getStringValue().trim().equals(""))
+            {
+                return var.getName();
+            }
+            else
+            {
+                return longNameAtt.getStringValue();
             }
         }
+        else
+        {
+            return stdNameAtt.getStringValue();
+        }
+    }
 
-        @Override
-        public void setGridDatatype(LayerImpl layer, GridDatatype gd) {
-            // Do nothing: we don't hold on to the GridDatatype object
+    /**
+     * @return the values on the z axis, with sign reversed if zPositive == false.
+     * Returns an empty list if zAxis is null.
+     */
+    private static List<Double> getZValues(CoordinateAxis1D zAxis, boolean zPositive)
+    {
+        List<Double> zValues = new ArrayList<Double>();
+        if (zAxis != null)
+        {
+            for (double zVal : zAxis.getCoordValues())
+            {
+                zValues.add(zPositive ? zVal : 0.0 - zVal);
+            }
+        }
+        return zValues;
+    }
+
+    /** Closes the given dataset, logging any exceptions at debug level */
+    private static void closeDataset(NetcdfDataset nc)
+    {
+        if (nc == null) return;
+        try
+        {
+            nc.close();
+            logger.debug("NetCDF file closed");
+        }
+        catch (IOException ex)
+        {
+            logger.error("IOException closing " + nc.getLocation(), ex);
         }
     }
 
@@ -303,26 +342,22 @@ public class DefaultDataReader extends DataReader
      * aggregation file or an OPeNDAP location, {@literal i.e.} anything that can be
      * passed to NetcdfDataset.openDataset(location).
      * @return a {@link NetcdfDataset} object for accessing the data at the
-     * given location.  The coordinate systems will have been read, but
-     * the application of scale-offset-missing is deferred.
+     * given location.
      * @throws IOException if there was an error reading from the data source.
      */
     private static NetcdfDataset openDataset(String location) throws IOException
     {
+        boolean usedCache = false;
+        NetcdfDataset nc;
+        long start = System.nanoTime();
         if (WmsUtils.isNcmlAggregation(location))
         {
             // We use the cache of NetcdfDatasets to read NcML aggregations
             // as they can be time-consuming to put together.  If the underlying
             // data can change we rely on the server admin setting the
             // "recheckEvery" parameter in the aggregation file.
-            return NetcdfDataset.acquireDataset(
-                null, // Use the default factory
-                location,
-                DATASET_ENHANCEMENTS,
-                -1, // use default buffer size
-                null, // no CancelTask
-                null // no iospMessage
-            );
+            nc = NetcdfDataset.acquireDataset(location, null);
+            usedCache = true;
         }
         else
         {
@@ -332,14 +367,12 @@ public class DefaultDataReader extends DataReader
             // have swallowed up all available file handles, in which case
             // the server admin will need to increase the number of available
             // handles on the server.
-            return NetcdfDataset.openDataset(
-                location,
-                DATASET_ENHANCEMENTS,
-                -1, // use default buffer size
-                null, // no CancelTask
-                null // no iospMessage
-            );
+            nc = NetcdfDataset.openDataset(location);
         }
+        long openedDS = System.nanoTime();
+        String verb = usedCache ? "Acquired" : "Opened";
+        logger.debug(verb + " NetcdfDataset in {} milliseconds", (openedDS - start) / 1.e6);
+        return nc;
     }
     
 }

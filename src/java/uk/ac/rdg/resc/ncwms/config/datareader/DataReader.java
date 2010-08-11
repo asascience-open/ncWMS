@@ -28,7 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.config.datareader;
 
-import uk.ac.rdg.resc.ncwms.coords.PointList;
+import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
@@ -39,9 +39,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.oro.io.GlobFilenameFilter;
-import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.ncwms.config.LayerImpl;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
@@ -61,7 +61,7 @@ public abstract class DataReader
     private static Map<String, DataReader> readers = new HashMap<String, DataReader>();
     
     /**
-     * This class can only be instantiated through forDataset()
+     * This class can only be instantiated through forName()
      */
     protected DataReader(){}
     
@@ -104,13 +104,13 @@ public abstract class DataReader
      * @param layer {@link Layer} object representing the variable
      * @param tIndex The index along the time axis (or -1 if there is no time axis)
      * @param zIndex The index along the vertical axis (or -1 if there is no vertical axis)
-     * @param pointList The list of real-world x-y points for which we need data
+     * @param domain The list of real-world x-y points for which we need data
      * @return an List of floating-point data values, one for each point in
      * the {@code pointList}, in the same order.
      * @throws IOException if an input/output exception occurred when reading data
      */
     public abstract List<Float> read(String filename, Layer layer,
-        int tIndex, int zIndex, PointList pointList)
+        int tIndex, int zIndex, Domain<HorizontalPosition> domain)
         throws IOException;
 
     /**
@@ -124,7 +124,7 @@ public abstract class DataReader
      * sensible.)</p>
      * <p>This default implementation simply makes multiple calls to
      * {@link #read(java.lang.String, uk.ac.rdg.resc.ncwms.metadata.Layer, int,
-     * int, uk.ac.rdg.resc.ncwms.datareader.PointList) read()},
+     * int, uk.ac.rdg.resc.ncwms.datareader.HorizontalDomain) read()},
      * which is not very efficient because the same file may be opened and closed
      * multiple times (a particular problem when reading from OPeNDAP servers).
      * Subclasses are encouraged to override this with a more efficient method.</p>
@@ -142,7 +142,7 @@ public abstract class DataReader
         List<Integer> tIndices, int zIndex, HorizontalPosition xy)
         throws IOException {
 
-        PointList pointList = PointList.fromPoint(xy);
+        HorizontalDomain pointList = new HorizontalDomain(xy);
         List<Float> tsData = new ArrayList<Float>();
         for (int tIndex : tIndices) {
             tsData.add(this.read(filename, layer, tIndex, zIndex, pointList).get(0));
@@ -152,12 +152,11 @@ public abstract class DataReader
     }
     
     /**
-     * Reads and returns the metadata for all the layers (i.e. variables) in the
-     * given {@link Dataset}.
-     * @param location Location of the dataset's files, as set in the admin
-     * application.  This can be a glob expression.
+     * Reads and returns the metadata for all the layers (i.e. variables) at the
+     * given location.
+     * @param location Location of the files.  This can be a glob expression.
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
-     * @throws FileNotFoundException if the dataset's location does not match
+     * @throws FileNotFoundException if the location does not match
      * any existing files on the server
      * @throws IOException if there was an error reading from the data source
      */
@@ -171,8 +170,7 @@ public abstract class DataReader
         }
         else
         {
-            // The dataset's location represents locally-held data so we do
-            // a glob expansion
+            // The location represents locally-held data so we do a glob expansion
             List<File> files = expandGlobExpression(location);
             if (files.size() == 0)
             {
@@ -190,11 +188,11 @@ public abstract class DataReader
     }
     
     /**
-     * Reads the metadata for all the variables in the dataset
+     * Reads the metadata for all the variables in the file(s)
      * at the given location, which is the location of a NetCDF file, NcML
      * aggregation, or OPeNDAP location ({@literal i.e.} one element resulting
      * from the expansion of a glob aggregation).
-     * @param location Full path to the dataset
+     * @param location Full path to the files
      * @param layers Map of Layer Ids to Layer objects to populate or update
      * @throws Exception if there was an error reading from the data source
      */
@@ -219,7 +217,7 @@ public abstract class DataReader
         File globFile = new File(globExpression);
         if (!globFile.isAbsolute())
         {
-            throw new IllegalArgumentException("Dataset location must be an absolute path");
+            throw new IllegalArgumentException("Location must be an absolute path");
         }
 
         // Break glob pattern into path components.  To do this in a reliable

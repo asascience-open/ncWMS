@@ -42,14 +42,14 @@ import org.joda.time.Period;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
+import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.controller.AbstractWmsController.LayerFactory;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
-import uk.ac.rdg.resc.ncwms.util.Range;
-import uk.ac.rdg.resc.ncwms.util.Ranges;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
@@ -276,8 +276,7 @@ public abstract class AbstractMetadataController
         usageLogEntry.setLayer(layer);
         
         // Get the grid onto which the data is being projected
-        HorizontalGrid grid = new HorizontalGrid(dr.getCrsCode(), dr.getWidth(),
-                dr.getHeight(), dr.getBbox());
+        RegularGrid grid = WmsUtils.getImageGrid(dr);
         
         // Get the value on the z axis
         double zValue = AbstractWmsController.getElevationValue(dr.getElevationString(), layer);
@@ -289,13 +288,13 @@ public abstract class AbstractMetadataController
         List<Float> magnitudes;
         if (layer instanceof ScalarLayer)
         {
-            magnitudes = ((ScalarLayer)layer).readPointList(tValue, zValue, grid);
+            magnitudes = ((ScalarLayer)layer).readHorizontalPoints(tValue, zValue, grid);
         }
         else if (layer instanceof VectorLayer)
         {
             VectorLayer vecLayer = (VectorLayer)layer;
-            List<Float> east = vecLayer.getEastwardComponent().readPointList(tValue, zValue, grid);
-            List<Float> north = vecLayer.getNorthwardComponent().readPointList(tValue, zValue, grid);
+            List<Float> east = vecLayer.getEastwardComponent().readHorizontalPoints(tValue, zValue, grid);
+            List<Float> north = vecLayer.getNorthwardComponent().readHorizontalPoints(tValue, zValue, grid);
             magnitudes = WmsUtils.getMagnitudes(east, north);
         }
         else

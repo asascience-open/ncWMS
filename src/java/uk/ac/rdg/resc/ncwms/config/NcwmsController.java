@@ -36,11 +36,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
 import org.springframework.web.servlet.ModelAndView;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.ncwms.cache.TileCache;
 import uk.ac.rdg.resc.ncwms.cache.TileCacheKey;
 import uk.ac.rdg.resc.ncwms.controller.AbstractWmsController;
 import uk.ac.rdg.resc.ncwms.controller.RequestParams;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
@@ -237,7 +237,7 @@ public final class NcwmsController extends AbstractWmsController
      */
     @Override
     protected List<Float> readDataGrid(ScalarLayer layer, DateTime dateTime,
-        double elevation, HorizontalGrid grid, UsageLogEntry usageLogEntry)
+        double elevation, RegularGrid grid, UsageLogEntry usageLogEntry)
         throws InvalidDimensionValueException, IOException
     {
         // We know that this Config object only returns LayerImpl objects
@@ -268,7 +268,7 @@ public final class NcwmsController extends AbstractWmsController
         {
             // We didn't get any data from the cache, so we have to read from
             // the source data.
-            data = layerImpl.readPointList(fti, zIndex, grid);
+            data = layerImpl.readHorizontalDomain(fti, zIndex, grid);
             // Put the data in the tile cache
             if (cacheEnabled) this.tileCache.put(key, data);
         }

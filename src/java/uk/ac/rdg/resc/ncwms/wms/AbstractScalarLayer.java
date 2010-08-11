@@ -36,9 +36,9 @@ import java.util.List;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalCoordSys;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.coords.PointList;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
@@ -62,7 +62,7 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     protected List<Double> zValues = Collections.emptyList(); // Prevents NullPointerExceptions
     protected boolean zPositive;
     protected GeographicBoundingBox bbox = DefaultGeographicBoundingBox.WORLD;
-    protected HorizontalCoordSys horizCoordSys;
+    protected HorizontalGrid horizGrid;
 
     /**
      * Creates an AbstractLayer with a bounding box that covers the whole world
@@ -123,8 +123,8 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     }
 
     @Override
-    public HorizontalCoordSys getHorizontalCoordSys() { return this.horizCoordSys; }
-    public void setHorizontalCoordSys(HorizontalCoordSys horizCoordSys) { this.horizCoordSys = horizCoordSys; }
+    public HorizontalGrid getHorizontalGrid() { return this.horizGrid; }
+    public void setHorizontalGrid(HorizontalGrid horizGrid) { this.horizGrid = horizGrid; }
 
     /**
      * Returns true if this layer has a time axis.  This is a convenience method
@@ -304,8 +304,8 @@ public abstract class AbstractScalarLayer implements ScalarLayer
 
     /**
      * <p>Simple but naive implementation of
-     * {@link Layer#readPointList(org.joda.time.DateTime, double,
-     * uk.ac.rdg.resc.ncwms.datareader.PointList) Layer.readPointList()} that
+     * {@link Layer#readHorizontalPoints(org.joda.time.DateTime, double,
+     * uk.ac.rdg.resc.ncwms.datareader.PointList) Layer.readHorizontalPoints()} that
      * makes repeated calls to
      * {@link Layer#readSinglePoint(org.joda.time.DateTime, double,
      * uk.ac.rdg.resc.ncwms.coordsys.HorizontalPosition) Layer.readSinglePoint()}.
@@ -314,11 +314,13 @@ public abstract class AbstractScalarLayer implements ScalarLayer
      * @return a List of data values
      */
     @Override
-    public List<Float> readPointList(DateTime time, double elevation, PointList pointList)
+    public List<Float> readHorizontalPoints(DateTime time,
+            double elevation, Domain<HorizontalPosition> domain)
             throws InvalidDimensionValueException, IOException
     {
-        List<Float> vals = new ArrayList<Float>(pointList.size());
-        for (HorizontalPosition xy : pointList.asList()) {
+        List<? extends HorizontalPosition> points = domain.getDomainObjects();
+        List<Float> vals = new ArrayList<Float>(points.size());
+        for (HorizontalPosition xy : points) {
             vals.add(this.readSinglePoint(time, elevation, xy));
         }
         return vals;

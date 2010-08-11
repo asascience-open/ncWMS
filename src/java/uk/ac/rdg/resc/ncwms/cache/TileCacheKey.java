@@ -31,10 +31,11 @@ package uk.ac.rdg.resc.ncwms.cache;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
-import uk.ac.rdg.resc.ncwms.coords.CrsHelper;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
+import org.geotoolkit.referencing.CRS;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
+import uk.ac.rdg.resc.edal.geometry.BoundingBox;
+import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
-import uk.ac.rdg.resc.ncwms.coords.Longitude;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
@@ -83,7 +84,7 @@ public class TileCacheKey implements Serializable
      * @throws IllegalArgumentException if the given filepath exists on the server
      * but does not represent a file (e.g. it is a directory)
      */
-    public TileCacheKey(String filepath, Layer layer, HorizontalGrid grid,
+    public TileCacheKey(String filepath, Layer layer, RegularGrid grid,
         int tIndex, int zIndex)
     {
         this.layerId = layer.getId();
@@ -198,36 +199,37 @@ public class TileCacheKey implements Serializable
     }
     
     /**
-     * Sets the properties of this Key that relate to the horizontal grid of the layer.
+     * Sets the properties of this Key that relate to the horizontal grid of the image.
      * Some CRSs have multiple, equivalent, codes (e.g. CRS:84 and EPSG:4326).
      * Furthermore, for CRSs with longitude axes, some apparently-different
      * bounding boxes are functionally equivalent (e.g. 360 degrees = 0 degrees).
      * This method sets the CRS and bbox to standard values to ensure that
      * data are retrieved accurately and without unnecessary repetition.
      */
-    private void setGrid(HorizontalGrid grid)
+    private void setGrid(RegularGrid grid)
     {
-        this.width = grid.getWidth();
-        this.height = grid.getHeight();
-        if (grid.isLatLon())
+        this.width = grid.getXAxis().getSize();
+        this.height = grid.getYAxis().getSize();
+        BoundingBox boundingBox = grid.getExtent();
+        this.bbox = new double[] {
+            boundingBox.getMinX(),
+            boundingBox.getMinY(),
+            boundingBox.getMaxX(),
+            boundingBox.getMaxY()
+        };
+        if (Utils.isWgs84LonLat(grid.getCoordinateReferenceSystem()))
         {
             // Make sure we always use the same code for lat-lon projections
-            this.crsCode = CrsHelper.PLATE_CARREE_CRS_CODE;
-            // Constrain longitudes to range [-180,180]
-            this.bbox = new double[] {
-                Longitude.constrain180(grid.getBbox()[0]),
-                grid.getBbox()[1],
-                Longitude.constrain180(grid.getBbox()[2]),
-                grid.getBbox()[3]
-            };
+            this.crsCode = "CRS:841";
+            // Constrain longitudes to range [-180,180] to canonicalise them
+            this.bbox[0] = Utils.constrainLongitude180(this.bbox[0]);
+            this.bbox[2] = Utils.constrainLongitude180(this.bbox[2]);
         }
         else
         {
-            this.crsCode = grid.getCrsCode();
-            // We are paranoid and create a clone so that we know for sure
-            // that the bounding box will not be altered in another class:
-            // guarantees immutability of the TileCacheKey object
-            this.bbox = (double[])grid.getBbox().clone();
+            // This should work for all CRS objects we obtain from the Geotoolkit
+            // CRS factories (see http://lists.osgeo.org/pipermail/geotoolkit/2010-April/000347.html)
+            this.crsCode = CRS.getDeclaredIdentifier(grid.getCoordinateReferenceSystem());
         }
     }
 }

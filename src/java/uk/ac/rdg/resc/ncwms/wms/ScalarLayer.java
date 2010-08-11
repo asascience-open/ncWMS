@@ -31,9 +31,9 @@ package uk.ac.rdg.resc.ncwms.wms;
 import java.io.IOException;
 import java.util.List;
 import org.joda.time.DateTime;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.coords.PointList;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 
 /**
@@ -87,7 +87,7 @@ public interface ScalarLayer extends Layer
      * this does not match a valid {@link #getElevationValues() elevation value}
      * in this Layer, this method will throw an {@link InvalidDimensionValueException}.
      * (If this Layer has no elevation axis, this parameter will be ignored.)
-     * @param pointList The list of horizontal locations from which we are to
+     * @param points The collections of horizontal locations from which we are to
      * read data.  The returned List of data values will contain one value for
      * each item in this list in the same order.  This method will extract data
      * from the nearest grid points to each item in this list, returning
@@ -101,7 +101,8 @@ public interface ScalarLayer extends Layer
      * Layer.
      * @throws IOException if there was an error reading from the data source
      */
-    public List<Float> readPointList(DateTime time, double elevation, PointList pointList)
+    public List<Float> readHorizontalPoints(DateTime time, double elevation,
+            Domain<HorizontalPosition> points)
         throws InvalidDimensionValueException, IOException;
 
     /**

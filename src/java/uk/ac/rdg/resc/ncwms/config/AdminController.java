@@ -38,7 +38,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.usagelog.h2.H2UsageLogger;
-import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**

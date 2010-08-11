@@ -32,6 +32,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
+import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
@@ -71,7 +72,7 @@ public abstract class SimpleFormat extends ImageFormat
     @Override
     public final void writeImage(List<BufferedImage> frames,
         OutputStream out, Layer layer, List<String> tValues,
-        String zValue, double[] bbox, BufferedImage legend) throws IOException
+        String zValue, BoundingBox bbox, BufferedImage legend) throws IOException
     {
         this.writeImage(frames, out);
     }

@@ -34,12 +34,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.joda.time.DateTime;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.coords.PointList;
+import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
-import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.AbstractTimeAggregatedLayer;
 
@@ -154,19 +155,20 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
      * and is thus more efficient than making multiple calls to readSinglePoint().</p>
      */
     @Override
-    public List<Float> readPointList(DateTime time, double elevation, PointList pointList)
+    public List<Float> readHorizontalPoints(DateTime time, double elevation,
+            Domain<HorizontalPosition> domain)
         throws InvalidDimensionValueException, IOException
     {
         int zIndex = this.findAndCheckElevationIndex(elevation);
         FilenameAndTimeIndex fti = this.findAndCheckFilenameAndTimeIndex(time);
-        return this.readPointList(fti, zIndex, pointList);
+        return this.readHorizontalDomain(fti, zIndex, domain);
     }
     
-    /** Reads a PointList based upon t and z indices rather than natural values */
-    List<Float> readPointList(FilenameAndTimeIndex fti, int zIndex, PointList pointList)
+    /** Reads a set of horizontal posiitions based upon t and z indices rather than natural values */
+    List<Float> readHorizontalDomain(FilenameAndTimeIndex fti, int zIndex, Domain<HorizontalPosition> domain)
         throws IOException
     {
-        return this.dataReader.read(fti.filename, this, fti.tIndexInFile, zIndex, pointList);
+        return this.dataReader.read(fti.filename, this, fti.tIndexInFile, zIndex, domain);
     }
 
     /**
@@ -228,8 +230,8 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
     public Float readSinglePoint(DateTime time, double elevation, HorizontalPosition xy)
         throws InvalidDimensionValueException, IOException
     {
-        PointList singlePoint = PointList.fromPoint(xy);
-        return this.readPointList(time, elevation, singlePoint).get(0);
+        HorizontalDomain singlePoint = new HorizontalDomain(xy);
+        return this.readHorizontalPoints(time, elevation, singlePoint).get(0);
     }
 
     @Override

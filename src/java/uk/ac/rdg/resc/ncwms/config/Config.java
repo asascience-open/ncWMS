@@ -76,7 +76,7 @@ import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
 public class Config implements ServerConfig, ApplicationContextAware
 {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
-    
+
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
     // presumably because the definition doesn't clarify what sort of List should
@@ -85,31 +85,31 @@ public class Config implements ServerConfig, ApplicationContextAware
     // The real set of all datasets is in the datasets Map.
     @ElementList(name="datasets", type=Dataset.class)
     private ArrayList<Dataset> datasetList = new ArrayList<Dataset>();
-    
+
     // Nothing happens to this at the moment... TODO for the future
     @Element(name="threddsCatalog", required=false)
     private String threddsCatalogLocation = " ";    //location of the Thredds Catalog.xml (if there is one...)
-    
+
     @Element(name="contact", required=false)
     private Contact contact = new Contact();
-    
+
     @Element(name="server")
     private Server server = new Server();
-    
+
     @Element(name="cache", required=false)
     private Cache cache = new Cache();
-    
+
     // Time of the last update to this configuration or any of the contained
     // metadata
     private DateTime lastUpdateTime;
-    
+
     private File configFile; // Location of the file from which this information has been read
-    
+
     // Will be injected by Spring: handles authenticated OPeNDAP calls
     private NcwmsCredentialsProvider credentialsProvider;
-    
+
     /**
-     * This contains the map of dataset IDs to Dataset objects.  We use a 
+     * This contains the map of dataset IDs to Dataset objects.  We use a
      * LinkedHashMap so that the order of datasets in the Map is preserved.
      */
     private Map<String, Dataset> datasets = new LinkedHashMap<String, Dataset>();
@@ -119,13 +119,13 @@ public class Config implements ServerConfig, ApplicationContextAware
     /** Contains handles to background threads that can be used to cancel reloading of datasets.
       * Maps dataset Ids to Future objects*/
     private Map<String, ScheduledFuture<?>> futures = new HashMap<String, ScheduledFuture<?>>();
-    
+
     /**
      * Private constructor.  This prevents other classes from creating
      * new Config objects directly.
      */
     private Config() {}
-    
+
     /**
      * Reads configuration information from the given working directory
      * @param workingDirectory The ncWMS working directory, which must contain
@@ -182,7 +182,7 @@ public class Config implements ServerConfig, ApplicationContextAware
 
         return config;
     }
-    
+
     /**
      * Saves configuration information to the disk.  Other classes can call this
      * method when they have altered the contents of this object.
@@ -199,7 +199,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         new Persister().write(this, this.configFile);
         logger.debug("Config information saved to {}", this.configFile.getPath());
     }
-    
+
     /**
      * Checks that the data we have read are valid.  Checks that there are no
      * duplicate dataset IDs or duplicate URLs for third-party layer providers.
@@ -218,7 +218,7 @@ public class Config implements ServerConfig, ApplicationContextAware
             dsIds.add(dsId);
         }
     }
-    
+
     /**
      * Called when we have checked that the configuration is valid.  Populates
      * the datasets hashmap.
@@ -233,7 +233,7 @@ public class Config implements ServerConfig, ApplicationContextAware
             this.datasets.put(ds.getId(), ds);
         }
     }
-    
+
     void setLastUpdateTime(DateTime date)
     {
         if (date.isAfter(this.lastUpdateTime))
@@ -268,7 +268,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         this.futures.put(ds.getId(), future);
         logger.debug("Scheduled auto-reloading of dataset {}", ds.getId());
     }
-    
+
     /**
      * @return the time at which this configuration was last updated
      */
@@ -287,7 +287,7 @@ public class Config implements ServerConfig, ApplicationContextAware
     {
         this.server = server;
     }
-    
+
     public Cache getCache()
     {
         return this.cache;
@@ -297,7 +297,7 @@ public class Config implements ServerConfig, ApplicationContextAware
     {
         this.cache = cache;
     }
-    
+
     public Contact getContact()
     {
         return contact;
@@ -325,7 +325,7 @@ public class Config implements ServerConfig, ApplicationContextAware
     {
         return this.datasets.get(datasetId);
     }
-    
+
     public synchronized void addDataset(Dataset ds)
     {
         ds.setConfig(this);
@@ -333,7 +333,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         this.datasets.put(ds.getId(), ds);
         this.scheduleReloading(ds);
     }
-    
+
     public synchronized void removeDataset(Dataset ds)
     {
         this.datasetList.remove(ds);
@@ -343,7 +343,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         // We allow the reloading task to be interrupted
         if (future != null) future.cancel(true);
     }
-    
+
     public synchronized void changeDatasetId(Dataset ds, String newId)
     {
         String oldId = ds.getId();
@@ -354,7 +354,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         this.futures.put(newId, future);
         logger.debug("Changed dataset with ID {} to {}", oldId, newId);
     }
-    
+
     /**
      * If s is whitespace-only or empty, returns a space, otherwise returns s.
      * This is to work around problems with the Simple XML software, which throws
@@ -366,7 +366,7 @@ public class Config implements ServerConfig, ApplicationContextAware
         s = s.trim();
         return s.equals("") ? " " : s;
     }
-    
+
     /**
      * If the given dataset is an OPeNDAP location, this looks for
      * a username and password and, if it finds one, updates the
@@ -522,5 +522,5 @@ public class Config implements ServerConfig, ApplicationContextAware
     public File getPaletteFilesLocation(ServletContext context) {
         return new File(context.getRealPath("/WEB-INF/conf/palettes"));
     }
-    
+
 }

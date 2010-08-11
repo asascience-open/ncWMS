@@ -38,6 +38,7 @@ import javax.imageio.ImageIO;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
@@ -78,7 +79,7 @@ public class KmzFormat extends ImageFormat
     @Override
     public void writeImage(List<BufferedImage> frames,
         OutputStream out, Layer layer, List<String> tValues,
-        String zValue, double[] bbox, BufferedImage legend) throws IOException
+        String zValue, BoundingBox bbox, BufferedImage legend) throws IOException
     {
         StringBuffer kml = new StringBuffer();
         
@@ -146,10 +147,10 @@ public class KmzFormat extends ImageFormat
             kml.append("<Icon><href>" + getPicFileName(frameIndex) + "</href></Icon>");
 
             kml.append("<LatLonBox id=\"" + frameIndex + "\">");
-            kml.append("<west>"  + bbox[0] + "</west>");
-            kml.append("<south>" + bbox[1] + "</south>");
-            kml.append("<east>"  + bbox[2] + "</east>");
-            kml.append("<north>" + bbox[3] + "</north>");
+            kml.append("<west>"  + bbox.getMinX() + "</west>");
+            kml.append("<south>" + bbox.getMinY() + "</south>");
+            kml.append("<east>"  + bbox.getMaxX() + "</east>");
+            kml.append("<north>" + bbox.getMaxY() + "</north>");
             kml.append("<rotation>0</rotation>");
             kml.append("</LatLonBox>");
             kml.append("</GroundOverlay>");

@@ -44,8 +44,8 @@ import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
 import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
-import uk.ac.rdg.resc.ncwms.util.Range;
-import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
@@ -119,7 +119,7 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
      */
     private Map<String, Variable> variables = new LinkedHashMap<String, Variable>();
 
-    /** The time at which this dataset's stored Layers were last successfully 
+    /** The time at which this dataset's stored Layers were last successfully
      * updated, or null if the Layers have not yet been loaded */
     private DateTime lastSuccessfulUpdateTime = null;
 
@@ -459,14 +459,12 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
         // Comment this out to use the default thread names (e.g. "pool-2-thread-1")
         Thread.currentThread().setName("load-metadata-" + this.id);
 
+        // Check to see if this dataset needs to have its metadata refreshed
+        if (!this.needsRefresh()) return;
+
         // Now load the layers and manage the state of the dataset
         try
         {
-            // Check to see if this dataset needs to have its metadata refreshed
-            // We do this inside the try clause in case needsRefresh() throws a
-            // runtime exception
-            if (!this.needsRefresh()) return;
-
             // if lastUpdateTime == null, this dataset has never previously been loaded.
             this.state = this.lastSuccessfulUpdateTime == null ? State.LOADING : State.UPDATING;
 

@@ -35,7 +35,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
-import org.slf4j.LoggerFactory;
 import org.apache.log4j.PropertyConfigurator;
 
 /**
@@ -81,20 +80,6 @@ public class NcwmsContext implements ApplicationContextAware
         // Set the location of the log file: see /WEB-INF/conf/log4j.properties
         logProps.put("log4j.appender.R.File", logFile.getPath());
         PropertyConfigurator.configure(logProps);
-        
-        // Set the headings for the benchmark logger
-        // Matches up with code in DefaultDataReader.read()
-        LoggerFactory.getLogger("ncwms.benchmark").info
-        (
-            "Dataset," +
-            "Variable," +
-            "Class," +
-            "Pixels in image," +
-            "Num unique data points," +
-            "Sum row lengths," +
-            "Bounding box size," +
-            "Time to extract data (ms)"
-        );
     }
     
     /**

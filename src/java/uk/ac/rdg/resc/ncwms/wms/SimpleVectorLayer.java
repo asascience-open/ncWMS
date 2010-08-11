@@ -33,10 +33,10 @@ import java.util.List;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalCoordSys;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
-import uk.ac.rdg.resc.ncwms.util.Range;
-import uk.ac.rdg.resc.ncwms.util.Ranges;
+import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
@@ -104,7 +104,7 @@ public class SimpleVectorLayer implements VectorLayer
     public GeographicBoundingBox getGeographicBoundingBox() { return this.east.getGeographicBoundingBox(); }
 
     @Override
-    public HorizontalCoordSys getHorizontalCoordSys() { return this.east.getHorizontalCoordSys(); }
+    public HorizontalGrid getHorizontalGrid() { return this.east.getHorizontalGrid(); }
 
     @Override
     public Chronology getChronology() { return this.east.getChronology(); }

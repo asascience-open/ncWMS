@@ -28,6 +28,8 @@
 
 package uk.ac.rdg.resc.ncwms.util;
 
+import uk.ac.rdg.resc.edal.util.Ranges;
+import uk.ac.rdg.resc.edal.util.Range;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,14 +41,21 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.geotoolkit.referencing.CRS;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.coords.chrono.ThreeSixtyDayChronology;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
+import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
+import uk.ac.rdg.resc.edal.geometry.BoundingBox;
+import uk.ac.rdg.resc.edal.geometry.impl.BoundingBoxImpl;
+import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
+import uk.ac.rdg.resc.edal.time.ThreeSixtyDayChronology;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
@@ -61,13 +70,9 @@ import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
  * are also available as JSP2.0 functions. For example:</p>
  * <code>
  * <%@taglib uri="/WEB-INF/taglib/wmsUtils" prefix="utils"%>
- * The epoch: ${utils:secondsToISO8601(0)}
  * </code>
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class WmsUtils
 {
@@ -194,7 +199,7 @@ public class WmsUtils
     /**
      * Creates a unique name for a Layer (for display in the Capabilities
      * document) based on a dataset ID and a Layer ID that is unique within a
-     * dataset.  Matches up with {@link #parseUniqueLayerName(java.lang.String)}.
+     * dataset.
      * @todo doesn't belong in generic WmsUtils: specific to ncWMS
      */
     public static String createUniqueLayerName(String datasetId, String layerId)
@@ -317,10 +322,10 @@ public class WmsUtils
     {
         try {
             // Read a low-resolution grid of data covering the entire spatial extent
-            return layer.readPointList(
+            return layer.readHorizontalPoints(
                 layer.getDefaultTimeValue(),
                 layer.getDefaultElevationValue(),
-                new HorizontalGrid(100, 100, layer.getGeographicBoundingBox())
+                new RegularGridImpl(layer.getGeographicBoundingBox(), 100, 100)
             );
         } catch (InvalidDimensionValueException idve) {
             // This would only happen due to a programming error in getDefaultXValue()
@@ -402,5 +407,41 @@ public class WmsUtils
         if (chronology instanceof ThreeSixtyDayChronology) return "360_day";
         return "unknown";
     }
-    
+
+    /**
+     * Finds a {@link CoordinateReferenceSystem} with the given code, forcing
+     * longitude-first axis order.
+     * @param crsCode The code for the CRS
+     * @return a coordinate reference system with the longitude axis first
+     * @throws InvalidCrsException if a CRS matching the code cannot be found
+     * @throws NullPointerException if {@code crsCode} is null
+     */
+    public static CoordinateReferenceSystem getCrs(String crsCode) throws InvalidCrsException
+    {
+        if (crsCode == null) throw new NullPointerException("CRS code cannot be null");
+        try
+        {
+            // the "true" means "force longitude first"
+            return CRS.decode(crsCode, true);
+        }
+        catch(Exception e)
+        {
+            throw new InvalidCrsException(crsCode);
+        }
+    }
+
+    /**
+     * Gets a {@link RegularGrid} representing the image requested by a client
+     * in a GetMap operation
+     * @param dr Object representing a GetMap request
+     * @return a RegularGrid representing the requested image
+     */
+    public static RegularGrid getImageGrid(GetMapDataRequest dr)
+            throws InvalidCrsException
+    {
+        CoordinateReferenceSystem crs = getCrs(dr.getCrsCode());
+        BoundingBox bbox = new BoundingBoxImpl(dr.getBbox(), crs);
+        return new RegularGridImpl(bbox, dr.getWidth(), dr.getHeight());
+    }
+
 }

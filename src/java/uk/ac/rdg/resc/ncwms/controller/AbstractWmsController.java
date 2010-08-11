@@ -40,15 +40,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.geotoolkit.referencing.CRS;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
@@ -71,15 +74,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
-import uk.ac.rdg.resc.ncwms.coords.CrsHelper;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.coords.LonLatPosition;
-import uk.ac.rdg.resc.ncwms.coords.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.coords.LineString;
-import uk.ac.rdg.resc.ncwms.coords.PixelMap;
-import uk.ac.rdg.resc.ncwms.coords.PointList;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
+import uk.ac.rdg.resc.edal.util.Utils;
+import uk.ac.rdg.resc.edal.geometry.impl.LineString;
+import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -94,7 +100,8 @@ import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.graphics.ImageProducer;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
-import uk.ac.rdg.resc.ncwms.util.Range;
+import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Dataset;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
@@ -102,7 +109,7 @@ import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
 
 /**
  * <p>This Controller is the entry point for all standard WMS operations
- * (GetMap, GetCapabilities, GetFeatureInfo).  Only one AbstractWmsController object
+ * (GetMap, GetCapabilities, GetFeatureInfo).  Only one WmsController object 
  * is created.  Spring manages the creation of this object and the injection 
  * of the objects that it needs (i.e. its dependencies), such as the
  * {@linkplain ServerConfig configuration object}.
@@ -193,7 +200,7 @@ public abstract class AbstractWmsController extends AbstractController {
             String request = params.getMandatoryString("request");
             usageLogEntry.setWmsOperation(request);
             return this.dispatchWmsRequest(request, params, httpServletRequest,
-                    httpServletResponse, usageLogEntry);
+                        httpServletResponse, usageLogEntry);
         } catch (WmsException wmse) {
             // We don't log these errors
             usageLogEntry.setException(wmse);
@@ -377,9 +384,7 @@ public abstract class AbstractWmsController extends AbstractController {
      * width/height).</li>
      * <li>Looks for TIME and ELEVATION parameters (TIME may be expressed as a
      * start/end range, in which case we will produce an animation).</li>
-     * <li>Extracts the data using
-     * {@link uk.ac.rdg.resc.ncwms.datareader.DataReader#read DataReader.read()}.
-     * This returns an array of floats, representing
+     * <li>Extracts the data, returning an array of floats, representing
      * the data values at each pixel in the final image.</li>
      * <li>Uses an {@link ImageProducer} object to turn the array of data into
      * a {@link java.awt.image.BufferedImage} (or, in the case of an animation, several
@@ -423,20 +428,47 @@ public abstract class AbstractWmsController extends AbstractController {
         usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data will be projected
-        HorizontalGrid grid = new HorizontalGrid(dr.getCrsCode(), dr.getWidth(),
-                dr.getHeight(), dr.getBbox());
+        RegularGrid grid = WmsUtils.getImageGrid(dr);
 
         // Create an object that will turn data into BufferedImages
         String[] styles = styleRequest.getStyles();
+        Range<Float> scaleRange = styleRequest.getColorScaleRange();
+        if (scaleRange == null) scaleRange = layer.getApproxValueRange();
+        Boolean logScale = styleRequest.isScaleLogarithmic();
+        if (logScale == null) logScale = layer.isLogScaling();
+        ImageProducer.Style style = layer instanceof VectorLayer
+                ? ImageProducer.Style.VECTOR
+                : ImageProducer.Style.BOXFILL;
+        ColorPalette palette = layer.getDefaultColorPalette();
+        if (styles[0] != null) {
+            String[] styleStrEls = styles[0].split("/");
+
+            // Get the style type
+            String styleType = styleStrEls[0];
+            if (styleType.equalsIgnoreCase("boxfill")) style = ImageProducer.Style.BOXFILL;
+            else if (styleType.equalsIgnoreCase("vector")) style = ImageProducer.Style.VECTOR;
+            else throw new StyleNotDefinedException("The style " + styles[0] +
+                " is not supported by this server");
+
+            // Now get the colour palette
+            String paletteName = null;
+            if (styleStrEls.length > 1) paletteName = styleStrEls[1];
+            palette = ColorPalette.get(paletteName);
+            if (palette == null) {
+                throw new StyleNotDefinedException("There is no palette with the name "
+                    + paletteName);
+            }
+        }
+
         ImageProducer imageProducer = new ImageProducer.Builder()
-            .layer(layer)
             .width(dr.getWidth())
             .height(dr.getHeight())
-            .style(styles.length == 0 ? null : styles[0]) // Use null to trigger default style
-            .colourScaleRange(styleRequest.getColorScaleRange())
+            .style(style)
+            .palette(palette)
+            .colourScaleRange(scaleRange)
             .backgroundColour(styleRequest.getBackgroundColour())
             .transparent(styleRequest.isTransparent())
-            .logarithmic(styleRequest.isScaleLogarithmic())
+            .logarithmic(logScale)
             .opacity(styleRequest.getOpacity())
             .numColourBands(styleRequest.getNumColourBands())
             .build();
@@ -463,34 +495,32 @@ public abstract class AbstractWmsController extends AbstractController {
         usageLogEntry.setNumTimeSteps(timeValues.size());
         long beforeExtractData = System.currentTimeMillis();
         for (DateTime timeValue : timeValues) {
-            // A List<Float> for each component of a vector quantity, although
-            // we only use the first component for scalars.
-            List<List<Float>> picData = new ArrayList<List<Float>>(2);
-            if (layer instanceof ScalarLayer) {
-                // Note that if the layer doesn't have a time axis, timeValue==null but this
-                // will be ignored by readPointList()
-                picData.add(this.readDataGrid((ScalarLayer)layer, timeValue, zValue, grid, usageLogEntry));
-            } else if (layer instanceof VectorLayer) {
-                VectorLayer vecLayer = (VectorLayer)layer;
-                picData.add(this.readDataGrid(vecLayer.getEastwardComponent(),  timeValue, zValue, grid, usageLogEntry));
-                picData.add(this.readDataGrid(vecLayer.getNorthwardComponent(), timeValue, zValue, grid, usageLogEntry));
-            } else {
-                throw new IllegalStateException("Unrecognized layer type");
-            }
-
             // Only add a label if this is part of an animation
             String tValueStr = "";
             if (timeValues.size() > 1 && timeValue != null) {
                 tValueStr = WmsUtils.dateTimeToISO8601(timeValue);
             }
             tValueStrings.add(tValueStr);
-            imageProducer.addFrame(picData, tValueStr); // the tValue is the label for the image
+
+            if (layer instanceof ScalarLayer) {
+                // Note that if the layer doesn't have a time axis, timeValue==null but this
+                // will be ignored by readHorizontalPoints()
+                List<Float> data = this.readDataGrid((ScalarLayer)layer, timeValue, zValue, grid, usageLogEntry);
+                imageProducer.addFrame(data, tValueStr);
+            } else if (layer instanceof VectorLayer) {
+                VectorLayer vecLayer = (VectorLayer)layer;
+                List<Float> eastData  = this.readDataGrid(vecLayer.getEastwardComponent(),  timeValue, zValue, grid, usageLogEntry);
+                List<Float> northData = this.readDataGrid(vecLayer.getNorthwardComponent(), timeValue, zValue, grid, usageLogEntry);
+                imageProducer.addFrame(eastData, northData, tValueStr);
+            } else {
+                throw new IllegalStateException("Unrecognized layer type");
+            }
         }
         long timeToExtractData = System.currentTimeMillis() - beforeExtractData;
         usageLogEntry.setTimeToExtractDataMs(timeToExtractData);
 
         // We only create a legend object if the image format requires it
-        BufferedImage legend = imageFormat.requiresLegend() ? imageProducer.getLegend() : null;
+        BufferedImage legend = imageFormat.requiresLegend() ? imageProducer.getLegend(layer) : null;
 
         // Write the image to the client.
         // First we set the HTTP headers
@@ -504,7 +534,7 @@ public abstract class AbstractWmsController extends AbstractController {
         // Render the images and write to the output stream
         imageFormat.writeImage(imageProducer.getRenderedFrames(),
                 httpServletResponse.getOutputStream(), layer, tValueStrings,
-                dr.getElevationString(), grid.getBbox(), legend);
+                dr.getElevationString(), grid.getExtent(), legend);
 
         return null;
     }
@@ -567,19 +597,24 @@ public abstract class AbstractWmsController extends AbstractController {
         usageLogEntry.setLayer(layer);
 
         // Get the grid onto which the data is being projected
-        HorizontalGrid grid = new HorizontalGrid(dr.getCrsCode(), dr.getWidth(),
-                dr.getHeight(), dr.getBbox());
-        // Get the x and y values of the point of interest
-        double x = grid.getXAxisValues()[dr.getPixelColumn()];
-        double y = grid.getYAxisValues()[dr.getPixelRow()];
-        LonLatPosition lonLat = grid.getCrsHelper().crsToLonLat(x, y);
-        usageLogEntry.setFeatureInfoLocation(lonLat.getLongitude(), lonLat.getLatitude());
+        RegularGrid grid = WmsUtils.getImageGrid(dr);
+        // Get the real-world coordinate values of the point of interest
+        // Remember that the vertical axis is flipped
+        int j = dr.getHeight() - dr.getPixelRow() - 1;
+        HorizontalPosition pos = grid.transformCoordinates(dr.getPixelColumn(), j);
+        // Transform these coordinates into lon-lat
+        LonLatPosition lonLat = Utils.transformToWgs84LonLat(pos);
 
         // Find out the i,j coordinates of this point in the source grid (could be null)
-        int[] gridCoords = layer.getHorizontalCoordSys().lonLatToGrid(lonLat);
-        // *** TODO: what if gridCoords is null? ***
-        // Get the location of the centre of the grid cell
-        LonLatPosition gridCellCentre = layer.getHorizontalCoordSys().gridToLonLat(gridCoords);
+        HorizontalGrid horizGrid = layer.getHorizontalGrid();
+        GridCoordinates gridCoords = horizGrid.findNearestGridPoint(pos);
+        LonLatPosition gridCellCentre = null;
+        if (gridCoords != null)
+        {
+            // Get the location of the centre of the grid cell
+            HorizontalPosition gridCellCentrePos = horizGrid.transformCoordinates(gridCoords);
+            gridCellCentre = Utils.transformToWgs84LonLat(gridCellCentrePos);
+        }
 
         // Get the elevation value requested
         double zValue = getElevationValue(dr.getElevationString(), layer);
@@ -593,11 +628,11 @@ public abstract class AbstractWmsController extends AbstractController {
         // axis this will return a List of one-element arrays.
         List<Float> tsData;
         if (layer instanceof ScalarLayer) {
-            tsData = ((ScalarLayer)layer).readTimeseries(tValues, zValue, lonLat);
+            tsData = ((ScalarLayer)layer).readTimeseries(tValues, zValue, pos);
         } else if (layer instanceof VectorLayer) {
             VectorLayer vecLayer = (VectorLayer)layer;
-            List<Float> tsDataEast  = vecLayer.getEastwardComponent() .readTimeseries(tValues, zValue, lonLat);
-            List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readTimeseries(tValues, zValue, lonLat);
+            List<Float> tsDataEast  = vecLayer.getEastwardComponent() .readTimeseries(tValues, zValue, pos);
+            List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readTimeseries(tValues, zValue, pos);
             tsData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
         } else {
             throw new IllegalStateException("Unrecognized layer type");
@@ -654,83 +689,6 @@ public abstract class AbstractWmsController extends AbstractController {
     }
 
     /**
-     * Reads timeseries data from the given variable from a single point,
-     * returning a List of data arrays.
-     * This List will have a single element if the variable is scalar, or two
-     * elements if the variable is a vector.  Each element in the list is
-     * an array of floats, representing the timeseries data.  The length of each
-     * array will equal tIndices.size().
-     */
-    /*private static List<float[]> readTimeseriesData(Layer layer,
-            LonLatPosition lonLat, List<Integer> tIndices, int zIndex)
-            throws Exception {
-        List<float[]> tsData = new ArrayList<float[]>();
-        if (layer instanceof VectorLayer) {
-            VectorLayer vecLayer = (VectorLayer) layer;
-            tsData.add(readTimeseriesDataArray(vecLayer.getEastwardComponent(),
-                    lonLat, tIndices, zIndex));
-            tsData.add(readTimeseriesDataArray(vecLayer.getNorthwardComponent(),
-                    lonLat, tIndices, zIndex));
-        } else {
-            tsData.add(readTimeseriesDataArray(layer, lonLat, tIndices, zIndex));
-        }
-        return tsData;
-    }*/
-
-    /**
-     * Reads a timeseries of data from a Layer that is <b>not</b> a VectorLayer.
-     */
-    /*private static float[] readTimeseriesDataArray(Layer layer,
-            LonLatPosition lonLat, List<Integer> tIndices, int zIndex)
-            throws Exception {
-
-        if (tIndices == null) throw new NullPointerException("tIndices");
-
-        // We need to group the tIndices by their containing file.  That way, we
-        // can read all the time data from the same file in the same operation.
-        // This maps filenames to lists of t indices within the file.  We must
-        // preserve the insertion order so we use a LinkedHashMap.
-        Map<String, List<Integer>> files = new LinkedHashMap<String, List<Integer>>();
-        for (int tIndexInLayer : tIndices) {
-            FilenameAndTindex ft = getFilenameAndTindex(layer, tIndexInLayer);
-            List<Integer> tIndicesInFile = files.get(ft.filename);
-            if (tIndicesInFile == null) {
-                tIndicesInFile = new ArrayList<Integer>();
-                files.put(ft.filename, tIndicesInFile);
-            }
-            tIndicesInFile.add(ft.tIndexInFile);
-        }
-
-        // Get a DataReader object for reading the data
-        Dataset ds = layer.getDataset();
-        DataReader dr = DataReader.forDataset(ds);
-        log.debug("Got data reader of type {}", dr.getClass().getName());
-
-        // Now we read the data from each file and add it to the timeseries
-        List<Float> data = new ArrayList<Float>();
-        for (String filename : files.keySet()) {
-            List<Integer> tIndicesInFile = files.get(filename);
-            float[] arr = dr.readTimeseries(filename, layer, tIndicesInFile, zIndex, lonLat);
-            for (float val : arr) {
-                data.add(val);
-            }
-        }
-
-        // Check that we have the right number of data points
-        if (data.size() != tIndices.size()) {
-            throw new AssertionError("Timeseries length inconsistency");
-        }
-
-        // Copy the data to an array of primitives and return
-        float[] arr = new float[data.size()];
-        for (int i = 0; i < arr.length; i++) {
-            arr[i] = data.get(i);
-        }
-
-        return arr;
-    }*/
-
-    /**
      * Creates and returns a PNG image with the colour scale and range for 
      * a given Layer
      */
@@ -782,136 +740,14 @@ public abstract class AbstractWmsController extends AbstractController {
             }
 
             // Now create the legend image
-            legend = palette.createLegend(numColourBands, layer, logarithmic, colorScaleRange);
+            legend = palette.createLegend(numColourBands, layer.getTitle(),
+                    layer.getUnits(), logarithmic, colorScaleRange);
         }
         httpServletResponse.setContentType("image/png");
         ImageIO.write(legend, "png", httpServletResponse.getOutputStream());
 
         return null;
     }
-
-    // This doesn't really work well so we're commenting it out for now.
-    /*private ModelAndView getKML(RequestParams params,
-            HttpServletRequest httpServletRequest) throws Exception {
-        // Get the Layer objects that we are to include in the KML.  The layer
-        // objects are bundled with information about the top-level tiles that
-        // need to be created in the top-level KML
-        List<TiledLayer> tiledLayers = new ArrayList<TiledLayer>();
-        for (String layerName : params.getMandatoryString("layers").split(",")) {
-            Layer layer = this.serverConfig.getLayerByUniqueName(layerName);
-            // The data will be displayed on Google Earth using tiles.  To take
-            // best advantage of the tile cache, we want to make sure that the
-            // tiles match those that will be generated by the Godiva2 site.
-
-            // The widest relevant zoom level (which we shall call level zero)
-            // in Godiva2 covers the earth with two
-            // tiles, one for the eastern and one for the western hemisphere, i.e.
-            // a side length of 180 degrees.  Each zoom level halves the side length.
-            // l = 180 / 2^z (l = side length, z = zoom level)
-
-            // We need to calculate the widest zoom level that is relevant for this
-            // layer.  This is the zoom level that will allow the layer to be
-            // displayed with a maximum of four tiles.  Then the sub-regions will
-            // be calculated automatically in getKMLRegion().
-
-            // First we need to calculate the length of the longest side of the
-            // bounding box in degrees.  (We know that layer.getBbox() returns
-            // values in lat/lon degrees.)
-            double[] bbox = layer.getBbox();
-            log.debug("Layer bbox = {},{},{},{}", new Object[]{
-                        bbox[0], bbox[1], bbox[2], bbox[3]});
-            double longestBboxSideLength = Math.max(
-                    bbox[2] - bbox[0],
-                    bbox[3] - bbox[1]);
-            log.debug("Longest side length = {}", longestBboxSideLength);
-            // z = ln(180/l) / ln(2)
-            double zoom = Math.log(180.0 / longestBboxSideLength) / Math.log(2.0);
-            // Need to take the floor of this number to ensure that the tiles
-            // are big enough (remember the lower the z value, the larger the tiles)
-            int z = (int) Math.floor(zoom);
-            if (z < 0) {
-                z = 0; // Don't want to zoom out any further
-            }
-            log.debug("Zoom level = {}", z);
-            // Calculate the side length at this zoom level
-            double sideLength = 180.0 / Math.pow(2, z);
-            log.debug("Side length at this zoom level = {}", sideLength);
-            assert (sideLength >= longestBboxSideLength);
-            // Calculate the index of the tile in the horizontal direction
-            // that contains the left-hand edge of the bounding box of the layer
-            // The first tile (with index 0) is the one whose LH edge is at -180 degrees
-            int leftIndex = (int) ((bbox[0] + 180.0) / sideLength);
-            int rightIndex = (int) ((bbox[2] + 180.0) / sideLength);
-            // Similarly for the bottom and top edges of the layer's bbox
-            int bottomIndex = (int) ((bbox[1] + 90.0) / sideLength);
-            int topIndex = (int) ((bbox[3] + 90.0) / sideLength);
-            log.debug("Indices: L={}, R={}, B={}, T={}", new Object[]{
-                        leftIndex, rightIndex, bottomIndex, topIndex});
-            // Create bounding boxes for the tiles that cover the layer
-            List<double[]> tiles = new ArrayList<double[]>();
-            for (int j = bottomIndex; j <= topIndex; j++) {
-                double bottom = sideLength * j - 90.0;
-                double top = bottom + sideLength;
-                for (int i = leftIndex; i <= rightIndex; i++) {
-                    double left = sideLength * i - 180.0;
-                    double right = left + sideLength;
-                    log.debug("Adding new tile({},{},{},{})", new Object[]{
-                                left, bottom, right, top});
-                    tiles.add(new double[]{left, bottom, right, top});
-                }
-            }
-            assert (tiles.size() <= 4);
-            log.debug("Created {} tiles for layer {}", tiles.size(), layer.getLayerName());
-            tiledLayers.add(new TiledLayer(layer, tiles));
-        }
-
-        Map<String, Object> models = new HashMap<String, Object>();
-        models.put("tiledLayers", tiledLayers);
-        models.put("title", this.serverConfig.getTitle());
-        models.put("description", this.serverConfig.getAbstract());
-        models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
-        return new ModelAndView("topLevelKML", models);
-    }
-
-    private ModelAndView getKMLRegion(RequestParams params,
-            HttpServletRequest httpServletRequest) throws Exception {
-        Layer layer = this.serverConfig.getLayerByUniqueName(params.getMandatoryString("layer"));
-        double[] dbox = WmsUtils.parseBbox(params.getMandatoryString("dbox"));
-        // Calculate the bounding boxes of all the four sub-regions
-        double[][] regionDBoxes = new double[4][4];
-        double halfLon = (dbox[2] - dbox[0]) / 2.0;
-        double halfLat = (dbox[3] - dbox[1]) / 2.0;
-
-        regionDBoxes[0][0] = dbox[0];
-        regionDBoxes[0][1] = dbox[1];
-        regionDBoxes[0][2] = dbox[0] + halfLon;
-        regionDBoxes[0][3] = dbox[1] + halfLat;
-
-        regionDBoxes[1][0] = dbox[0] + halfLon;
-        regionDBoxes[1][1] = dbox[1];
-        regionDBoxes[1][2] = dbox[2];
-        regionDBoxes[1][3] = dbox[1] + halfLat;
-
-        regionDBoxes[2][0] = dbox[0];
-        regionDBoxes[2][1] = dbox[1] + halfLat;
-        regionDBoxes[2][2] = dbox[0] + halfLon;
-        regionDBoxes[2][3] = dbox[3];
-
-        regionDBoxes[3][0] = dbox[0] + halfLon;
-        regionDBoxes[3][1] = dbox[1] + halfLat;
-        regionDBoxes[3][2] = dbox[2];
-        regionDBoxes[3][3] = dbox[3];
-
-        Map<String, Object> models = new HashMap<String, Object>();
-        models.put("layer", layer);
-        models.put("elevation", params.getString("elevation"));
-        models.put("time", params.getString("time"));
-        models.put("dbox", dbox);
-        models.put("size", 256);
-        models.put("regionDBoxes", regionDBoxes);
-        models.put("wmsBaseUrl", httpServletRequest.getRequestURL().toString());
-        return new ModelAndView("regionBasedOverlay", models);
-    }*/
 
     /**
      * Outputs a transect (data value versus distance along a path) in PNG or
@@ -933,31 +769,34 @@ public abstract class AbstractWmsController extends AbstractController {
         double zValue = getElevationValue(params.getString("elevation"), layer);
 
         if (!outputFormat.equals(FEATURE_INFO_PNG_FORMAT) &&
-                !outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
+            !outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
             throw new InvalidFormatException(outputFormat);
         }
 
         usageLogEntry.setLayer(layer);
         usageLogEntry.setOutputFormat(outputFormat);
 
-        final CrsHelper crsHelper = CrsHelper.fromCrsCode(crsCode);
+        // Get the required coordinate reference system, forcing longitude-first
+        // axis order.  TODO: need to make sure this is consistent with creation
+        // of CRS objects in CrsHelper.
+        final CoordinateReferenceSystem crs = CRS.decode(crsCode, true);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
-        final LineString transect = new LineString(lineString, crsHelper);
+        final LineString transect = new LineString(lineString, crs);
         log.debug("Got {} control points", transect.getControlPoints().size());
 
         // Find the optimal number of points to sample the layer's source grid
-        PointList pointList = getOptimalTransectPointList(layer, transect);
-        log.debug("Using transect consisting of {} points", pointList.size());
+        Domain<HorizontalPosition> transectDomain = getOptimalTransectDomain(layer, transect);
+        log.debug("Using transect consisting of {} points", transectDomain.getDomainObjects().size());
 
         // Read the data from the data source, without using the tile cache
         List<Float> transectData;
         if (layer instanceof ScalarLayer) {
-            transectData = ((ScalarLayer)layer).readPointList(tValue, zValue, pointList);
+            transectData = ((ScalarLayer)layer).readHorizontalPoints(tValue, zValue, transectDomain);
         } else if (layer instanceof VectorLayer) {
             VectorLayer vecLayer = (VectorLayer)layer;
-            List<Float> tsDataEast  = vecLayer.getEastwardComponent() .readPointList(tValue, zValue, pointList);
-            List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readPointList(tValue, zValue, pointList);
+            List<Float> tsDataEast  = vecLayer.getEastwardComponent() .readHorizontalPoints(tValue, zValue, transectDomain);
+            List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readHorizontalPoints(tValue, zValue, transectDomain);
             transectData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
         } else {
             throw new IllegalStateException("Unrecognized layer type");
@@ -1010,9 +849,13 @@ public abstract class AbstractWmsController extends AbstractController {
                     log.debug("prevCtrlPointDistance " + prevCtrlPointDistance);
                     log.debug("ctrlPointDistance " + ctrlPointDistance);
                     //determine start end end value for marker based on index of ctrl point
-                    IntervalMarker target = new IntervalMarker(transectData.size() * prevCtrlPointDistance, transectData.size() * ctrlPointDistance);
+                    IntervalMarker target = new IntervalMarker(
+                            transectData.size() * prevCtrlPointDistance,
+                            transectData.size() * ctrlPointDistance
+                    );
                     // TODO: printing to two d.p. not always appropriate
-                    target.setLabel("[" + printTwoDecimals(transect.getControlPoints().get(i - 1).getY()) + "," + printTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
+                    target.setLabel("[" + printTwoDecimals(transect.getControlPoints().get(i - 1).getY())
+                            + "," + printTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
                     target.setLabelFont(new Font("SansSerif", Font.ITALIC, 11));
                     //alter color of segment and position of label based on odd/even index
                     if (i % 2 == 0) {
@@ -1036,7 +879,7 @@ public abstract class AbstractWmsController extends AbstractController {
             // Output data as XML using a template
             // First create an ordered map of ProjectionPoints to data values
             Map<HorizontalPosition, Float> dataPoints = new LinkedHashMap<HorizontalPosition, Float>();
-            List<HorizontalPosition> points = pointList.asList();
+            List<? extends HorizontalPosition> points = transectDomain.getDomainObjects();
             for (int i = 0; i < points.size(); i++) {
                 dataPoints.put(points.get(i), transectData.get(i));
             }
@@ -1068,16 +911,16 @@ public abstract class AbstractWmsController extends AbstractController {
     }
 
     /**
-     * Gets a PointList that contains (near) the minimum necessary number of
+     * Gets a HorizontalDomain that contains (near) the minimum necessary number of
      * points to sample a layer's source grid of data.  That is to say,
-     * creating a PointList at higher resolution would not result in sampling
+     * creating a HorizontalDomain at higher resolution would not result in sampling
      * significantly more points in the layer's source grid.
      * @param layer The layer for which the transect will be generated
      * @param transect The transect as specified in the request
-     * @return a PointList that contains (near) the minimum necessary number of
+     * @return a HorizontalDomain that contains (near) the minimum necessary number of
      * points to sample a layer's source grid of data.
      */
-    private static PointList getOptimalTransectPointList(Layer layer,
+    private static Domain<HorizontalPosition> getOptimalTransectDomain(Layer layer,
             LineString transect) throws Exception {
         // We need to work out how many points we need to include in order to
         // completely sample the data grid (i.e. we need the resolution of the
@@ -1086,24 +929,30 @@ public abstract class AbstractWmsController extends AbstractController {
         // this by creating transects at progressively higher resolution, and
         // working out how many grid points will be sampled.
         int numTransectPoints = 500; // a bit more than the final image width
-        int lastNumGridPointsSampled = -1;
-        PointList pointList = null;
+        int lastNumUniqueGridPointsSampled = -1;
+        HorizontalDomain pointList = null;
         while (true) {
             // Create a transect with the required number of points, interpolating
             // between the control points in the line string
             List<HorizontalPosition> points = transect.getPointsOnPath(numTransectPoints);
-            // Create a PointList from the interpolated points
-            PointList testPointList = PointList.fromList(points, transect.getCrsHelper());
+            // Create a HorizontalDomain from the interpolated points
+            HorizontalDomain testPointList = new HorizontalDomain(points, transect.getCoordinateReferenceSystem());
+
             // Work out how many grid points will be sampled by this transect
-            int numGridPointsSampled =
-                new PixelMap(layer.getHorizontalCoordSys(), testPointList).getNumUniqueIJPairs();
+            // Relies on equals() being implemented correctly for the GridCoordinates
+            Set<GridCoordinates> gridCoords = new HashSet<GridCoordinates>();
+            for (GridCoordinates coords : layer.getHorizontalGrid().findNearestGridPoints(testPointList)) {
+                gridCoords.add(coords);
+            }
+            int numUniqueGridPointsSampled = gridCoords.size();
             log.debug("With {} transect points, we'll sample {} grid points",
-                    numTransectPoints, numGridPointsSampled);
+                    numTransectPoints, numUniqueGridPointsSampled);
+
             // If this increase in resolution results in at least 10% more points
             // being sampled we'll go around the loop again
-            if (numGridPointsSampled > lastNumGridPointsSampled * 1.1) {
+            if (numUniqueGridPointsSampled > lastNumUniqueGridPointsSampled * 1.1) {
                 // We need to increase the transect resolution and try again
-                lastNumGridPointsSampled = numGridPointsSampled;
+                lastNumUniqueGridPointsSampled = numUniqueGridPointsSampled;
                 numTransectPoints += 500;
                 pointList = testPointList;
             } else {
@@ -1123,9 +972,8 @@ public abstract class AbstractWmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the provided z value is not
      * a valid number, or if zValue is null and the layer does not support
      * a default elevation value
-     * @todo Move to a utility class?
      */
-    public static double getElevationValue(String zValue, Layer layer) throws InvalidDimensionValueException
+    static double getElevationValue(String zValue, Layer layer) throws InvalidDimensionValueException
     {
         if (layer.getElevationValues().isEmpty()) return Double.NaN;
         if (zValue == null)
@@ -1161,9 +1009,8 @@ public abstract class AbstractWmsController extends AbstractController {
      * a single null element if the layer does not have a time axis.
      * @throws InvalidDimensionValueException if the time string cannot be parsed,
      * or if any of the requested times are not valid times for the layer
-     * @todo Move to a utility class?
      */
-    public static List<DateTime> getTimeValues(String timeString, Layer layer)
+    static List<DateTime> getTimeValues(String timeString, Layer layer)
             throws InvalidDimensionValueException {
 
         // If the layer does not have a time axis return a List containing
@@ -1202,9 +1049,8 @@ public abstract class AbstractWmsController extends AbstractController {
      * checking that the time is valid for the given layer.
      * @throws InvalidDimensionValueException if the layer does not contain
      * the given time, or if the given ISO8601 string is not valid.
-     * @todo move to a utility class?
      */
-    public static int findTIndex(String isoDateTime, Layer layer)
+    static int findTIndex(String isoDateTime, Layer layer)
         throws InvalidDimensionValueException
     {
         DateTime target = isoDateTime.equals("current")
@@ -1290,10 +1136,10 @@ public abstract class AbstractWmsController extends AbstractController {
      * @throws IOException if there was an error reading from the data source
      */
     protected List<Float> readDataGrid(ScalarLayer layer, DateTime dateTime,
-        double elevation, HorizontalGrid grid, UsageLogEntry usageLogEntry)
+        double elevation, RegularGrid grid, UsageLogEntry usageLogEntry)
         throws InvalidDimensionValueException, IOException
     {
-        return layer.readPointList(dateTime, elevation, grid);
+        return layer.readHorizontalPoints(dateTime, elevation, grid);
     }
 
     /**
