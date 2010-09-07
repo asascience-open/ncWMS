@@ -39,6 +39,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -494,6 +495,8 @@ public abstract class AbstractWmsController extends AbstractController {
         }
         usageLogEntry.setNumTimeSteps(timeValues.size());
         long beforeExtractData = System.currentTimeMillis();
+        // Use a single null time value if the layer has no time axis
+        if (timeValues.isEmpty()) timeValues = Arrays.asList((DateTime)null);
         for (DateTime timeValue : timeValues) {
             // Only add a label if this is part of an animation
             String tValueStr = "";
@@ -625,29 +628,55 @@ public abstract class AbstractWmsController extends AbstractController {
         usageLogEntry.setNumTimeSteps(tValues.size());
 
         // First we read the timeseries data.  If the layer doesn't have a time
-        // axis this will return a List of one-element arrays.
+        // axis we'll use ScalarLayer.readSinglePoint() instead.
+        // TODO: this code is messy: refactor.
         List<Float> tsData;
         if (layer instanceof ScalarLayer) {
-            tsData = ((ScalarLayer)layer).readTimeseries(tValues, zValue, pos);
+            ScalarLayer scalLayer = (ScalarLayer)layer;
+            if (tValues.isEmpty()) {
+                // The layer has no time axis
+                Float val = scalLayer.readSinglePoint(null, zValue, pos);
+                tsData = Arrays.asList(val);
+            } else {
+                tsData = scalLayer.readTimeseries(tValues, zValue, pos);
+            }
         } else if (layer instanceof VectorLayer) {
             VectorLayer vecLayer = (VectorLayer)layer;
-            List<Float> tsDataEast  = vecLayer.getEastwardComponent() .readTimeseries(tValues, zValue, pos);
-            List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readTimeseries(tValues, zValue, pos);
-            tsData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
+            ScalarLayer eastComp = vecLayer.getEastwardComponent();
+            ScalarLayer northComp = vecLayer.getNorthwardComponent();
+            if (tValues.isEmpty()) {
+                // The layer has no time axis
+                Float eastVal = eastComp.readSinglePoint(null, zValue, pos);
+                Float northVal = northComp.readSinglePoint(null, zValue, pos);
+                if (eastVal == null || northVal == null) {
+                    tsData = Arrays.asList((Float)null);
+                } else {
+                    tsData = Arrays.asList((float)Math.sqrt(eastVal * eastVal + northVal * northVal));
+                }
+            } else {
+                // The layer has a time axis
+                List<Float> tsDataEast  = eastComp.readTimeseries(tValues, zValue, pos);
+                List<Float> tsDataNorth = northComp.readTimeseries(tValues, zValue, pos);
+                tsData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
+            }
         } else {
             throw new IllegalStateException("Unrecognized layer type");
         }
 
         // Internal consistency check: arrays should be the same length
-        if (tValues.size() != tsData.size()) {
+        if (!tValues.isEmpty() && tValues.size() != tsData.size()) {
             throw new IllegalStateException("Internal error: timeseries length inconsistency");
         }
 
         // Now we map date-times to data values
         // The map is sorted in order of ascending time
         SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
-        for (int i = 0; i < tValues.size(); i++) {
-            featureData.put(tValues.get(i), tsData.get(i));
+        if (tValues.isEmpty()) {
+            featureData.put(null, tsData.get(0));
+        } else {
+            for (int i = 0; i < tValues.size(); i++) {
+                featureData.put(tValues.get(i), tsData.get(i));
+            }
         }
 
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT)) {
@@ -765,7 +794,8 @@ public abstract class AbstractWmsController extends AbstractController {
         String crsCode = params.getMandatoryString("crs");
         String lineString = params.getMandatoryString("linestring");
         String outputFormat = params.getMandatoryString("format");
-        DateTime tValue = getTimeValues(params.getString("time"), layer).get(0); // null if no t axis
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
         double zValue = getElevationValue(params.getString("elevation"), layer);
 
         if (!outputFormat.equals(FEATURE_INFO_PNG_FORMAT) &&
@@ -1001,21 +1031,20 @@ public abstract class AbstractWmsController extends AbstractController {
 
     /**
      * Gets the list of time values requested by the client.  If the layer does
-     * not have a time axis the timeString will be ignored and a List containing
-     * a single null value will be returned.
+     * not have a time axis the timeString will be ignored and an empty List will
+     * be returned.
      * @param timeString the string provided for the TIME parameter, or null
      * if there was no TIME parameter in the client's request
-     * @return the list of time values requested by the client or a List containing
-     * a single null element if the layer does not have a time axis.
+     * @return the list of time values requested by the client or an empty List
+     * if the layer does not have a time axis.
      * @throws InvalidDimensionValueException if the time string cannot be parsed,
      * or if any of the requested times are not valid times for the layer
      */
     static List<DateTime> getTimeValues(String timeString, Layer layer)
             throws InvalidDimensionValueException {
 
-        // If the layer does not have a time axis return a List containing
-        // a single null value
-        if (layer.getTimeValues().isEmpty()) return Arrays.asList((DateTime)null);
+        // If the layer does not have a time axis return an empty list
+        if (layer.getTimeValues().isEmpty()) return Collections.emptyList();
         
         // Use the default time if none is specified
         if (timeString == null) {

@@ -282,7 +282,8 @@ public abstract class AbstractMetadataController
         double zValue = AbstractWmsController.getElevationValue(dr.getElevationString(), layer);
         
         // Get the requested timestep (taking the first only if an animation is requested)
-        DateTime tValue = AbstractWmsController.getTimeValues(dr.getTimeString(), layer).get(0);
+        List<DateTime> timeValues = AbstractWmsController.getTimeValues(dr.getTimeString(), layer);
+        DateTime tValue = timeValues.isEmpty() ? null : timeValues.get(0);
         
         // Now read the data and calculate the minimum and maximum values
         List<Float> magnitudes;

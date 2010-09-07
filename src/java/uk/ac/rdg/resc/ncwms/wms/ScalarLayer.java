@@ -115,9 +115,13 @@ public interface ScalarLayer extends Layer
      * is outside the domain of this Layer, this method will return a List of
      * nulls, to retain consistency with other read...() methods
      * in this interface.</p>
+     * <p>If this method is called on a Layer that has no time axis, an
+     * InvalidDimensionValueException will be thrown, unless {@code times} is
+     * an empty list (because all times are invalid for the axis).</p>
      * @param times The list of time instants for which we require data.  If a
      * value in this list is not found in {@link #getTimeValues()}, this method
-     * will throw an {@link InvalidDimensionValueException}.
+     * will throw an {@link InvalidDimensionValueException}.  This may not be null
+     * but it may be empty (in which case this method will return an empty list).
      * @param elevation The elevation for which we require data (in the
      * {@link #getElevationUnits() units of this Layer's elevation axis}).  If
      * this does not match a valid {@link #getElevationValues() elevation value}
@@ -133,7 +137,6 @@ public interface ScalarLayer extends Layer
      * elevation in this Layer, or if any of the {@code times} are not valid
      * times for this layer.
      * @throws IOException if there was an error reading from the data source
-     * @todo what if this method is called on a Layer that has no time axis?
      */
     public List<Float> readTimeseries(List<DateTime> times, double elevation,
         HorizontalPosition xy) throws InvalidDimensionValueException, IOException;
