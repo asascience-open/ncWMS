@@ -33,20 +33,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.opengis.coverage.grid.GridCoordinates;
-import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
-import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
-import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
@@ -467,41 +461,6 @@ final class PixelMap
     {
         return (this.maxIIndex - this.minIIndex + 1) *
                (this.maxJIndex - this.minJIndex + 1);
-    }
-
-    public static void main(String[] args) throws Exception
-    {
-        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\Unsigned_byte\\GLOB_GMS5_IR1_20100822T233200.nc");
-        GridDatatype grid = CdmUtils.getGridDatatype(nc, "IR1");
-
-        HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(grid.getCoordinateSystem());
-        if (horizGrid instanceof RectilinearGrid)
-        {
-            RectilinearGrid rectGrid = (RectilinearGrid)horizGrid;
-            System.out.println(rectGrid.getExtent());
-            ReferenceableAxis yAxis = rectGrid.getYAxis();
-            System.out.println(yAxis.toString());
-            System.out.println(rectGrid.getYAxis().getExtent());
-            List<Double> yValues = rectGrid.getYAxis().getCoordinateValues();
-            for(double yVal : yValues)
-            {
-                System.out.printf("%f, ", yVal);
-            }
-            System.out.println();
-        }
-        GeographicBoundingBox bbox = CdmUtils.getBbox(grid.getCoordinateSystem().getLatLonBoundingBox());
-        System.out.println(bbox);
-        RegularGrid targetGrid = new RegularGridImpl(DefaultGeographicBoundingBox.WORLD, 256, 256);
-        System.out.println(targetGrid.getExtent());
-
-        PixelMap pixelMap = new PixelMap(horizGrid, targetGrid, false);
-
-        System.out.println(pixelMap.getNumUniqueIJPairs());
-
-        List<Float> data = CdmUtils.readHorizontalPoints(nc, "IR1", horizGrid, 0, 0, targetGrid);
-
-        nc.close();
-
     }
 
 }
