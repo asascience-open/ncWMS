@@ -31,12 +31,11 @@ package uk.ac.rdg.resc.edal.coverage.grid;
 /**
  * <p>A one-dimensional axis of a Grid, whose coordinate values are regularly
  * spaced.</p>
- * @param <T> the type of the coordinate values
  * @author Jon
  */
 public interface RegularAxis extends ReferenceableAxis {
 
-    /** Gets the spacing between coordinate values */
+    /** Gets the spacing between coordinate values, might be negative. */
     public double getCoordinateSpacing();
 
 }

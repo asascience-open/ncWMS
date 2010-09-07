@@ -107,7 +107,7 @@ public interface ScalarLayer extends Layer
 
     /**
      * <p>Reads a timeseries of data at a single xyz point from this Layer.
-     * Missing values (e.g. land pixels in oceanography data will be represented
+     * Missing values (e.g. land pixels in oceanography data) will be represented
      * by null.</p>
      * <p>This method will perform no interpolation in time or elevation, but
      * will perform nearest-neighbour interpolation in the horizontal, i.e. it

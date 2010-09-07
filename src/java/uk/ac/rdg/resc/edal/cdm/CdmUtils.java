@@ -99,7 +99,7 @@ public final class CdmUtils
         // TODO: generate coordinate system axes if appropriate
         if (axis.isRegular())
         {
-            return new RegularAxisImpl(name, axis.getMinValue(),
+            return new RegularAxisImpl(name, axis.getStart(),
                     axis.getIncrement(), (int)axis.getSize(), isLongitude);
         }
         else
@@ -303,16 +303,49 @@ public final class CdmUtils
 
     /**
      * Reads a set of points at a given time and elevation from the given
-     * GridDatatype.
+     * GridDatatype.  This method will internally create a {@link HorizontalGrid}
+     * object with each invocation; if you expect to call this method multiple times,
+     * greater efficiency may be gained by creating the HorizontalGrid once and
+     * calling {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset,
+     * java.lang.String, uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid, int,
+     * int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
+     * @param nc The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId The ID of the variable from which we will read data
+     * @param tIndex The time index, ignored if the grid has no time axis
+     * @param zIndex The elevation index, ignored if the grid has no elevation axis
+     * @param targetDomain The list of horizontal points for which we need data
+     * @return a List of floating point numbers, one for each point in the
+     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
+     * in oceanography data} are represented as nulls.
+     * @throws IllegalArgumentException if there is no variable in the dataset
+     * with the id {@code varId}.
+     * @throws IOException if there was an error reading data from the data source
+     */
+    public static List<Float> readHorizontalPoints(NetcdfDataset nc, String varId,
+            int tIndex, int zIndex, Domain<HorizontalPosition> targetDomain)
+            throws IOException
+    {
+        GridDatatype grid = getGridDatatype(nc, varId);
+        HorizontalGrid sourceGrid = createHorizontalGrid(grid.getCoordinateSystem());
+        DataReadingStrategy strategy = getOptimumDataReadingStrategy(nc);
+        return strategy.readData(tIndex, zIndex, sourceGrid, targetDomain, grid);
+    }
+
+    /**
+     * Reads a set of points at a given time and elevation from the given
+     * GridDatatype.  Use this method if you already have a {@link HorizontalGrid}
+     * object created for the variable in question, otherwise use
+     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String,
+     * int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
      * @param nc The (already-opened) NetcdfDataset from which we'll read data
      * @param varId The ID of the variable from which we will read data
      * @param sourceGrid object that maps between real-world and grid coordinates
      * in the source data grid
-     * @param tIndex The time index, or -1 if the grid has no time axis
-     * @param zIndex The elevation index, or -1 if the grid has no elevation axis
+     * @param tIndex The time index, ignored if the grid has no time axis
+     * @param zIndex The elevation index, ignored if the grid has no elevation axis
      * @param targetDomain The list of horizontal points for which we need data
      * @return a List of floating point numbers, one for each point in the
-     * {@code domain}, in the same order.  Missing values (e.g. land pixels
+     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
      * in oceanography data} are represented as nulls.
      * @throws IllegalArgumentException if there is no variable in the dataset
      * with the id {@code varId}.
@@ -328,7 +361,7 @@ public final class CdmUtils
         return strategy.readData(tIndex, zIndex, sourceGrid, targetDomain, grid);
     }
 
-    private static GridDatatype getGridDatatype(NetcdfDataset nc, String varId)
+    public static GridDatatype getGridDatatype(NetcdfDataset nc, String varId)
             throws IOException
     {
         GridDataset gd = getGridDataset(nc);
@@ -352,7 +385,7 @@ public final class CdmUtils
      * @param horizGrid object that maps between real-world and grid coordinates
      * in the source data grid
      * @param tIndices The list of indices along the time axis
-     * @param zIndex The elevation index, or -1 if the grid has no elevation axis
+     * @param zIndex The elevation index, ignored if the grid has no elevation axis
      * @param xy The horizontal location of the required timeseries
      * @return a list of floating-point numbers, one for each of the time indices.
      * Missing values (e.g. land pixels in oceanography data} are represented as nulls.

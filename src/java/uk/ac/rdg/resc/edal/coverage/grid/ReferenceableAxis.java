@@ -36,6 +36,8 @@ import org.opengis.referencing.cs.CoordinateSystemAxis;
  * <p>A one-dimensional axis of a Grid, which maps between integer indices along
  * the axis and real-world coordinates.  It is in spirit a one-dimensional
  * special case of a {@link ReferenceableGrid}.</p>
+ * <p>Coordinate values along the axis must either increase or decrease
+ * monotonically.</p>
  * @author Jon
  */
 public interface ReferenceableAxis {
@@ -46,12 +48,14 @@ public interface ReferenceableAxis {
     public String getName();
 
     /**
-     * The coordinate values along the axis, in ascending order.  Maps from
+     * <p>The coordinate values along the axis, in ascending order.  Maps from
      * integer indices to coordinate values.  Note that the inverse mapping can be
      * found using the {@code indexOf()} method, although this method does not
      * take into account the wrapping of longitude values in a longitude axis:
      * use {@link #getCoordinateIndex(double)} or
-     * {@link #getNearestCoordinateIndex(double)} for this.
+     * {@link #getNearestCoordinateIndex(double)} for this.</p>
+     * <p>The coordinate values must vary monotonically, i.e. either always
+     * increasing or always decreasing.</p>
      * @return the coordinate values along the axis.
      */
     public List<Double> getCoordinateValues();
@@ -66,15 +70,15 @@ public interface ReferenceableAxis {
     public double getCoordinateValue(int index);
 
     /**
-     * Gets the number of coordinate values on this axis
+     * Gets the number of coordinate values on this axis, always at least 1.
      * @return the number of coordinate values on this axis
      */
     public int getSize();
 
     /**
      * Finds the index of the given coordinate value.  If this is a longitude
-     * axis, this method will handle the case of longitude values wrapping.
-     * So values of -180 and +180 are treated as equivalent by this method,
+     * axis, this method will handle the case of longitude values wrapping,
+     * therefore values of -180 and +180 are treated as equivalent by this method,
      * irrespective of the values in {@link #getCoordinateValues()}.
      * @param value
      * @return the index of the given coordinate value, or -1 if not found.

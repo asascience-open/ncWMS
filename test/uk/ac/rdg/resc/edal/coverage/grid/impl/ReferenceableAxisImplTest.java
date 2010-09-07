@@ -28,58 +28,57 @@
 
 package uk.ac.rdg.resc.edal.coverage.grid.impl;
 
-import java.util.List;
 import org.junit.Test;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
-import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import static org.junit.Assert.*;
 
 /**
  * Test of the {@link ReferenceableAxisImpl} class.
  * @author Jon
  */
-public class ReferenceableAxisImplTest {
+public class ReferenceableAxisImplTest extends AbstractReferenceableAxisTest {
 
     private static double[] NON_MONOTONIC_ARRAY = new double[]{
         1.0, 2.0, 3.0, 2.5, 3.5, 4.5
     };
 
-//    private static List<Double> NON_MONOTONIC_COLLECTION =
-//        CollectionUtils.listFromDoubleArray(NON_MONOTONIC_ARRAY);
+    private static double[] NON_MONOTONIC_REVERSE_ARRAY = new double[]{
+        5.0, 4.0, 3.0, 3.5, 2.0, 1.0
+    };
 
     /** Tests the enforcement of strict monotonicity in axis values */
     @Test(expected=IllegalArgumentException.class)
     public void testMonotonicityArray() {
         new ReferenceableAxisImpl("", NON_MONOTONIC_ARRAY, false);
     }
-    
+
     /** Tests the enforcement of strict monotonicity in axis values */
-    /*@Test(expected=IllegalArgumentException.class)
-    public void testMonotonicityCollection() {
-        new ReferenceableAxisImpl("", NON_MONOTONIC_COLLECTION, false);
-    }*/
+    @Test(expected=IllegalArgumentException.class)
+    public void testMonotonicityArray2() {
+        new ReferenceableAxisImpl("", NON_MONOTONIC_REVERSE_ARRAY, false);
+    }
 
     /** Tests the reverse lookup of all values in the list of coordinate values */
     @Test
     public void testReverseLookup() {
         double[] axisVals = new double[100];
+
         for (int i = 0; i < axisVals.length; i++) {
             axisVals[i] = -56.45 + i * 2.65;
         }
-        ReferenceableAxis axis = new ReferenceableAxisImpl("", axisVals, false);
-        
-        List<Double> coordValues = axis.getCoordinateValues();
-        for (int i = 0; i < coordValues.size(); i++) {
-            double value = coordValues.get(i);
-            int index = coordValues.indexOf(value);
-            assertEquals(i, index);
+        createAndTestReferenceableAxis(axisVals, false);
+
+        // Now an axis in reverse order
+        for (int i = 0; i < axisVals.length; i++) {
+            axisVals[i] = 85.5 - i * 0.5;
         }
+        createAndTestReferenceableAxis(axisVals, false);
     }
 
     /** Test finding nearest coordinate values */
     @Test
     public void testFindNearestCoordValues() {
-        ReferenceableAxis axis = new ReferenceableAxisImpl("",
+        ReferenceableAxis axis = createAndTestReferenceableAxis(
              new double[] {0.0, 1.5, 3.5, 6.0, 10.0, 15.0, 25.0, 50.0, 100.0},
              false);
 
@@ -95,6 +94,28 @@ public class ReferenceableAxisImplTest {
         assertEquals(8, axis.getNearestCoordinateIndex(100.01));
         assertEquals(8, axis.getNearestCoordinateIndex(124.99));
         assertEquals(-1, axis.getNearestCoordinateIndex(125.01));
+    }
+
+    /** Test finding nearest coordinate values */
+    @Test
+    public void testFindNearestCoordValuesReversedAxis() {
+        ReferenceableAxis axis = createAndTestReferenceableAxis(
+             new double[] {80, 75, 70, 60, 50, 30, 10, 5},
+             false);
+
+        assertEquals(-1, axis.getNearestCoordinateIndex(85));
+        assertEquals(-1, axis.getNearestCoordinateIndex(82.51));
+        assertEquals(0, axis.getNearestCoordinateIndex(82.49));
+        assertEquals(0, axis.getNearestCoordinateIndex(79));
+        assertEquals(0, axis.getNearestCoordinateIndex(77.51));
+        assertEquals(1, axis.getNearestCoordinateIndex(77.49));
+        assertEquals(4, axis.getNearestCoordinateIndex(51));
+        assertEquals(5, axis.getNearestCoordinateIndex(39.9));
+        assertEquals(6, axis.getNearestCoordinateIndex(11));
+        assertEquals(6, axis.getNearestCoordinateIndex(7.51));
+        assertEquals(7, axis.getNearestCoordinateIndex(7.49));
+        assertEquals(7, axis.getNearestCoordinateIndex(2.51));
+        assertEquals(-1, axis.getNearestCoordinateIndex(2.49));
     }
 
 

@@ -39,11 +39,12 @@ import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
  */
 public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
 {
-    private final double[] axisValues;
-    private double firstValue; // The first value on the axis
-    private double lastValue;  // The last value on the axis
-    private double minValue;
-    private double maxValue;
+    /** The axis values, always in ascending numerical order to simplify searching */
+    private double[] axisValues;
+    
+    /** True if axis values in the above array have been reversed */
+    private boolean reversed = false;
+
 
     /**
      * Creates a ReferenceableAxis from the given array of axis values.  The
@@ -61,8 +62,7 @@ public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
     public ReferenceableAxisImpl(String name, double[] axisValues, boolean isLongitude)
     {
         super(name, isLongitude);
-        this.axisValues = axisValues.clone();
-        this.setup();
+        this.setup(axisValues);
     }
 
     /**
@@ -82,46 +82,71 @@ public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
     public ReferenceableAxisImpl(CoordinateSystemAxis axis, double[] axisValues, boolean isLongitude)
     {
         super(axis, isLongitude);
-        this.axisValues = axisValues.clone();
-        this.setup();
+        this.setup(axisValues);
     }
 
     /**
-     * Checks that the axis values are in ascending order, throwing an
-     * IllegalArgumentException if not.
+     * Sets all the fields and checks that the axis values ascend or descend
+     * monotonically, throwing an IllegalArgumentException if not.
      */
-    private void setup()
+    private void setup(double[] axisValues)
     {
-        if (this.axisValues.length == 0) {
+        if (axisValues.length == 0) {
             throw new IllegalArgumentException("Zero-length array");
         }
-        double prevVal = this.axisValues[0];
+
+        if (axisValues.length == 1) {
+            this.axisValues = axisValues.clone();
+            return;
+        }
+
+        this.reversed = axisValues[1] < axisValues[0];
+        if (this.reversed) {
+            // Copy out the array in reverse order
+            this.axisValues = new double[axisValues.length];
+            for (int i = 0; i < axisValues.length; i++) {
+                this.axisValues[i] = axisValues[axisValues.length - 1 - i];
+            }
+        } else {
+            this.axisValues = axisValues.clone();
+        }
+
+        this.checkAscending();
+    }
+
+    /**
+     * Checks that the axis values ascend or descend
+     * monotonically, throwing an IllegalArgumentException if not.
+     */
+    private void checkAscending()
+    {
+        double prevVal = axisValues[0];
         for (int i = 1; i < this.axisValues.length; i++)
         {
             if (this.axisValues[i] <= prevVal)
             {
-                throw new IllegalArgumentException("Coordinate values must increase monotonically");
+                throw new IllegalArgumentException("Coordinate values must increase or decrease monotonically");
             }
             prevVal = this.axisValues[i];
         }
-
-        // Now precalculate the axis bounds
-        this.firstValue = this.axisValues[0];
-        this.lastValue = this.axisValues[this.axisValues.length - 1];
-        this.minValue = super.getMinimumValue();
-        this.maxValue = super.getMaximumValue();
     }
 
     @Override
     public double getCoordinateValue(int index) {
-        return this.axisValues[index];
+        return this.axisValues[this.maybeReverseIndex(index)];
+    }
+
+    /** If the array has been reversed, we need to reverse the index */
+    private int maybeReverseIndex(int index) {
+        if (this.reversed) return this.axisValues.length - 1 - index;
+        else return index;
     }
 
     @Override
     protected int doGetCoordinateIndex(double value) {
         // Do a binary search for the coordinate value
         int index = Arrays.binarySearch(this.axisValues, value);
-        return index >= 0 ? index : -1;
+        return index >= 0 ? this.maybeReverseIndex(index) : -1;
     }
 
     @Override
@@ -129,23 +154,28 @@ public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
         // The axis values are in ascending order so we can use a binary search
         int index = Arrays.binarySearch(this.axisValues, value);
 
-        // Check for an exact match
-        if (index >= 0)  return index;
+        if (index < 0)
+        {
+            // No exact match, but we have the insertion point, i.e. the index of
+            // the first element that is greater than the target value
+            int insertionPoint = -(index + 1);
 
-        // No exact match, but we have the insertion point, i.e. the index of
-        // the first element that is greater than the target value
-        int insertionPoint = -(index + 1);
+            // Deal with the extremes
+            if (insertionPoint == 0) {
+                index = 0;
+            } else if (insertionPoint == this.axisValues.length) {
+                index = this.axisValues.length - 1;
+            } else {
+                // We need to work out which index is closer: insertionPoint or
+                // (insertionPoint - 1)
+                double d1 = Math.abs(value - this.axisValues[insertionPoint]);
+                double d2 = Math.abs(value - this.axisValues[insertionPoint - 1]);
+                if (d1 < d2) index = insertionPoint;
+                else index = insertionPoint - 1;
+            }
+        }
 
-        // Deal with the extremes
-        if (insertionPoint == 0) return insertionPoint;
-        if (insertionPoint == this.axisValues.length) return insertionPoint - 1;
-        
-        // We need to work out which index is closer: insertionPoint or
-        // (insertionPoint - 1)
-        double d1 = Math.abs(value - this.getCoordinateValue(insertionPoint));
-        double d2 = Math.abs(value - this.getCoordinateValue(insertionPoint - 1));
-        if (d1 < d2) return insertionPoint;
-        return insertionPoint - 1;
+        return this.maybeReverseIndex(index);
     }
 
     @Override
@@ -153,12 +183,9 @@ public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
         return this.axisValues.length;
     }
 
-    // The following methods are overridden for efficiency reasons.  This object
-    // is immutable, so all of these quantities can be precalculated
-
-    @Override protected double getFirstValue() { return this.firstValue; }
-    @Override protected double getLastValue() { return this.lastValue; }
-    @Override protected double getMinimumValue() { return this.minValue; }
-    @Override protected double getMaximumValue() { return this.maxValue; }
+    @Override
+    protected boolean isAscending() {
+        return !this.reversed;
+    }
 
 }

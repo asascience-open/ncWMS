@@ -39,11 +39,7 @@ import uk.ac.rdg.resc.edal.coverage.grid.RegularAxis;
 public final class RegularAxisImpl extends AbstractReferenceableAxis
         implements RegularAxis
 {
-
-    private double firstValue; // The first value on the axis
-    private double lastValue;  // The last value on the axis
-    private double minValue;
-    private double maxValue;
+    private double firstValue;
     private double spacing; // The axis spacing
     private int size; // The number of points on the axis
 
@@ -63,21 +59,15 @@ public final class RegularAxisImpl extends AbstractReferenceableAxis
 
     private void setParams(double firstValue, double spacing, int size)
     {
-        if (spacing <= 0.0) {
-            throw new IllegalArgumentException("Axis spacing must be positive");
+        if (size <= 0) {
+            throw new IllegalArgumentException("Axis length must not be negative or zero");
         }
-        if (size < 0) {
-            throw new IllegalArgumentException("Axis length must not be negative");
+        if (spacing == 0.0) {
+            throw new IllegalArgumentException("Axis spacing cannot be zero");
         }
         this.firstValue = firstValue;
         this.spacing = spacing;
         this.size = size;
-
-        // We can precalculate all the following values since this object is
-        // immutable
-        this.lastValue = super.getLastValue();
-        this.minValue = super.getMinimumValue();
-        this.maxValue = super.getMaximumValue();
     }
 
     @Override
@@ -147,12 +137,15 @@ public final class RegularAxisImpl extends AbstractReferenceableAxis
         return this.size;
     }
 
-    // The following methods are overridden for efficiency reasons.  This object
-    // is immutable, so all of these quantities can be precalculated
+    @Override
+    protected boolean isAscending() {
+        return this.spacing > 0.0;
+    }
 
-    @Override protected double getFirstValue() { return this.firstValue; }
-    @Override protected double getLastValue() { return this.lastValue; }
-    @Override protected double getMinimumValue() { return this.minValue; }
-    @Override protected double getMaximumValue() { return this.maxValue; }
+    @Override
+    public String toString() {
+        return String.format("Regular axis: %s, %f, %f, %d", this.getName(),
+                this.firstValue, this.spacing, this.size);
+    }
 
 }

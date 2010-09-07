@@ -151,4 +151,9 @@ public final class BoundingBoxImpl extends AbstractEnvelope implements BoundingB
         return new DirectPositionImpl(this.getCoordinateReferenceSystem(), this.maxx, this.maxy);
     }
 
+    @Override
+    public String toString() {
+        return String.format("%f, %f - %f, %f", this.minx, this.miny, this.maxx, this.maxy);
+    }
+
 }

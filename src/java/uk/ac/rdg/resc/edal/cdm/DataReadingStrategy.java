@@ -203,7 +203,7 @@ enum DataReadingStrategy {
                 index.setDim(ranges.getYAxisIndex(), j - jmin);
                 for (int i : pixelMap.getIIndices(j))
                 {
-                    index.setDim(ranges.getXAxisIndex(), i - jmax);
+                    index.setDim(ranges.getXAxisIndex(), i - imin);
                     float val = arr.getFloat(index);
                     // The value we've read won't have had scale-offset-missing applied
                     val = (float)var.convertScaleOffsetMissing(val);

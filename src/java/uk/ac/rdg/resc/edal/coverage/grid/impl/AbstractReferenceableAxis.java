@@ -39,6 +39,9 @@ import uk.ac.rdg.resc.edal.util.Utils;
  * Abstract superclass for {@link ReferenceableAxis} implementations.  Handles
  * the tricky case of searching for longitude values in the axis (longitude
  * values wrap around the globe).
+ * @todo automatically apply the maximum extent -90:90 for latitude axes?  Or is
+ * this dangerous, given that some model grid cells are constructed with latitudes
+ * outside this range?
  * @author Jon
  */
 public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
@@ -73,7 +76,8 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
      * The name of the axis will be set to the name of the given axis.
      * @throws NullPointerException if coordSysAxis is null
      */
-    protected AbstractReferenceableAxis(CoordinateSystemAxis coordSysAxis, boolean isLongitude) {
+    protected AbstractReferenceableAxis(CoordinateSystemAxis coordSysAxis, boolean isLongitude)
+    {
         if (coordSysAxis == null) throw new NullPointerException("coordSysAxis cannot be null");
         this.name = coordSysAxis.getName().toString();
         this.coordSysAxis = coordSysAxis;
@@ -83,9 +87,9 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
     /**
      * Creates an axis with the given name.  The {@link #getCoordinateSystemAxis()
      * coordinate system axis} will be null.
-     * @throws NullPointerException if name is null
      */
-    protected AbstractReferenceableAxis(String name, boolean isLongitude) {
+    protected AbstractReferenceableAxis(String name, boolean isLongitude)
+    {
         this.name = name;
         this.coordSysAxis = null;
         this.isLongitude = isLongitude;
@@ -98,13 +102,13 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
      * {@inheritDoc}
      * <p>If this is a longitude axis, this implementation will ensure that the
      * value is corrected to the smallest equivalent longitude value that is
-     * greater than {@link #getFirstValue()}, before handing off to
+     * greater than {@link #getMinimumValue()}, before handing off to
      * {@link #doGetCoordinateIndex(double)}.</p>
      */
     @Override
     public final int getCoordinateIndex(double value) {
         if (this.isLongitude) {
-            value = Utils.getNextEquivalentLongitude(this.getFirstValue(), value);
+            value = Utils.getNextEquivalentLongitude(this.getMinimumValue(), value);
         }
         return this.doGetCoordinateIndex(value);
     }
@@ -118,59 +122,57 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
      * the {@link #getCoordinateValues() list of coordinate values}.</p>
      */
     protected abstract int doGetCoordinateIndex(double value);
-
-    /** Returns the first coordinate value in this axis.  This implementation
-     delegates to {@link #getCoordinateValue(int) getCoordinateValue(0)}. */
-    protected double getFirstValue() {
+    
+    /** Gets the value of the axis at index 0 */
+    private final double getFirstValue() {
         return this.getCoordinateValue(0);
     }
-
-    /** Returns the last coordinate value in this axis.  This implementation
-     delegates to {@link #getCoordinateValue(int) getCoordinateValue(size - 1)}. */
-    protected double getLastValue() {
+    
+    /** Gets the value of the axis at index (size - 1) */
+    private final double getLastValue() {
         return this.getCoordinateValue(this.getSize() - 1);
     }
 
     /**
-     * Returns the minimum valid value of this axis: values less than this
-     * will cause -1 to be returned from {@link #getNearestCoordinateIndex(double)}.
-     * Note that this is different from {@link #getFirstValue()}, which simply
-     * returns the first coordinate value.
-     * @return the minimum valid value of this axis
+     * Returns the minimum coordinate value of this axis.  This will be the first
+     * coordinate value if the coordinate values are in ascending order, or the
+     * last coordinate value if the coordinate values are in descending order.
+     * @return the minimum coordinate value of this axis
      */
-    protected double getMinimumValue() {
-        return this.getFirstValue() -
-                0.5 * (this.getCoordinateValue(1) - this.getFirstValue());
+    private final double getMinimumValue() {
+        return this.isAscending() ? this.getFirstValue() : this.getLastValue();
     }
 
     /**
-     * Returns the minimum valid value of this axis: values less than this
-     * will cause -1 to be returned from {@link #getNearestCoordinateIndex(double)}.
-     * Note that this is different from {@link #getFirstValue()}, which simply
-     * returns the first coordinate value.
-     * @return the minimum valid value of this axis
+     * Returns the maximum coordinate value of this axis.  This will be the last
+     * coordinate value if the coordinate values are in ascending order, or the
+     * first coordinate value if the coordinate values are in descending order.
+     * @return the maximum coordinate value of this axis
      */
-    protected double getMaximumValue() {
-        return this.getLastValue() +
-                0.5 * (this.getLastValue() - this.getCoordinateValue(this.getSize() - 2));
+    private final double getMaximumValue() {
+        return this.isAscending() ? this.getLastValue() : this.getFirstValue();
     }
+
+    /** Return true if the values of the axis are in ascending numerical order */
+    protected abstract boolean isAscending();
 
     /**
      * {@inheritDoc}
-     * <p>This implementation checks the value against the
-     * {@link #getMinimumValue() minimum} and {@link #getMaximumValue() maximum}
-     * valid values then hands off to {@link #doGetNearestCoordinateIndex(double)}.
+     * <p>This implementation checks that the value is within the bounds of the
+     * {@link #getExtent() envelope} of the axis, then hands off to
+     * {@link #doGetNearestCoordinateIndex(double)}.
      * If this is a longitude axis, this will ensure that the value is corrected
-     * to the smallest equivalent longitude value that is greater than
-     * {@link #getMinimumValue()}.
+     * to the smallest equivalent longitude value that is greater than the minimum
+     * value of the extent.
      */
     @Override
     public final int getNearestCoordinateIndex(double value) {
-        double minValue = this.getMinimumValue();
+        Envelope extent = this.getExtent();
+        double minValue = extent.getMinimum(0);
         if (this.isLongitude) {
             value = Utils.getNextEquivalentLongitude(minValue, value);
         }
-        if (value < minValue || value > this.getMaximumValue()) {
+        if (value < minValue || value > extent.getMaximum(0)) {
             return -1;
         }
         return this.doGetNearestCoordinateIndex(value);
@@ -189,8 +191,33 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
     }
 
     @Override
-    public final Envelope getExtent() {
-        return new GeneralEnvelope(this.getMinimumValue(), this.getMaximumValue());
+    public final Envelope getExtent()
+    {
+        final double min;
+        final double max;
+        if (this.getSize() == 1)
+        {
+            min = this.getMinimumValue();
+            max = this.getMaximumValue();
+        }
+        else
+        {
+            double val1 = this.getFirstValue() -
+                0.5 * (this.getCoordinateValue(1) - this.getFirstValue());
+            double val2 = this.getLastValue() +
+                0.5 * (this.getLastValue() - this.getCoordinateValue(this.getSize() - 2));
+            if (this.isAscending())
+            {
+                min = val1;
+                max = val2;
+            }
+            else
+            {
+                min = val2;
+                max = val1;
+            }
+        }
+        return new GeneralEnvelope(min, max);
     }
 
     /**
