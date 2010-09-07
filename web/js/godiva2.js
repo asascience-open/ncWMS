@@ -127,7 +127,14 @@ window.onload = function()
             });
         }
     });
-    var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble",
+
+    var demis_wms = new OpenLayers.Layer.WMS1_1_1( "Demis WMS",
+       "http://www2.demis.nl/wms/wms.ashx?WMS=WorldMap",
+        {layers:'Countries,Bathymetry,Topography,Hillshading,Coastlines,Builtup+areas,Waterbodies,Rivers,Streams,Railroads,Highways,Roads,Trails,Borders,Cities,Airports',
+        format: 'image/png'});
+    var bluemarble_demis_wms = new OpenLayers.Layer.WMS1_1_1( "Demis BlueMarble",
+        "http://www2.demis.nl/wms/wms.ashx?WMS=BlueMarble" , {layers: 'Earth Image,Borders,Coastlines'});
+    var bluemarble_wms = new OpenLayers.Layer.WMS1_1_1( "Blue Marble + bathymetry",
         "http://wms-basemaps.appspot.com/wms", {layers: 'bluemarble_file', format: 'image/jpeg'});
     var srtm_dem = new OpenLayers.Layer.WMS( "SRTM DEM",
         "http://iceds.ge.ucl.ac.uk/cgi-bin/icedswms?", {layers:'bluemarble,srtm30'}, {wrapDateLine: true});
@@ -196,9 +203,9 @@ window.onload = function()
         {layers: 'Bathymetry___Elevation.bds', transparent: 'true'});
     seazone_wms.setVisibility(false);*/
 
-    map.addLayers([bluemarble_wms, srtm_dem, ol_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer, drawinglayer/*, seazone_wms, essi_wms*/]);
+    map.addLayers([demis_wms, bluemarble_demis_wms, bluemarble_wms, srtm_dem, ol_wms, human_wms, northPoleBaseLayer, southPoleBaseLayer, drawinglayer/*, seazone_wms, essi_wms*/]);
 
-    map.setBaseLayer(bluemarble_wms);
+    map.setBaseLayer(demis_wms);
     projectionCode = map.baseLayer.projection.getCode();
 
     // Make sure the Google Earth and Permalink links are kept up to date when
