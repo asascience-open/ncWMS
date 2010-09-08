@@ -33,11 +33,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.chrono.JulianChronology;
 import org.opengis.coverage.grid.GridCoordinates;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -73,8 +75,11 @@ import uk.ac.rdg.resc.edal.coverage.grid.impl.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularAxisImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.time.AllLeapChronology;
+import uk.ac.rdg.resc.edal.time.NoLeapChronology;
 import uk.ac.rdg.resc.edal.time.ThreeSixtyDayChronology;
 import uk.ac.rdg.resc.edal.time.TimeUtils;
+import uk.ac.rdg.resc.edal.util.CollectionUtils;
 
 /**
  * Contains static helper methods for reading data and metadata from NetCDF files,
@@ -84,6 +89,19 @@ import uk.ac.rdg.resc.edal.time.TimeUtils;
 public final class CdmUtils
 {
     private static final Logger logger = LoggerFactory.getLogger(CdmUtils.class);
+
+    /** Map of CF identifiers for calendar systems to joda-time Chronologies */
+    private static final Map<String, Chronology> CHRONOLOGIES = CollectionUtils.newHashMap();
+
+    static
+    {
+        CHRONOLOGIES.put("julian", JulianChronology.getInstanceUTC());
+        CHRONOLOGIES.put("360_day", ThreeSixtyDayChronology.getInstanceUTC());
+        CHRONOLOGIES.put("all_leap", AllLeapChronology.getInstanceUTC());
+        CHRONOLOGIES.put("366_day", AllLeapChronology.getInstanceUTC());
+        CHRONOLOGIES.put("noleap", NoLeapChronology.getInstanceUTC());
+        CHRONOLOGIES.put("365_day", NoLeapChronology.getInstanceUTC());
+    }
 
     /** Enforce non-instantiability */
     private CdmUtils() { throw new AssertionError(); }
@@ -259,23 +277,23 @@ public final class CdmUtils
             }
             return timesteps;
         }
-        else if (calString.equals("360_day"))
-        {
-            return getTimesteps360Day(timeAxis);
-        }
         else
         {
-            throw new IllegalArgumentException("The calendar system "
-                + cal.getStringValue() + " cannot be handled");
+            Chronology chron = CHRONOLOGIES.get(calString);
+            if (chron == null)
+            {
+                throw new IllegalArgumentException("The calendar system "
+                    + cal.getStringValue() + " cannot be handled");
+            }
+            return getTimestepsForChronology(timeAxis, chron);
         }
     }
 
     /**
-     * Creates a list of DateTimes in the 360-day calendar system.  All of the
-     * DateTimes will have a zero time zone offset (i.e. UTC) and will use
-     * the {@link ThreeSixtyDayChronology}.
+     * Creates a list of DateTimes in a non-standard calendar system.  All of the
+     * DateTimes will have a zero time zone offset (i.e. UTC).
      */
-    private static List<DateTime> getTimesteps360Day(CoordinateAxis1DTime timeAxis)
+    private static List<DateTime> getTimestepsForChronology(CoordinateAxis1DTime timeAxis, Chronology chron)
     {
         // Get the units of the time axis, e.g. "days since 1970-1-1 0:0:0"
         String timeAxisUnits = timeAxis.getUnitsString();
@@ -288,8 +306,7 @@ public final class CdmUtils
 
         // Get the base date of the axis, e.g. "1970-1-1 0:0:0"
         String baseDateTimeString = timeAxisUnits.substring(indexOfSince + " since ".length());
-        DateTime baseDateTime = TimeUtils.parseUdunitsTimeString(baseDateTimeString,
-                ThreeSixtyDayChronology.getInstanceUTC());
+        DateTime baseDateTime = TimeUtils.parseUdunitsTimeString(baseDateTimeString, chron);
 
         // Now create and return the axis values
         List<DateTime> timesteps = new ArrayList<DateTime>();

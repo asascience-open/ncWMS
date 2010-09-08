@@ -132,13 +132,22 @@ public abstract class AbstractMetadataController
         usageLogEntry.setLayer(layer);
         
         // Find the time the user has requested (this is the time that is
-        // currently displayed on the Godiva2 site).  If not time has been
+        // currently displayed on the Godiva2 site).  If no time has been
         // specified we use the current time
-        DateTime targetDateTime = new DateTime();
+        DateTime targetDateTime = new DateTime(layer.getChronology());
         String targetDateIso = request.getParameter("time");
         if (targetDateIso != null && !targetDateIso.trim().equals(""))
         {
-            targetDateTime = WmsUtils.iso8601ToDateTime(targetDateIso, layer.getChronology());
+            try
+            {
+                targetDateTime = WmsUtils.iso8601ToDateTime(targetDateIso, layer.getChronology());
+            }
+            catch(IllegalArgumentException iae)
+            {
+                // targetDateIso was not valid for the layer's chronology
+                // We swallow this exception: targetDateTime will remain
+                // unchanged.
+            }
         }
         
         Map<Integer, Map<Integer, List<Integer>>> datesWithData =

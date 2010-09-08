@@ -46,13 +46,17 @@ import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.chrono.JulianChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import uk.ac.rdg.resc.edal.cdm.CdmUtils;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.geometry.impl.BoundingBoxImpl;
+import uk.ac.rdg.resc.edal.time.AllLeapChronology;
+import uk.ac.rdg.resc.edal.time.NoLeapChronology;
 import uk.ac.rdg.resc.ncwms.controller.GetMapDataRequest;
 import uk.ac.rdg.resc.edal.time.ThreeSixtyDayChronology;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
@@ -131,11 +135,21 @@ public class WmsUtils
 
     /**
      * Converts an ISO8601-formatted String into a {@link DateTime} object
-     * @throws IllegalArgumentException if the string is not a valid ISO date-time
+     * @throws IllegalArgumentException if the string is not a valid ISO date-time,
+     * or if it is not valid within the Chronology (e.g. 31st July in a 360-day
+     * calendar).
      */
     public static DateTime iso8601ToDateTime(String isoDateTime, Chronology chronology)
     {
-        return ISO_DATE_TIME_PARSER.withChronology(chronology).parseDateTime(isoDateTime);
+        try
+        {
+            return ISO_DATE_TIME_PARSER.withChronology(chronology).parseDateTime(isoDateTime);
+        }
+        catch(RuntimeException re)
+        {
+            re.printStackTrace();
+            throw re;
+        }
     }
     
     /**
@@ -400,11 +414,16 @@ public class WmsUtils
      * in Capabilities documents.  For standard (ISO) chronologies, this will
      * return "ISO8601".  For 360-day chronologies this will return "360_day".
      * For other chronologies this will return "unknown".</p>
+     * @todo Should match up with {@link CdmUtils#CHRONOLOGIES}.
      */
     public static String getTimeAxisUnits(Chronology chronology)
     {
         if (chronology instanceof ISOChronology) return "ISO8601";
+        // The following are the CF names for these calendars
+        if (chronology instanceof JulianChronology) return "julian";
         if (chronology instanceof ThreeSixtyDayChronology) return "360_day";
+        if (chronology instanceof NoLeapChronology) return "noleap";
+        if (chronology instanceof AllLeapChronology) return "all_leap";
         return "unknown";
     }
 
