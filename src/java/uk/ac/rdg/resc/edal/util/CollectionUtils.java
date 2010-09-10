@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -126,6 +127,16 @@ public final class CollectionUtils {
             @Override public Double get(int index) { return arr[index]; }
             @Override public int size() { return arr.length; }
         };
+    }
+
+    /**
+     * Returns a new Set containing the given values
+     */
+    public static <T> Set<T> setOf(T... values)
+    {
+        Set<T> set = newHashSet();
+        for (T value : values) set.add(value);
+        return set;
     }
 
 }

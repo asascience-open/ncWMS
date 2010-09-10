@@ -614,11 +614,15 @@ function layerSelected(layerDetails)
 
     var zAxis = layerDetails.zaxis;
     if (zAxis == null) {
-        $('zAxis').innerHTML = ''
+        $('zAxis').style.visibility = 'hidden';
         $('zValues').style.visibility = 'hidden';
     } else {
-        var axisLabel = zAxis.positive ? 'Elevation' : 'Depth';
-        $('zAxis').innerHTML = '<b>' + axisLabel + ' (' + zAxis.units + '): </b>';
+        var zAxisLabel = getZAxisLabel(zAxis);
+        var isDepth = zAxisLabel == 'Depth';
+        $('zAxisLabel').innerHTML = zAxisLabel;
+        $('zAxisUnits').innerHTML = zAxis.units;
+        $('zAxis').style.visibility = 'visible';
+        $('zValues').style.visibility = 'visible';
         // Populate the drop-down list of z values
         // Make z range selector invisible if there are no z values
         var zValues = zAxis.values;
@@ -626,7 +630,9 @@ function layerSelected(layerDetails)
         var nearestIndex = 0;
         for (var j = 0; j < zValues.length; j++) {
             // Create an item in the drop-down list for this z level
-            var zLabel = zAxis.positive ? zValues[j] : -zValues[j];
+            // If this is a depth axis we reverse the sign of the displayed values.
+            // See getZAxisLabel
+            var zLabel = isDepth ? -zValues[j] : zValues[j];
             $('zValues').options[j] = new Option(zLabel, zValues[j]);
             // Find the nearest value to the currently-selected
             // depth level
@@ -813,6 +819,26 @@ function layerSelected(layerDetails)
             loadTimesteps(makeIsoDate(selectedDate));
         }
     }
+}
+
+// Gets the string to use as the z axis label
+function getZAxisLabel(zAxis)
+{
+    // Check for units of pressure: see http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.4/cf-conventions.html#id2982284
+    if (['Pa', 'hPa', 'bar', 'millibar', 'decibar', 'atmosphere', 'atm', 'pascal'].indexOf(zAxis.units) >= 0) {
+        return 'Pressure';
+    }
+    // This will be a normal elevation (e.g. in metres).  Check to see if all
+    // values are negative: if so we'll call this a depth axis
+    var allNegative = true;
+    var zVals = zAxis.values;
+    for (var i = 0; i < zVals.length; i++) {
+        if (zVals[i] >= 0) {
+            allNegative = false;
+            break;
+        }
+    }
+    return allNegative ? 'Depth' : 'Height';
 }
 
 // Function that is used by the calendar to see whether a date should be disabled
@@ -1510,7 +1536,7 @@ function loadScreenshot() {
         // Add the elevation, time and units if this layer has them
         var zAxis = activeLayer.zaxis;
         if (zAxis != null) {
-            var axisLabel = zAxis.positive ? 'Elevation' : 'Depth';
+            var axisLabel = $('zAxisLabel').innerHTML;
             var zValue = $('zValues').options[$('zValues').selectedIndex].text;
             params.elevation = axisLabel + ': ' + zValue + ' ' + zAxis.units;
         }

@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.Attribute;
 import ucar.nc2.Variable;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
@@ -215,6 +216,9 @@ public class DefaultDataReader extends DataReader
                     // Create an object that will map lat-lon points to nearest grid points
                     HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
 
+                    // TODO Should set zPositive = true if a pressure axis?
+                    // We should have defined
+                    // the meaning of "zPositive" a bit more carefully.
                     boolean zPositive = coordSys.isZPositive();
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
                     List<Double> zValues = getZValues(zAxis, zPositive);
@@ -305,9 +309,13 @@ public class DefaultDataReader extends DataReader
         List<Double> zValues = new ArrayList<Double>();
         if (zAxis != null)
         {
+            boolean isPressure = zAxis.getAxisType() == AxisType.Pressure;
             for (double zVal : zAxis.getCoordValues())
             {
-                zValues.add(zPositive ? zVal : 0.0 - zVal);
+                // Pressure axes have "positive = down" but we don't want to
+                // reverse the sign.
+                if (zPositive || isPressure) zValues.add(zVal);
+                else zValues.add(-zVal); // This is probably a depth axis
             }
         }
         return zValues;

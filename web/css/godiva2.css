@@ -65,6 +65,10 @@ div.help {
     left: 390px;
 }
 
+#zAxis {
+    visibility: hidden;
+}
+
 #zValues {
     visibility: hidden;
 }

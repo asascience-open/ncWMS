@@ -31,14 +31,16 @@ package uk.ac.rdg.resc.ncwms.wms;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
@@ -54,6 +56,17 @@ import uk.ac.rdg.resc.ncwms.util.WmsUtils;
  */
 public abstract class AbstractScalarLayer implements ScalarLayer
 {
+    /** TODO: may belong elsewhere, in which case should be made unmodifiable */
+    private static final Set<String> PRESSURE_UNITS =
+        CollectionUtils.setOf("Pa", "hPa", "bar", "millibar", "decibar", "atmosphere", "atm", "pascal");
+
+    /** Compares double values based upon their absolute value */
+    private static final Comparator<Double> ABSOLUTE_VALUE_COMPARATOR = new Comparator<Double>() {
+        @Override public int compare(Double d1, Double d2) {
+            return Double.compare(Math.abs(d1), Math.abs(d2));
+        }
+    };
+
     protected String id;
     protected String title = null;
     protected String abstr = null; // "abstract" is a reserved word in Java
@@ -222,22 +235,21 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     {
         // We must access the elevation values via the accessor method in case
         // subclasses override it.
-	Iterator<Double> it = this.getElevationValues().iterator();
-        if (!it.hasNext()) return Double.NaN;
-        
-        // Adapted from Collections.min()
-	Double candidate = it.next();
-        while (it.hasNext())
+        if (!this.hasElevationAxis()) return Double.NaN;
+
+        if (PRESSURE_UNITS.contains(this.getElevationUnits()))
         {
-	    Double next = it.next();
-            // Find out which value is closest to zero (i.e. has the smaller
-            // absolute value)
-	    if (Double.compare(Math.abs(next), Math.abs(candidate)) < 0)
-            {
-                candidate = next;
-            }
-	}
-	return candidate;
+            // The vertical axis is pressure.  The default (closest to the surface)
+            // is therefore the maximum value.
+            return Collections.max(this.getElevationValues());
+        }
+        else
+        {
+            // The vertical axis represents linear height, so we find which
+            // value is closest to zero (the surface), i.e. the smallest
+            // absolute value
+            return Collections.min(this.getElevationValues(), ABSOLUTE_VALUE_COMPARATOR);
+        }
     }
 
     /**
