@@ -441,7 +441,7 @@ public abstract class AbstractWmsController extends AbstractController {
                 ? ImageProducer.Style.VECTOR
                 : ImageProducer.Style.BOXFILL;
         ColorPalette palette = layer.getDefaultColorPalette();
-        if (styles[0] != null) {
+        if (styles.length > 0) {
             String[] styleStrEls = styles[0].split("/");
 
             // Get the style type

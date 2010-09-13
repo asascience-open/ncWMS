@@ -65,7 +65,7 @@ public class GetMapStyleRequest
         // RequestParser replaces pluses with spaces: we must change back
         // to parse the format correctly
         String stylesStr = params.getMandatoryString("styles");
-        if (stylesStr.trim().equals("")) this.styles = new String[0]; 
+        if (stylesStr.trim().isEmpty()) this.styles = new String[0];
         else this.styles = stylesStr.split(",");
         
         this.imageFormat = params.getMandatoryString("format").replaceAll(" ", "+");
