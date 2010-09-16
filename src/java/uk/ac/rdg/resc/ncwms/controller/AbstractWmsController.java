@@ -583,11 +583,6 @@ public abstract class AbstractWmsController extends AbstractController {
 
         GetFeatureInfoDataRequest dr = request.getDataRequest();
 
-        // Check the feature count
-        if (dr.getFeatureCount() != 1) {
-            throw new WmsException("Can only provide feature info for one layer at a time");
-        }
-
         // Check the output format
         if (!request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT) &&
                 !request.getOutputFormat().equals(FEATURE_INFO_PNG_FORMAT)) {

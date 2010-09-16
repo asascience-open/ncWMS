@@ -39,9 +39,6 @@ import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
  * this to save code repetition).
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public class GetFeatureInfoDataRequest extends GetMapDataRequest
 {
@@ -56,16 +53,30 @@ public class GetFeatureInfoDataRequest extends GetMapDataRequest
     {
         this.layers = params.getMandatoryString("query_layers").split(",");
         this.init(params, version); // Initialize parameters that are shared with GetMap
-        this.featureCount = params.getPositiveInt("feature_count", 1);
-        this.pixelColumn = params.getMandatoryPositiveInt("i");
+
+        // FeatureCount defaults to 1 if a valid positive integer is not provided
+        String featureCountStr = params.getString("feature_count");
+        if (featureCountStr == null) this.featureCount = 1;
+        try
+        {
+            this.featureCount = Integer.parseInt(featureCountStr);
+            if (this.featureCount <= 0) this.featureCount = 1;
+        }
+        catch(NumberFormatException nfe)
+        {
+            this.featureCount = 1;
+        }
+
+        // WMS1.3.0 uses "i/j", 1.1.1 uses "x/y" for the pixel column/row.
+        this.pixelColumn = params.getMandatoryPositiveInt(version.equals("1.3.0") ? "i" : "x");
         if (this.pixelColumn > this.getWidth() - 1)
         {
-            throw new InvalidPointException("i");
+            throw new InvalidPointException("i (or x)");
         }
-        this.pixelRow = params.getMandatoryPositiveInt("j");
+        this.pixelRow = params.getMandatoryPositiveInt(version.equals("1.3.0") ? "j" : "y");
         if (this.pixelRow > this.getHeight() - 1)
         {
-            throw new InvalidPointException("j");
+            throw new InvalidPointException("j (or y)");
         }
     }
 
