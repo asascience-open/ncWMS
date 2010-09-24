@@ -37,9 +37,6 @@ import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.nc2.Attribute;
-import ucar.nc2.Variable;
-import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
@@ -49,8 +46,8 @@ import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.cdm.CdmUtils;
-import uk.ac.rdg.resc.ncwms.config.LayerImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.config.LayerImpl;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
@@ -166,6 +163,8 @@ public class DefaultDataReader extends DataReader
      * {@link NetcdfDataset#openDataset}.
      * @param layers Map of Layer Ids to LayerImpl objects to populate or update
      * @throws IOException if there was an error reading from the data source
+     * @todo Some of this code is repeated in THREDDS's ThreddsDataset, but it's
+     * hard to refactor neatly in a manner that allows better reuse.
      */
     @Override
     protected void findAndUpdateLayers(String location, Map<String, LayerImpl> layers)
@@ -216,12 +215,8 @@ public class DefaultDataReader extends DataReader
                     // Create an object that will map lat-lon points to nearest grid points
                     HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
 
-                    // TODO Should set zPositive = true if a pressure axis?
-                    // We should have defined
-                    // the meaning of "zPositive" a bit more carefully.
-                    boolean zPositive = coordSys.isZPositive();
                     CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-                    List<Double> zValues = getZValues(zAxis, zPositive);
+                    List<Double> zValues = CdmUtils.getZValues(coordSys);
 
                     // Get the bounding box
                     GeographicBoundingBox bbox = CdmUtils.getBbox(coordSys.getLatLonBoundingBox());
@@ -231,7 +226,7 @@ public class DefaultDataReader extends DataReader
                     {
                         logger.debug("Creating new Layer object for {}", grid.getName());
                         LayerImpl layer = new LayerImpl(grid.getName());
-                        layer.setTitle(getLayerTitle(grid.getVariable()));
+                        layer.setTitle(CdmUtils.getVariableTitle(grid.getVariable()));
                         layer.setAbstract(grid.getDescription());
                         layer.setUnits(grid.getUnitsString());
                         layer.setHorizontalGrid(horizGrid);
@@ -240,7 +235,10 @@ public class DefaultDataReader extends DataReader
                         if (zAxis != null)
                         {
                             layer.setElevationValues(zValues);
-                            layer.setElevationPositive(zPositive);
+                            // We should have defined the meaning of "zPositive"
+                            // a bit more carefully. It's not intuitive,
+                            // particularly for a pressure axis
+                            layer.setElevationPositive(coordSys.isZPositive());
                             layer.setElevationUnits(zAxis.getUnitsString());
                         }
 
@@ -272,53 +270,6 @@ public class DefaultDataReader extends DataReader
             logger.debug("In finally clause");
             closeDataset(nc);
         }
-    }
-
-    /**
-     * @return the value of the standard_name attribute of the variable,
-     * or the long_name if it does not exist, or the unique id if neither of
-     * these attributes exist.
-     */
-    private static String getLayerTitle(Variable var)
-    {
-        Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
-        if (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
-        {
-            Attribute longNameAtt = var.findAttributeIgnoreCase("long_name");
-            if (longNameAtt == null || longNameAtt.getStringValue().trim().equals(""))
-            {
-                return var.getName();
-            }
-            else
-            {
-                return longNameAtt.getStringValue();
-            }
-        }
-        else
-        {
-            return stdNameAtt.getStringValue();
-        }
-    }
-
-    /**
-     * @return the values on the z axis, with sign reversed if zPositive == false.
-     * Returns an empty list if zAxis is null.
-     */
-    private static List<Double> getZValues(CoordinateAxis1D zAxis, boolean zPositive)
-    {
-        List<Double> zValues = new ArrayList<Double>();
-        if (zAxis != null)
-        {
-            boolean isPressure = zAxis.getAxisType() == AxisType.Pressure;
-            for (double zVal : zAxis.getCoordValues())
-            {
-                // Pressure axes have "positive = down" but we don't want to
-                // reverse the sign.
-                if (zPositive || isPressure) zValues.add(zVal);
-                else zValues.add(-zVal); // This is probably a depth axis
-            }
-        }
-        return zValues;
     }
 
     /** Closes the given dataset, logging any exceptions at debug level */

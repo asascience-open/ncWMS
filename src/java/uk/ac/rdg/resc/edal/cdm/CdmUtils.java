@@ -208,7 +208,7 @@ public final class CdmUtils
      * @param nc The NetcdfDataset from which data will be read.
      * @return an optimum DataReadingStrategy for reading from the dataset
      */
-    private static DataReadingStrategy getOptimumDataReadingStrategy(NetcdfDataset nc)
+    public static DataReadingStrategy getOptimumDataReadingStrategy(NetcdfDataset nc)
     {
         String fileType = nc.getFileTypeId();
         return "netCDF".equals(fileType) || "HDF4".equals(fileType)
@@ -475,6 +475,8 @@ public final class CdmUtils
      */
     static Array readVariable(Variable var, RangesList ranges) throws IOException
     {
+        if (var == null) throw new NullPointerException("var");
+        if (ranges == null) throw new NullPointerException("ranges");
         try
         {
             return var.read(ranges.getRanges());
@@ -482,6 +484,58 @@ public final class CdmUtils
         catch(InvalidRangeException ire)
         {
             throw new IllegalArgumentException(ire);
+        }
+    }
+
+    /**
+     * Gets the values of the z axis of the given coordinate system.  Returns
+     * an empty list of the given coordinate system has no vertical axis.
+     * , with sign reversed if zPositive == false.
+     * Returns an empty list if zAxis is null.
+     */
+    public static List<Double> getZValues(GridCoordSystem coordSys)
+    {
+        if (coordSys == null) throw new NullPointerException("coordSys");
+
+        CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
+        if (zAxis == null) return Collections.emptyList();
+
+        List<Double> zValues = new ArrayList<Double>();
+        boolean isPositive = coordSys.isZPositive();
+        boolean isPressure = zAxis.getAxisType() == AxisType.Pressure;
+        for (double zVal : zAxis.getCoordValues())
+        {
+            // Pressure axes have "positive = down" but we don't want to
+            // reverse the sign of the values.
+            if (isPositive || isPressure) zValues.add(zVal);
+            else zValues.add(-zVal); // This is probably a depth axis
+        }
+        return zValues;
+    }
+
+    /**
+     * @return the value of the standard_name attribute of the variable,
+     * or the long_name if it does not exist, or the unique id if neither of
+     * these attributes exist.
+     */
+    public static String getVariableTitle(Variable var)
+    {
+        Attribute stdNameAtt = var.findAttributeIgnoreCase("standard_name");
+        if (stdNameAtt == null || stdNameAtt.getStringValue().trim().equals(""))
+        {
+            Attribute longNameAtt = var.findAttributeIgnoreCase("long_name");
+            if (longNameAtt == null || longNameAtt.getStringValue().trim().equals(""))
+            {
+                return var.getName();
+            }
+            else
+            {
+                return longNameAtt.getStringValue();
+            }
+        }
+        else
+        {
+            return stdNameAtt.getStringValue();
         }
     }
 

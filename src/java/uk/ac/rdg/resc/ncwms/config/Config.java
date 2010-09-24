@@ -127,9 +127,7 @@ public class Config implements ServerConfig, ApplicationContextAware
     private Config() {}
 
     /**
-     * Reads configuration information from the given working directory
-     * @param workingDirectory The ncWMS working directory, which must contain
-     * config.xml
+     * Reads configuration information from the given config file
      */
     public static Config readConfig(File configFile) throws Exception
     {

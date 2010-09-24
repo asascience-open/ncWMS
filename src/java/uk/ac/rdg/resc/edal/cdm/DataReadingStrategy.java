@@ -98,8 +98,8 @@ import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
  * <img src="doc-files/pixelmap_scanline.png">
  * @author Jon
  */
-enum DataReadingStrategy {
-
+public enum DataReadingStrategy
+{
     /**
      * Reads "scanlines" of data, leading to a smaller memory footprint than
      * the {@link #BOUNDING_BOX bounding-box} strategy, but a larger number of individual
@@ -302,7 +302,7 @@ enum DataReadingStrategy {
     }
 
     /**
-     * Returns an ArrayList of null values of the given length
+     * Returns an ArrayList with the given length, filled with null values
      */
     private static ArrayList<Float> nullArrayList(int n)
     {
@@ -316,7 +316,7 @@ enum DataReadingStrategy {
 
     protected abstract boolean sortPixelMap();
 
-    protected abstract void populatePixelArray(List<Float> picData,
+    abstract void populatePixelArray(List<Float> picData,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
         throws IOException;
 
