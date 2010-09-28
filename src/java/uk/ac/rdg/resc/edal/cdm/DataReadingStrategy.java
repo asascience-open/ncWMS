@@ -35,9 +35,7 @@ import java.util.Set;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.Array;
 import ucar.ma2.Index;
-import ucar.nc2.Variable;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
@@ -116,8 +114,6 @@ public enum DataReadingStrategy
             // Cycle through the y indices, extracting a scanline of
             // data each time from minX to maxX
             logger.debug("Shape of grid: {}", Arrays.toString(var.getShape()));
-            // Get a VariableDS for unpacking and checking for missing data
-            Variable origVar = var.getOriginalVariable();
 
             for (int j : pixelMap.getJIndices())
             {
@@ -131,23 +127,17 @@ public enum DataReadingStrategy
 
                 // Read a chunk of data - values will not be unpacked or
                 // checked for missing values yet
-                long start = System.nanoTime();
-                Array arr = CdmUtils.readVariable(origVar, ranges);
-                logger.debug("Array shape = {}", Arrays.toString(arr.getShape()));
-                long end = System.nanoTime();
-                double timeToReadDataMs = (end - start) / 1.e6;
+                DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
 
                 // Get an index for the array and set it to zero
-                Index index = arr.getIndex();
+                Index index = dataChunk.getIndex();
                 index.set(new int[index.getRank()]);
 
                 // Now copy the scanline's data to the picture array
                 Set<Integer> iIndices = pixelMap.getIIndices(j);
                 for (int i : iIndices) {
                     index.setDim(ranges.getXAxisIndex(), i - imin);
-                    float val = arr.getFloat(index);
-                    // The value we've read won't have had scale-offset-missing applied
-                    val = (float) var.convertScaleOffsetMissing(val);
+                    float val = dataChunk.readFloatValue(index);
 
                     // Now we set the value of all the image pixels associated with
                     // this data point.
@@ -157,8 +147,6 @@ public enum DataReadingStrategy
                         }
                     }
                 }
-//                System.out.printf("Row: %d, imin: %d, imax: %d, pointsRead: %d, usefulPointsRead: %d, timeMs: %f, msPerPoint: %f, msPerUsefulPoint: %f%n",
-//                     j, imin, imax, (imax - imin + 1), iIndices.size(), timeToReadDataMs, (timeToReadDataMs / (imax - imin + 1)), (timeToReadDataMs / iIndices.size()));
             }
         }
 
@@ -188,15 +176,13 @@ public enum DataReadingStrategy
             logger.debug("Shape of grid: {}", Arrays.toString(var.getShape()));
             logger.debug(ranges.toString());
 
-            Variable origVar = var.getOriginalVariable();
-
             long start = System.currentTimeMillis();
-            Array arr = CdmUtils.readVariable(origVar, ranges);
+            DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
             long readData = System.currentTimeMillis();
             logger.debug("Read data using bounding box algorithm in {} milliseconds", (readData - start));
 
             // Now extract the information we need from the data array
-            Index index = arr.getIndex();
+            Index index = dataChunk.getIndex();
             index.set(new int[index.getRank()]);
             for (int j : pixelMap.getJIndices())
             {
@@ -204,9 +190,7 @@ public enum DataReadingStrategy
                 for (int i : pixelMap.getIIndices(j))
                 {
                     index.setDim(ranges.getXAxisIndex(), i - imin);
-                    float val = arr.getFloat(index);
-                    // The value we've read won't have had scale-offset-missing applied
-                    val = (float)var.convertScaleOffsetMissing(val);
+                    float val = dataChunk.readFloatValue(index);
                     if (!Float.isNaN(val))
                     {
                         for (int pixelIndex : pixelMap.getPixelIndices(i, j))
@@ -235,8 +219,6 @@ public enum DataReadingStrategy
             logger.debug("Reading data using a pixel-by-pixel algorithm");
             long start = System.currentTimeMillis();
 
-            Variable origVar = var.getOriginalVariable();
-
             // Now create the picture from the data array
             for (int j : pixelMap.getJIndices())
             {
@@ -244,13 +226,11 @@ public enum DataReadingStrategy
                 for (int i : pixelMap.getIIndices(j))
                 {
                     ranges.setXRange(i, i);
-                    Array arr = CdmUtils.readVariable(origVar, ranges);
+                    DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
                     // Get an index and set all elements to zero
-                    Index index = arr.getIndex();
+                    Index index = dataChunk.getIndex();
                     index.set(new int[index.getRank()]);
-                    float val = arr.getFloat(index); // TODO: can we just use "0" instead of the index?
-                    // The value we've read won't have had scale-offset-missing applied
-                    val = (float)var.convertScaleOffsetMissing(val);
+                    float val = dataChunk.readFloatValue(index);
                     if (!Float.isNaN(val))
                     {
                         for (int pixelIndex : pixelMap.getPixelIndices(i, j))

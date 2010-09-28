@@ -45,9 +45,7 @@ import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ucar.ma2.Array;
 import ucar.ma2.Index;
-import ucar.ma2.InvalidRangeException;
 import ucar.nc2.Attribute;
 import ucar.nc2.Variable;
 import ucar.nc2.constants.AxisType;
@@ -57,7 +55,6 @@ import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.CoordinateAxis1DTime;
 import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
 import ucar.nc2.dt.GridDatatype;
@@ -433,58 +430,29 @@ public final class CdmUtils
         rangesList.setYRange(j, j);
         rangesList.setXRange(i, i);
 
-        VariableDS enhancedVar = grid.getVariable();
-        Variable origVar = enhancedVar.getOriginalVariable();
         // We read data for the whole time range.  This may mean grabbing
         // data we don't need.
         // TODO: use a datareadingstrategy here to read point-by-point for
         // local files?
-        Array arr = readVariable(origVar, rangesList);
+        DataChunk dataChunk = DataChunk.readDataChunk(grid.getVariable(), rangesList);
 
         // Copy the data to the required array, discarding the points we
         // don't need
         List<Float> tsData = new ArrayList<Float>();
-        Index index = arr.getIndex();
+        Index index = dataChunk.getIndex();
         index.set(new int[index.getRank()]);
         for (int tIndex : tIndices)
         {
             int tIndexOffset = tIndex - firstTIndex;
             if (tIndexOffset < 0) tIndexOffset = 0; // This will happen if the layer has no t axis
             index.setDim(rangesList.getTAxisIndex(), tIndexOffset);
-            float val = arr.getFloat(index);
-            // Apply any scale-offset-missing conversions
-            val = (float)enhancedVar.convertScaleOffsetMissing(val);
+            // Read the data from the chunk, applying enhancement if necessary
+            float val = dataChunk.readFloatValue(index);
             // Replace missing values with nulls
             tsData.add(Float.isNaN(val) ? null : val);
         }
 
         return tsData;
-    }
-
-    /**
-     * Reads a chunk of data from the given variable.  This method avoids the
-     * need for catching InvalidRangeExceptions.  Such an exception will not be
-     * thrown by this method unless the given RangesList was constructed for a
-     * different variable shape.
-     * @param var The variable from which to read data
-     * @param ranges The list of ranges describing the data chunk
-     * @return array of data
-     * @throws IOException if there was an io error reading from the variable
-     * @throws IllegalArgumentException if {@code ranges} is not valid for the
-     * variable.
-     */
-    static Array readVariable(Variable var, RangesList ranges) throws IOException
-    {
-        if (var == null) throw new NullPointerException("var");
-        if (ranges == null) throw new NullPointerException("ranges");
-        try
-        {
-            return var.read(ranges.getRanges());
-        }
-        catch(InvalidRangeException ire)
-        {
-            throw new IllegalArgumentException(ire);
-        }
     }
 
     /**
