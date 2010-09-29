@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import org.joda.time.DateTime;
 
 /**
  * Contains convenience methods for creating {@link Range} objects.  This class
@@ -88,11 +87,6 @@ public final class Ranges
     public static <T> Range<T> newRange(T min, T max, Comparator<? super T> comp)
     {
         return new SimpleRangeWithComparator<T>(min, max, comp);
-    }
-
-    public static Range<DateTime> newDateTimeRange(DateTime dt1, DateTime dt2)
-    {
-        return newRange(dt1, dt2, null);
     }
 
     public static <T> Range<T> emptyRange()
