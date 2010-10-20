@@ -30,6 +30,8 @@ package uk.ac.rdg.resc.edal.cdm;
 
 import java.io.IOException;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.InvalidRangeException;
@@ -43,6 +45,8 @@ import ucar.nc2.dataset.VariableDS;
  */
 class DataChunk
 {
+    private static final Logger log = LoggerFactory.getLogger(DataChunk.class);
+
     private final VariableDS var;
     private final Array arr;
     private final boolean needsEnhance;
@@ -89,12 +93,13 @@ class DataChunk
     /**
      * Reads from the variable, converting any InvalidRangeExceptions to
      * IllegalArgumentExceptions (they are really run time errors and so
-     * should not be checked exceptions.
+     * should not be checked exceptions).
      */
     private static final Array readVariable(Variable var, RangesList ranges) throws IOException
     {
         try
         {
+            log.debug("Reading from variable {} with ranges {}", var.getName(), ranges.toString());
             return var.read(ranges.getRanges());
         }
         catch(InvalidRangeException ire)

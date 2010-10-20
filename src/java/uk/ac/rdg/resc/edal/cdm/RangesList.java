@@ -28,14 +28,18 @@
 package uk.ac.rdg.resc.edal.cdm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.InvalidRangeException;
 import ucar.ma2.Range;
+import ucar.nc2.Dimension;
 import ucar.nc2.Variable;
 import ucar.nc2.dt.GridDatatype;
 
 /**
- * <p>Wraps a List of Ranges, providing methods to safely set ranges for
+ * <p>Wraps a List of {@link Range}s, providing methods to safely set ranges for
  * x, y, z and t.  Call {@link #getRanges()} to get a List of Range objects
  * that can be passed directly to {@link Variable#read(java.util.List)}.</p>
  * <p>The setXRange() methods and its cousins do nothing if there is no
@@ -45,14 +49,17 @@ import ucar.nc2.dt.GridDatatype;
  */
 final class RangesList
 {
+    private static final Logger log = LoggerFactory.getLogger(RangesList.class);
+
     private static final Range ZERO_RANGE;
 
     private final List<Range> ranges;
 
-    private final int xAxisIndex;
-    private final int yAxisIndex;
-    private final int zAxisIndex;
-    private final int tAxisIndex;
+    // The indices of these axes in the *physical* data arrays.
+    private int xAxisIndex = -1;
+    private int yAxisIndex = -1;
+    private int zAxisIndex = -1;
+    private int tAxisIndex = -1;
 
     static
     {
@@ -62,14 +69,33 @@ final class RangesList
 
     public RangesList(GridDatatype grid)
     {
-        int rank = grid.getRank();
+        int rank = grid.getShape().length; // getRank() seems to fail for some FMRC datasets via OPeNDAP
         this.ranges = new ArrayList<Range>(rank);
         for (int i = 0; i < rank; i++) { this.ranges.add(ZERO_RANGE); }
 
-        this.xAxisIndex = grid.getXDimensionIndex();
-        this.yAxisIndex = grid.getYDimensionIndex();
-        this.zAxisIndex = grid.getZDimensionIndex();
-        this.tAxisIndex = grid.getTimeDimensionIndex();
+        // We need to find the indices of the four axes in the *physical* data
+        // arrays.  Note that GridDatatype.getXDimensionIndex() and its cousins
+        // return the index in *canonical* (tzyx) order and therefore can't be used.
+        String xDimName = grid.getXDimension() == null ? null : grid.getXDimension().getName();
+        String yDimName = grid.getYDimension() == null ? null : grid.getYDimension().getName();
+        String zDimName = grid.getZDimension() == null ? null : grid.getZDimension().getName();
+        String tDimName = grid.getTimeDimension() == null ? null : grid.getTimeDimension().getName();
+
+        // The dimensions in this list are in physical order
+        List<Dimension> dims = grid.getVariable().getDimensions();
+        // Look through the list, looking for the x,y,z,t dimensions based on name
+        for (int i = 0; i < dims.size(); i++)
+        {
+            Dimension dim = dims.get(i);
+            if (dim.getName().equals(xDimName)) this.xAxisIndex = i;
+            else if (dim.getName().equals(yDimName)) this.yAxisIndex = i;
+            else if (dim.getName().equals(zDimName)) this.zAxisIndex = i;
+            else if (dim.getName().equals(tDimName)) this.tAxisIndex = i;
+        }
+
+        log.debug("Created RangesList: Shape = {}", Arrays.toString(grid.getShape()));
+        log.debug("            ....    Rank = {}, x = {}, y = {}, z = {}, t = {}",
+            new Object[]{rank, this.xAxisIndex, this.yAxisIndex, this.zAxisIndex, this.tAxisIndex});
     }
 
     public void setXRange(int xmin, int xmax)
@@ -135,7 +161,10 @@ final class RangesList
         Range zRange = this.getRange(this.zAxisIndex);
         Range yRange = this.getRange(this.yAxisIndex);
         Range xRange = this.getRange(this.xAxisIndex);
-        return String.format("tRange: %s, zRange: %s, yRange: %s, xRange: %s",
-            tRange, zRange, yRange, xRange);
+        return String.format("tRange(%d): %s, zRange(%d): %s, yRange(%d): %s, xRange(%d): %s",
+            this.tAxisIndex, tRange,
+            this.zAxisIndex, zRange,
+            this.yAxisIndex, yRange,
+            this.xAxisIndex, xRange);
     }
 }
