@@ -69,7 +69,8 @@ final class RangesList
 
     public RangesList(GridDatatype grid)
     {
-        int rank = grid.getShape().length; // getRank() seems to fail for some FMRC datasets via OPeNDAP
+        Variable var = grid.getVariable();
+        int rank = var.getRank();
         this.ranges = new ArrayList<Range>(rank);
         for (int i = 0; i < rank; i++) { this.ranges.add(ZERO_RANGE); }
 
@@ -82,7 +83,7 @@ final class RangesList
         String tDimName = grid.getTimeDimension() == null ? null : grid.getTimeDimension().getName();
 
         // The dimensions in this list are in physical order
-        List<Dimension> dims = grid.getVariable().getDimensions();
+        List<Dimension> dims = var.getDimensions();
         // Look through the list, looking for the x,y,z,t dimensions based on name
         for (int i = 0; i < dims.size(); i++)
         {

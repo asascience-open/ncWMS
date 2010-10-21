@@ -43,6 +43,7 @@ import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
+import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.edal.util.Ranges;
@@ -129,11 +130,13 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
 
     /** The Layers that belong to this dataset.  This will be loaded through the
      * {@link #loadLayers()} method, which is called periodically by the
-     * {@link Config} object. */
-    private Map<String, LayerImpl> scalarLayers;
+     * {@link Config} object. 
+     * Initialized to an empty map to prevent null pointer exceptions later
+     */
+    private Map<String, LayerImpl> scalarLayers = CollectionUtils.newHashMap();
 
     /** The VectorLayers generated from the scalarLayers */
-    private Map<String, VectorLayerImpl> vectorLayers;
+    private Map<String, VectorLayerImpl> vectorLayers = CollectionUtils.newHashMap();
 
     /**
      * Checks that the data we have read are valid.  Checks that there are no
@@ -568,15 +571,14 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     }
 
     /**
-     * Searches through the collection of Layer objects, looking for
+     * Searches through the collection of scalar Layer objects, looking for
      * pairs of quantities that represent the components of a vector, e.g.
-     * northward/eastward_sea_water_velocity.  Modifies the given Map
-     * in-place.
+     * northward/eastward_sea_water_velocity.  Populates the vector layers
+     * field.
      * @todo Only works for northward/eastward so far
      */
     private void findVectorQuantities()
     {
-        // Now add the vector quantities to the collection of Layer objects
         this.vectorLayers = new LinkedHashMap<String, VectorLayerImpl>();
         for (VectorLayer vecLayer : WmsUtils.findVectorLayers(this.scalarLayers.values()))
         {
