@@ -28,11 +28,12 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.opengis.coverage.grid.GridCoordinates;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
+import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
@@ -82,7 +84,40 @@ final class PixelMap
 {
     private static final Logger logger = LoggerFactory.getLogger(PixelMap.class);
 
-    private final boolean sorted;
+    /**
+     * First entry in each int[] is the source grid index: subsequent entries
+     * are the corresponding target grid indices.  Sorted according to
+     * {@link #PIXEL_MAP_ENTRY_COMPARATOR}.
+     */
+    private final ArrayList<int[]> pixelMapEntries = CollectionUtils.newArrayList();
+
+    /** Sorts pixel map entries in ascending order of their index in the source grid */
+    private static final Comparator<int[]> PIXEL_MAP_ENTRY_COMPARATOR =
+            new Comparator<int[]>()
+    {
+        @Override
+        public int compare(int[] o1, int[] o2)
+        {
+            // Compare the source grid indices only
+            return o1[0] - o2[0];
+        }
+    };
+
+    /**
+     * Maps a point in the source grid to corresponding points in the target grid.
+     */
+    public static interface PixelMapEntry
+    {
+        /** Gets the i index of this point in the source grid */
+        public int getSourceGridIIndex();
+        /** Gets the j index of this point in the source grid */
+        public int getSourceGridJIndex();
+        /** Gets the array of all target grid points that correspond with this
+         * source grid point */
+        public List<Integer> getTargetGridPoints();
+    }
+
+    private final int sourceGridISize;
 
     // These define the bounding box (in terms of axis indices) of the data
     // to extract from the source files
@@ -90,12 +125,6 @@ final class PixelMap
     private int minJIndex = Integer.MAX_VALUE;
     private int maxIIndex = -1;
     private int maxJIndex = -1;
-
-    // Maps j indices to row information
-    private final Map<Integer, Row> pixelMap;
-
-    // Number of unique i-j pairs
-    private int numUniqueIJPairs = 0;
 
     /**
      * Creates a PixelMap that maps from points within the grid of source
@@ -106,7 +135,7 @@ final class PixelMap
      * i/o performance (can make better use of underlying buffers, and there is
      * less seeking).
      */
-    public PixelMap(HorizontalGrid sourceGrid, Domain<HorizontalPosition> targetDomain, boolean sorted)
+    public PixelMap(HorizontalGrid sourceGrid, Domain<HorizontalPosition> targetDomain)
             throws TransformException
     {
         logger.debug("Creating PixelMap: Source CRS: {}, Target CRS: {}",
@@ -114,9 +143,8 @@ final class PixelMap
                 targetDomain.getCoordinateReferenceSystem().getName());
         logger.debug("SourceGrid class: {}, targetDomain class: {}",
                 sourceGrid.getClass(), targetDomain.getClass());
-        this.sorted = sorted;
-        if (sorted) this.pixelMap = CollectionUtils.newTreeMap();
-        else this.pixelMap = CollectionUtils.newHashMap();
+
+        this.sourceGridISize = sourceGrid.getGridExtent().getSpan(0);
 
         long start = System.currentTimeMillis();
         if (sourceGrid instanceof RectilinearGrid && targetDomain instanceof RectilinearGrid &&
@@ -136,6 +164,9 @@ final class PixelMap
         {
             this.initFromPointList(sourceGrid, targetDomain);
         }
+
+        this.pixelMapEntries.trimToSize();
+
         logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);
     }
 
@@ -212,12 +243,12 @@ final class PixelMap
      * negative.
      * @param i The i index of the point in the source data
      * @param j The j index of the point in the source data
-     * @param pixel The index of the corresponding point in the target domain
+     * @param targetGridIndex The index of the corresponding point in the target domain
      */
-    private void put(int i, int j, int pixel)
+    private void put(int i, int j, int targetGridIndex)
     {
         // If either of the indices are negative there is no data for this
-        // pixel index
+        // target grid point
         if (i < 0 || j < 0) return;
 
         // Modify the bounding box if necessary
@@ -226,17 +257,36 @@ final class PixelMap
         if (j < this.minJIndex) this.minJIndex = j;
         if (j > this.maxJIndex) this.maxJIndex = j;
 
-        // Get the information for this row (i.e. this j index),
-        // creating a new row if necessary
-        Row row = this.pixelMap.get(j);
-        if (row == null)
-        {
-            row = new Row();
-            this.pixelMap.put(j, row);
-        }
+        // Calculate a single integer representing this grid point in the source grid
+        // TODO: watch out for overflows (would only happen with a very large grid!)
+        int sourceGridIndex = j * this.sourceGridISize + i;
 
-        // Add the pixel to this row
-        row.put(i, pixel);
+        // Find this entry in the pixel map
+        // Create a dummy entry; the search function will only search on the source grid index
+        int[] pixelMapEntry = new int[2];
+        pixelMapEntry[0] = sourceGridIndex;
+        int entryIndex = Collections.binarySearch(pixelMapEntries, pixelMapEntry, PIXEL_MAP_ENTRY_COMPARATOR);
+
+        if (entryIndex >= 0)
+        {
+            // We already have an entry for this source grid point
+            // We replace the dummy PME with the one from the list
+            pixelMapEntry = this.pixelMapEntries.get(entryIndex);
+            // Grow the array by one to make room for the new target index
+            int[] newArray = new int[pixelMapEntry.length + 1];
+            System.arraycopy(pixelMapEntry, 0, newArray, 0, pixelMapEntry.length);
+            newArray[newArray.length - 1] = targetGridIndex;
+            // Replace the entry with the new one
+            this.pixelMapEntries.set(entryIndex, newArray);
+        }
+        else
+        {
+            // This source grid point doesn't exist in the list
+            pixelMapEntry[1] = targetGridIndex;
+            // Insert in the list in the correct position
+            int insertionPoint = -entryIndex - 1;
+            this.pixelMapEntries.add(insertionPoint, pixelMapEntry);
+        }
     }
 
     /**
@@ -247,84 +297,7 @@ final class PixelMap
      */
     public boolean isEmpty()
     {
-        return this.pixelMap.size() == 0;
-    }
-
-    /**
-     * Gets the j indices of all rows in this pixel map, in ascending order if
-     * this pixel map was created with sorted=true
-     * @return the Set of all j indices in this pixel map
-     */
-    public Set<Integer> getJIndices()
-    {
-        return this.pixelMap.keySet();
-    }
-
-    /**
-     * Gets the i indices of all the data points in the given row that
-     * are needed to make the final image, in ascending order if
-     * this pixel map was created with sorted=true
-     * @return the Set of all i indices in the given row
-     * @throws IllegalArgumentException if there is no row with the given y index
-     */
-    public Set<Integer> getIIndices(int j)
-    {
-        return this.getRow(j).getIIndices().keySet();
-    }
-
-    /**
-     * Gets the collection of all pixel indices, representing individual elements in the
-     * final data array, that correspond with the given grid point in the source data.  A single
-     * value from the source data might map to several elements in the final data array,
-     * especially if we are "zoomed in".
-     * @return a {@link Collection} of all data array indices that correspond
-     * with the given i and j indices
-     * @throws IllegalArgumentException if there is no row with the given j index
-     * or if the given i index is not found in the row
-     */
-    public Collection<Integer> getPixelIndices(int i, int j)
-    {
-        Map<Integer, Collection<Integer>> row = this.getRow(j).getIIndices();
-        Collection<Integer> pixelIndices = row.get(i);
-        if (pixelIndices == null)
-        {
-            throw new IllegalArgumentException("The i index " + i +
-                " was not found in the row with j index " + j);
-        }
-        return pixelIndices;
-    }
-
-    /**
-     * Gets the minimum i index in the row with the given j index
-     * @return the minimum i index in the row with the given j index
-     * @throws IllegalArgumentException if there is no row with the given y index
-     */
-    public int getMinIIndexInRow(int j)
-    {
-        return this.getRow(j).getMinIIndex();
-    }
-
-    /**
-     * Gets the maximum i index in the row with the given j index
-     * @return the maximum i index in the row with the given j index
-     * @throws IllegalArgumentException if there is no row with the given y index
-     */
-    public int getMaxIIndexInRow(int j)
-    {
-        return this.getRow(j).getMaxIIndex();
-    }
-
-    /**
-     * @return the row with the given j index
-     * @throws IllegalArgumentException if there is no row with the given y index
-     */
-    private Row getRow(int j)
-    {
-        if (!this.pixelMap.containsKey(j))
-        {
-            throw new IllegalArgumentException("There is no row with j index " + j);
-        }
-        return this.pixelMap.get(j);
+        return this.pixelMapEntries.size() == 0;
     }
 
     /**
@@ -364,64 +337,6 @@ final class PixelMap
     }
 
     /**
-     * Contains information about a particular row in the data
-     */
-    private class Row
-    {
-        // Maps i Indices to a set of pixel indices
-        //             i        pixels
-        private final Map<Integer, Collection<Integer>> iIndices;
-        // Min and max x Indices in this row
-        private int minIIndex = Integer.MAX_VALUE;
-        private int maxIIndex = -1;
-
-        public Row()
-        {
-            if (sorted) this.iIndices = CollectionUtils.newTreeMap();
-            else this.iIndices = CollectionUtils.newHashMap();
-        }
-
-        /**
-         * Adds a mapping of an i index to a pixel index
-         * NOTE: Profiling shows that this method is the bottleneck in the creation
-         * of the PixelMap.  The use of an ArrayList to hold pixel indices speeds
-         * up the creation of the PixelMap by 10-30% over a HashSet.  (A LinkedList appears
-         * only fractionally slower than an ArrayList for this purpose.)
-         */
-        public void put(int i, int pixel)
-        {
-            if (i < this.minIIndex) this.minIIndex = i;
-            if (i > this.maxIIndex) this.maxIIndex = i;
-
-            Collection<Integer> pixelIndices = this.iIndices.get(i);
-            if (pixelIndices == null)
-            {
-                pixelIndices = new ArrayList<Integer>();
-                this.iIndices.put(i, pixelIndices);
-                // We have a new unique i-j pair
-                PixelMap.this.numUniqueIJPairs++;
-            }
-            // Add the pixel index to the set
-            pixelIndices.add(pixel);
-        }
-
-        public Map<Integer, Collection<Integer>> getIIndices()
-        {
-            return this.iIndices;
-        }
-
-        public int getMinIIndex()
-        {
-            return this.minIIndex;
-        }
-
-        public int getMaxIIndex()
-        {
-            return this.maxIIndex;
-        }
-    }
-
-    /**
      * Gets the number of unique i-j pairs in this pixel map. When combined
      * with the size of the resulting image we can quantify the under- or
      * oversampling.  This is the number of data points that will be extracted
@@ -431,7 +346,7 @@ final class PixelMap
      */
     public int getNumUniqueIJPairs()
     {
-        return numUniqueIJPairs;
+        return this.pixelMapEntries.size();
     }
 
     /**
@@ -440,8 +355,10 @@ final class PixelMap
      * be extracted by the {@link DataReadingStrategy#SCANLINE SCANLINE} data
      * reading strategy.
      * @return the sum of the lengths of each row of data points
+     * @todo could reinstate this by moving the Scanline-generating code from
+     * DataReadingStrategy to this class and counting the lengths of the scanlines
      */
-    public int getSumRowLengths()
+    /*public int getSumRowLengths()
     {
         int sumRowLengths = 0;
         for (Row row : this.pixelMap.values())
@@ -449,7 +366,7 @@ final class PixelMap
             sumRowLengths += (row.getMaxIIndex() - row.getMinIIndex() + 1);
         }
         return sumRowLengths;
-    }
+    }*/
 
     /**
      * Gets the size of the i-j bounding box that encompasses all data.  This is
@@ -461,6 +378,53 @@ final class PixelMap
     {
         return (this.maxIIndex - this.minIIndex + 1) *
                (this.maxJIndex - this.minJIndex + 1);
+    }
+
+    /**
+     * Returns an unmodifiable list of all the {@link PixelMapEntry}s in this PixelMap.
+     */
+    public List<PixelMapEntry> getEntries()
+    {
+        return new AbstractList<PixelMapEntry>()
+        {
+            @Override
+            public PixelMapEntry get(int index) {
+                final int[] pixelMapEntry = PixelMap.this.pixelMapEntries.get(index);
+                return new PixelMapEntry() {
+
+                    @Override
+                    public int getSourceGridIIndex() {
+                        int sourceGridIndex = pixelMapEntry[0];
+                        return sourceGridIndex % PixelMap.this.sourceGridISize;
+                    }
+
+                    @Override
+                    public int getSourceGridJIndex() {
+                        int sourceGridIndex = pixelMapEntry[0];
+                        return sourceGridIndex / PixelMap.this.sourceGridISize;
+                    }
+
+                    @Override
+                    public List<Integer> getTargetGridPoints() {
+                        return new AbstractList<Integer>() {
+                            @Override public Integer get(int index) {
+                                return pixelMapEntry[index + 1];
+                            }
+
+                            @Override public int size() {
+                                return pixelMapEntry.length - 1;
+                            }
+                        };
+                    }
+
+                };
+            }
+
+            @Override
+            public int size() {
+                return PixelMap.this.pixelMapEntries.size();
+            }
+        };
     }
 
 }

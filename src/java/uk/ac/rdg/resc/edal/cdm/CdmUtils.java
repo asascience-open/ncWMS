@@ -200,8 +200,8 @@ public final class CdmUtils
      * NetcdfDataset.  Essentially, if the data are remote (e.g. OPeNDAP) or
      * compressed, this will return {@link DataReadingStrategy#BOUNDING_BOX},
      * which makes a single i/o call, minimizing the overhead.  If the data
-     * are local and uncompressed this will return {@link DataReadingStrategy#PIXEL_BY_PIXEL},
-     * which minimize the amount of data read
+     * are local and uncompressed this will return {@link DataReadingStrategy#SCANLINE},
+     * which reduces the amount of data read.
      * @param nc The NetcdfDataset from which data will be read.
      * @return an optimum DataReadingStrategy for reading from the dataset
      */
@@ -209,7 +209,7 @@ public final class CdmUtils
     {
         String fileType = nc.getFileTypeId();
         return "netCDF".equals(fileType) || "HDF4".equals(fileType)
-            ? DataReadingStrategy.PIXEL_BY_PIXEL
+            ? DataReadingStrategy.SCANLINE
             : DataReadingStrategy.BOUNDING_BOX;
     }
 

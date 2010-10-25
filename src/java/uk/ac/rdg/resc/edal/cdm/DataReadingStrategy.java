@@ -29,15 +29,15 @@ package uk.ac.rdg.resc.edal.cdm;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.ma2.Index;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
+import uk.ac.rdg.resc.edal.cdm.PixelMap.PixelMapEntry;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
@@ -105,53 +105,85 @@ public enum DataReadingStrategy
      * a data-reading operation is low, e.g. for local, uncompressed files.
      */
     SCANLINE {
+
+        // Stores all the PixelMapEntries at a certain j index
+        class Scanline
+        {
+            private final int jIndex;
+            private final List<PixelMapEntry> pixelMapEntries = new ArrayList<PixelMapEntry>();
+            
+            public Scanline(PixelMapEntry pme)
+            {
+                this.jIndex = pme.getSourceGridJIndex();
+                this.pixelMapEntries.add(pme);
+            }
+        }
+        
         @Override
         protected void populatePixelArray(List<Float> picData,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
-            logger.debug("Reading data using a scanline algorithm");
-            // Cycle through the y indices, extracting a scanline of
-            // data each time from minX to maxX
-            logger.debug("Shape of grid: {}", Arrays.toString(var.getShape()));
-
-            for (int j : pixelMap.getJIndices())
+            Iterator<PixelMapEntry> it = pixelMap.getEntries().iterator();
+            if (!it.hasNext()) return;
+            PixelMapEntry pme = it.next();
+            Scanline scanline = new Scanline(pme);
+            
+            while (it.hasNext())
             {
-                ranges.setYRange(j, j);
-                // Read a row of data from the source
-                int imin = pixelMap.getMinIIndexInRow(j);
-                int imax = pixelMap.getMaxIIndexInRow(j);
-                ranges.setXRange(imin, imax);
+                pme = it.next();
+                int sourceJ = pme.getSourceGridJIndex();
+                if (sourceJ == scanline.jIndex)
+                {
+                    scanline.pixelMapEntries.add(pme);
+                }
+                else
+                {
+                    // We have a new scanline.
+                    // We read the data for the existing scanline first
+                    this.readScanline(picData, var, ranges, scanline);
+                    // Now we create a new scanline
+                    scanline = new Scanline(pme);
+                }
+            }
+            
+            // We must read the last scanline
+            this.readScanline(picData, var, ranges, scanline);
+        }
+        
+        private void readScanline(List<Float> picData, VariableDS var, RangesList ranges, Scanline scanline)
+                throws IOException
+        {
+            ranges.setYRange(scanline.jIndex, scanline.jIndex);
+            int imin = scanline.pixelMapEntries.get(0).getSourceGridIIndex();
+            int imax = scanline.pixelMapEntries.get(scanline.pixelMapEntries.size() - 1).getSourceGridIIndex();
+            ranges.setXRange(imin, imax);
 
-                logger.debug(ranges.toString());
+            //logger.debug(ranges.toString());
 
-                // Read a chunk of data - values will not be unpacked or
-                // checked for missing values yet
-                DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
+            // Read a chunk of data - values will not be unpacked or
+            // checked for missing values yet
+            DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
 
-                // Get an index for the array and set it to zero
-                Index index = dataChunk.getIndex();
-                index.set(new int[index.getRank()]);
+            // Get an index for the array and set it to zero
+            Index index = dataChunk.getIndex();
+            index.set(new int[index.getRank()]);
 
-                // Now copy the scanline's data to the picture array
-                Set<Integer> iIndices = pixelMap.getIIndices(j);
-                for (int i : iIndices) {
-                    index.setDim(ranges.getXAxisIndex(), i - imin);
-                    float val = dataChunk.readFloatValue(index);
+            // Now copy the scanline's data to the picture array
+            for (PixelMapEntry pme : scanline.pixelMapEntries)
+            {
+                index.setDim(ranges.getXAxisIndex(), pme.getSourceGridIIndex() - imin);
+                float val = dataChunk.readFloatValue(index);
 
-                    // Now we set the value of all the image pixels associated with
-                    // this data point.
-                    if (!Float.isNaN(val)) {
-                        for (int p : pixelMap.getPixelIndices(i, j)) {
-                            picData.set(p, val);
-                        }
+                // Now we set the value of all the image pixels associated with
+                // this data point.
+                if (!Float.isNaN(val)) {
+                    for (int p : pme.getTargetGridPoints()) {
+                        picData.set(p, val);
                     }
                 }
             }
         }
-
-        @Override
-        protected boolean sortPixelMap() { return false; }
     },
 
     /**
@@ -165,7 +197,6 @@ public enum DataReadingStrategy
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
-            logger.debug("Reading data using a bounding-box algorithm");
             // Read the whole chunk of x-y data
             int imin = pixelMap.getMinIIndex();
             int imax = pixelMap.getMaxIIndex();
@@ -173,37 +204,29 @@ public enum DataReadingStrategy
             int jmax = pixelMap.getMaxJIndex();
             ranges.setXRange(imin, imax);
             ranges.setYRange(jmin, jmax);
-            logger.debug("Shape of grid: {}", Arrays.toString(var.getShape()));
-            logger.debug(ranges.toString());
+//            logger.debug("Shape of grid: {}", Arrays.toString(var.getShape()));
+//            logger.debug(ranges.toString());
 
-            long start = System.currentTimeMillis();
             DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
-            long readData = System.currentTimeMillis();
-            logger.debug("Read data using bounding box algorithm in {} milliseconds", (readData - start));
 
             // Now extract the information we need from the data array
             Index index = dataChunk.getIndex();
             index.set(new int[index.getRank()]);
-            for (int j : pixelMap.getJIndices())
+
+            for (PixelMapEntry pme : pixelMap.getEntries())
             {
-                index.setDim(ranges.getYAxisIndex(), j - jmin);
-                for (int i : pixelMap.getIIndices(j))
+                index.setDim(ranges.getYAxisIndex(), pme.getSourceGridJIndex() - jmin);
+                index.setDim(ranges.getXAxisIndex(), pme.getSourceGridIIndex() - imin);
+                float val = dataChunk.readFloatValue(index);
+                if (!Float.isNaN(val))
                 {
-                    index.setDim(ranges.getXAxisIndex(), i - imin);
-                    float val = dataChunk.readFloatValue(index);
-                    if (!Float.isNaN(val))
+                    for (int targetGridPoint : pme.getTargetGridPoints())
                     {
-                        for (int pixelIndex : pixelMap.getPixelIndices(i, j))
-                        {
-                            picData.set(pixelIndex, val);
-                        }
+                        picData.set(targetGridPoint, val);
                     }
                 }
             }
         }
-
-        @Override
-        protected boolean sortPixelMap() { return false; }
     },
 
     /**
@@ -216,37 +239,24 @@ public enum DataReadingStrategy
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
-            logger.debug("Reading data using a pixel-by-pixel algorithm");
-            long start = System.currentTimeMillis();
-
-            // Now create the picture from the data array
-            for (int j : pixelMap.getJIndices())
+            for (PixelMapEntry pme : pixelMap.getEntries())
             {
-                ranges.setYRange(j, j);
-                for (int i : pixelMap.getIIndices(j))
+                ranges.setYRange(pme.getSourceGridJIndex(), pme.getSourceGridJIndex());
+                ranges.setXRange(pme.getSourceGridIIndex(), pme.getSourceGridIIndex());
+                DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
+                // Get an index and set all elements to zero
+                Index index = dataChunk.getIndex();
+                index.set(new int[index.getRank()]);
+                float val = dataChunk.readFloatValue(index);
+                if (!Float.isNaN(val))
                 {
-                    ranges.setXRange(i, i);
-                    DataChunk dataChunk = DataChunk.readDataChunk(var, ranges);
-                    // Get an index and set all elements to zero
-                    Index index = dataChunk.getIndex();
-                    index.set(new int[index.getRank()]);
-                    float val = dataChunk.readFloatValue(index);
-                    if (!Float.isNaN(val))
+                    for (int targetGridPoint : pme.getTargetGridPoints())
                     {
-                        for (int pixelIndex : pixelMap.getPixelIndices(i, j))
-                        {
-                            picData.set(pixelIndex, val);
-                        }
+                        picData.set(targetGridPoint, val);
                     }
                 }
             }
-            logger.debug("Read data pixel-by-pixel in {} ms",
-                (System.currentTimeMillis() - start));
         }
-
-        /** Data reading is faster if the pixel map is sorted */
-        @Override
-        protected boolean sortPixelMap() { return true; }
     };
 
     /**
@@ -262,7 +272,11 @@ public enum DataReadingStrategy
         PixelMap pixelMap;
         try
         {
-            pixelMap = new PixelMap(sourceGrid, targetDomain, this.sortPixelMap());
+            long start = System.nanoTime();
+            pixelMap = new PixelMap(sourceGrid, targetDomain);
+            long finish = System.nanoTime();
+            logger.debug("Pixel map created in {} ms and has {} unique i-j pairs",
+                    (finish - start) / 1e6, pixelMap.getNumUniqueIJPairs());
         }
         catch (TransformException te)
         {
@@ -276,7 +290,11 @@ public enum DataReadingStrategy
         rangesList.setTRange(tIndex, tIndex);
         
         // Now read the actual data from the source GridDatatype
+        long start = System.nanoTime();
         this.populatePixelArray(picData, pixelMap, grid.getVariable(), rangesList);
+        long finish = System.nanoTime();
+        logger.debug("Data read in {} ms using {} strategy",
+                (finish - start) / 1e6, this.name());
 
         return picData;
     }
@@ -293,8 +311,6 @@ public enum DataReadingStrategy
         }
         return list;
     }
-
-    protected abstract boolean sortPixelMap();
 
     abstract void populatePixelArray(List<Float> picData,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
