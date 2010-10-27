@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.opengis.coverage.grid.GridCoordinates;
 import org.opengis.referencing.operation.TransformException;
 import org.slf4j.Logger;
@@ -42,7 +41,6 @@ import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
-import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
@@ -87,7 +85,9 @@ final class PixelMap
     /**
      * First entry in each int[] is the source grid index: subsequent entries
      * are the corresponding target grid indices.  Sorted according to
-     * {@link #PIXEL_MAP_ENTRY_COMPARATOR}.
+     * {@link #PIXEL_MAP_ENTRY_COMPARATOR}.  This structure is designed to minimize
+     * the number of object references, which blow up the memory footprint of the
+     * PixelMap.
      */
     private final ArrayList<int[]> pixelMapEntries = CollectionUtils.newArrayList();
 
@@ -113,7 +113,8 @@ final class PixelMap
         /** Gets the j index of this point in the source grid */
         public int getSourceGridJIndex();
         /** Gets the array of all target grid points that correspond with this
-         * source grid point */
+         * source grid point.  Each grid point is expressed as a single integer
+         * {@code j * width + i}.*/
         public List<Integer> getTargetGridPoints();
     }
 
@@ -165,6 +166,7 @@ final class PixelMap
             this.initFromPointList(sourceGrid, targetDomain);
         }
 
+        // Minimize memory footprint
         this.pixelMapEntries.trimToSize();
 
         logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);

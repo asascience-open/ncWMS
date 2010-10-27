@@ -264,6 +264,7 @@ public final class CdmUtils
     {
         Attribute cal = timeAxis.findAttribute("calendar");
         String calString = cal == null ? null : cal.getStringValue().toLowerCase();
+        // TODO: check that we're using the right sort of Gregorian (proleptic or not)
         if (calString == null || calString.equals("gregorian") || calString.equals("standard"))
         {
             List<DateTime> timesteps = new ArrayList<DateTime>();
