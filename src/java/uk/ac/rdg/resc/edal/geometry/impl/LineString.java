@@ -81,7 +81,8 @@ public final class LineString
             try {
                 ctlPoints.add(new HorizontalPositionImpl(
                     Double.parseDouble(coords[0].trim()),
-                    Double.parseDouble(coords[1].trim())
+                    Double.parseDouble(coords[1].trim()),
+                    crs
                 ));
             } catch (NumberFormatException nfe) {
                 throw new InvalidLineStringException("Coordinates format error");
@@ -187,7 +188,7 @@ public final class LineString
         double x = (1.0 - dfrac) * cplast.getX() + dfrac * cpnext.getX();
         double y = (1.0 - dfrac) * cplast.getY() + dfrac * cpnext.getY();
 
-        return new HorizontalPositionImpl(x, y);
+        return new HorizontalPositionImpl(x, y, this.crs);
     }
 
     /**
