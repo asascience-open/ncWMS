@@ -32,13 +32,15 @@ import uk.ac.rdg.resc.edal.geometry.impl.LonLatPositionImpl;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
+import org.khelekore.prtree.MBR;
+import org.khelekore.prtree.SimpleMBR;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +62,7 @@ import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
  *
  * @author Jon
  */
-final class CurvilinearGrid implements Iterable<Cell>
+final class CurvilinearGrid
 {
     private static final Logger logger = LoggerFactory.getLogger(CurvilinearGrid.class);
 
@@ -357,31 +359,27 @@ final class CurvilinearGrid implements Iterable<Cell>
                Arrays.equals(this.latitudes, other.latitudes);
     }
 
-    /** Returns an unmodifiable iterator over the cells in this grid, with the
+    /** Returns an unmodifiable list of the cells in this grid, with the
      * i direction varying fastest. */
-    @Override public Iterator<Cell> iterator()
+    public List<Cell> getCells()
     {
-        return new CellIterator();
+        return new CellList();
     }
 
-    /** An unmodifiable iterator over the cells in this grid */
-    private final class CellIterator implements Iterator<Cell>
+    /** An unmodifiable iterator over the cells in this grid.  Not to be confused
+     with a cellist. */
+    private final class CellList extends AbstractList<Cell>
     {
-        private int index = 0;
-
-        @Override public boolean hasNext() {
-            return this.index < CurvilinearGrid.this.size();
-        }
-
-        @Override public Cell next() {
-            int i = this.index % CurvilinearGrid.this.ni;
-            int j = this.index / CurvilinearGrid.this.ni;
-            this.index++;
+        @Override
+        public Cell get(int index) {
+            int i = index % CurvilinearGrid.this.ni;
+            int j = index / CurvilinearGrid.this.ni;
             return new Cell(i, j);
         }
 
-        @Override public void remove() {
-            throw new UnsupportedOperationException("Not supported.");
+        @Override
+        public int size() {
+            return CurvilinearGrid.this.size();
         }
     }
 
@@ -412,7 +410,7 @@ final class CurvilinearGrid implements Iterable<Cell>
     {
         double sumArea = 0.0;
         int nans = 0;
-        for (Cell cell : this)
+        for (Cell cell : this.getCells())
         {
             double cellArea = cell.getArea();
             // Cell areas can be NaN - see Javadoc for Cell.getArea()
@@ -430,6 +428,7 @@ final class CurvilinearGrid implements Iterable<Cell>
     {
         private final int i;
         private final int j;
+        private MBR mbr = null; // lazily instantiated
 
         /** Can only be instantiated from the CurvilinearGrid class */
         private Cell(int i, int j)
@@ -565,6 +564,31 @@ final class CurvilinearGrid implements Iterable<Cell>
             }
             path.closePath();
             return path;
+        }
+
+        public MBR getMinimumBoundingRectangle()
+        {
+            // Lazily instantiated: only needed for rtrees
+            if (this.mbr == null)
+            {
+                List<Point2D> corners = this.getCorners();
+                if (corners.isEmpty()) return null; // Shouldn't happen
+                Point2D corner1 = corners.get(0);
+                double minX = corner1.getX();
+                double maxX = minX;
+                double minY = corner1.getY();
+                double maxY = minY;
+                for (int ii = 1, size = corners.size(); ii < size; ii++)
+                {
+                    Point2D corner = corners.get(ii);
+                    minX = Math.min(minX, corner.getX());
+                    maxX = Math.max(maxX, corner.getX());
+                    minY = Math.min(minY, corner.getY());
+                    maxY = Math.max(maxY, corner.getY());
+                }
+                this.mbr = new SimpleMBR(minX, minY, maxX, maxY);
+            }
+            return this.mbr;
         }
 
         /**

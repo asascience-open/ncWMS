@@ -49,7 +49,7 @@ import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
 
 /**
- * A HorizontalCoordSys that is created from a "curvilinear" coordinate system,
+ * A HorizontalGrid that is created from a "curvilinear" coordinate system,
  * {@literal i.e.} one in which the latitude/longitude coordinates of each
  * grid point are specified using two-dimensional coordinate axes, which explicitly
  * give the lat/lon of each point in the horizontal plane.  In these coordinate
@@ -58,7 +58,6 @@ import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
  * the nearest i-j indices to a set of lat-lon points. Coordinate
  * conversions using such a look-up table are not precise but may suffice for
  * many applications.
- * @todo reduce the number of objects: fold in LookUpTable and BufferedImageLutGenerator
  * @author Jon Blower
  */
 final class LookUpTableGrid extends AbstractHorizontalGrid
@@ -95,23 +94,23 @@ final class LookUpTableGrid extends AbstractHorizontalGrid
 
         synchronized(CACHE)
         {
-            LookUpTableGrid lutCoordSys = CACHE.get(curvGrid);
-            if (lutCoordSys == null)
+            LookUpTableGrid lutGrid = CACHE.get(curvGrid);
+            if (lutGrid == null)
             {
                 logger.debug("Need to generate new look-up table");
                 // Create a look-up table for this coord sys
                 LookUpTable lut = new LookUpTable(curvGrid, minLutResolution);
                 logger.debug("Generated new look-up table");
                 // Create the LookUpTableGrid
-                lutCoordSys = new LookUpTableGrid(curvGrid, lut);
+                lutGrid = new LookUpTableGrid(curvGrid, lut);
                 // Now put this in the cache
-                CACHE.put(curvGrid, lutCoordSys);
+                CACHE.put(curvGrid, lutGrid);
             }
             else
             {
                 logger.debug("Look-up table found in cache");
             }
-            return lutCoordSys;
+            return lutGrid;
         }
     }
 

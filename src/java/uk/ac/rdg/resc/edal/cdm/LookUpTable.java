@@ -144,7 +144,7 @@ final class LookUpTable
         // Populate the BufferedImages using the information from the curvilinear grid
         // Iterate over all the cells in the grid, painting the i and j indices of the
         // cell onto the BufferedImage
-        for (Cell cell : curvGrid)
+        for (Cell cell : curvGrid.getCells())
         {
             // Get a Path representing the boundary of the cell
             Path2D path = cell.getBoundaryPath();
