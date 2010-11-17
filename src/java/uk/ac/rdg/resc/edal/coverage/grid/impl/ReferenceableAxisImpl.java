@@ -184,7 +184,7 @@ public final class ReferenceableAxisImpl extends AbstractReferenceableAxis
     }
 
     @Override
-    protected boolean isAscending() {
+    public boolean isAscending() {
         return !this.reversed;
     }
 

@@ -138,7 +138,7 @@ public final class RegularAxisImpl extends AbstractReferenceableAxis
     }
 
     @Override
-    protected boolean isAscending() {
+    public boolean isAscending() {
         return this.spacing > 0.0;
     }
 

@@ -65,5 +65,5 @@ public interface Grid
      * Returns the number of grid points in the grid.
      * @return the number of grid points in the grid.
      */
-    public int getSize();
+    public int size();
 }

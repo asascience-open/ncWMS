@@ -55,6 +55,8 @@ public interface Domain<DO>
      */
     public List<DO> getDomainObjects();
 
-    // TODO: provide a getSize() operation?  It may be inefficient for clients
-    // to have to get the list of domain objects before finding out the size
+    /**
+     * Returns the number of domain objects in the domain.
+     */
+    public int size();
 }

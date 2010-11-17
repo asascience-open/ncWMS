@@ -153,9 +153,6 @@ public abstract class AbstractReferenceableAxis implements ReferenceableAxis {
         return this.isAscending() ? this.getLastValue() : this.getFirstValue();
     }
 
-    /** Return true if the values of the axis are in ascending numerical order */
-    protected abstract boolean isAscending();
-
     /**
      * {@inheritDoc}
      * <p>This implementation checks that the value is within the bounds of the

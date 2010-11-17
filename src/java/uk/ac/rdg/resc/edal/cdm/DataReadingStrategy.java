@@ -124,7 +124,7 @@ public enum DataReadingStrategy
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
-            Iterator<PixelMapEntry> it = pixelMap.getEntries().iterator();
+            Iterator<PixelMapEntry> it = pixelMap.iterator();
             if (!it.hasNext()) return;
             PixelMapEntry pme = it.next();
             Scanline scanline = new Scanline(pme);
@@ -213,7 +213,7 @@ public enum DataReadingStrategy
             Index index = dataChunk.getIndex();
             index.set(new int[index.getRank()]);
 
-            for (PixelMapEntry pme : pixelMap.getEntries())
+            for (PixelMapEntry pme : pixelMap)
             {
                 index.setDim(ranges.getYAxisIndex(), pme.getSourceGridJIndex() - jmin);
                 index.setDim(ranges.getXAxisIndex(), pme.getSourceGridIIndex() - imin);
@@ -239,7 +239,7 @@ public enum DataReadingStrategy
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
-            for (PixelMapEntry pme : pixelMap.getEntries())
+            for (PixelMapEntry pme : pixelMap)
             {
                 ranges.setYRange(pme.getSourceGridJIndex(), pme.getSourceGridJIndex());
                 ranges.setXRange(pme.getSourceGridIIndex(), pme.getSourceGridIIndex());

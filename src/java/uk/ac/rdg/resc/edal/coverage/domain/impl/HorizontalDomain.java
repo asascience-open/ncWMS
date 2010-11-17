@@ -100,4 +100,9 @@ public final class HorizontalDomain implements Domain<HorizontalPosition>
         return this.posList;
     }
 
+    @Override
+    public int size() {
+        return this.posList.size();
+    }
+
 }

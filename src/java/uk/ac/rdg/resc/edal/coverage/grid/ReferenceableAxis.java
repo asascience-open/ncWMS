@@ -69,6 +69,9 @@ public interface ReferenceableAxis {
      */
     public double getCoordinateValue(int index);
 
+    /** Return true if the values of the axis are in ascending numerical order */
+    public boolean isAscending();
+
     /**
      * Gets the number of coordinate values on this axis, always at least 1.
      * @return the number of coordinate values on this axis
