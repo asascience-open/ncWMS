@@ -31,7 +31,7 @@ package uk.ac.rdg.resc.ncwms.graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,14 +46,11 @@ import uk.ac.rdg.resc.ncwms.wms.Layer;
  * protected default constructors so that they cannot be instantiated directly.
  *
  * @author Jon Blower
- * $Revision$
- * $Date$
- * $Log$
  */
 public abstract class ImageFormat
 {
     private static final Map<String, ImageFormat> formats =
-        new HashMap<String, ImageFormat>();
+        new LinkedHashMap<String, ImageFormat>();
     
     static
     {
@@ -64,7 +61,7 @@ public abstract class ImageFormat
         ImageIO.setUseCache(false);
         // We pre-create all the ImageFormat objects
         for (ImageFormat format : new ImageFormat[]{new PngFormat(),
-            new GifFormat(), new JpegFormat(), new KmzFormat()})
+            new Png32Format(), new GifFormat(), new JpegFormat(), new KmzFormat()})
         {
             formats.put(format.getMimeType(), format);
         }
