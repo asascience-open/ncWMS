@@ -78,6 +78,7 @@
             destfile="dist/ncwms.jar"
             excludes="uk/ac/rdg/resc/ncwms/cache/**,
                       uk/ac/rdg/resc/ncwms/config/**,
+                      uk/ac/rdg/resc/ncwms/usagelog/h2/**,
                       uk/ac/rdg/resc/ncwms/security/**"
          />
     </target>
