@@ -82,7 +82,7 @@ import uk.ac.rdg.resc.edal.util.Utils;
  * and putting data from/to the HashMaps is a bottleneck.)
  * @see DataReadingStrategy
  */
-final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
+public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
 {
     private static final Logger logger = LoggerFactory.getLogger(PixelMap.class);
 
@@ -132,7 +132,6 @@ final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
      * data ({@code sourceGrid}) to points within the required target domain.
      */
     public PixelMap(HorizontalGrid sourceGrid, Domain<HorizontalPosition> targetDomain)
-            throws TransformException
     {
         logger.debug("Creating PixelMap: Source CRS: {}, Target CRS: {}",
                 sourceGrid.getCoordinateReferenceSystem().getName(),
@@ -165,7 +164,16 @@ final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
         }
         else
         {
-            this.initFromPointList(sourceGrid, targetDomain);
+            try
+            {
+                this.initFromPointList(sourceGrid, targetDomain);
+            }
+            catch(TransformException te)
+            {
+                // Shouldn't happen, and there's nothing we can do about it if it
+                // does (except perhaps to log the exception).
+                throw new RuntimeException(te);
+            }
         }
 
         // Sort the array. Because the source grid indices are the high four bytes
@@ -201,10 +209,8 @@ final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
      * projecting onto the target grid.
      * @param sourceGrid The source grid in WGS84 lat-lon coordinates
      * @param targetGrid The target grid in WGS84 lat-lon coordinates
-     * @throws TransformException if the necessary transformations could not be performed
      */
     private void initFromGrid(RectilinearGrid sourceGrid, RectilinearGrid targetGrid)
-            throws TransformException
     {
         logger.debug("Using optimized method for lat-lon coordinates with 1D axes");
 

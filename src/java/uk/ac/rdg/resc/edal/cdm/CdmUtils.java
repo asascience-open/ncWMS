@@ -29,7 +29,9 @@
 package uk.ac.rdg.resc.edal.cdm;
 
 import java.io.IOException;
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -340,12 +342,12 @@ public final class CdmUtils
             int tIndex, int zIndex, Domain<HorizontalPosition> targetDomain)
             throws IOException
     {
+        // TODO: will end up calling this method twice
         GridDatatype grid = getGridDatatype(nc, varId);
         HorizontalGrid sourceGrid = createHorizontalGrid(grid.getCoordinateSystem());
-        DataReadingStrategy strategy = getOptimumDataReadingStrategy(nc);
-        return strategy.readData(tIndex, zIndex, sourceGrid, targetDomain, grid);
+        return readHorizontalPoints(nc, grid, sourceGrid, tIndex, zIndex, targetDomain);
     }
-
+    
     /**
      * Reads a set of points at a given time and elevation from the given
      * GridDatatype.  Use this method if you already have a {@link HorizontalGrid}
@@ -372,8 +374,97 @@ public final class CdmUtils
             throws IOException
     {
         GridDatatype grid = getGridDatatype(nc, varId);
+        return readHorizontalPoints(nc, grid, sourceGrid, tIndex, zIndex, targetDomain);
+    }
+
+    /**
+     * Reads a set of points at a given time and elevation from the given
+     * GridDatatype.  Use this method if you already have a {@link HorizontalGrid}
+     * object created for the variable in question, otherwise use
+     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String,
+     * int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
+     * @param nc The (already-opened) NetcdfDataset from which we'll read data
+     * @param grid The GridDatatype object representing the data to be read
+     * @param sourceGrid object that maps between real-world and grid coordinates
+     * in the source data grid
+     * @param tIndex The time index, ignored if the grid has no time axis
+     * @param zIndex The elevation index, ignored if the grid has no elevation axis
+     * @param targetDomain The list of horizontal points for which we need data
+     * @return a List of floating point numbers, one for each point in the
+     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
+     * in oceanography data} are represented as nulls.
+     * @throws IllegalArgumentException if there is no variable in the dataset
+     * with the id {@code varId}.
+     * @throws IOException if there was an error reading data from the data source
+     */
+    public static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
+            HorizontalGrid sourceGrid, int tIndex, int zIndex,
+            Domain<HorizontalPosition> targetDomain)
+            throws IOException
+    {
+        // Create the mapping between the requested points in the target domain
+        // and the nearest cells in the source grid
+        long start = System.nanoTime();
+        PixelMap pixelMap = new PixelMap(sourceGrid, targetDomain);
+        long finish = System.nanoTime();
+        logger.debug("Pixel map created in {} ms", (finish - start) / 1.e6);
+        
+        if (pixelMap.isEmpty())
+        {
+            // There is no overlap between the source data grid and the target
+            // domain.  Return a list of null values.
+            return nullList(targetDomain.size());
+        }
+        
+        // Create an array of the right size to hold the data
+        float[] data = new float[targetDomain.size()];
+        Arrays.fill(data, Float.NaN); // Will be represented as nulls in the returned List
+
+        // Now read the actual data
         DataReadingStrategy strategy = getOptimumDataReadingStrategy(nc);
-        return strategy.readData(tIndex, zIndex, sourceGrid, targetDomain, grid);
+        start = System.nanoTime();
+        int bytesRead = strategy.readData(tIndex, zIndex, grid, pixelMap, data);
+        finish = System.nanoTime();
+        logger.debug("{} bytes read in {} ms", bytesRead, (finish - start) / 1.e6);
+
+        // Wrap the data array as an immutable list and return
+        return wrap(data);
+    }
+
+    /**
+     * Returns an immutable List of the given size in which all values are null.
+     * @todo we could cache instances of this object for some typical sizes (e.g. 256x256)
+     */
+    private static List<Float> nullList(final int size)
+    {
+        return new AbstractList<Float>()
+        {
+            @Override public Float get(int index) {
+                if (index < 0 || index >= size) throw new IndexOutOfBoundsException();
+                return null;
+            }
+
+            @Override public int size() { return size; }
+        };
+    }
+
+    /**
+     * Wraps a float array as an immutable List.  NaNs in the passed array will
+     * be returned as null values.
+     */
+    private static List<Float> wrap(final float[] arr)
+    {
+        return new AbstractList<Float>()
+        {
+            @Override
+            public Float get(int index) {
+                float val = arr[index];
+                return Float.isNaN(val) ? null : val;
+            }
+
+            @Override
+            public int size() { return arr.length; }
+        };
     }
 
     public static GridDatatype getGridDatatype(NetcdfDataset nc, String varId)
@@ -417,7 +508,7 @@ public final class CdmUtils
         {
             // The point is outside the domain of the coord sys, so return
             // a list of nulls
-            return Collections.nCopies(tIndices.size(), null);
+            return nullList(tIndices.size());
         }
 
         int i = gridCoords.getCoordinateValue(0);
@@ -439,7 +530,7 @@ public final class CdmUtils
 
         // Copy the data to the required array, discarding the points we
         // don't need
-        List<Float> tsData = new ArrayList<Float>();
+        List<Float> tsData = new ArrayList<Float>(tIndices.size());
         Index index = dataChunk.getIndex();
         index.set(new int[index.getRank()]);
         for (int tIndex : tIndices)

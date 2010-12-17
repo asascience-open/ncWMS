@@ -31,16 +31,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.opengis.referencing.operation.TransformException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ucar.ma2.Index;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.edal.cdm.PixelMap.PixelMapEntry;
-import uk.ac.rdg.resc.edal.coverage.domain.Domain;
-import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
-import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 
 /**
@@ -120,15 +114,16 @@ public enum DataReadingStrategy
         }
         
         @Override
-        protected void populatePixelArray(List<Float> picData,
+        protected int populatePixelArray(float[] data,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
             Iterator<PixelMapEntry> it = pixelMap.iterator();
-            if (!it.hasNext()) return;
+            if (!it.hasNext()) return 0;
             PixelMapEntry pme = it.next();
             Scanline scanline = new Scanline(pme);
-            
+
+            int dataPointsRead = 0;
             while (it.hasNext())
             {
                 pme = it.next();
@@ -141,17 +136,19 @@ public enum DataReadingStrategy
                 {
                     // We have a new scanline.
                     // We read the data for the existing scanline first
-                    this.readScanline(picData, var, ranges, scanline);
+                    dataPointsRead += this.readScanline(data, var, ranges, scanline);
                     // Now we create a new scanline
                     scanline = new Scanline(pme);
                 }
             }
             
             // We must read the last scanline
-            this.readScanline(picData, var, ranges, scanline);
+            dataPointsRead += this.readScanline(data, var, ranges, scanline);
+
+            return dataPointsRead;
         }
         
-        private void readScanline(List<Float> picData, VariableDS var, RangesList ranges, Scanline scanline)
+        private int readScanline(float[] data, VariableDS var, RangesList ranges, Scanline scanline)
                 throws IOException
         {
             ranges.setYRange(scanline.jIndex, scanline.jIndex);
@@ -179,10 +176,13 @@ public enum DataReadingStrategy
                 // this data point.
                 if (!Float.isNaN(val)) {
                     for (int p : pme.getTargetGridPoints()) {
-                        picData.set(p, val);
+                        data[p] = val;
                     }
                 }
             }
+            
+            // Return the number of data points read
+            return imax - imin + 1;
         }
     },
 
@@ -193,7 +193,7 @@ public enum DataReadingStrategy
      */
     BOUNDING_BOX {
         @Override
-        protected void populatePixelArray(List<Float> picData,
+        protected int populatePixelArray(float[] data,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
@@ -222,10 +222,13 @@ public enum DataReadingStrategy
                 {
                     for (int targetGridPoint : pme.getTargetGridPoints())
                     {
-                        picData.set(targetGridPoint, val);
+                        data[targetGridPoint] = val;
                     }
                 }
             }
+
+            // Return the number of data points read
+            return (imax - imin + 1) * (jmax - jmin + 1);
         }
     },
 
@@ -235,10 +238,11 @@ public enum DataReadingStrategy
      */
     PIXEL_BY_PIXEL {
         @Override
-        protected void populatePixelArray(List<Float> picData,
+        protected int populatePixelArray(float[] data,
             PixelMap pixelMap, VariableDS var, RangesList ranges)
             throws IOException
         {
+            int numDataPointsRead = 0;
             for (PixelMapEntry pme : pixelMap)
             {
                 ranges.setYRange(pme.getSourceGridJIndex(), pme.getSourceGridJIndex());
@@ -248,73 +252,46 @@ public enum DataReadingStrategy
                 Index index = dataChunk.getIndex();
                 index.set(new int[index.getRank()]);
                 float val = dataChunk.readFloatValue(index);
+                numDataPointsRead++;
                 if (!Float.isNaN(val))
                 {
                     for (int targetGridPoint : pme.getTargetGridPoints())
                     {
-                        picData.set(targetGridPoint, val);
+                        data[targetGridPoint] = val;
                     }
                 }
             }
+            return numDataPointsRead;
         }
     };
 
     /**
-     * Reads data from the given GridDatatype and populates the given pixel array.
-     * @param picData A List of the correct size, full of nulls.
+     * Reads data from the given GridDatatype, populating the passed-in array
+     * of floats.  Returns the number of bytes actually read from the source data files
+     * (which may be considerably larger than the size of the data array).
      * @see PixelMap
      */
-    public final List<Float> readData(int tIndex, int zIndex,
-        HorizontalGrid sourceGrid, Domain<HorizontalPosition> targetDomain,
-        GridDatatype grid) throws IOException
+    public final int readData(int tIndex, int zIndex, GridDatatype grid, PixelMap pixelMap,
+            float[] data) throws IOException
     {
-        List<Float> picData = nullArrayList(targetDomain.getDomainObjects().size());
-        PixelMap pixelMap;
-        try
-        {
-            long start = System.nanoTime();
-            pixelMap = new PixelMap(sourceGrid, targetDomain);
-            long finish = System.nanoTime();
-            logger.debug("Pixel map created in {} ms and has {} unique i-j pairs",
-                    (finish - start) / 1e6, pixelMap.getNumUniqueIJPairs());
-        }
-        catch (TransformException te)
-        {
-            throw new RuntimeException(te);
-        }
-        if (pixelMap.isEmpty()) return picData;
-
         // Set the time and z ranges
         RangesList rangesList = new RangesList(grid);
         rangesList.setZRange(zIndex, zIndex);
         rangesList.setTRange(tIndex, tIndex);
         
         // Now read the actual data from the source GridDatatype
-        long start = System.nanoTime();
-        this.populatePixelArray(picData, pixelMap, grid.getVariable(), rangesList);
-        long finish = System.nanoTime();
-        logger.debug("Data read in {} ms using {} strategy",
-                (finish - start) / 1e6, this.name());
+        VariableDS var = grid.getVariable();
+        int dataPointsRead = this.populatePixelArray(data, pixelMap, var, rangesList);
 
-        return picData;
+        // Calculate the number of bytes that we read from the source data
+        int bytesPerDataPoint = var.getDataType().getSize();
+        return dataPointsRead * bytesPerDataPoint;
     }
 
     /**
-     * Returns an ArrayList with the given length, filled with null values
+     * Reads data from the given variable, populating the given data array
+     * @return The number of data points actually read from the source data
      */
-    private static ArrayList<Float> nullArrayList(int n)
-    {
-        ArrayList<Float> list = new ArrayList<Float>(n);
-        for (int i = 0; i < n; i++)
-        {
-            list.add((Float)null);
-        }
-        return list;
-    }
-
-    abstract void populatePixelArray(List<Float> picData,
-            PixelMap pixelMap, VariableDS var, RangesList ranges)
+    abstract int populatePixelArray(float[] data, PixelMap pixelMap, VariableDS var, RangesList ranges)
         throws IOException;
-
-    private static final Logger logger = LoggerFactory.getLogger(DataReadingStrategy.class);
 }
