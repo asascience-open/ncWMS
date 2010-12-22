@@ -184,6 +184,7 @@ public class AdminController extends MultiActionController
                     }
                     ds.setDisabled(disabled);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
+                    ds.setIntervalTime(request.getParameter("dataset." + ds.getId() + ".intervalTime") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
                     ds.setMoreInfo(request.getParameter("dataset." + ds.getId() + ".moreinfo"));
                     ds.setCopyrightStatement(request.getParameter("dataset." + ds.getId() + ".copyright"));
@@ -236,6 +237,7 @@ public class AdminController extends MultiActionController
                     ds.setDataReaderClass(request.getParameter("dataset.new" + i + ".reader"));
                     ds.setDisabled(request.getParameter("dataset.new" + i + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset.new" + i + ".queryable") != null);
+                    ds.setIntervalTime(request.getParameter("dataset.new" + i + ".intervalTime") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
                     ds.setMoreInfo(request.getParameter("dataset.new" + i + ".moreinfo"));
                     ds.setCopyrightStatement(request.getParameter("dataset.new" + i + ".copyright"));

@@ -69,11 +69,13 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     
     @Attribute(name="queryable", required=false)
     private boolean queryable = true; // True if we want GetFeatureInfo enabled for this dataset
+
+    @Attribute(name="intervalTime", required=false)
+    private boolean intervalTime = false; // True if we want GetCapabilities to use Time Intervals
     
     @Attribute(name="dataReaderClass", required=false)
     private String dataReaderClass = ""; // We'll use a default data reader
                                          // unless this is overridden in the config file
-    
     @Attribute(name="copyrightStatement", required=false)
     private String copyrightStatement = "";
 
@@ -249,6 +251,19 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     public void setQueryable(boolean queryable)
     {
         this.queryable = queryable;
+    }
+
+    /**
+     * @return true if this dataset should use time intervals in the GetCapabilities
+     */
+    public boolean isIntervalTime()
+    {
+        return this.intervalTime;
+    }
+
+    public void setIntervalTime(boolean intervalTime)
+    {
+        this.intervalTime = intervalTime;
     }
     
     /**

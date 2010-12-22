@@ -11,6 +11,12 @@
     <function-signature>java.lang.String dateTimeToISO8601(org.joda.time.DateTime)</function-signature>
   </function>
   <function>
+    <description>Converts a List of DateTime objects to an Interval String or a List</description>
+    <name>dateTimesToCapabilitiesString</name>
+    <function-class>uk.ac.rdg.resc.ncwms.util.WmsUtils</function-class>
+    <function-signature>java.lang.String dateTimesToCapabilitiesString(java.util.List, boolean)</function-signature>
+  </function>
+  <function>
     <description>Calculates the absolute value of a number</description>
     <name>abs</name>
     <function-class>java.lang.Math</function-class>

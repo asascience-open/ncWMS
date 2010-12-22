@@ -101,6 +101,9 @@ public class SimpleVectorLayer implements VectorLayer
     public boolean isQueryable() { return this.east.isQueryable(); }
 
     @Override
+    public boolean isIntervalTime() { return this.east.isIntervalTime(); }
+
+    @Override
     public GeographicBoundingBox getGeographicBoundingBox() { return this.east.getGeographicBoundingBox(); }
 
     @Override

@@ -17,7 +17,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
          legendWidth, legendHeight = size of the legend that will be returned from GetLegendGraphic
          paletteNames = Names of colour palettes that are supported by this server (Set<String>)
-         verboseTime = boolean flag to indicate whether we should use a verbose or concise version of the TIME value string
+         verboseTimes = boolean flag to indicate whether we should use a verbose or concise version of the TIME value string
      --%>
 <!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/capabilities_1_1_1.dtd">
 <WMT_MS_Capabilities
@@ -127,18 +127,26 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:set var="tvalues" value="${layer.timeValues}"/>
                     <c:if test="${not empty tvalues}">
-                    <Extent name="time" multipleValues="1" current="1" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}">
-                        <c:choose>
-                            <c:when test="${verboseTimes}">
-                                <%-- Use the verbose version of the time string --%>
-                                <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <%-- Use the most concise version of the time string --%>
-                                <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
-                            </c:otherwise>
-                        </c:choose>
-                    </Extent>
+                      <Extent name="time" multipleValues="1" current="1" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}">
+                          <c:choose>
+                              <c:when test="${verboseTimes}">
+                                  <%-- Use the verbose version of the time string --%>
+                                  <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
+                              </c:when>
+                              <c:otherwise>
+                                  <c:choose>
+                                      <c:when test="${layer.intervalTime}">
+                                          <%-- Use the most concise version of the time string --%>
+                                          <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
+                                      </c:when>
+                                      <c:otherwise>
+                                          <%-- Use the verbose version of the time string --%>
+                                          <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
+                                      </c:otherwise>
+                                  </c:choose>
+                              </c:otherwise>
+                          </c:choose>
+                      </Extent>
                     </c:if>
                     <c:set var="styles" value="boxfill"/>
                     <c:if test="${utils:isVectorLayer(layer)}">

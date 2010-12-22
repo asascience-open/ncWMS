@@ -18,7 +18,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
          featureInfoFormats = Array of Strings representing MIME types of supported feature info formats
          legendWidth, legendHeight = size of the legend that will be returned from GetLegendGraphic
          paletteNames = Names of colour palettes that are supported by this server (Set<String>)
-         verboseTime = boolean flag to indicate whether we should use a verbose or concise version of the TIME value string
+         verboseTimes = boolean flag to indicate whether we should use a verbose or concise version of the TIME value string
      --%>
 <WMS_Capabilities
         version="1.3.0"
@@ -115,8 +115,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                                     <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
                                 </c:when>
                                 <c:otherwise>
-                                    <%-- Use the most concise version of the time string --%>
-                                    <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
+                                    <c:choose>
+                                        <c:when test="${layer.intervalTime}">
+                                            <%-- Use the most concise version of the time string --%>
+                                            <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <%-- Use the verbose version of the time string --%>
+                                            <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:otherwise>
                             </c:choose>
                         </Dimension>
@@ -145,5 +153,4 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             </c:forEach> <%-- End loop through datasets --%>
         </Layer>
     </Capability>
-    
 </WMS_Capabilities>

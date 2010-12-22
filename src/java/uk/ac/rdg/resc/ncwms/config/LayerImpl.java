@@ -103,6 +103,16 @@ final class LayerImpl extends AbstractTimeAggregatedLayer
     }
 
     /**
+     * @return true if this variable should return time intervals in the
+     * GetCapabilities document.  Delegates to Dataset.isIntervalTime().
+     */
+    @Override
+    public boolean isIntervalTime()
+    {
+        return this.dataset.isIntervalTime();
+    }
+
+    /**
      * Return true if we are to use logarithmic colour scaling by default for
      * this layer.
      * @return true if we are to use logarithmic colour scaling by default for

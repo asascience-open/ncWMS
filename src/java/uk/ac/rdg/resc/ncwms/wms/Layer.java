@@ -81,6 +81,11 @@ public interface Layer
     public boolean isQueryable();
 
     /**
+     * Returns true if Layer should return time intervals in GetCapabilities
+     */
+    public boolean isIntervalTime();
+
+    /**
      * Returns the geographic extent of this layer in latitude-longitude
      * coordinates.  Note that this extent is not necessarily precise so
      * specifying the coordinate system is unnecessary.

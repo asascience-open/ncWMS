@@ -43,6 +43,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <h2>Datasets</h2>
         <table border="1">
         <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
+        <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Time Intervals?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
 
             <c:forEach var="datasetEntry" items="${config.allDatasets}">
                 <c:set var="dataset" value="${datasetEntry.value}"/>
@@ -86,6 +87,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td><input type="checkbox" name="dataset.${dataset.id}.refresh"/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.disabled"<c:if test="${dataset.disabled}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.queryable"<c:if test="${dataset.queryable}"> checked="checked"</c:if>/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.intervalTime"<c:if test="${dataset.intervalTime}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.remove"/></td>
                     <td><input type="text" name="dataset.${dataset.id}.reader" value="${dataset.dataReaderClass}"/></td>
                     <td><input type="text" name="dataset.${dataset.id}.moreinfo" value="${dataset.moreInfoUrl}"/></td>
@@ -116,6 +118,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td>N/A</td>
                     <td><input type="checkbox" name="dataset.new${i}.disabled"/></td>
                     <td><input type="checkbox" name="dataset.new${i}.queryable" checked="checked"/></td>
+                    <td><input type="checkbox" name="dataset.new${i}.intervalTime" /></td>
                     <td>N/A</td>
                     <td><input type="text" name="dataset.new${i}.reader" value=""/></td>
                     <td><input type="text" name="dataset.new${i}.moreinfo" value=""/></td>
