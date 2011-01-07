@@ -44,6 +44,7 @@ import java.util.Set;
 import org.geotoolkit.referencing.CRS;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeConstants;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.chrono.JulianChronology;
@@ -93,6 +94,8 @@ public class WmsUtils
 
     private static final DateTimeFormatter ISO_TIME_FORMATTER =
         ISODateTimeFormat.time().withZone(DateTimeZone.UTC);
+
+    private static final String EMPTY_STRING = "";
 
     /**
      * <p>A {@link Comparator} that compares {@link DateTime} objects based only
@@ -425,6 +428,241 @@ public class WmsUtils
         if (chronology instanceof NoLeapChronology) return "noleap";
         if (chronology instanceof AllLeapChronology) return "all_leap";
         return "unknown";
+    }
+
+    /**
+     * <p>Returns a string representing the given List of DateTimes, suitable for
+     * inclusion in a Capabilities document.  For regularly-spaced data, this
+     * will return a string of the form "start/stop/period".  For irregularly-spaced
+     * data this will return the times as a comma-separated list.  For lists with
+     * some regular and some irregular spacings, this will use a combination of
+     * both approaches.</p>
+     * <p>All DateTimes in the provided list are assumed to be in the same
+     * {@link Chronology} as the first element of the list.  If this is not the
+     * case, undefined behaviour may result.</p>
+     * @param times The List of DateTimes to convert to a String.  If this List
+     * contains no entries, an empty string will be returned.
+     * @return a string representing the given List of DateTimes, suitable for
+     * inclusion in a Capabilities document.
+     * @throws NullPointerException if {@code times == null}
+     */
+    public static String getTimeStringForCapabilities(List<DateTime> times)
+    {
+        // Take care of some simple cases
+        if (times == null) throw new NullPointerException();
+        if (times.size() == 0) return EMPTY_STRING;
+        if (times.size() == 1) return dateTimeToISO8601(times.get(0));
+
+        // We look for sublists that are regularly-spaced
+        // This is a simple class that holds the indices of the start and end
+        // of these sublists, together with the spacing of the items
+        class SubList
+        {
+            int first, last;
+            long spacing;
+            int length() { return last - first + 1; }
+        }
+
+        List<SubList> subLists = new ArrayList<SubList>();
+        SubList currentSubList = new SubList();
+        currentSubList.first = 0;
+        currentSubList.spacing = times.get(1).getMillis() - times.get(0).getMillis();
+
+        for (int i = 1; i < times.size() - 1; i++)
+        {
+            long spacing = times.get(i+1).getMillis() - times.get(i).getMillis();
+            if (spacing != currentSubList.spacing)
+            {
+                // Finish off the current sublist and add it to the collection
+                currentSubList.last = i;
+                subLists.add(currentSubList);
+                // Create a new sublist, starting at this point
+                currentSubList = new SubList();
+                currentSubList.first = i;
+                currentSubList.spacing = spacing;
+            }
+        }
+
+        // Now add the last time
+        currentSubList.last = times.size() - 1;
+        subLists.add(currentSubList);
+
+        // We now have a collection of sub-lists, each regularly spaced in time.
+        // However, we can't simply print these to strings because the some of
+        // the times (those on the borders between sublists) would appear twice.
+        // For these border times, we need to decide which sublist they belong
+        // to.  We choose this by attempting to make the longest sublist possible,
+        // until there are no more border times to assign.
+
+        // We must make sure not to deal with the same sublist repeatedly, so
+        // we store the indices of the sublists we have dealt with.
+        Set<Integer> subListsDone = new HashSet<Integer>(subLists.size());
+        boolean done;
+        do
+        {
+            // First we find the longest sublist
+            int longestSubListIndex = -1;
+            SubList longestSubList = null;
+            for (int i = 0; i < subLists.size(); i++)
+            {
+                // Don't look at sublists we've already dealt with
+                if (subListsDone.contains(i)) continue;
+                SubList subList = subLists.get(i);
+                if (longestSubList == null || subList.length() > longestSubList.length())
+                {
+                    longestSubListIndex = i;
+                    longestSubList = subList;
+                }
+            }
+            subListsDone.add(longestSubListIndex);
+
+            // Now we remove the DateTimes at the borders of this sublist from
+            // the adjacent sublists.  Therefore the longest sublist "claims"
+            // the borders from its neighbours.
+            if (longestSubListIndex > 0)
+            {
+                // Check the previous sublist
+                SubList prevSubList = subLists.get(longestSubListIndex - 1);
+                if (prevSubList.last == longestSubList.first)
+                {
+                    prevSubList.last--;
+                }
+            }
+            if (longestSubListIndex < subLists.size() - 1)
+            {
+                // Check the next sublist
+                SubList nextSubList = subLists.get(longestSubListIndex + 1);
+                if (nextSubList.first == longestSubList.last)
+                {
+                    nextSubList.first++;
+                }
+            }
+
+            // Check to see if there are any borders that appear in two sublists
+            done = true;
+            for (int i = 1; i < subLists.size() - 1; i++)
+            {
+                SubList prev = subLists.get(i - 1);
+                SubList cur = subLists.get(i);
+                SubList next = subLists.get(i + 1);
+                if (prev.last == cur.first || cur.last == next.first)
+                {
+                    // We still have a contested border
+                    done = false;
+                    break;
+                }
+            }
+        } while (!done);
+
+        // Now we can simply print out our sublists, comma-separated
+        StringBuilder str = new StringBuilder();
+        for (int i = 0; i < subLists.size(); i++)
+        {
+            SubList subList = subLists.get(i);
+            List<DateTime> timeList = times.subList(subList.first, subList.last + 1);
+            if (timeList.size() > 0)
+            {
+                if (i > 0) str.append(",");
+                str.append(getRegularlySpacedTimeString(timeList, subList.spacing));
+            }
+        }
+
+        return str.toString();
+    }
+
+    /**
+     * <p>Creates a time string, suitable for a Capabilities document, that represents
+     * the given list of DateTimes, which have previously been calculated to be
+     * regularly-spaced according to the given period.</p>
+     * <p><i>"Package-private" rather than "private" to enable visibility in unit tests</i></p>
+     * @param times The list of DateTimes, which have been previously calculated
+     * to be regularly-spaced.  This can have one or more elements; if it only
+     * has one or two elements then the {@code period} is ignored.
+     * @param period The interval between the dateTimes, in milliseconds
+     * @throws IllegalArgumentException if {@code times} has zero elements.
+     */
+    static StringBuilder getRegularlySpacedTimeString(List<DateTime> times, long period)
+    {
+        if (times.size() == 0) throw new IllegalArgumentException();
+        StringBuilder str = new StringBuilder();
+        str.append(dateTimeToISO8601(times.get(0)));
+        if (times.size() == 2)
+        {
+            // No point in specifying the interval, just write the two times
+            str.append(",");
+            str.append(dateTimeToISO8601(times.get(1)));
+        }
+        else if (times.size() > 2)
+        {
+            str.append("/");
+            str.append(dateTimeToISO8601(times.get(times.size() - 1)));
+            str.append("/");
+            str.append(getPeriodString(period));
+        }
+        return str;
+    }
+
+    /**
+     * <p>Gets a representation of the given period as an ISO8601 string, e.g.
+     * "P1D" for one day, "PT3.5S" for 3.5s.</p>
+     * <p>For safety, this will only express periods in days, hours, minutes
+     * and seconds.  These are the only durations that are constant in their
+     * millisecond length across different Chronologies.  (Years and months
+     * can be different lengths between and within Chronologies.)</p>
+     * @param period The period in milliseconds
+     * @return a representation of the given period as an ISO8601 string
+     */
+    public static String getPeriodString(long period)
+    {
+        StringBuilder str = new StringBuilder("P");
+        long days = period / DateTimeConstants.MILLIS_PER_DAY;
+        if (days > 0)
+        {
+            str.append(days + "D");
+            period -= days * DateTimeConstants.MILLIS_PER_DAY;
+        }
+        if (period > 0) str.append("T");
+        long hours = period / DateTimeConstants.MILLIS_PER_HOUR;
+        if (hours > 0)
+        {
+            str.append(hours + "H");
+            period -= hours * DateTimeConstants.MILLIS_PER_HOUR;
+        }
+        long minutes = period / DateTimeConstants.MILLIS_PER_MINUTE;
+        if (minutes > 0)
+        {
+            str.append(minutes + "M");
+            period -= minutes * DateTimeConstants.MILLIS_PER_MINUTE;
+        }
+        // Now the period represents the number of milliseconds
+        if (period > 0)
+        {
+            long seconds = period / DateTimeConstants.MILLIS_PER_SECOND;
+            long millis = period % DateTimeConstants.MILLIS_PER_SECOND;
+            str.append(seconds);
+            if (millis > 0) str.append("." + addOrRemoveZeros(millis));
+            str.append("S");
+        }
+
+        return str.toString();
+    }
+
+    /** Adds leading zeros and removes trailing zeros as appropriate, to make
+     * the given number of milliseconds suitable for placing after a decimal
+     * point (e.g. 500 becomes 5, 5 becomes 005). */
+    private static String addOrRemoveZeros(long millis)
+    {
+        if (millis == 0) return "";
+        String s = Long.toString(millis);
+        if (millis < 10) return "00" + s;
+
+        if (millis < 100) s = "0" + s;
+        // Now remove all trailing zeros
+        while (s.endsWith("0"))
+        {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s;
     }
 
     /**
