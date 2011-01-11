@@ -52,7 +52,6 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.geotoolkit.referencing.CRS;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
@@ -802,9 +801,8 @@ public abstract class AbstractWmsController extends AbstractController {
         usageLogEntry.setOutputFormat(outputFormat);
 
         // Get the required coordinate reference system, forcing longitude-first
-        // axis order.  TODO: need to make sure this is consistent with creation
-        // of CRS objects in CrsHelper.
-        final CoordinateReferenceSystem crs = CRS.decode(crsCode, true);
+        // axis order.
+        final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
         final LineString transect = new LineString(lineString, crs);
