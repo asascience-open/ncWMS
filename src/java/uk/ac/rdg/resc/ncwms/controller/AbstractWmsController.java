@@ -1075,9 +1075,16 @@ public abstract class AbstractWmsController extends AbstractController {
     static int findTIndex(String isoDateTime, Layer layer)
         throws InvalidDimensionValueException
     {
-        DateTime target = isoDateTime.equals("current")
-            ? layer.getCurrentTimeValue()
-            : WmsUtils.iso8601ToDateTime(isoDateTime, layer.getChronology());
+        DateTime target;
+        if (isoDateTime.equals("current")) {
+            target = layer.getCurrentTimeValue();
+        } else {
+            try {
+                target = WmsUtils.iso8601ToDateTime(isoDateTime, layer.getChronology());
+            } catch(IllegalArgumentException iae) {
+                throw new InvalidDimensionValueException("time", isoDateTime);
+            }
+        }
 
         // Find the equivalent DateTime in the Layer.  Note that we can't simply
         // use the contains() method of the List, since this is based on equals().
