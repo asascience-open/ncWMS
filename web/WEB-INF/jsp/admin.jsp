@@ -174,7 +174,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <table border="1">
             <tr><th>Title</th><td><input type="text" name="server.title" value="${config.server.title}"/></td><td>Title for this WMS</td></tr>
             <!-- TODO: make the abstract field larger -->
-            <tr><th>Abstract</th><td><input type="text" name="server.abstract" value="${config.server.abstract}"/></td><td>More details about this server</td></tr>
+            <tr><th>Abstract</th><td><input type="text" name="server.abstract" value="${config.server.serverAbstract}"/></td><td>More details about this server</td></tr>
             <tr><th>Keywords</th><td><input type="text" name="server.keywords" value="${config.server.keywords}"/></td><td>Comma-separated list of keywords</td></tr>
             <tr><th>URL</th><td><input type="text" name="server.url" value="${config.server.url}"/></td><td>Web site of the service provider</td></tr>
             <!-- TODO: do integer validation on max width and height -->

@@ -125,7 +125,7 @@ public final class VectorLayerImpl implements VectorLayer
     public String getId() { return this.wrappedLayer.getId(); }
 
     @Override
-    public String getAbstract()  { return this.wrappedLayer.getAbstract(); }
+    public String getLayerAbstract()  { return this.wrappedLayer.getLayerAbstract(); }
 
     @Override
     public String getName()  { return this.wrappedLayer.getName(); }

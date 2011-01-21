@@ -59,7 +59,7 @@ public interface ServerConfig
     public int getMaxImageHeight();
 
     /** Returns a (perhaps-lengthy) description of this server */
-    public String getAbstract();
+    public String getServerAbstract();
 
     /** Returns a set of keywords that help to describe this server */
     public Set<String> getKeywords();

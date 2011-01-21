@@ -57,7 +57,7 @@ public interface Layer
     public String getTitle();
 
     /** Returns a (perhaps-lengthy) description of this layer */
-    public String getAbstract();
+    public String getLayerAbstract();
 
     /**
      * Returns an identifier for this layer that is unique <b>within a

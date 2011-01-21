@@ -109,12 +109,12 @@ public class Server
         this.maxImageHeight = maxImageHeight;
     }
 
-    public String getAbstract()
+    public String getServerAbstract()
     {
         return abstr;
     }
 
-    public void setAbstract(String abstr)
+    public void setServerAbstract(String abstr)
     {
         this.abstr = Config.checkEmpty(abstr);
     }

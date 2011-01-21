@@ -96,7 +96,7 @@ public class KmzFormat extends ImageFormat
                 kml.append("<name>" + layer.getDataset().getId() + ", " +
                     layer.getId() + "</name>");
                 kml.append("<description>" + layer.getDataset().getTitle() + ", "
-                    + layer.getTitle() + ": " + layer.getAbstract() +
+                    + layer.getTitle() + ": " + layer.getLayerAbstract() +
                     "</description>");
 
                 // Add the screen overlay containing the colour scale

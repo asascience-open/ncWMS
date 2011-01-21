@@ -227,7 +227,7 @@ public class DefaultDataReader extends DataReader
                         logger.debug("Creating new Layer object for {}", grid.getName());
                         LayerImpl layer = new LayerImpl(grid.getName());
                         layer.setTitle(CdmUtils.getVariableTitle(grid.getVariable()));
-                        layer.setAbstract(grid.getDescription());
+                        layer.setLayerAbstract(grid.getDescription());
                         layer.setUnits(grid.getUnitsString());
                         layer.setHorizontalGrid(horizGrid);
                         layer.setGeographicBoundingBox(bbox);

@@ -141,7 +141,7 @@ public class AdminController extends MultiActionController
 
             // Process the server details
             server.setTitle(request.getParameter("server.title"));
-            server.setAbstract(request.getParameter("server.abstract"));
+            server.setServerAbstract(request.getParameter("server.abstract"));
             server.setKeywords(request.getParameter("server.keywords"));
             server.setUrl(request.getParameter("server.url"));
             server.setMaxImageWidth(Integer.parseInt(request.getParameter("server.maximagewidth")));

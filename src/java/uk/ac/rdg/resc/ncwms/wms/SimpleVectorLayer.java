@@ -71,7 +71,7 @@ public class SimpleVectorLayer implements VectorLayer
     public String getId() { return this.id; }
 
     @Override
-    public String getAbstract() {
+    public String getLayerAbstract() {
         return "Automatically-generated vector field, composed of the fields "
             + this.east.getTitle() + " and " + this.north.getTitle(); 
     }

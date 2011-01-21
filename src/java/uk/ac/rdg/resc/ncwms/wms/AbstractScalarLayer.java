@@ -107,8 +107,8 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     @Override public String getTitle() { return this.title; }
     public void setTitle(String title) { this.title = title; }
 
-    @Override public String getAbstract() { return this.abstr; }
-    public void setAbstract(String abstr) { this.abstr = abstr; }
+    @Override public String getLayerAbstract() { return this.abstr; }
+    public void setLayerAbstract(String abstr) { this.abstr = abstr; }
 
     @Override public String getUnits() { return this.units; }
     public void setUnits(String units) { this.units = units; }
