@@ -60,9 +60,12 @@ import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
  * but does not modify them or provide any public methods to modify them.
  * Modification of these arrays outside this class will cause undefined behaviour.
  *
+ * @todo: rename this class - it is used by AbstractCurvilinearGrid, but does not
+ * inherit from it.
+ *
  * @author Jon
  */
-final class CurvilinearGrid
+public final class CurvilinearGrid
 {
     private static final Logger logger = LoggerFactory.getLogger(CurvilinearGrid.class);
 

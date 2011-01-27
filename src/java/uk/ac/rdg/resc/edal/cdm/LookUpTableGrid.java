@@ -28,22 +28,14 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import org.opengis.coverage.grid.GridEnvelope;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
-import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
-import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dt.GridCoordSystem;
-import uk.ac.rdg.resc.edal.coverage.grid.impl.AbstractHorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.GridCoordinatesImpl;
-import uk.ac.rdg.resc.edal.coverage.grid.impl.GridEnvelopeImpl;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
@@ -60,7 +52,7 @@ import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
  * many applications.
  * @author Jon Blower
  */
-final class LookUpTableGrid extends AbstractHorizontalGrid
+final class LookUpTableGrid extends AbstractCurvilinearGrid
 {
     private static final Logger logger = LoggerFactory.getLogger(LookUpTableGrid.class);
 
@@ -74,11 +66,7 @@ final class LookUpTableGrid extends AbstractHorizontalGrid
     private static final Map<CurvilinearGrid, LookUpTableGrid> CACHE =
             CollectionUtils.newHashMap();
 
-    private final CurvilinearGrid curvGrid;
     private final LookUpTable lut;
-    private final GridEnvelopeImpl gridExtent;
-    private final List<String> axisNames = Collections.unmodifiableList(
-            Arrays.asList("i", "j"));
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
@@ -117,10 +105,7 @@ final class LookUpTableGrid extends AbstractHorizontalGrid
     /** Private constructor to prevent direct instantiation */
     private LookUpTableGrid(CurvilinearGrid curvGrid, LookUpTable lut)
     {
-        // All points will be returned in WGS84 lon-lat
-        super(DefaultGeographicCRS.WGS84);
-        this.curvGrid = curvGrid;
-        this.gridExtent = new GridEnvelopeImpl(curvGrid.getNi(), curvGrid.getNj());
+        super(curvGrid);
         this.lut = lut;
     }
 
@@ -158,51 +143,5 @@ final class LookUpTableGrid extends AbstractHorizontalGrid
         // If we get this far something probably went wrong with the LUT
         //logger.debug("Point is not contained by cell or its neighbours");
         return new GridCoordinatesImpl(lutCoords);
-    }
-
-    /**
-     * @return the latitude and longitude of the given grid point, or null if
-     * the given grid coordinates [i,j] are outside the extent of the grid
-     */
-    @Override
-    protected HorizontalPosition transformCoordinatesNoBoundsCheck(int i, int j)
-    {
-        if (i >= 0 && i < this.curvGrid.getNi() &&
-            j >= 0 && j < this.curvGrid.getNj())
-        {
-            return this.curvGrid.getMidpoint(i, j);
-        }
-        return null;
-    }
-
-    @Override
-    public BoundingBox getExtent() {
-        return Utils.getBoundingBox(this.curvGrid.getBoundingBox());
-    }
-
-    @Override
-    public GridEnvelope getGridExtent() {
-        return this.gridExtent;
-    }
-
-    @Override
-    public List<String> getAxisNames() {
-        return this.axisNames;
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>This implementation uses {@link #findNearestGridPoint(uk.ac.rdg.resc.edal.position.HorizontalPosition)}
-     * to find the nearest grid point, then finds the real-world coordinates
-     * of the grid point using {@link #transformCoordinates(uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates)}.
-     * If the real-world position matches {@code pos}, the grid coordinates
-     * will be returned, otherwise null.</p>
-     */
-    @Override
-    public GridCoordinates inverseTransformCoordinates(HorizontalPosition pos) {
-        GridCoordinates nearestGridPoint = this.findNearestGridPoint(pos);
-        HorizontalPosition nearestPos = this.transformCoordinates(nearestGridPoint);
-        if (nearestPos.equals(pos)) return nearestGridPoint;
-        return null;
     }
 }

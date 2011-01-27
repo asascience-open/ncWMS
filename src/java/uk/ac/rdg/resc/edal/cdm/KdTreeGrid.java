@@ -28,18 +28,18 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
-import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
+import java.util.List;
+import uk.ac.rdg.resc.edal.cdm.kdtree.Point;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
-import org.khelekore.prtree.MBRConverter;
-import org.khelekore.prtree.PRTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
+import uk.ac.rdg.resc.edal.cdm.kdtree.KDTree;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.GridCoordinatesImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
@@ -47,11 +47,11 @@ import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
 
 /**
- * A HorizontalGrid that uses an RTree to look up the nearest neighbour of a point.
+ * A HorizontalGrid that uses an KdTree to look up the nearest neighbour of a point.
  */
-final class RTreeGrid extends AbstractCurvilinearGrid
+final class KdTreeGrid extends AbstractCurvilinearGrid
 {
-    private static final Logger logger = LoggerFactory.getLogger(RTreeGrid.class);
+    private static final Logger logger = LoggerFactory.getLogger(KdTreeGrid.class);
 
     /**
      * In-memory cache of LookUpTableGrid objects to save expensive re-generation of same object
@@ -60,80 +60,51 @@ final class RTreeGrid extends AbstractCurvilinearGrid
      * these.  This means that we could make other large objects available for
      * garbage collection.
      */
-    private static final Map<CurvilinearGrid, RTreeGrid> CACHE =
+    private static final Map<CurvilinearGrid, KdTreeGrid> CACHE =
             CollectionUtils.newHashMap();
 
-    /** The branch factor of the RTree */
-    private static final int RTREE_BRANCH_FACTOR = 10;
-
-    private final PRTree<CurvilinearGrid.Cell> rtree;
-
-    /**
-     * An object that can determine the minimum bounding rectangle of a
-     * CurvilinearGrid's cells.  We can save memory by not storing the MBR
-     * information redundantly (perhaps at the expense of some processing power?)
-     */
-    private static final MBRConverter<CurvilinearGrid.Cell> MBR_CONVERTER
-            = new MBRConverter<CurvilinearGrid.Cell>()
-    {
-        @Override
-        public double getMinX(Cell t) {
-            return t.getMinimumBoundingRectangle().getMinX();
-        }
-
-        @Override
-        public double getMinY(Cell t) {
-            return t.getMinimumBoundingRectangle().getMinY();
-        }
-
-        @Override
-        public double getMaxX(Cell t) {
-            return t.getMinimumBoundingRectangle().getMaxX();
-        }
-
-        @Override
-        public double getMaxY(Cell t) {
-            return t.getMinimumBoundingRectangle().getMaxY();
-        }
-    };
+    private final KDTree kdTree;
+    private final float max_distance;
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
      */
-    public static RTreeGrid generate(GridCoordSystem coordSys)
+    public static KdTreeGrid generate(GridCoordSystem coordSys)
     {
         CurvilinearGrid curvGrid = new CurvilinearGrid(coordSys);
 
         synchronized(CACHE)
         {
-            RTreeGrid rTreeGrid = CACHE.get(curvGrid);
-            if (rTreeGrid == null)
+            KdTreeGrid kdTreeGrid = CACHE.get(curvGrid);
+            if (kdTreeGrid == null)
             {
-                logger.debug("Need to generate new rtree");
-                // Create the RTree for this coordinate system
-                PRTree<CurvilinearGrid.Cell> rtree =
-                        new PRTree<CurvilinearGrid.Cell>(MBR_CONVERTER, RTREE_BRANCH_FACTOR);
-                rtree.load(curvGrid.getCells());
-                logger.debug("Generated new rtree");
+                logger.debug("Need to generate new kdtree");
+                // Create the KdTree for this coordinate system
+                long start = System.nanoTime();
+                KDTree kdTree = new KDTree(curvGrid);
+                kdTree.buildTree();
+                long finish = System.nanoTime();
+                logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
                 // Create the RTreeGrid
-                rTreeGrid = new RTreeGrid(curvGrid, rtree);
+                kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
                 // Now put this in the cache
-                CACHE.put(curvGrid, rTreeGrid);
+                CACHE.put(curvGrid, kdTreeGrid);
             }
             else
             {
-                logger.debug("RTree found in cache");
+                logger.debug("kdree found in cache");
             }
-            return rTreeGrid;
+            return kdTreeGrid;
         }
     }
 
     /** Private constructor to prevent direct instantiation */
-    private RTreeGrid(CurvilinearGrid curvGrid, PRTree<CurvilinearGrid.Cell> rtree)
+    private KdTreeGrid(CurvilinearGrid curvGrid, KDTree kdTree)
     {
         // All points will be returned in WGS84 lon-lat
         super(curvGrid);
-        this.rtree = rtree;
+        this.kdTree = kdTree;
+        this.max_distance = (float)Math.sqrt(curvGrid.getMeanCellArea());
     }
 
     /**
@@ -148,15 +119,22 @@ final class RTreeGrid extends AbstractCurvilinearGrid
         double lon = lonLatPos.getLongitude();
         double lat = lonLatPos.getLatitude();
 
-        // Find all cells that intersect this point
-        Iterable<CurvilinearGrid.Cell> cells = this.rtree.find(lon, lat, lon, lat);
-        for (CurvilinearGrid.Cell cell : cells)
-        {
-            if (cell.contains(lonLatPos))
+        List<Point> nns = this.kdTree.approxNearestNeighbour((float)lat, (float)lon, 5.0f); //max_distance);
+        //logger.debug("Returned {} candidate points", nns.size());
+
+        for (Point pt : nns) {
+            int i = pt.index % this.curvGrid.getNi();
+            int j = pt.index / this.curvGrid.getNi();
+            CurvilinearGrid.Cell cell = this.curvGrid.getCell(i, j);
+            //if (cell.contains(lonLatPos))
             {
                 return new GridCoordinatesImpl(cell.getI(), cell.getJ());
             }
         }
+        if (nns.size() > 0) {
+            logger.debug("KDtree found {} points, but all were rejected", nns.size());
+        }
+        //logger.debug("No cells contain the target point");
         return null;
     }
 
@@ -164,9 +142,9 @@ final class RTreeGrid extends AbstractCurvilinearGrid
     {
         NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "sea_level");
-        RTreeGrid rTreeGrid = RTreeGrid.generate(grid.getCoordinateSystem());
-        HorizontalGrid targetDomain = new RegularGridImpl(rTreeGrid.getExtent(), 256, 256);
-        PixelMap pixelMap = new PixelMap(rTreeGrid, targetDomain);
+        KdTreeGrid kdTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
+        HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), 256, 256);
+        PixelMap pixelMap = new PixelMap(kdTreeGrid, targetDomain);
         nc.close();
     }
 }
