@@ -28,12 +28,15 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.List;
 import uk.ac.rdg.resc.edal.cdm.kdtree.Point;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
+import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
@@ -45,6 +48,9 @@ import uk.ac.rdg.resc.edal.coverage.grid.impl.GridCoordinatesImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
+import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
+import uk.ac.rdg.resc.ncwms.graphics.ImageProducer;
+import uk.ac.rdg.resc.ncwms.graphics.ImageProducer.Style;
 
 /**
  * A HorizontalGrid that uses an KdTree to look up the nearest neighbour of a point.
@@ -143,8 +149,20 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "sea_level");
         KdTreeGrid kdTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
+        System.out.println("Generated kdTreeGrid");
         HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), 256, 256);
-        PixelMap pixelMap = new PixelMap(kdTreeGrid, targetDomain);
+        //PixelMap pixelMap = new PixelMap(kdTreeGrid, targetDomain);
+        List<Float> data = CdmUtils.readHorizontalPoints(nc, grid, kdTreeGrid, 0, 0, targetDomain);
+        System.out.println("Read data");
         nc.close();
+        ImageProducer ip = new ImageProducer.Builder()
+            .palette(ColorPalette.get(null))
+            .style(Style.BOXFILL)
+            .height(256)
+            .width(256)
+            .build();
+        ip.addFrame(data, null);
+        List<BufferedImage> ims = ip.getRenderedFrames();
+        ImageIO.write(ims.get(0), "png", new File("C:\\test.png"));
     }
 }
