@@ -1,16 +1,26 @@
 package uk.ac.rdg.resc.edal.cdm.kdtree;
 
 public class Point extends TreeNode {
-	public Point(float latitude, float longitude, int index) {
-		super();
-		this.latitude = latitude;
-		this.longitude = longitude;
-		this.index = index;
-	}
-	public float latitude, longitude;
-	public int index;
-	
-	public String toString() {
-		return "Lat: " + latitude + " Lon: " + longitude + " Index: " + index;
-	}
+
+    private double latitude, longitude;
+    public int index;
+
+    public Point(double latitude, double longitude, int index) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.index = index;
+    }
+    
+    @Override
+    public String toString() {
+        return "(" + latitude + "," + longitude + "@" + index + ")";
+    }
+
+    public double getLongitude() {
+        return this.longitude;
+    }
+
+    public double getLatitude() {
+        return this.latitude;
+    }
 }

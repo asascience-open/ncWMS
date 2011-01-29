@@ -12,8 +12,8 @@ public class KDTree {
     int num_elements;
     Point[] source_data = null;
     TreeNode[] tree = null;
-    float nominal_minimum_resolution;
-    float expansion_factor;
+    double nominal_minimum_resolution;
+    double expansion_factor;
     int approx_queries = 0, approx_results = 0, approx_iterations = 0;
     CurvilinearGrid curvGrid;
 
@@ -23,18 +23,17 @@ public class KDTree {
         num_elements = curvGrid.size();
         source_data = new Point[num_elements];
 
-        expansion_factor = 3.5f;//2.0f;
+        expansion_factor = 3.5f;
     }
 
-    public void buildTree()  {
+    public void buildTree() {
         // Load data from files into source_data, and keep track of min/max
-        float min_lat = Float.MAX_VALUE, min_lon = Float.MAX_VALUE;
-        float max_lat = Float.MIN_VALUE, max_lon = Float.MIN_VALUE;
+        double min_lat = Float.POSITIVE_INFINITY, min_lon = Float.NEGATIVE_INFINITY;
+        double max_lat = Float.NEGATIVE_INFINITY, max_lon = Float.POSITIVE_INFINITY;
         int counter = 0;
-        for (CurvilinearGrid.Cell cell : this.curvGrid.getCells())
-        {
-            float new_lat = (float)cell.getCentre().getLatitude();
-            float new_lon = (float)cell.getCentre().getLongitude();
+        for (CurvilinearGrid.Cell cell : this.curvGrid.getCells()) {
+            double new_lat = cell.getCentre().getLatitude();
+            double new_lon = cell.getCentre().getLongitude();
             min_lat = Math.min(min_lat, new_lat);
             max_lat = Math.max(max_lat, new_lat);
             min_lon = Math.min(min_lon, new_lon);
@@ -44,11 +43,11 @@ public class KDTree {
         }
 
         // Compute the nominal resolution
-        nominal_minimum_resolution = 0.5f;//(float) Math.sqrt(Math.min(max_lon - min_lon, max_lat - min_lat)) / 20.0f;
+        nominal_minimum_resolution = 0.25f;// Math.sqrt(Math.min(max_lon - min_lon, max_lat - min_lat)) / 20.0f;
 
-        // Perform an initial sort of the source data by latitude
-        Comparator<Point> latitude_comp = new PointComparator(true);
-        Arrays.sort(source_data, latitude_comp);
+        // Perform an initial sort of the source data by longitude (likely to be bigger for world data)
+        Comparator<Point> longitude_comp = new PointComparator(false);
+        Arrays.sort(source_data, longitude_comp);
 
         // Calculate the number of elements needed in the tree
         int num_leaf_elements = (int) Math.pow(2.0, Math.ceil(Math.log(num_elements)
@@ -60,14 +59,72 @@ public class KDTree {
         tree = new TreeNode[num_tree_elements];
 
         // Recursively build this into a tree
-        recursiveBuildTree(0, num_elements - 1, 0, true);
+        recursiveBuildTree(0, num_elements - 1, 0, false);
 
-        // Clear the source data - no longer needed
+        // Clear the source data array - no longer needed
         source_data = null;
-
     }
 
-    ;
+    public void verifyChildren(int current_index) {
+        // Verify the correctness of the tree (call with current_index = 0)
+
+        // Reached a leaf node, no more checks can be made
+        if (tree[current_index] instanceof Point) return;
+
+        int left_child_index = 2 * current_index + 1;
+        int right_child_index = 2 * current_index + 2;
+
+        NonTerminalTreeNode myself = (NonTerminalTreeNode) tree[current_index];
+
+        // If child nodes are leaf nodes, check that the fall on the correct
+        // side of the current discriminator
+        // If the child nodes are non terminal tree nodes, then they can
+        // only be checked if the discriminators are of the same type
+
+        if (tree[left_child_index] instanceof Point) {
+            Point left_child = (Point) tree[left_child_index];
+            if (myself.is_latitude) {
+                if (left_child.getLatitude() > myself.discriminator) {
+                    System.out.println("Error! Left child latitude greater than self");
+                }
+            } else {
+                if (left_child.getLongitude() > myself.discriminator) {
+                    System.out.println("Error! Left child longitude greater than self");
+                }
+            }
+        } else {
+            NonTerminalTreeNode left_child = (NonTerminalTreeNode) tree[left_child_index];
+            if (!(myself.is_latitude ^ left_child.is_latitude)) {
+                if (left_child.discriminator > myself.discriminator) {
+                    System.out.println("Error! Compatible left child discriminator greater than self");
+                }
+            }
+        }
+
+        if (tree[right_child_index] instanceof Point) {
+            Point right_child = (Point) tree[right_child_index];
+            if (myself.is_latitude) {
+                if (right_child.getLatitude() < myself.discriminator) {
+                    System.out.println("Error! Right child latitude lesser than self");
+                }
+            } else {
+                if (right_child.getLongitude() < myself.discriminator) {
+                    System.out.println("Error! Right child longitude lesser than self");
+                }
+            }
+        } else {
+            NonTerminalTreeNode right_child = (NonTerminalTreeNode) tree[right_child_index];
+            if (!(myself.is_latitude ^ right_child.is_latitude)) {
+                if (right_child.discriminator < myself.discriminator) {
+                    System.out.println("Error! Compatible right child discriminator lesser than self");
+                }
+            }
+        }
+
+        // Recurse
+        verifyChildren(left_child_index);
+        verifyChildren((right_child_index));
+    }
 
     private void recursiveBuildTree(int source_index_first, int source_index_last,
             int tree_index_current, boolean sorted_by_latitude) {
@@ -85,86 +142,70 @@ public class KDTree {
         // 2 (high and low)
 
         // Determine whether we should be sorting by latitude or longitude
-        float lat_min = Float.MAX_VALUE;
-        float lat_max = Float.MIN_VALUE;
-        float lon_min = Float.MAX_VALUE;
-        float lon_max = Float.MIN_VALUE;
+        double lat_min = Float.POSITIVE_INFINITY;
+        double lat_max = Float.NEGATIVE_INFINITY;
+        double lon_min = Float.POSITIVE_INFINITY;
+        double lon_max = Float.NEGATIVE_INFINITY;
         for (int current_index = source_index_first; current_index <= source_index_last; current_index++) {
-            lat_min = Math.min(lat_min, source_data[current_index].latitude);
-            lat_max = Math.max(lat_max, source_data[current_index].latitude);
-            lon_min = Math.min(lon_min, source_data[current_index].longitude);
-            lon_max = Math.max(lon_max, source_data[current_index].longitude);
+            lat_min = Math.min(lat_min, source_data[current_index].getLatitude());
+            lat_max = Math.max(lat_max, source_data[current_index].getLatitude());
+            lon_min = Math.min(lon_min, source_data[current_index].getLongitude());
+            lon_max = Math.max(lon_max, source_data[current_index].getLongitude());
         }
-        boolean sort_by_latitude = Math.abs(lat_max - lat_min) >= Math.abs(lon_max - lon_min);
+        boolean discriminate_on_latitude = (Math.abs(lat_max - lat_min) >= Math.abs(lon_max - lon_min));
 
-        // Determine if we need to sort - if sort_by_latitude and
+        // Determine if we need to sort - if discriminate_on_latitude and
         // sorted_by_latitude have different values
-        if (sort_by_latitude ^ sorted_by_latitude) {
+        if (discriminate_on_latitude ^ sorted_by_latitude) {
             // Sort by the latitude or longitude as appropriate
-            Comparator<Point> comp = new PointComparator(sort_by_latitude);
-            Arrays.sort(source_data, source_index_first, source_index_last,
+            Comparator<Point> comp = new PointComparator(discriminate_on_latitude);
+            Arrays.sort(source_data, source_index_first, source_index_last+1,
                     comp);
         }
 
         // Work out the median, and the indices of the values surrounding the
         // median
         int end_left, start_right;
-        float discriminator;
+        double discriminator;
         if (((source_index_last - source_index_first) % 2) != 0) {
             // even number of elements
             end_left = source_index_first
                     + ((source_index_last - source_index_first - 1) / 2);
             start_right = end_left + 1;
-            if (sort_by_latitude) {
-                discriminator = (float) ((source_data[end_left].latitude + source_data[start_right].latitude) / 2.0);
+            if (discriminate_on_latitude) {
+                discriminator = (source_data[end_left].getLatitude() + source_data[start_right].getLatitude()) / 2.0;
             } else {
-                discriminator = (float) ((source_data[end_left].longitude + source_data[start_right].longitude) / 2.0);
+                discriminator = (source_data[end_left].getLongitude() + source_data[start_right].getLongitude()) / 2.0;
             }
         } else {
             // odd number of elements
             end_left = ((source_index_last - source_index_first) / 2)
                     + source_index_first;
             start_right = end_left + 1;
-            if (sort_by_latitude) {
-                discriminator = source_data[end_left].latitude;
+            if (discriminate_on_latitude) {
+                discriminator = source_data[end_left].getLatitude();
             } else {
-                discriminator = source_data[end_left].longitude;
+                discriminator = source_data[end_left].getLongitude();
             }
         }
 
         // Store this information back into the tree to create the discriminator
         // node
         tree[tree_index_current] = new NonTerminalTreeNode(discriminator,
-                sort_by_latitude);
+                discriminate_on_latitude);
 
         // Recurse
         recursiveBuildTree(source_index_first, end_left,
-                (2 * (tree_index_current + 1)) - 1, sort_by_latitude);
+                2 * tree_index_current + 1, discriminate_on_latitude);
         recursiveBuildTree(start_right, source_index_last,
-                2 * (tree_index_current + 1), sort_by_latitude);
+                2 * tree_index_current + 2, discriminate_on_latitude);
     }
 
-    /*public Point nearestNeighbourIndexed(float latitude, float longitude, int tolerance) {
-    int density_index_lat = (int) ((latitude - min_lat) / density_index_vres);
-    int density_index_lon = (int) ((longitude - min_lon) / density_index_hres);
-    float density = density_index[density_index_lat * density_index_size + density_index_lon];
-    ArrayList<Point> result = null;
-    while (true) {
-    result = rangeQuery(latitude - density, latitude + density, longitude - density, longitude + density);
-    if (result.size() == 0) {
-    density *= 2.0;
-    continue;
-    }
-    if (result.size() > tolerance) {
-    density /=
-    }
-    }
-
-    }*/
-    public List<Point> approxNearestNeighbour(float latitude, float longitude, float max_distance) {
+    public List<Point> approxNearestNeighbour(double latitude, double longitude, double max_distance) {
         approx_queries++;
-        float current_distance = nominal_minimum_resolution;
+        double current_distance = nominal_minimum_resolution;
         ArrayList<Point> results;
+        boolean break_next = false;
         while (current_distance <= max_distance) {
             approx_iterations++;
             results = rangeQuery(latitude - current_distance, latitude + current_distance, longitude - current_distance, longitude + current_distance);
@@ -172,15 +213,27 @@ public class KDTree {
                 approx_results += results.size();
                 return results;
             }
+            if (break_next) {
+                break;
+            }
             current_distance *= expansion_factor;
+            if (current_distance > max_distance) {
+                break_next = true;
+                current_distance = max_distance;
+            }
         }
+        // Reached max distance and no points found - return empty
         return Collections.emptyList();
     }
 
     public void printApproxQueryStats() {
         System.out.println("Computed nominal resolution " + nominal_minimum_resolution);
-        System.out.println("Results per query " + (float) (approx_results / approx_queries));
-        System.out.println("Iterations per query " + (float) (approx_iterations / approx_queries));
+        if (approx_queries > 0) {
+            System.out.println("Results per query " + (double) (approx_results / approx_queries));
+            System.out.println("Iterations per query " + (double) (approx_iterations / approx_queries));
+        } else {
+            System.out.println("No approximate queries made");
+        }
     }
 
     public void resetApproxQueryStats() {
@@ -189,27 +242,68 @@ public class KDTree {
         approx_queries = 0;
     }
 
-    public Point nearestNeighbour(float latitude, float longitude) {
+    private final static double squaredDistance(Point p, double latitude, double longitude) {
+        return Math.pow(p.getLatitude() - latitude, 2.0)
+                + Math.pow(p.getLongitude() - longitude, 2.0);
+    }
+
+    public Point nearestNeighbour(double latitude, double longitude) {
         return nearestNeighbourRecurse(latitude, longitude, 0);
     }
 
-    private final static double squaredDistance(Point p, float latitude, float longitude) {
-        return Math.pow(p.latitude - latitude, 2.0)
-                + Math.pow(p.longitude - longitude, 2.0);
+    private final Point nearestNeighbourRecurse(double latitude, double longitude, int current_index) {
+        if (tree[current_index] instanceof Point) {
+            // Terminal node reached - return it
+            return (Point) tree[current_index];
+        } else {
+            // Non-terminal
+            NonTerminalTreeNode node = (NonTerminalTreeNode) tree[current_index];
+            double pivot_target_distance;
+            if (node.is_latitude) {
+                pivot_target_distance = node.discriminator - latitude;
+            } else {
+                pivot_target_distance = node.discriminator - longitude;
+            }
+
+            // Search the 'near' branch
+            Point best;
+            if (pivot_target_distance > 0) {
+                best = nearestNeighbourRecurse(latitude, longitude, 2 * current_index + 1);
+            } else {
+                best = nearestNeighbourRecurse(latitude, longitude, 2 * current_index + 2);
+            }
+
+            // Only search the 'away' branch if the squared distance between the current best and the target is greater
+            // Than the squared distance between the target and the branch pivot
+            if (squaredDistance(best, latitude, longitude) > Math.pow(pivot_target_distance, 2.0)) {
+                Point potential_best;
+                // Search the 'away' branch
+                if (pivot_target_distance > 0) {
+                    potential_best = nearestNeighbourRecurse(latitude, longitude, 2 * (current_index + 1));
+                } else {
+                    potential_best = nearestNeighbourRecurse(latitude, longitude, (2 * (current_index + 1)) - 1);
+                }
+                if (squaredDistance(potential_best, latitude, longitude) < squaredDistance(best, latitude, longitude)) {
+                    return potential_best;
+                }
+            }
+
+            return best;
+        }
     }
 
-    public ArrayList<Point> rangeQuery(float min_lat, float max_lat, float min_lon, float max_lon) {
+    public ArrayList<Point> rangeQuery(double min_lat, double max_lat, double min_lon, double max_lon) {
         ArrayList<Point> results = new ArrayList<Point>();
         rangeQueryRecurse(min_lat, max_lat, min_lon, max_lon, results, 0);
         return results;
     }
 
-    private final void rangeQueryRecurse(float min_lat, float max_lat, float min_lon, float max_lon, ArrayList<Point> results, int tree_current_index) {
+    private final void rangeQueryRecurse(double min_lat, double max_lat, double min_lon, double max_lon, ArrayList<Point> results, int tree_current_index) {
         if (tree[tree_current_index] instanceof Point) {
             // Terminal - return this point if it's within bounds
             Point terminal_point = (Point) tree[tree_current_index];
-            if (terminal_point.latitude >= min_lat && terminal_point.latitude <= max_lat
-                    && terminal_point.longitude >= min_lon && terminal_point.latitude <= max_lon) {
+            if (terminal_point.getLatitude() >= min_lat && terminal_point.getLatitude() <= max_lat
+                    && terminal_point.getLongitude() >= min_lon && terminal_point.getLongitude() <= max_lon) {
                 results.add(terminal_point);
             }
             return;
@@ -234,47 +328,6 @@ public class KDTree {
             if (search_right) {
                 rangeQueryRecurse(min_lat, max_lat, min_lon, max_lon, results, (2 * (tree_current_index + 1)));
             }
-        }
-    }
-
-    private final Point nearestNeighbourRecurse(float latitude, float longitude, int current_index) {
-        if (tree[current_index] instanceof Point) {
-            // Terminal node reached - return it
-            return (Point) tree[current_index];
-        } else {
-            // Non-terminal
-            NonTerminalTreeNode node = (NonTerminalTreeNode) tree[current_index];
-            double pivot_target_distance;
-            if (node.is_latitude) {
-                pivot_target_distance = node.discriminator - latitude;
-            } else {
-                pivot_target_distance = node.discriminator - longitude;
-            }
-
-            // Search the 'near' branch
-            Point best;
-            if (pivot_target_distance > 0) {
-                best = nearestNeighbourRecurse(latitude, longitude, (2 * (current_index + 1)) - 1);
-            } else {
-                best = nearestNeighbourRecurse(latitude, longitude, 2 * (current_index + 1));
-            }
-
-            // Only search the 'away' branch if the squared distance between the current best and the target is greater
-            // Than the squared distance between the target and the branch pivot
-            if (squaredDistance(best, latitude, longitude) > Math.pow(pivot_target_distance, 2.0)) {
-                Point potential_best;
-                // Search the 'away' branch
-                if (pivot_target_distance > 0) {
-                    potential_best = nearestNeighbourRecurse(latitude, longitude, 2 * (current_index + 1));
-                } else {
-                    potential_best = nearestNeighbourRecurse(latitude, longitude, (2 * (current_index + 1)) - 1);
-                }
-                if (squaredDistance(potential_best, latitude, longitude) < squaredDistance(best, latitude, longitude)) {
-                    return potential_best;
-                }
-            }
-
-            return best;
         }
     }
 }

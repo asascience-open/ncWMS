@@ -91,6 +91,9 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
                 kdTree.buildTree();
                 long finish = System.nanoTime();
                 logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
+                System.out.println("Verifying tree");
+                kdTree.verifyChildren(0);
+                System.out.println("Tree finished verifying");
                 // Create the RTreeGrid
                 kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
                 // Now put this in the cache
@@ -125,41 +128,49 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         double lon = lonLatPos.getLongitude();
         double lat = lonLatPos.getLatitude();
 
-        List<Point> nns = this.kdTree.approxNearestNeighbour((float)lat, (float)lon, 5.0f); //max_distance);
-        //logger.debug("Returned {} candidate points", nns.size());
-
-        for (Point pt : nns) {
-            int i = pt.index % this.curvGrid.getNi();
-            int j = pt.index / this.curvGrid.getNi();
+        List<Point> nns = this.kdTree.approxNearestNeighbour(lat, lon, 0.5);
+        for (Point nn : nns) {
+            int i = nn.index % this.curvGrid.getNi();
+            int j = nn.index / this.curvGrid.getNi();
             CurvilinearGrid.Cell cell = this.curvGrid.getCell(i, j);
-            //if (cell.contains(lonLatPos))
-            {
+            if (cell.contains(lonLatPos)) {
                 return new GridCoordinatesImpl(cell.getI(), cell.getJ());
             }
+            // Do a neighbour search, as sometimes the nearest neighbour does
+            // not fall precisely into the cell
+            for (CurvilinearGrid.Cell neighbour : cell.getEdgeNeighbours()) {
+                if (neighbour.contains(lonLatPos)) {
+                    return new GridCoordinatesImpl(neighbour.getI(), neighbour.getJ());
+                }
+            }
+            for (CurvilinearGrid.Cell neighbour : cell.getCornerNeighbours()) {
+                if (neighbour.contains(lonLatPos)) {
+                    return new GridCoordinatesImpl(neighbour.getI(), neighbour.getJ());
+                }
+            }
         }
-        if (nns.size() > 0) {
-            logger.debug("KDtree found {} points, but all were rejected", nns.size());
-        }
-        //logger.debug("No cells contain the target point");
         return null;
     }
 
     public static void main(String[] args) throws Exception
     {
+        int size = 256;
         NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "sea_level");
         KdTreeGrid kdTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
         System.out.println("Generated kdTreeGrid");
-        HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), 256, 256);
-        //PixelMap pixelMap = new PixelMap(kdTreeGrid, targetDomain);
+        HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), size, size);
+        long start = System.nanoTime();
         List<Float> data = CdmUtils.readHorizontalPoints(nc, grid, kdTreeGrid, 0, 0, targetDomain);
-        System.out.println("Read data");
+        long finish = System.nanoTime();
+        System.out.printf("Produced data for image in %f seconds\n", (finish - start) / 1.e9);
+        kdTreeGrid.kdTree.printApproxQueryStats();
         nc.close();
         ImageProducer ip = new ImageProducer.Builder()
             .palette(ColorPalette.get(null))
             .style(Style.BOXFILL)
-            .height(256)
-            .width(256)
+            .height(size)
+            .width(size)
             .build();
         ip.addFrame(data, null);
         List<BufferedImage> ims = ip.getRenderedFrames();
