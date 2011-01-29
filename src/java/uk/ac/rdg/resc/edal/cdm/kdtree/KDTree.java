@@ -16,6 +16,7 @@ public class KDTree {
     double expansion_factor;
     int approx_queries = 0, approx_results = 0, approx_iterations = 0;
     CurvilinearGrid curvGrid;
+    private double square_root_2 = Math.sqrt(2.0);
 
     public KDTree(CurvilinearGrid curvGrid) {
         super();
@@ -210,6 +211,11 @@ public class KDTree {
             approx_iterations++;
             results = rangeQuery(latitude - current_distance, latitude + current_distance, longitude - current_distance, longitude + current_distance);
             if (results.size() > 0) {
+                // Need to do one more check - if the point found is at the corner of the current box,
+                // there could be a closer point within that distance, so set the search distance to
+                // the distance to the current point
+                current_distance *= square_root_2;
+                results = rangeQuery(latitude - current_distance, latitude + current_distance, longitude - current_distance, longitude + current_distance);
                 approx_results += results.size();
                 return results;
             }
