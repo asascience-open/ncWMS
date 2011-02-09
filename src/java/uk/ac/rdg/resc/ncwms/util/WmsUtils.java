@@ -411,6 +411,17 @@ public class WmsUtils
     {
         return layer instanceof VectorLayer;
     }
+    
+    /**
+     * Returns the RuntimeException name. This used in 'displayDefaultException.jsp'
+     * to show the exception name, to go around the use of '${exception.class.name}' where 
+     * the word 'class' is deemed as Java keyword by Tomcat 7.0 
+     *  
+     */
+    public static String getExceptionName(Exception e)
+    {
+        return e.getClass().getName();
+    }
 
     /**
      * <p>Returns the string to be used to display units for the TIME dimension
