@@ -227,8 +227,7 @@ final class LookUpTable
         int jIndex = this.jIndices.getElem(index);
 
         // Check for missing values
-        if (iIndex < 0 || iIndex > MAX_INDEX ||
-            jIndex < 0 || jIndex > MAX_INDEX)
+        if (iIndex == MISSING_VALUE || jIndex == MISSING_VALUE)
         {
             return null;
         }

@@ -28,10 +28,12 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
+import java.util.HashSet;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dt.GridCoordSystem;
@@ -126,22 +128,52 @@ final class LookUpTableGrid extends AbstractCurvilinearGrid
         // the neighbours
         Cell cell = this.curvGrid.getCell(lutCoords[0], lutCoords[1]);
         if (cell.contains(lonLatPos)) return new GridCoordinatesImpl(lutCoords);
-        for (Cell neighbour : cell.getEdgeNeighbours())
+
+        // We do a gradient-descent method to find the true nearest neighbour
+        // We store the grid coordinates that we have already examined.
+        Set<Cell> examined = new HashSet<Cell>();
+        examined.add(cell);
+        // find the Euclidean distance from the cell centre to the target position
+        double shortestDistanceSq = cell.findDistanceSq(lonLatPos);
+
+        boolean found = true;
+        int maxIterations = 100; // prevent the search going on forever
+        for (int i = 0; found && i < maxIterations; i++)
+        {
+            found = false;
+            for (Cell neighbour : cell.getNeighbours())
+            {
+                if(!examined.contains(neighbour))
+                {
+                    double distanceSq = neighbour.findDistanceSq(lonLatPos);
+                    if (distanceSq < shortestDistanceSq)
+                    {
+                        cell = neighbour;
+                        shortestDistanceSq = distanceSq;
+                        found = true;
+                    }
+                    examined.add(neighbour);
+                }
+            }
+        }
+
+        // We now have the nearest neighbour, but sometimes the position is actually
+        // contained within one of the cell's neighbours
+        if (cell.contains(lonLatPos))
+        {
+            return new GridCoordinatesImpl(cell.getI(), cell.getJ());
+        }
+        for (Cell neighbour : cell.getNeighbours())
         {
             if (neighbour.contains(lonLatPos))
             {
                 return new GridCoordinatesImpl(neighbour.getI(), neighbour.getJ());
             }
         }
-        for (Cell neighbour : cell.getCornerNeighbours())
-        {
-            if (neighbour.contains(lonLatPos))
-            {
-                return new GridCoordinatesImpl(neighbour.getI(), neighbour.getJ());
-            }
-        }
-        // If we get this far something probably went wrong with the LUT
-        //logger.debug("Point is not contained by cell or its neighbours");
-        return new GridCoordinatesImpl(lutCoords);
+
+        // The point is probably on the edge between grid cells and failing the
+        // contains() checks.  This is probably OK in the middle of a grid, but
+        // we might need to be careful at the edges - TODO.
+        return new GridCoordinatesImpl(cell.getI(), cell.getJ());
     }
 }

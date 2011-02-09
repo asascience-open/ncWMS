@@ -116,6 +116,32 @@ public final class CollectionUtils {
      * Creates and returns an unmodifiable List that wraps the given array.
      * Changes to the array will be reflected in the List.
      * @param arr The array to wrap as a List
+     * @param fillValue The value to use in place of Float.NaNs
+     * @return an unmodifiable List that wraps the array
+     * @throws NullPointerException if the array is null
+     */
+    public static List<Float> listFromFloatArray(final float[] arr, final Float fillValue)
+    {
+        if (arr == null) throw new NullPointerException("array cannot be null");
+        return new AbstractList<Float>()
+        {
+            @Override public Float get(int index) {
+                float val = arr[index];
+                if (Float.isNaN(val)) {
+                    return fillValue;
+                } else {
+                    return val;
+                }
+//                return Float.isNaN(val) ? fillValue : val;
+            }
+            @Override public int size() { return arr.length; }
+        };
+    }
+
+    /**
+     * Creates and returns an unmodifiable List that wraps the given array.
+     * Changes to the array will be reflected in the List.
+     * @param arr The array to wrap as a List
      * @return an unmodifiable List that wraps the array
      * @throws NullPointerException if the array is null
      */

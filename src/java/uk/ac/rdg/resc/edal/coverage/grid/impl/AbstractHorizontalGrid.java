@@ -88,22 +88,14 @@ public abstract class AbstractHorizontalGrid extends AbstractGrid implements Hor
         return this.crs;
     }
 
-    /**
-     * This is implemented on top of {@link #transformCoordinates(int, int)}.
-     */
     @Override
     public HorizontalPosition transformCoordinates(GridCoordinates coords) {
         if (coords.getDimension() != 2) {
             throw new IllegalArgumentException("GridCoordinates must be 2D");
         }
-        GridEnvelopeImpl gridEnv = GridEnvelopeImpl.convert(this.getGridExtent());
-        if (!gridEnv.contains(coords)) return null;
-        return this.transformCoordinatesNoBoundsCheck(coords.getCoordinateValue(0), coords.getCoordinateValue(1));
+        return transformCoordinates(coords.getCoordinateValue(0), coords.getCoordinateValue(1));
     }
 
-    /**
-     * This is implemented on top of {@link #transformCoordinates(int, int)}.
-     */
     @Override
     public HorizontalPosition transformCoordinates(int i, int j) {
         GridEnvelopeImpl gridEnv = GridEnvelopeImpl.convert(this.getGridExtent());

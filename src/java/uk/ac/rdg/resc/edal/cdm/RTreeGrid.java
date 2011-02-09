@@ -102,6 +102,14 @@ final class RTreeGrid extends AbstractCurvilinearGrid
      */
     public static RTreeGrid generate(GridCoordSystem coordSys)
     {
+        return generate(coordSys, RTREE_BRANCH_FACTOR);
+    }
+
+    /**
+     * The passed-in coordSys must have 2D horizontal coordinate axes.
+     */
+    public static RTreeGrid generate(GridCoordSystem coordSys, int branchFactor)
+    {
         CurvilinearGrid curvGrid = new CurvilinearGrid(coordSys);
 
         synchronized(CACHE)
@@ -112,7 +120,7 @@ final class RTreeGrid extends AbstractCurvilinearGrid
                 logger.debug("Need to generate new rtree");
                 // Create the RTree for this coordinate system
                 PRTree<CurvilinearGrid.Cell> rtree =
-                        new PRTree<CurvilinearGrid.Cell>(MBR_CONVERTER, RTREE_BRANCH_FACTOR);
+                        new PRTree<CurvilinearGrid.Cell>(MBR_CONVERTER, branchFactor);
                 rtree.load(curvGrid.getCells());
                 logger.debug("Generated new rtree");
                 // Create the RTreeGrid
@@ -162,11 +170,21 @@ final class RTreeGrid extends AbstractCurvilinearGrid
 
     public static void main(String[] args) throws Exception
     {
+        Runtime rt = Runtime.getRuntime();
         NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "sea_level");
-        RTreeGrid rTreeGrid = RTreeGrid.generate(grid.getCoordinateSystem());
-        HorizontalGrid targetDomain = new RegularGridImpl(rTreeGrid.getExtent(), 256, 256);
-        PixelMap pixelMap = new PixelMap(rTreeGrid, targetDomain);
-        nc.close();
+
+
+        long memUsed = getMemoryUsed(rt);
+        HorizontalGrid rTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
+        long rTreeFootprint = getMemoryUsed(rt) - memUsed;
+        System.out.println("Rtree consumes " + rTreeFootprint + " bytes");
+    }
+
+    private static long getMemoryUsed(Runtime rt) throws Exception
+    {
+        System.gc();
+        Thread.sleep(5000);
+        return rt.totalMemory() - rt.freeMemory();
     }
 }

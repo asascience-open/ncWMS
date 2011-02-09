@@ -535,6 +535,17 @@ public final class CurvilinearGrid
         }
 
         /**
+         * Gets the neighbours of this cell (up to eight) that join this cell
+         * at an edge or corner.
+         */
+        public List<Cell> getNeighbours()
+        {
+            List<Cell> neighbours = this.getEdgeNeighbours();
+            neighbours.addAll(this.getCornerNeighbours());
+            return neighbours;
+        }
+
+        /**
          * <p>Returns the area of this cell in square degrees.</p>
          * <p>Note that in some grid
          * formulations, the area could be NaN (in this case
@@ -595,15 +606,27 @@ public final class CurvilinearGrid
         }
 
         /**
+         * Finds the square of the distance between the centre of this cell and
+         * the given LonLatPosition
+         */
+        public double findDistanceSq(LonLatPosition pos)
+        {
+            LonLatPosition centre = this.getCentre();
+            double dx = pos.getLongitude() - centre.getLongitude();
+            double dy = pos.getLatitude() - centre.getLatitude();
+            return dx*dx + dy*dy;
+        }
+
+        /**
          * Returns true if this cell's {@link #getBoundaryPath() boundary}
          * contains the given longitude-latitude point.
          * @todo what happens if this cell is represented by NaNs?
          */
-        public boolean contains(LonLatPosition latLonPoint)
+        public boolean contains(LonLatPosition lonLatPos)
         {
             Path2D path = this.getBoundaryPath();
-            double lon = this.harmonizeWithCentre(latLonPoint.getLongitude());
-            return path.contains(lon, latLonPoint.getLatitude());
+            double lon = this.harmonizeWithCentre(lonLatPos.getLongitude());
+            return path.contains(lon, lonLatPos.getLatitude());
         }
 
         /**
