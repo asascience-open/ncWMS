@@ -27,6 +27,11 @@ public class KDTree {
         expansion_factor = 3.5f;
     }
 
+    public void setQueryParameters(double expansionFactor, double nominalMinimumResolution) {
+        expansion_factor = expansionFactor;
+        nominal_minimum_resolution = nominalMinimumResolution;
+    }
+
     public void buildTree() {
         // Load data from files into source_data, and keep track of min/max
         double min_lat = Float.POSITIVE_INFINITY, min_lon = Float.NEGATIVE_INFINITY;
@@ -54,8 +59,8 @@ public class KDTree {
         int num_leaf_elements = (int) Math.pow(2.0, Math.ceil(Math.log(num_elements)
                 / Math.log(2.0)));
         int num_tree_elements = 2 * num_leaf_elements - 1;
-        System.out.println(num_elements + " elements, " + num_leaf_elements
-                + " leaf, " + num_tree_elements + " total");
+        //System.out.println(num_elements + " elements, " + num_leaf_elements
+        //        + " leaf, " + num_tree_elements + " total");
         // Create the uninitialised tree with this number of elements
         tree = new TreeNode[num_tree_elements];
 
@@ -200,6 +205,22 @@ public class KDTree {
                 2 * tree_index_current + 1, discriminate_on_latitude);
         recursiveBuildTree(start_right, source_index_last,
                 2 * tree_index_current + 2, discriminate_on_latitude);
+    }
+
+    public Point limitedNearestNeighbour(double latitude, double longitude, double max_distance) {
+        Point nearest_neighbour = null;
+        double best_distance = Float.POSITIVE_INFINITY;
+        for (Point candidate : approxNearestNeighbour(latitude, longitude, max_distance)) {
+            double current_distance_latitude = (latitude - candidate.getLatitude());
+            double current_distance_longitude = (longitude - candidate.getLongitude());
+            double current_distance = current_distance_latitude * current_distance_latitude + current_distance_longitude * current_distance_longitude;
+            if (current_distance < best_distance) {
+                nearest_neighbour = candidate;
+                best_distance = current_distance;
+            }
+        }
+        // Return best result
+        return nearest_neighbour;
     }
 
     public List<Point> approxNearestNeighbour(double latitude, double longitude, double max_distance) {
