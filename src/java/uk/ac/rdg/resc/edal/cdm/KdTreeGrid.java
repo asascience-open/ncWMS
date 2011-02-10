@@ -80,7 +80,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
             CollectionUtils.newHashMap();
 
     private final KDTree kdTree;
-    private final float max_distance;
+    private double max_distance;
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
@@ -91,29 +91,26 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
         synchronized(CACHE)
         {
-            KdTreeGrid kdTreeGrid = CACHE.get(curvGrid);
+        KdTreeGrid kdTreeGrid = CACHE.get(curvGrid);
             if (kdTreeGrid == null)
             {
-                logger.debug("Need to generate new kdtree");
-                // Create the KdTree for this coordinate system
-                long start = System.nanoTime();
-                KDTree kdTree = new KDTree(curvGrid);
-                kdTree.buildTree();
-                long finish = System.nanoTime();
-                logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
-                System.out.println("Verifying tree");
-                kdTree.verifyChildren(0);
-                System.out.println("Tree finished verifying");
-                // Create the RTreeGrid
-                kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
-                // Now put this in the cache
-                CACHE.put(curvGrid, kdTreeGrid);
+        logger.debug("Need to generate new kdtree");
+        // Create the KdTree for this coordinate system
+        long start = System.nanoTime();
+        KDTree kdTree = new KDTree(curvGrid);
+        kdTree.buildTree();
+        long finish = System.nanoTime();
+        logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
+        // Create the Grid
+        kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
+        // Now put this in the cache
+        CACHE.put(curvGrid, kdTreeGrid);
             }
             else
             {
-                logger.debug("kdree found in cache");
-            }
-            return kdTreeGrid;
+        logger.debug("kdree found in cache");
+        }
+        return kdTreeGrid;
         }
     }
 
@@ -123,7 +120,12 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         // All points will be returned in WGS84 lon-lat
         super(curvGrid);
         this.kdTree = kdTree;
-        this.max_distance = (float)Math.sqrt(curvGrid.getMeanCellArea());
+        this.max_distance = Math.sqrt(curvGrid.getMeanCellArea());
+    }
+
+    void setQueryingParameters(double nominalMinimumResolution, double expansionFactor, double maxDistance) {
+        this.kdTree.setQueryParameters(expansionFactor, nominalMinimumResolution);
+        this.max_distance = maxDistance;
     }
 
     /**
@@ -139,7 +141,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         double lat = lonLatPos.getLatitude();
 
         // Find a set of candidate nearest-neighbours from the kd-tree
-        List<Point> nns = this.kdTree.approxNearestNeighbour(lat, lon, 0.5);
+        List<Point> nns = this.kdTree.approxNearestNeighbour(lat, lon, this.max_distance);
 
         // Now find the real nearest neighbour
         double shortestDistanceSq = Double.MAX_VALUE;
@@ -154,7 +156,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
                 closestCell = cell;
             }
         }
-        
+
         if (closestCell == null) return null;
 
         // Now find whether the NN or one of its neighbours actually contains the
@@ -181,7 +183,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
                "C:\\Godiva2_data\\ORCA025-R07-MEAN\\Exp4-Annual\\ORCA025-R07_y2004_ANNUAL_gridT2.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "sossheig_sqd"); //*/"sea_level");
         int size = 256;
-
+  
         // Read the data from the source
         long start = System.nanoTime();
         float[] data = (float[])grid.readDataSlice(0, 0, -1, -1).get1DJavaArray(float.class);
@@ -277,7 +279,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
                 : 360.0;
             path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
             g2d.fill(path);
-        }
+    }
 
         return im;
     }
