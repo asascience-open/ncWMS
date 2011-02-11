@@ -28,34 +28,29 @@
 
 package uk.ac.rdg.resc.edal.cdm;
 
-import com.infomatiq.jsi.Rectangle;
-import com.infomatiq.jsi.rtree.RTree;
-import gnu.trove.TIntProcedure;
-import java.util.ArrayList;
-import java.util.List;
+import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
-import java.util.Properties;
-import org.khelekore.prtree.MBR;
+import org.khelekore.prtree.MBRConverter;
+import org.khelekore.prtree.PRTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
-import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.GridCoordinatesImpl;
 import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.edal.util.Utils;
 
 /**
- * A HorizontalGrid that uses an RTree to look up the nearest neighbour of a point.
+ * A HorizontalGrid that uses a Priority RTree to look up the nearest neighbour of a point.
  */
-final class RTreeGrid extends AbstractCurvilinearGrid
+final class PRTreeGrid extends AbstractCurvilinearGrid
 {
-    private static final Logger logger = LoggerFactory.getLogger(RTreeGrid.class);
+    private static final Logger logger = LoggerFactory.getLogger(PRTreeGrid.class);
 
     /**
      * In-memory cache of LookUpTableGrid objects to save expensive re-generation of same object
@@ -64,43 +59,71 @@ final class RTreeGrid extends AbstractCurvilinearGrid
      * these.  This means that we could make other large objects available for
      * garbage collection.
      */
-    private static final Map<CurvilinearGrid, RTreeGrid> CACHE =
+    private static final Map<CurvilinearGrid, PRTreeGrid> CACHE =
             CollectionUtils.newHashMap();
 
-    private final RTree rtree;
+    /** The branch factor of the RTree */
+    private static final int RTREE_BRANCH_FACTOR = 10;
+
+    private final PRTree<CurvilinearGrid.Cell> rtree;
+
+    /**
+     * An object that can determine the minimum bounding rectangle of a
+     * CurvilinearGrid's cells.  We can save memory by not storing the MBR
+     * information redundantly (perhaps at the expense of some processing power?)
+     */
+    private static final MBRConverter<CurvilinearGrid.Cell> MBR_CONVERTER
+            = new MBRConverter<CurvilinearGrid.Cell>()
+    {
+        @Override
+        public double getMinX(Cell t) {
+            return t.getMinimumBoundingRectangle().getMinX();
+        }
+
+        @Override
+        public double getMinY(Cell t) {
+            return t.getMinimumBoundingRectangle().getMinY();
+        }
+
+        @Override
+        public double getMaxX(Cell t) {
+            return t.getMinimumBoundingRectangle().getMaxX();
+        }
+
+        @Override
+        public double getMaxY(Cell t) {
+            return t.getMinimumBoundingRectangle().getMaxY();
+        }
+    };
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
      */
-    public static RTreeGrid generate(GridCoordSystem coordSys)
+    public static PRTreeGrid generate(GridCoordSystem coordSys)
+    {
+        return generate(coordSys, RTREE_BRANCH_FACTOR);
+    }
+
+    /**
+     * The passed-in coordSys must have 2D horizontal coordinate axes.
+     */
+    public static PRTreeGrid generate(GridCoordSystem coordSys, int branchFactor)
     {
         CurvilinearGrid curvGrid = new CurvilinearGrid(coordSys);
 
         synchronized(CACHE)
         {
-            RTreeGrid rTreeGrid = CACHE.get(curvGrid);
+            PRTreeGrid rTreeGrid = CACHE.get(curvGrid);
             if (rTreeGrid == null)
             {
                 logger.debug("Need to generate new rtree");
                 // Create the RTree for this coordinate system
-                RTree rtree = new RTree();
-                rtree.init(new Properties()); // Todo: set max node entries?
-                int i = 0;
-                for (Cell cell : curvGrid.getCells())
-                {
-                    MBR mbr = cell.getMinimumBoundingRectangle();
-                    Rectangle rect = new Rectangle(
-                        (float)mbr.getMinX(),
-                        (float)mbr.getMinY(),
-                        (float)mbr.getMaxX(),
-                        (float)mbr.getMaxY()
-                    );
-                    rtree.add(rect, i);
-                    i++;
-                }
+                PRTree<CurvilinearGrid.Cell> rtree =
+                        new PRTree<CurvilinearGrid.Cell>(MBR_CONVERTER, branchFactor);
+                rtree.load(curvGrid.getCells());
                 logger.debug("Generated new rtree");
                 // Create the RTreeGrid
-                rTreeGrid = new RTreeGrid(curvGrid, rtree);
+                rTreeGrid = new PRTreeGrid(curvGrid, rtree);
                 // Now put this in the cache
                 CACHE.put(curvGrid, rTreeGrid);
             }
@@ -113,7 +136,7 @@ final class RTreeGrid extends AbstractCurvilinearGrid
     }
 
     /** Private constructor to prevent direct instantiation */
-    private RTreeGrid(CurvilinearGrid curvGrid, RTree rtree)
+    private PRTreeGrid(CurvilinearGrid curvGrid, PRTree<CurvilinearGrid.Cell> rtree)
     {
         // All points will be returned in WGS84 lon-lat
         super(curvGrid);
@@ -128,42 +151,19 @@ final class RTreeGrid extends AbstractCurvilinearGrid
     public GridCoordinates findNearestGridPoint(HorizontalPosition pos)
     {
         LonLatPosition lonLatPos = Utils.transformToWgs84LonLat(pos);
-        float lon = (float)lonLatPos.getLongitude();
-        float lat = (float)lonLatPos.getLatitude();
-        
-        // Create a rectangle representing the target point
-        Rectangle rect = new Rectangle(lon, lat, lon, lat);
-        IndexCollector indexCollector = new IndexCollector();
+        double lon = lonLatPos.getLongitude();
+        double lat = lonLatPos.getLatitude();
 
-        // Query the rTree
-        this.rtree.intersects(rect, indexCollector);
-
-        // Now look through the list of intersecting rectangles, finding which
-        // one contains the target point
-        int ni = this.curvGrid.getNi();
-        for (int i : indexCollector.indices)
+        // Find all cells that intersect this point
+        Iterable<CurvilinearGrid.Cell> cells = this.rtree.find(lon, lat, lon, lat);
+        for (CurvilinearGrid.Cell cell : cells)
         {
-            int celli = i % ni;
-            int cellj = i / ni;
-            Cell cell = this.curvGrid.getCell(celli, cellj);
             if (cell.contains(lonLatPos))
             {
-                return new GridCoordinatesImpl(celli, cellj);
+                return new GridCoordinatesImpl(cell.getI(), cell.getJ());
             }
         }
-
         return null;
-    }
-
-    /** Collects indices of intersecting rectanges from an RTree query */
-    private static final class IndexCollector implements TIntProcedure
-    {
-        private List<Integer> indices = new ArrayList<Integer>();
-
-        @Override public boolean execute(int i) {
-            indices.add(i);
-            return true; // Allow further invocations of this procedure
-        }
     }
 
     public static void main(String[] args) throws Exception
@@ -174,7 +174,7 @@ final class RTreeGrid extends AbstractCurvilinearGrid
 
 
         long memUsed = getMemoryUsed(rt);
-        HorizontalGrid rTreeGrid = RTreeGrid.generate(grid.getCoordinateSystem());
+        HorizontalGrid rTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
         long rTreeFootprint = getMemoryUsed(rt) - memUsed;
         System.out.println("Rtree consumes " + rTreeFootprint + " bytes");
     }

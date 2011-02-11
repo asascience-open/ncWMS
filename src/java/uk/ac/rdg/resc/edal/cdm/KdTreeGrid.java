@@ -91,26 +91,26 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
         synchronized(CACHE)
         {
-        KdTreeGrid kdTreeGrid = CACHE.get(curvGrid);
+            KdTreeGrid kdTreeGrid = CACHE.get(curvGrid);
             if (kdTreeGrid == null)
             {
-        logger.debug("Need to generate new kdtree");
-        // Create the KdTree for this coordinate system
-        long start = System.nanoTime();
-        KDTree kdTree = new KDTree(curvGrid);
-        kdTree.buildTree();
-        long finish = System.nanoTime();
-        logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
-        // Create the Grid
-        kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
-        // Now put this in the cache
-        CACHE.put(curvGrid, kdTreeGrid);
+                logger.debug("Need to generate new kdtree");
+                // Create the KdTree for this coordinate system
+                long start = System.nanoTime();
+                KDTree kdTree = new KDTree(curvGrid);
+                kdTree.buildTree();
+                long finish = System.nanoTime();
+                logger.debug("Generated new kdtree in {} seconds", (finish - start) / 1.e9);
+                // Create the Grid
+                kdTreeGrid = new KdTreeGrid(curvGrid, kdTree);
+                // Now put this in the cache
+                CACHE.put(curvGrid, kdTreeGrid);
             }
             else
             {
-        logger.debug("kdree found in cache");
-        }
-        return kdTreeGrid;
+                logger.debug("kdree found in cache");
+            }
+            return kdTreeGrid;
         }
     }
 
@@ -130,8 +130,7 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
     /**
      * @return the nearest grid point to the given lat-lon point, or null if the
-     * lat-lon point is not contained within this layer's domain. The grid point
-     * is given as a two-dimensional integer array: [i,j].
+     * lat-lon point is not contained within this layer's domain.
      */
     @Override
     public GridCoordinates findNearestGridPoint(HorizontalPosition pos)
@@ -146,9 +145,10 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         // Now find the real nearest neighbour
         double shortestDistanceSq = Double.MAX_VALUE;
         CurvilinearGrid.Cell closestCell = null;
+        int ni = this.curvGrid.getNi();
         for (Point nn : nns) {
-            int i = nn.index % this.curvGrid.getNi();
-            int j = nn.index / this.curvGrid.getNi();
+            int i = nn.index % ni;
+            int j = nn.index / ni;
             CurvilinearGrid.Cell cell = this.curvGrid.getCell(i, j);
             double distanceSq = cell.findDistanceSq(lonLatPos);
             if (distanceSq < shortestDistanceSq) {
@@ -180,10 +180,28 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
     public static void main(String[] args) throws Exception
     {
         NetcdfDataset nc = NetcdfDataset.openDataset(//"C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
-               "C:\\Godiva2_data\\ORCA025-R07-MEAN\\Exp4-Annual\\ORCA025-R07_y2004_ANNUAL_gridT2.nc");
-        GridDatatype grid = CdmUtils.getGridDatatype(nc, "sossheig_sqd"); //*/"sea_level");
+//               "C:\\Godiva2_data\\ORCA025-R07-MEAN\\Exp4-Annual\\ORCA025-R07_y2004_ANNUAL_gridT2.nc");
+                 "C:\\Godiva2_data\\EUMETSAT_TEST\\xc_yc\\W_XX-EUMETSAT-Darmstadt,VIS+IR+IMAGERY,MET7+MVIRI_C_EUMS_20091110120000.nc");
+        GridDatatype grid = CdmUtils.getGridDatatype(nc, "ch1"); ///*"sossheig_sqd"); //*/"sea_level");
         int size = 256;
   
+        CurvilinearGrid cv = new CurvilinearGrid(grid.getCoordinateSystem());
+        int nans = 0;
+        int nonnans = 0;
+        for (Cell c : cv.getCells()) {
+            if (Double.isNaN(c.getCentre().getLongitude()))
+            {
+                nans++;
+            }
+            else
+            {
+                nonnans++;
+            }
+        }
+        System.out.println("nans: " + nans + ", nonnans: " + nonnans);
+
+        if (1 == 1) return;
+
         // Read the data from the source
         long start = System.nanoTime();
         float[] data = (float[])grid.readDataSlice(0, 0, -1, -1).get1DJavaArray(float.class);
@@ -199,15 +217,15 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
             .colourScaleRange(dataRange)
             .build();
 
-        start = System.nanoTime();
-        CurvilinearGrid curvGrid = new CurvilinearGrid(grid.getCoordinateSystem());
-        BufferedImage vg = vectorGraphic(dataList, curvGrid, ip);
-        System.out.println("Created vector graphic in " + getTimingMs(start) + " ms");
-        ImageIO.write(vg, "png", new File("c:\\vector.png"));
+//        start = System.nanoTime();
+//        CurvilinearGrid curvGrid = new CurvilinearGrid(grid.getCoordinateSystem());
+//        BufferedImage vg = vectorGraphic(dataList, curvGrid, ip);
+//        System.out.println("Created vector graphic in " + getTimingMs(start) + " ms");
+//        ImageIO.write(vg, "png", new File("c:\\vector.png"));
 
         start = System.nanoTime();
-        AbstractCurvilinearGrid kdTreeGrid = KdTreeGrid.generate(grid.getCoordinateSystem());
-        System.out.println("Generated lutGrid in " + getTimingMs(start) + " ms");
+        AbstractCurvilinearGrid kdTreeGrid = LookUpTableGrid.generate(grid.getCoordinateSystem());
+        System.out.println("Generated index in " + getTimingMs(start) + " ms");
         HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), size, size);
 
         start = System.nanoTime();
@@ -215,8 +233,8 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         System.out.println("Created PixelMap in " + getTimingMs(start) + " ms");
 
         start = System.nanoTime();
-        List<Float> newData = CdmUtils.readHorizontalPoints(nc, grid, kdTreeGrid, 0, 0, targetDomain);
-        System.out.println("Read data in " + getTimingMs(start) + " ms (includes creating PixelMap again)");
+        List<Float> newData = CdmUtils.readHorizontalPoints(nc, grid, 0, 0, pixelMap, targetDomain.size());
+        System.out.println("Read data in " + getTimingMs(start) + " ms");
         nc.close();
 
         start = System.nanoTime();

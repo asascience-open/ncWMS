@@ -113,8 +113,7 @@ final class LookUpTableGrid extends AbstractCurvilinearGrid
 
     /**
      * @return the nearest grid point to the given lat-lon point, or null if the
-     * lat-lon point is not contained within this layer's domain. The grid point
-     * is given as a two-dimensional integer array: [i,j].
+     * lat-lon point is not contained within this layer's domain.
      */
     @Override
     public GridCoordinates findNearestGridPoint(HorizontalPosition pos)

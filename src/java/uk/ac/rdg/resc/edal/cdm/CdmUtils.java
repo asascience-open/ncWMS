@@ -415,16 +415,23 @@ public final class CdmUtils
             // domain.  Return a list of null values.
             return nullList(targetDomain.size());
         }
-        
+
+        return readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, targetDomain.size());
+    }
+
+    static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
+            int tIndex, int zIndex, PixelMap pixelMap, int targetDomainSize)
+            throws IOException
+    {
         // Create an array of the right size to hold the data
-        float[] data = new float[targetDomain.size()];
+        float[] data = new float[targetDomainSize];
         Arrays.fill(data, Float.NaN); // Will be represented as nulls in the returned List
 
         // Now read the actual data
         DataReadingStrategy strategy = getOptimumDataReadingStrategy(nc);
-        start = System.nanoTime();
+        long start = System.nanoTime();
         int bytesRead = strategy.readData(tIndex, zIndex, grid, pixelMap, data);
-        finish = System.nanoTime();
+        long finish = System.nanoTime();
         logger.debug("{} bytes read in {} ms", bytesRead, (finish - start) / 1.e6);
 
         // Wrap the data array as an immutable list and return
