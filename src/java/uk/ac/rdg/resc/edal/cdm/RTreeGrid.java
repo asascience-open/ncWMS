@@ -112,6 +112,12 @@ final class RTreeGrid extends AbstractCurvilinearGrid
         }
     }
 
+    public static void clearCache() {
+        synchronized(CACHE) {
+            CACHE.clear();
+        }
+    }
+
     /** Private constructor to prevent direct instantiation */
     private RTreeGrid(CurvilinearGrid curvGrid, RTree rtree)
     {

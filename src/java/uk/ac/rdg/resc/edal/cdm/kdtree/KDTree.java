@@ -36,24 +36,29 @@ public class KDTree {
         // Load data from files into source_data, and keep track of min/max
         double min_lat = Float.POSITIVE_INFINITY, min_lon = Float.NEGATIVE_INFINITY;
         double max_lat = Float.NEGATIVE_INFINITY, max_lon = Float.POSITIVE_INFINITY;
-        int counter = 0;
+        int source_counter = -1, destination_counter = 0;
         for (CurvilinearGrid.Cell cell : this.curvGrid.getCells()) {
+            source_counter++;
             double new_lat = cell.getCentre().getLatitude();
             double new_lon = cell.getCentre().getLongitude();
+            if (Double.isNaN(new_lat) || Double.isNaN(new_lon)) {
+                continue;
+            }
             min_lat = Math.min(min_lat, new_lat);
             max_lat = Math.max(max_lat, new_lat);
             min_lon = Math.min(min_lon, new_lon);
             max_lon = Math.max(max_lon, new_lon);
-            source_data[counter] = new Point(new_lat, new_lon, counter);
-            counter++;
+            source_data[destination_counter] = new Point(new_lat, new_lon, source_counter);
+            destination_counter++;
         }
+        num_elements = destination_counter; // Hack! If NaNs were filtered, take account of this
 
         // Compute the nominal resolution
         nominal_minimum_resolution = 0.25f;// Math.sqrt(Math.min(max_lon - min_lon, max_lat - min_lat)) / 20.0f;
 
         // Perform an initial sort of the source data by longitude (likely to be bigger for world data)
         Comparator<Point> longitude_comp = new PointComparator(false);
-        Arrays.sort(source_data, longitude_comp);
+        Arrays.sort(source_data, 0, num_elements, longitude_comp);
 
         // Calculate the number of elements needed in the tree
         int num_leaf_elements = (int) Math.pow(2.0, Math.ceil(Math.log(num_elements)

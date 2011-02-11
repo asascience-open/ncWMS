@@ -104,6 +104,12 @@ final class LookUpTableGrid extends AbstractCurvilinearGrid
         }
     }
 
+    public static void clearCache() {
+        synchronized (CACHE) {
+            CACHE.clear();
+        }
+    }
+
     /** Private constructor to prevent direct instantiation */
     private LookUpTableGrid(CurvilinearGrid curvGrid, LookUpTable lut)
     {
@@ -120,7 +126,7 @@ final class LookUpTableGrid extends AbstractCurvilinearGrid
     {
         LonLatPosition lonLatPos = Utils.transformToWgs84LonLat(pos);
         int[] lutCoords =
-            this.lut.getGridCoordinates(lonLatPos.getLongitude(), lonLatPos.getLatitude());
+                this.lut.getGridCoordinates(lonLatPos.getLongitude(), lonLatPos.getLatitude());
         // Return null if the latLonPoint does not match a valid grid point
         if (lutCoords == null) return null;
         // Check that this cell really contains this point, if not, check

@@ -36,11 +36,13 @@ import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import java.util.Map;
+import java.util.Set;
 import javax.imageio.ImageIO;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
@@ -81,6 +83,9 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
     private final KDTree kdTree;
     private double max_distance;
+    
+    // Minimisation iterations: 0 = no searching, 1=search neighbours only, >1 = minimisation
+    private int max_minimisation_iterations = 1;
 
     /**
      * The passed-in coordSys must have 2D horizontal coordinate axes.
@@ -114,6 +119,12 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         }
     }
 
+    public static void clearCache() {
+        synchronized(CACHE) {
+            CACHE.clear();
+        }
+    }
+
     /** Private constructor to prevent direct instantiation */
     private KdTreeGrid(CurvilinearGrid curvGrid, KDTree kdTree)
     {
@@ -123,9 +134,10 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         this.max_distance = Math.sqrt(curvGrid.getMeanCellArea());
     }
 
-    void setQueryingParameters(double nominalMinimumResolution, double expansionFactor, double maxDistance) {
+    void setQueryingParameters(double nominalMinimumResolution, double expansionFactor, double maxDistance, int minimisationIterations) {
         this.kdTree.setQueryParameters(expansionFactor, nominalMinimumResolution);
         this.max_distance = maxDistance;
+        this.max_minimisation_iterations = minimisationIterations;
     }
 
     /**
@@ -145,10 +157,11 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         // Now find the real nearest neighbour
         double shortestDistanceSq = Double.MAX_VALUE;
         CurvilinearGrid.Cell closestCell = null;
-        int ni = this.curvGrid.getNi();
+        int number_points_horizontal = this.curvGrid.getNi();
         for (Point nn : nns) {
-            int i = nn.index % ni;
-            int j = nn.index / ni;
+            int this_point_index = nn.getIndex();
+            int i = this_point_index % number_points_horizontal;
+            int j = this_point_index / number_points_horizontal;
             CurvilinearGrid.Cell cell = this.curvGrid.getCell(i, j);
             double distanceSq = cell.findDistanceSq(lonLatPos);
             if (distanceSq < shortestDistanceSq) {
@@ -159,32 +172,49 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
         if (closestCell == null) return null;
 
-        // Now find whether the NN or one of its neighbours actually contains the
-        // point
         if (closestCell.contains(lonLatPos)) {
             return new GridCoordinatesImpl(closestCell.getI(), closestCell.getJ());
         }
-        // Do a neighbour search, as sometimes the nearest neighbour does
-        // not fall precisely into the cell
-        for (CurvilinearGrid.Cell neighbour : closestCell.getNeighbours()) {
-            if (neighbour.contains(lonLatPos)) {
-                return new GridCoordinatesImpl(neighbour.getI(), neighbour.getJ());
+
+        // We do a gradient-descent method to find the true nearest neighbour
+        // We store the grid coordinates that we have already examined.
+        Set<Cell> examined = new HashSet<Cell>();
+        examined.add(closestCell);
+
+        boolean found_closer_neighbour = true;
+        boolean found_containing_cell = false;
+        for (int i = 0; found_closer_neighbour && !found_containing_cell && i < this.max_minimisation_iterations; i++) {
+            found_closer_neighbour = false;
+            for (Cell neighbour : closestCell.getNeighbours()) {
+                if (!examined.contains(neighbour)) {
+                    double distanceSq = neighbour.findDistanceSq(lonLatPos);
+                    if (distanceSq < shortestDistanceSq) {
+                        closestCell = neighbour;
+                        shortestDistanceSq = distanceSq;
+                        found_closer_neighbour = true;
+                        if (neighbour.contains(lonLatPos)) {
+                            found_containing_cell = true;
+                            break;
+                        }
+                    }
+                    examined.add(neighbour);
+                }
             }
         }
 
-        // Sometimes none of the cells pass the contains() test, possibly because
-        // the target position is on the edge of a cell.
+
         return new GridCoordinatesImpl(closestCell.getI(), closestCell.getJ());
+
     }
 
     public static void main(String[] args) throws Exception
     {
-        NetcdfDataset nc = NetcdfDataset.openDataset(//"C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
+    NetcdfDataset nc = NetcdfDataset.openDataset(//"C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
 //               "C:\\Godiva2_data\\ORCA025-R07-MEAN\\Exp4-Annual\\ORCA025-R07_y2004_ANNUAL_gridT2.nc");
                  "C:\\Godiva2_data\\EUMETSAT_TEST\\xc_yc\\W_XX-EUMETSAT-Darmstadt,VIS+IR+IMAGERY,MET7+MVIRI_C_EUMS_20091110120000.nc");
         GridDatatype grid = CdmUtils.getGridDatatype(nc, "ch1"); ///*"sossheig_sqd"); //*/"sea_level");
-        int size = 256;
-  
+    int size = 256;
+
         CurvilinearGrid cv = new CurvilinearGrid(grid.getCoordinateSystem());
         int nans = 0;
         int nonnans = 0;
@@ -202,20 +232,20 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 
         if (1 == 1) return;
 
-        // Read the data from the source
-        long start = System.nanoTime();
-        float[] data = (float[])grid.readDataSlice(0, 0, -1, -1).get1DJavaArray(float.class);
-        List<Float> dataList = CollectionUtils.listFromFloatArray(data, null);
-        Range<Float> dataRange = Ranges.findMinMax(dataList);
-        System.out.println("Read whole data in " + getTimingMs(start) + " ms");
+    // Read the data from the source
+    long start = System.nanoTime();
+    float[] data = (float[])grid.readDataSlice(0, 0, -1, -1).get1DJavaArray(float.class);
+    List<Float> dataList = CollectionUtils.listFromFloatArray(data, null);
+    Range<Float> dataRange = Ranges.findMinMax(dataList);
+    System.out.println("Read whole data in " + getTimingMs(start) + " ms");
 
-        ImageProducer ip = new ImageProducer.Builder()
-            .palette(ColorPalette.get(null))
-            .style(Style.BOXFILL)
-            .height(size)
-            .width(size)
-            .colourScaleRange(dataRange)
-            .build();
+    ImageProducer ip = new ImageProducer.Builder()
+    .palette(ColorPalette.get(null))
+    .style(Style.BOXFILL)
+    .height(size)
+    .width(size)
+    .colourScaleRange(dataRange)
+    .build();
 
 //        start = System.nanoTime();
 //        CurvilinearGrid curvGrid = new CurvilinearGrid(grid.getCoordinateSystem());
@@ -223,10 +253,10 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
 //        System.out.println("Created vector graphic in " + getTimingMs(start) + " ms");
 //        ImageIO.write(vg, "png", new File("c:\\vector.png"));
 
-        start = System.nanoTime();
+    start = System.nanoTime();
         AbstractCurvilinearGrid kdTreeGrid = LookUpTableGrid.generate(grid.getCoordinateSystem());
         System.out.println("Generated index in " + getTimingMs(start) + " ms");
-        HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), size, size);
+    HorizontalGrid targetDomain = new RegularGridImpl(kdTreeGrid.getExtent(), size, size);
 
         start = System.nanoTime();
         PixelMap pixelMap = new PixelMap(kdTreeGrid, targetDomain);
@@ -237,69 +267,69 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         System.out.println("Read data in " + getTimingMs(start) + " ms");
         nc.close();
 
-        start = System.nanoTime();
-        ip.addFrame(newData, null);
-        List<BufferedImage> ims = ip.getRenderedFrames();
-        ImageIO.write(ims.get(0), "png", new File("C:\\lookup.png"));
-        System.out.println("Created and wrote image in " + getTimingMs(start) + " ms");
+    start = System.nanoTime();
+    ip.addFrame(newData, null);
+    List<BufferedImage> ims = ip.getRenderedFrames();
+    ImageIO.write(ims.get(0), "png", new File("C:\\lookup.png"));
+    System.out.println("Created and wrote image in " + getTimingMs(start) + " ms");
 
     }
 
     private static BufferedImage vectorGraphic(List<Float> data, CurvilinearGrid curvGrid, ImageProducer ip)
-            throws IOException
+    throws IOException
     {
-        int width = ip.getPicWidth();
-        int height = ip.getPicHeight();
-        IndexColorModel cm = ip.getColorModel();
-        int[] rgbs = new int[cm.getMapSize()];
-        cm.getRGBs(rgbs);
-        BufferedImage im = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, cm);
-        Graphics2D g2d = im.createGraphics();
+    int width = ip.getPicWidth();
+    int height = ip.getPicHeight();
+    IndexColorModel cm = ip.getColorModel();
+    int[] rgbs = new int[cm.getMapSize()];
+    cm.getRGBs(rgbs);
+    BufferedImage im = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, cm);
+    Graphics2D g2d = im.createGraphics();
 
-        GeographicBoundingBox bbox = curvGrid.getBoundingBox();
+    GeographicBoundingBox bbox = curvGrid.getBoundingBox();
 
-        double lonDiff = bbox.getEastBoundLongitude() - bbox.getWestBoundLongitude();
-        double latDiff = bbox.getNorthBoundLatitude() - bbox.getSouthBoundLatitude();
+    double lonDiff = bbox.getEastBoundLongitude() - bbox.getWestBoundLongitude();
+    double latDiff = bbox.getNorthBoundLatitude() - bbox.getSouthBoundLatitude();
 
-        // This ensures that the highest value of longitude (corresponding
-        // with nLon - 1) is getLonMax()
-        double lonStride = lonDiff / (width - 1);
-        double latStride = latDiff / (height - 1);
+    // This ensures that the highest value of longitude (corresponding
+    // with nLon - 1) is getLonMax()
+    double lonStride = lonDiff / (width - 1);
+    double latStride = latDiff / (height - 1);
 
-        // Create the transform.  We scale by the inverse of the stride length
-        AffineTransform transform = new AffineTransform();
-        transform.scale(1.0/lonStride, 1.0/latStride);
-        // Then we translate by the minimum coordinate values
-        transform.translate(-bbox.getWestBoundLongitude(), -bbox.getSouthBoundLatitude());
+    // Create the transform.  We scale by the inverse of the stride length
+    AffineTransform transform = new AffineTransform();
+    transform.scale(1.0/lonStride, 1.0/latStride);
+    // Then we translate by the minimum coordinate values
+    transform.translate(-bbox.getWestBoundLongitude(), -bbox.getSouthBoundLatitude());
 
-        g2d.setTransform(transform);
+    g2d.setTransform(transform);
 
-        // Populate the BufferedImages using the information from the curvilinear grid
-        // Iterate over all the cells in the grid, painting the i and j indices of the
-        // cell onto the BufferedImage
-        for (Cell cell : curvGrid.getCells())
-        {
-            int index = cell.getI() + curvGrid.getNi() * cell.getJ();
-            Float val = data.get(index);
-            int colourIndex = ip.getColourIndex(val);
+    // Populate the BufferedImages using the information from the curvilinear grid
+    // Iterate over all the cells in the grid, painting the i and j indices of the
+    // cell onto the BufferedImage
+    for (Cell cell : curvGrid.getCells())
+    {
+    int index = cell.getI() + curvGrid.getNi() * cell.getJ();
+    Float val = data.get(index);
+    int colourIndex = ip.getColourIndex(val);
 
-            // Get a Path representing the boundary of the cell
-            Path2D path = cell.getBoundaryPath();
-            //g2d.setPaint(new Color(rgbs[colourIndex]));
-            g2d.setPaint(new Color(cm.getRGB(colourIndex)));
-            g2d.fill(path);
+    // Get a Path representing the boundary of the cell
+    Path2D path = cell.getBoundaryPath();
+    //g2d.setPaint(new Color(rgbs[colourIndex]));
+    g2d.setPaint(new Color(cm.getRGB(colourIndex)));
+    g2d.fill(path);
 
-            // We paint a second copy of the cell, shifted by 360 degrees, to handle
-            // the anti-meridian
-            // TODO: this bit increases runtime by 30%
-            double shiftLon = cell.getCentre().getLongitude() > 0.0
-                ? -360.0
-                : 360.0;
-            path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
-            g2d.fill(path);
+    // We paint a second copy of the cell, shifted by 360 degrees, to handle
+    // the anti-meridian
+    // TODO: this bit increases runtime by 30%
+    double shiftLon = cell.getCentre().getLongitude() > 0.0
+    ? -360.0
+    : 360.0;
+    path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
+    g2d.fill(path);
     }
 
-        return im;
+    return im;
     }
 
     private static double getTimingMs(long startNs)

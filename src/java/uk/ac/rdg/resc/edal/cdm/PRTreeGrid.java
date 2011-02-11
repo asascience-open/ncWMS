@@ -63,7 +63,7 @@ final class PRTreeGrid extends AbstractCurvilinearGrid
             CollectionUtils.newHashMap();
 
     /** The branch factor of the RTree */
-    private static final int RTREE_BRANCH_FACTOR = 10;
+    public static final int RTREE_BRANCH_FACTOR = 10;
 
     private final PRTree<CurvilinearGrid.Cell> rtree;
 
@@ -132,6 +132,12 @@ final class PRTreeGrid extends AbstractCurvilinearGrid
                 logger.debug("RTree found in cache");
             }
             return rTreeGrid;
+        }
+    }
+
+    public static void clearCache() {
+        synchronized(CACHE) {
+            CACHE.clear();
         }
     }
 
