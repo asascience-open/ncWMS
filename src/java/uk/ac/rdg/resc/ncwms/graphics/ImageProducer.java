@@ -35,6 +35,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
+import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
@@ -163,6 +164,17 @@ public final class ImageProducer
             this.renderedFrames.add(this.createImage(comps, label));
         }
     }
+
+    /**
+     * Creates and returns an image with an appropriate ColorModel and palette
+     * for this
+     */
+
+    public IndexColorModel getColorModel()
+    {
+        return this.colorPalette.getColorModel(this.numColourBands,
+            this.opacity, this.bgColor, this.transparent);
+    }
     
     /**
      * Creates and returns a single frame as an Image, based on the given data.
@@ -186,8 +198,7 @@ public final class ImageProducer
         }
         
         // Create a ColorModel for the image
-        ColorModel colorModel = this.colorPalette.getColorModel(this.numColourBands,
-            this.opacity, this.bgColor, this.transparent);
+        ColorModel colorModel = this.getColorModel();
         
         // Create the Image
         DataBuffer buf = new DataBufferByte(pixels, pixels.length);
@@ -275,7 +286,7 @@ public final class ImageProducer
     /**
      * @return the colour index that corresponds to the given value
      */
-    private int getColourIndex(Float value)
+    public int getColourIndex(Float value)
     {
         if (value == null)
         {
