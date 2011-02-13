@@ -1,17 +1,27 @@
 package uk.ac.rdg.resc.edal.cdm;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import org.opengis.metadata.extent.GeographicBoundingBox;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
+import uk.ac.rdg.resc.edal.cdm.CurvilinearGrid.Cell;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.graphics.ImageProducer;
 import uk.ac.rdg.resc.ncwms.graphics.ImageProducer.Style;
@@ -22,9 +32,113 @@ import uk.ac.rdg.resc.ncwms.graphics.ImageProducer.Style;
  */
 public class BenchmarkGrids {
 
-    public static void run_querytime_benchmarking(AbstractCurvilinearGrid grid, int size, int warmup_runs, int tries_per_parameter_set) throws Exception {
+    private static void run_imagemaker_comparison(NetcdfDataset nc, GridDatatype gdt, AbstractCurvilinearGrid grid, int size, int warmup_runs, int tries_per_parameter_set) throws Exception {
 
-        ArrayList<Double> gridding_times = new ArrayList<Double>();
+        List<Double> source_push_results = new ArrayList<Double>();
+        List<Double> destination_pull_results = new ArrayList<Double>();
+
+        for (int i = 0; i < tries_per_parameter_set + warmup_runs; i++) {
+
+            ImageProducer ip = new ImageProducer.Builder()
+                    .palette(ColorPalette.get(null))
+                    .style(Style.BOXFILL)
+                    .height(size)
+                    .width(size)
+                    .build();
+
+            // Build an image using "destination-pull"
+            long start = System.nanoTime();
+            HorizontalGrid targetDomain = new RegularGridImpl(grid.getExtent(), size, size);
+            List<Float> data = CdmUtils.readHorizontalPoints(nc, gdt.getName(), 0, 0, targetDomain);
+            ip.addFrame(data, null);
+            BufferedImage im = ip.getRenderedFrames().get(0);
+            long finish = System.nanoTime();
+
+            ImageIO.write(im, "png", new File("destpull.png"));
+            double image_build_time = (finish - start) / 1.e9;
+            if (i >= warmup_runs) {
+                destination_pull_results.add(image_build_time);
+            }
+
+            // Build an image using "source-push"
+            start = System.nanoTime();
+            float[] dataArr = (float[])gdt.readDataSlice(0, 0, -1, -1).get1DJavaArray(float.class);
+            List<Float> dataList = CollectionUtils.listFromFloatArray(dataArr, null);
+            im = vectorGraphic(dataList, grid.curvGrid, ip);
+            finish = System.nanoTime();
+
+            ImageIO.write(im, "png", new File("sourcepush.png"));
+            image_build_time = (finish - start) / 1.e9;
+            if (i >= warmup_runs) {
+                source_push_results.add(image_build_time);
+            }
+        }
+
+        printStats("Source-push Times (size=" + size + ")", source_push_results);
+        printStats("Destination-pull Times (size=" + size + ")", destination_pull_results);
+    }
+
+    private static BufferedImage vectorGraphic(List<Float> data, CurvilinearGrid curvGrid, ImageProducer ip)
+            throws IOException
+    {
+        int width = ip.getPicWidth();
+        int height = ip.getPicHeight();
+        IndexColorModel cm = ip.getColorModel();
+        int[] rgbs = new int[cm.getMapSize()];
+        cm.getRGBs(rgbs);
+        BufferedImage im = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, cm);
+        Graphics2D g2d = im.createGraphics();
+
+        GeographicBoundingBox bbox = curvGrid.getBoundingBox();
+
+        double lonDiff = bbox.getEastBoundLongitude() - bbox.getWestBoundLongitude();
+        double latDiff = bbox.getNorthBoundLatitude() - bbox.getSouthBoundLatitude();
+
+        // This ensures that the highest value of longitude (corresponding
+        // with nLon - 1) is getLonMax()
+        double lonStride = lonDiff / (width - 1);
+        double latStride = latDiff / (height - 1);
+
+        // Create the transform.  We scale by the inverse of the stride length
+        AffineTransform transform = new AffineTransform();
+        transform.scale(1.0 / lonStride, 1.0 / latStride);
+        // Then we translate by the minimum coordinate values
+        transform.translate(-bbox.getWestBoundLongitude(), -bbox.getSouthBoundLatitude());
+
+        g2d.setTransform(transform);
+
+        // Populate the BufferedImages using the information from the curvilinear grid
+        // Iterate over all the cells in the grid, painting the i and j indices of the
+        // cell onto the BufferedImage
+        for (Cell cell : curvGrid.getCells()) {
+            // Need to flip the y-axis
+            int j = curvGrid.getNj() - 1 - cell.getJ();
+            int index = cell.getI() + curvGrid.getNi() * j;
+            Float val = data.get(index);
+            int colourIndex = ip.getColourIndex(val);
+
+            // Get a Path representing the boundary of the cell
+            Path2D path = cell.getBoundaryPath();
+            //g2d.setPaint(new Color(rgbs[colourIndex]));
+            g2d.setPaint(new Color(cm.getRGB(colourIndex)));
+            g2d.fill(path);
+
+            // We paint a second copy of the cell, shifted by 360 degrees, to handle
+            // the anti-meridian
+            // TODO: this bit increases runtime by 30%
+            double shiftLon = cell.getCentre().getLongitude() > 0.0
+                    ? -360.0
+                    : 360.0;
+            path.transform(AffineTransform.getTranslateInstance(shiftLon, 0.0));
+            g2d.fill(path);
+        }
+
+        return im;
+    }
+
+    private static void run_querytime_benchmarking(AbstractCurvilinearGrid grid, int size, int warmup_runs, int tries_per_parameter_set) throws Exception {
+
+        List<Double> gridding_times = new ArrayList<Double>();
         HorizontalGrid targetDomain = new RegularGridImpl(grid.getExtent(), size, size);
 
         for (int i = 0; i < tries_per_parameter_set + warmup_runs; i++) {
@@ -61,7 +175,7 @@ public class BenchmarkGrids {
             case 3:
                 return RTreeGrid.generate(gcs);
             default:
-                throw new Exception("grid_type must be 0,1 or 2");
+                throw new Exception("grid_type must be 0,1,2 or 3");
         }
     }
 
@@ -239,7 +353,7 @@ public class BenchmarkGrids {
 
     }
 
-    public static void printStats(String title, ArrayList<Double> results) {
+    public static void printStats(String title, List<Double> results) {
         System.out.println(title);
         for (double result : results) {
             System.out.println(result);
@@ -272,9 +386,10 @@ public class BenchmarkGrids {
 
     public static void main(String[] args) throws Exception {
         boolean perform_kdtree_tuning = false;
-        boolean perform_buildtime_benchmarking = true;
-        boolean perform_querytime_benchmarking = true;
-        boolean produce_test_output = true;
+        boolean perform_buildtime_benchmarking = false;
+        boolean perform_querytime_benchmarking = false;
+        boolean produce_test_output = false;
+        boolean perform_imagemaker_comparison = true; // Compare source-push and destination-pull methods for generating images
 
         String test_output_filename = "/home/andy/sat_data/test.png";
         int test_output_size = 256;
@@ -330,21 +445,30 @@ public class BenchmarkGrids {
                     grid_type, data_filename, data_variable, warmup_runs, tries_per_parameter_set);
         }
 
-
-        if (perform_querytime_benchmarking) {
+        if (perform_querytime_benchmarking || perform_imagemaker_comparison) {
             NetcdfDataset nc = NetcdfDataset.openDataset(data_filename);
             GridDatatype grid = CdmUtils.getGridDatatype(nc, data_variable);
             GridCoordSystem gcs = grid.getCoordinateSystem();
             AbstractCurvilinearGrid index = getGrid(grid_type, gcs);
 
-
             if (index instanceof KdTreeGrid) {
                 ((KdTreeGrid) index).setQueryingParameters(nominal_resolution, expansion_factor, max_distance, max_iterations);
             }
 
-            System.out.printf("Performing querytime benchmarking (dataset %d, index %d)\n", dataset, grid_type);
-            run_querytime_benchmarking(
-                    index, test_output_size, warmup_runs, tries_per_parameter_set);
+            if (perform_querytime_benchmarking) {
+                System.out.printf("Performing querytime benchmarking (dataset %d, index %d)\n", dataset, grid_type);
+                run_querytime_benchmarking(
+                        index, test_output_size, warmup_runs, tries_per_parameter_set);
+            }
+
+            if (perform_imagemaker_comparison) {
+                System.out.printf("Performing image-maker comparison (dataset %d, index %d)\n", dataset, grid_type);
+                List<Integer> sizes = Arrays.asList(256, 512, 1024);
+                for (int size : sizes) {
+                    run_imagemaker_comparison(
+                            nc, grid, index, size, warmup_runs, tries_per_parameter_set);
+                }
+            }
         }
 
         if (produce_test_output) {
