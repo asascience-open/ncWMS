@@ -27,15 +27,10 @@
  */
 package uk.ac.rdg.resc.ncwms.controller;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketException;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,32 +39,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.plot.IntervalMarker;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.chart.title.TextTitle;
-import org.jfree.data.time.Millisecond;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.ui.HorizontalAlignment;
-import org.jfree.ui.RectangleAnchor;
-import org.jfree.ui.RectangleEdge;
-import org.jfree.ui.TextAnchor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.joda.time.DateTime;
@@ -663,8 +639,8 @@ public abstract class AbstractWmsController extends AbstractController {
         }
 
         // Now we map date-times to data values
-        // The map is sorted in order of ascending time
-        SortedMap<DateTime, Float> featureData = new TreeMap<DateTime, Float>();
+        // The map is kept in order of ascending time
+        Map<DateTime, Float> featureData = new LinkedHashMap<DateTime, Float>();
         if (tValues.isEmpty()) {
             featureData.put(null, tsData.get(0));
         } else {
@@ -683,28 +659,8 @@ public abstract class AbstractWmsController extends AbstractController {
             return new ModelAndView("showFeatureInfo_xml", models);
         } else {
             // Must be PNG format: prepare and output the JFreeChart
-            // TODO: this is nasty: we're mixing presentation code in the controller
-            TimeSeries ts = new TimeSeries("Data", Millisecond.class);
-            for (DateTime dateTime : featureData.keySet()) {
-                ts.add(new Millisecond(dateTime.toDate()), featureData.get(dateTime));
-            }
-            TimeSeriesCollection xydataset = new TimeSeriesCollection();
-            xydataset.addSeries(ts);
-
-            // Create a chart with no legend, tooltips or URLs
-            String title = "Lon: " + lonLat.getLongitude() + ", Lat: " +
-                    lonLat.getLatitude();
-            String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";
-            JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
-                    "Date / time", yLabel, xydataset, false, false, false);
-            XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-            renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
-            renderer.setSeriesShapesVisible(0, true);
-            chart.getXYPlot().setRenderer(renderer);
-            chart.getXYPlot().setNoDataMessage("There is no data for your choice");
-            chart.getXYPlot().setNoDataMessageFont(new Font("sansserif", Font.BOLD, 32));
+            JFreeChart chart = Charting.createTimeseriesPlot(layer, lonLat, featureData);
             httpServletResponse.setContentType("image/png");
-
             ChartUtilities.writeChartAsPNG(httpServletResponse.getOutputStream(),
                     chart, 400, 300);
             return null;
@@ -828,77 +784,13 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Now output the data in the selected format
         response.setContentType(outputFormat);
-        if (outputFormat.equals(FEATURE_INFO_PNG_FORMAT)) {
-            XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
-            for (int i = 0; i < transectData.size(); i++) {
-                series.add(i, transectData.get(i));
-            }
-
-            XYSeriesCollection xySeriesColl = new XYSeriesCollection();
-            xySeriesColl.addSeries(series);
-
-            JFreeChart chart = ChartFactory.createXYLineChart(
-                    "Transect for " + layer.getTitle(), // title
-                    "distance along transect (arbitrary units)", // TODO more meaningful x axis label
-                    layer.getTitle() + " (" + layer.getUnits() + ")",
-                    xySeriesColl,
-                    PlotOrientation.VERTICAL,
-                    false, // show legend
-                    false, // show tooltips (?)
-                    false // urls (?)
-                    );
-
-            XYPlot plot = chart.getXYPlot();
-            plot.getRenderer().setSeriesPaint(0, Color.RED);
-            if (layer.getDataset().getCopyrightStatement() != null) {
-                final TextTitle textTitle = new TextTitle(layer.getDataset().getCopyrightStatement());
-                textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
-                textTitle.setPosition(RectangleEdge.BOTTOM);
-                textTitle.setHorizontalAlignment(HorizontalAlignment.RIGHT);
-                chart.addSubtitle(textTitle);
-            }
-            NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-
-            rangeAxis.setAutoRangeIncludesZero(false);
-            plot.setNoDataMessage("There is no data for what you have chosen.");
-
-            //Iterate through control points to show segments of transect
-            Double prevCtrlPointDistance = null;
-            for (int i = 0; i < transect.getControlPoints().size(); i++) {
-                double ctrlPointDistance = transect.getFractionalControlPointDistance(i);
-                if (prevCtrlPointDistance != null) {
-
-                    log.debug("ctrl point [" + i + "].");
-                    log.debug("prevCtrlPointDistance " + prevCtrlPointDistance);
-                    log.debug("ctrlPointDistance " + ctrlPointDistance);
-                    //determine start end end value for marker based on index of ctrl point
-                    IntervalMarker target = new IntervalMarker(
-                            transectData.size() * prevCtrlPointDistance,
-                            transectData.size() * ctrlPointDistance
-                    );
-                    // TODO: printing to two d.p. not always appropriate
-                    target.setLabel("[" + printTwoDecimals(transect.getControlPoints().get(i - 1).getY())
-                            + "," + printTwoDecimals(transect.getControlPoints().get(i - 1).getX()) + "]");
-                    target.setLabelFont(new Font("SansSerif", Font.ITALIC, 11));
-                    //alter color of segment and position of label based on odd/even index
-                    if (i % 2 == 0) {
-                        target.setPaint(new Color(222, 222, 255, 128));
-                        target.setLabelAnchor(RectangleAnchor.TOP_LEFT);
-                        target.setLabelTextAnchor(TextAnchor.TOP_LEFT);
-                    } else {
-                        target.setPaint(new Color(233, 225, 146, 128));
-                        target.setLabelAnchor(RectangleAnchor.BOTTOM_LEFT);
-                        target.setLabelTextAnchor(TextAnchor.BOTTOM_LEFT);
-                    }
-                    //add marker to plot
-                    plot.addDomainMarker(target);
-
-                }
-                prevCtrlPointDistance = transect.getFractionalControlPointDistance(i);
-
-            }           
+        if (outputFormat.equals(FEATURE_INFO_PNG_FORMAT))
+        {
+            JFreeChart chart = Charting.createTransectPlot(layer, transect, transectData);
             ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
-        } else if (outputFormat.equals(FEATURE_INFO_XML_FORMAT)) {
+        }
+        else if (outputFormat.equals(FEATURE_INFO_XML_FORMAT))
+        {
             // Output data as XML using a template
             // First create an ordered map of ProjectionPoints to data values
             Map<HorizontalPosition, Float> dataPoints = new LinkedHashMap<HorizontalPosition, Float>();
@@ -915,22 +807,6 @@ public abstract class AbstractWmsController extends AbstractController {
             return new ModelAndView("showTransect_xml", models);
         }
         return null;
-    }
-
-    /**
-     * Prints a double-precision number to 2 decimal places
-     * @param d the double
-     * @return rounded value to 2 places, as a String
-     */
-    private static String printTwoDecimals(double d)
-    {
-        DecimalFormat twoDForm = new DecimalFormat("#.##");
-        // We need to set the Locale properly, otherwise the DecimalFormat doesn't
-        // work in locales that use commas instead of points.
-        // Thanks to Justino Martinez for this fix!
-        DecimalFormatSymbols decSym = DecimalFormatSymbols.getInstance(new Locale("us", "US"));
-        twoDForm.setDecimalFormatSymbols(decSym);
-        return twoDForm.format(d);
     }
 
     /**
