@@ -385,7 +385,7 @@ public abstract class AbstractWmsController extends AbstractController {
         GetMapStyleRequest styleRequest = getMapRequest.getStyleRequest();
 
         // Get the ImageFormat object corresponding with the requested MIME type
-        String mimeType = getMapRequest.getStyleRequest().getImageFormat();
+        String mimeType = styleRequest.getImageFormat();
         // This throws an InvalidFormatException if the MIME type is not supported
         ImageFormat imageFormat = ImageFormat.get(mimeType);
 
@@ -407,7 +407,6 @@ public abstract class AbstractWmsController extends AbstractController {
         RegularGrid grid = WmsUtils.getImageGrid(dr);
 
         // Create an object that will turn data into BufferedImages
-        String[] styles = styleRequest.getStyles();
         Range<Float> scaleRange = styleRequest.getColorScaleRange();
         if (scaleRange == null) scaleRange = layer.getApproxValueRange();
         Boolean logScale = styleRequest.isScaleLogarithmic();
@@ -416,6 +415,7 @@ public abstract class AbstractWmsController extends AbstractController {
                 ? ImageProducer.Style.VECTOR
                 : ImageProducer.Style.BOXFILL;
         ColorPalette palette = layer.getDefaultColorPalette();
+        String[] styles = styleRequest.getStyles();
         if (styles.length > 0) {
             String[] styleStrEls = styles[0].split("/");
 
@@ -859,6 +859,107 @@ public abstract class AbstractWmsController extends AbstractController {
                 return pointList;
             }
         }
+    }
+
+    /**
+     * Generate the vertical section JfreeChart object
+     */
+    protected ModelAndView getVerticalSection(RequestParams params, LayerFactory layerFactory,
+            HttpServletResponse response, UsageLogEntry usageLogEntry)
+            throws Exception {
+
+        // Parse the request parameters
+        // TODO repeats code from getTransect()
+        String layerStr = params.getMandatoryString("layer");
+        Layer layer = layerFactory.getLayer(layerStr);
+
+        String crsCode = params.getMandatoryString("crs");
+        String lineStr = params.getMandatoryString("linestring");
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
+        usageLogEntry.setLayer(layer);
+
+        // Parse the parameters connected with styling
+        // TODO repeats code from GetMap and GetLegendGraphic
+        int numColourBands = GetMapStyleRequest.getNumColourBands(params);
+        String outputFormat = params.getMandatoryString("format");
+        if (!"image/png".equals(outputFormat) &&
+            !"image/jpeg".equals(outputFormat) &&
+            !"image/jpg".equals(outputFormat)) {
+            throw new InvalidFormatException(outputFormat + " is not a valid output format");
+        }
+        usageLogEntry.setOutputFormat(outputFormat);
+        Range<Float> scaleRange = GetMapStyleRequest.getColorScaleRange(params);
+        if (scaleRange == null) scaleRange = layer.getApproxValueRange();
+        // TODO: deal with auto scale ranges - look at actual values extracted
+        Boolean logScale = GetMapStyleRequest.isLogScale(params);
+        if (logScale == null) logScale = layer.isLogScaling();
+        // TODO: repeats code from GetLegendGraphic
+        String paletteName = params.getString("palette");
+        ColorPalette palette = paletteName == null
+            ? layer.getDefaultColorPalette()
+            : ColorPalette.get(paletteName);
+
+        // Get the required coordinate reference system, forcing longitude-first
+        // axis order.
+        final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
+
+        // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
+        final LineString lineString = new LineString(lineStr, crs);
+        log.debug("Got {} control points", lineString.getControlPoints().size());
+
+        // Find the optimal number of points to sample the layer's source grid
+        Domain<HorizontalPosition> transectDomain = getOptimalTransectDomain(layer, lineString);
+        log.debug("Using transect consisting of {} points", transectDomain.getDomainObjects().size());
+
+        // Read data from each elevation in the source grid
+        List<Double> zValues = new ArrayList<Double>();
+        List<List<Float>> sectionData = new ArrayList<List<Float>>();
+        for (double zValue : layer.getElevationValues())
+        {
+            List<Float> transectData;
+            if (layer instanceof ScalarLayer) {
+                 ScalarLayer scalarLayer = (ScalarLayer) layer;
+                 transectData = scalarLayer.readHorizontalPoints(tValue, zValue, transectDomain);
+            }
+            else if (layer instanceof VectorLayer) {
+                 VectorLayer vecLayer = (VectorLayer)layer;
+                 List<Float> tsDataEast  = vecLayer.getEastwardComponent().readHorizontalPoints(tValue, zValue, transectDomain);
+                 List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readHorizontalPoints(tValue, zValue, transectDomain);
+                 transectData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
+            }
+            else {
+                // Shouldn't happen
+                throw new UnsupportedOperationException("Unsupported layer type");
+            }
+
+            // Don't display any all-null values in the vertical section plot
+            boolean allNull = true;
+            for (Float val : transectData) {
+                if (val != null) {
+                    allNull = false;
+                    break;
+                }
+            }
+            if (!allNull) {
+                zValues.add(zValue);
+                sectionData.add(transectData);
+            }
+        }
+
+        JFreeChart chart = Charting.createVerticalSectionChart(layer, lineString,
+                zValues, sectionData, scaleRange, palette, numColourBands, logScale);
+        response.setContentType(outputFormat);
+        int width = 500;
+        int height = 400;
+        if ("image/png".equals(outputFormat)) {
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
+        } else {
+            // Must be a JPEG
+            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
+        }
+
+        return null;
     }
 
     /**

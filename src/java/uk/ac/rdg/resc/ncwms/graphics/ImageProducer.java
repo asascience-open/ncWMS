@@ -166,10 +166,8 @@ public final class ImageProducer
     }
 
     /**
-     * Creates and returns an image with an appropriate ColorModel and palette
-     * for this
+     * Returns the {@link IndexColorModel} which will be used by this ImageProducer
      */
-
     public IndexColorModel getColorModel()
     {
         return this.colorPalette.getColorModel(this.numColourBands,
