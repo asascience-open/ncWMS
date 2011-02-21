@@ -77,6 +77,7 @@ import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.graphics.ImageProducer;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
 import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.exceptions.StyleNotDefinedException;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Dataset;
@@ -915,36 +916,53 @@ public abstract class AbstractWmsController extends AbstractController {
         // Read data from each elevation in the source grid
         List<Double> zValues = new ArrayList<Double>();
         List<List<Float>> sectionData = new ArrayList<List<Float>>();
-        for (double zValue : layer.getElevationValues())
-        {
-            List<Float> transectData;
-            if (layer instanceof ScalarLayer) {
-                 ScalarLayer scalarLayer = (ScalarLayer) layer;
-                 transectData = scalarLayer.readHorizontalPoints(tValue, zValue, transectDomain);
-            }
-            else if (layer instanceof VectorLayer) {
-                 VectorLayer vecLayer = (VectorLayer)layer;
-                 List<Float> tsDataEast  = vecLayer.getEastwardComponent().readHorizontalPoints(tValue, zValue, transectDomain);
-                 List<Float> tsDataNorth = vecLayer.getNorthwardComponent().readHorizontalPoints(tValue, zValue, transectDomain);
-                 transectData = WmsUtils.getMagnitudes(tsDataEast, tsDataNorth);
-            }
-            else {
-                // Shouldn't happen
-                throw new UnsupportedOperationException("Unsupported layer type");
-            }
+        if (layer instanceof ScalarLayer) {
+             ScalarLayer scalarLayer = (ScalarLayer) layer;
+             List<List<Float>> data = scalarLayer.readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
+             // Filter out all-null values
+             int i = 0;
+             for (Double zValue : layer.getElevationValues()) {
+                 List<Float> d = data.get(i);
+                 if (!allNull(d)) {
+                     sectionData.add(d);
+                     zValues.add(zValue);
+                 }
+                 i++;
+             }
+        }
+        else if (layer instanceof VectorLayer) {
+             VectorLayer vecLayer = (VectorLayer)layer;
+             List<List<Float>> sectionDataEast  = vecLayer.getEastwardComponent()
+                 .readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
+             List<List<Float>> sectionDataNorth = vecLayer.getNorthwardComponent()
+                 .readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
+             // Calculate magnitudes and filter out all-null values
+             int i = 0;
+             for (Double zValue : layer.getElevationValues()) {
+                 List<Float> mags = WmsUtils.getMagnitudes(sectionDataEast.get(i), sectionDataNorth.get(i));
+                 if (!allNull(mags)) {
+                     sectionData.add(mags);
+                     zValues.add(zValue);
+                 }
+                 i++;
+             }
+        }
+        else {
+            // Shouldn't happen
+            throw new UnsupportedOperationException("Unsupported layer type");
+        }
 
-            // Don't display any all-null values in the vertical section plot
-            boolean allNull = true;
-            for (Float val : transectData) {
-                if (val != null) {
-                    allNull = false;
-                    break;
-                }
+        // If the user has specified COLORSCALERANGE=auto, we will use the actual
+        // minimum and maximum values of the extracted data to generate the scale
+        float max = Float.NEGATIVE_INFINITY;
+        float min = Float.POSITIVE_INFINITY;
+        if (scaleRange.isEmpty()) {
+            for (List<Float> data : sectionData) {
+                Range<Float> minMax = Ranges.findMinMax(data);
+                max = Math.max(max, minMax.getMaximum());
+                min = Math.min(min, minMax.getMinimum());
             }
-            if (!allNull) {
-                zValues.add(zValue);
-                sectionData.add(transectData);
-            }
+            scaleRange = Ranges.newRange(min, max);
         }
 
         JFreeChart chart = Charting.createVerticalSectionChart(layer, lineString,
@@ -960,6 +978,23 @@ public abstract class AbstractWmsController extends AbstractController {
         }
 
         return null;
+    }
+
+    /**
+     * Returns true if all the values in the given list are null
+     * @param data
+     * @return
+     */
+    private static boolean allNull(List<Float> data)
+    {
+        boolean allNull = true;
+        for (Float val : data) {
+            if (val != null) {
+                allNull = false;
+                break;
+            }
+        }
+        return allNull;
     }
 
     /**

@@ -34,12 +34,14 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.oro.io.GlobFilenameFilter;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.ncwms.config.LayerImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
@@ -112,6 +114,38 @@ public abstract class DataReader
     public abstract List<Float> read(String filename, Layer layer,
         int tIndex, int zIndex, Domain<HorizontalPosition> domain)
         throws IOException;
+
+    /**
+     * <p>Reads vertical section data from a file.  Reads data for a single timestep only.
+     * This method knows
+     * nothing about aggregation: it simply reads data from the given file.
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by null.</p>
+     * <p>This default implementation simply makes multiple calls to read().
+     * Subclasses are encouraged to make more efficient implementations.</p>
+     *
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
+     * @param layer {@link Layer} object representing the variable
+     * @param tIndex The index along the time axis (or -1 if there is no time axis)
+     * @param zIndices The indices along the vertical axis.
+     * @param domain The list of real-world x-y points for which we need data.
+     * In the case of a GetMap operation this will usually be a {@link HorizontalGrid}.
+     * @return a List of floating point numbers for each elevation; each list
+     * contains a value for each point in the {@code targetDomain}, in the same
+     * order.  Missing values (e.g. land pixels in oceanography data} are
+     * represented as nulls.
+     * @throws IOException if an input/output exception occurred when reading data
+     */
+    public List<List<Float>> readVerticalSection(String filename, Layer layer, int tIndex,
+        List<Integer> zIndices, Domain<HorizontalPosition> domain) throws IOException
+    {
+        if (zIndices == null) zIndices = Arrays.asList(-1);
+        List<List<Float>> data = new ArrayList<List<Float>>(zIndices.size());
+        for (int zIndex : zIndices) {
+            data.add(this.read(filename, layer, tIndex, zIndex, domain));
+        }
+        return data;
+    }
 
     /**
      * <p>Reads a timeseries of data from a file from a single xyz point.  This

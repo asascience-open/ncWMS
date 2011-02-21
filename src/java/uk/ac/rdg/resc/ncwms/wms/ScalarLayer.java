@@ -106,6 +106,38 @@ public interface ScalarLayer extends Layer
         throws InvalidDimensionValueException, IOException;
 
     /**
+     * <p>Reads data at a number of horizontal locations at a single time for a
+     * number of elevations.  Missing values (e.g. land pixels in oceanography
+     * data) will be represented by null.</p>
+     * <p>This method will perform no interpolation in time or elevation, but
+     * will perform nearest-neighbour interpolation in the horizontal.</p>
+     * @param time The time instant for which we require data.  If this does not
+     * match a time instant in {@link #getTimeValues()} an {@link InvalidDimensionValueException}
+     * will be thrown.  (If this Layer has no time axis, this parameter will be ignored.)
+     * @param elevations The elevations for which we require data (in the
+     * {@link #getElevationUnits() units of this Layer's elevation axis}).  If
+     * any of these values do not match a valid {@link #getElevationValues() elevation value}
+     * in this Layer, this method will throw an {@link InvalidDimensionValueException}.
+     * @param points The collections of horizontal locations from which we are to
+     * read data.  The returned List of data values will contain one value for
+     * each item in this list in the same order.  This method will extract data
+     * from the nearest grid points to each item in this list, returning
+     * null for any points outside the domain of this Layer.
+     * @return a List of Lists: one List for every elevation value.  Each list
+     * contains one value for each point in the {@code pointList}, in the same order.
+     * @throws NullPointerException if {@code pointList} or {@code elevations}
+     * is null or if this layer has a time axis and {@code time} is null.
+     * @throws InvalidDimensionValueException if any of the {@code elevations}
+     * is not valid in this Layer, or if {@code time} is not a valid time in this
+     * Layer.
+     * @throws IOException if there was an error reading from the data source
+     * @todo What if this layer has no elevation axis?
+     */
+    public List<List<Float>> readVerticalSection(DateTime time, List<Double> elevations,
+            Domain<HorizontalPosition> points)
+        throws InvalidDimensionValueException, IOException;
+
+    /**
      * <p>Reads a timeseries of data at a single xyz point from this Layer.
      * Missing values (e.g. land pixels in oceanography data) will be represented
      * by null.</p>

@@ -272,6 +272,8 @@ public final class NcwmsController extends AbstractWmsController
         {
             // We didn't get any data from the cache, so we have to read from
             // the source data.
+            // We call layerImpl.readHorizDomain() directly to save repeating
+            // the call to findAndCheckFilenameAndTimeIndex().
             data = layerImpl.readHorizontalDomain(fti, zIndex, grid);
             // Put the data in the tile cache
             if (cacheEnabled) this.tileCache.put(key, data);

@@ -347,6 +347,43 @@ public final class CdmUtils
         HorizontalGrid sourceGrid = createHorizontalGrid(grid.getCoordinateSystem());
         return readHorizontalPoints(nc, grid, sourceGrid, tIndex, zIndex, targetDomain);
     }
+
+    /**
+     * Reads a set of points at a given time from the given GridDatatype at a
+     * number of elevations.
+     * @param nc The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId The ID of the variable from which we will read data
+     * @param sourceGrid object that maps between real-world and grid coordinates
+     * in the source data grid
+     * @param tIndex The time index, ignored if the grid has no time axis
+     * @param zIndices The elevation indices, ignored if the grid has no elevation axis
+     * @param targetDomain The list of horizontal points for which we need data
+     * @return a List of floating point numbers for each elevation; each list
+     * contains a value for each point in the {@code targetDomain}, in the same
+     * order.  Missing values (e.g. land pixels in oceanography data} are
+     * represented as nulls.
+     * @throws IllegalArgumentException if there is no variable in the dataset
+     * with the id {@code varId}.
+     * @throws IOException if there was an error reading data from the data source
+     */
+    public static List<List<Float>> readVerticalSection(NetcdfDataset nc, String varId,
+            HorizontalGrid sourceGrid, int tIndex, List<Integer> zIndices,
+            Domain<HorizontalPosition> targetDomain)
+            throws IOException
+    {
+        // TODO: will end up calling this method twice
+        GridDatatype grid = getGridDatatype(nc, varId);
+        // We create the pixelMap only once
+        PixelMap pixelMap = new PixelMap(sourceGrid, targetDomain);
+
+        // Defend against null values
+        if (zIndices == null) zIndices = Arrays.asList(-1);
+        List<List<Float>> data = new ArrayList<List<Float>>(zIndices.size());
+        for (int zIndex : zIndices) {
+            data.add(readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, targetDomain.size()));
+        }
+        return data;
+    }
     
     /**
      * Reads a set of points at a given time and elevation from the given

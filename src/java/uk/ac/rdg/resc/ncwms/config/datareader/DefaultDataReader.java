@@ -104,6 +104,49 @@ public class DefaultDataReader extends DataReader
     }
 
     /**
+     * Reads data from a NetCDF file.  Reads data for a single timestep only.
+     * This method knows
+     * nothing about aggregation: it simply reads data from the given file.
+     * Missing values (e.g. land pixels in oceanography data) will be represented
+     * by null.
+     *
+     * @param filename Location of the file, NcML aggregation or OPeNDAP URL
+     * @param layer {@link Layer} object representing the variable
+     * @param tIndex The index along the time axis (or -1 if there is no time axis)
+     * @param zIndices The indices along the vertical axis.  If there is no
+     * vertical axis
+     * @param domain The list of real-world x-y points for which we need data.
+     * In the case of a GetMap operation this will usually be a {@link HorizontalGrid}.
+     * @return an array of floating-point data values, one for each point in
+     * the {@code pointList}, in the same order.
+     * @throws IOException if an input/output exception occurred when reading data
+     */
+    @Override
+    public List<List<Float>> readVerticalSection(String filename, Layer layer, int tIndex,
+        List<Integer> zIndices, Domain<HorizontalPosition> domain) throws IOException
+    {
+        NetcdfDataset nc = null;
+        try
+        {
+            // Open the dataset, using the cache for NcML aggregations
+            nc = openDataset(filename);
+            // Read and return the data
+            return CdmUtils.readVerticalSection(
+                nc,
+                layer.getId(),
+                layer.getHorizontalGrid(),
+                tIndex,
+                zIndices,
+                domain
+            );
+        }
+        finally
+        {
+            closeDataset(nc);
+        }
+    }
+
+    /**
      * <p>Reads a timeseries of data from a file from a single xyz point.  This
      * method knows nothing about aggregation: it simply reads data from the
      * given file.  Missing values (e.g. land pixels in oceanography data) will

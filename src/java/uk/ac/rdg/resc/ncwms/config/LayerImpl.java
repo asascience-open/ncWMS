@@ -30,6 +30,7 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -169,6 +170,25 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
         throws IOException
     {
         return this.dataReader.read(fti.filename, this, fti.tIndexInFile, zIndex, domain);
+    }
+
+    @Override
+    public List<List<Float>> readVerticalSection(DateTime time, List<Double> elevations,
+            Domain<HorizontalPosition> points)
+            throws InvalidDimensionValueException, IOException
+    {
+        FilenameAndTimeIndex fti = this.findAndCheckFilenameAndTimeIndex(time);
+        // Defend against null values
+        List<Integer> zIndices;
+        if (elevations == null) {
+            zIndices = Arrays.asList(-1);
+        } else {
+            zIndices = new ArrayList<Integer>(elevations.size());
+            for (Double el : elevations) {
+                zIndices.add(this.findAndCheckElevationIndex(el));
+            }
+        }
+        return this.dataReader.readVerticalSection(fti.filename, this, fti.tIndexInFile, zIndices, points);
     }
 
     /**
