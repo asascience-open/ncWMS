@@ -166,6 +166,13 @@ public interface Layer
     public boolean isElevationPositive();
 
     /**
+     * Returns true if the vertical axis represents pressure.  In this case the
+     * values of elevation will be positive, but will increase downward.
+     * @todo This is a lousy name!
+     */
+    public boolean isElevationPressure();
+
+    /**
      * Returns an approximate range of values that this layer can take.  This
      * is merely a hint, for example to suggest to clients sensible default
      * values for choosing a colour scale.

@@ -186,4 +186,9 @@ public final class VectorLayerImpl implements VectorLayer
         return this.wrappedLayer.isElevationPositive();
     }
 
+    @Override
+    public boolean isElevationPressure() {
+        return this.wrappedLayer.isElevationPressure();
+    }
+
 }

@@ -37,6 +37,7 @@ import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ucar.nc2.constants.AxisType;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
@@ -239,6 +240,7 @@ public class DefaultDataReader extends DataReader
                             // a bit more carefully. It's not intuitive,
                             // particularly for a pressure axis
                             layer.setElevationPositive(coordSys.isZPositive());
+                            layer.setElevationPressure(coordSys.getVerticalAxis().getAxisType() == AxisType.Pressure);
                             layer.setElevationUnits(zAxis.getUnitsString());
                         }
 

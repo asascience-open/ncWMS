@@ -129,6 +129,9 @@ public class SimpleVectorLayer implements VectorLayer
     
     @Override
     public boolean isElevationPositive() { return this.east.isElevationPositive(); }
+
+    @Override
+    public boolean isElevationPressure() { return this.east.isElevationPressure(); }
     
     @Override
     public ColorPalette getDefaultColorPalette() { return ColorPalette.get(null); }

@@ -34,6 +34,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.IndexColorModel;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -202,32 +203,56 @@ final class Charting
         List<Double> elevationValues, List<List<Float>> sectionData, Range<Float> colourScaleRange,
         ColorPalette palette, int numColourBands, boolean logarithmic)
     {
+        // We can deal with three types of vertical axis: Height, Depth and Presssure.
+        // The code for this is very messy in ncWMS, sorry about that...  We should
+        // improve this but there are possible knock-on effects, so it's not a very
+        // easy job.
+
+        final String yAxisLabel;
+        final boolean invertYAxis;
+        if (layer.isElevationPositive()) {
+            yAxisLabel = "Height";
+            invertYAxis = false;
+        } else if (layer.isElevationPressure()) {
+            yAxisLabel = "Pressure";
+            invertYAxis = true;
+        } else {
+            yAxisLabel = "Depth";
+            // If this is a depth axis, all the values in elevationValues will be
+            // negative, so we must reverse this (see CdmUtils.getZValues())
+            List<Double> newElValues = new ArrayList<Double>(elevationValues.size());
+            for (Double zVal : elevationValues) {
+                newElValues.add(-zVal);
+            }
+            elevationValues = newElValues;
+            invertYAxis = true;
+        }
+
         double minElValue = elevationValues.get(0);
         double maxElValue = elevationValues.get(elevationValues.size() - 1);
 
-        // Deal with reversed axes:  TODO: do this properly with positive=down/pressure
+        // Sometimes values on the axes are reversed
         if (minElValue > maxElValue) {
             double temp = minElValue;
             minElValue = maxElValue;
             maxElValue = temp;
         }
 
-        System.out.printf("min %f, max %f%n", minElValue, maxElValue);
         // TODO expand the minElValue and maxElValue a bit
 
         // The number of elevation values that will be represented in the final
         // dataset.  TODO: calculate this based on the minimum elevation spacing
-        int numElValues = 200;
+        int numElValues = 300;
 
         XYZDataset dataset = new VerticalSectionDataset(elevationValues,
                 sectionData, minElValue, maxElValue, numElValues);
         
-        NumberAxis xAxis = new NumberAxis("Distance along path");
-        NumberAxis yAxis = layer.isElevationPositive()
-            ? new NumberAxis("Height (" + layer.getElevationUnits() + ")")
-            : new NumberAxis("Depth (" + layer.getElevationUnits() + ")");
+        NumberAxis xAxis = new NumberAxis("Distance along path (arbitrary units)");
+        NumberAxis yAxis = new NumberAxis(yAxisLabel + " (" + layer.getElevationUnits() + ")");
         xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
         yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+
+        if (invertYAxis) yAxis.setInverted(true);
 
         PaintScale scale = createPaintScale(palette, colourScaleRange,
                 numColourBands, logarithmic);
@@ -252,7 +277,7 @@ final class Charting
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
 
-        JFreeChart chart = new JFreeChart("Vertical Section Plot", plot);
+        JFreeChart chart = new JFreeChart(layer.getTitle() + " (" + layer.getUnits() + ")", plot);
         chart.removeLegend();
         chart.addSubtitle(paintScaleLegend);
         chart.setBackgroundPaint(Color.white);

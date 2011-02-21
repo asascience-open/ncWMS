@@ -74,6 +74,7 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     protected String zUnits;
     protected List<Double> zValues = Collections.emptyList(); // Prevents NullPointerExceptions
     protected boolean zPositive;
+    protected boolean zPressure;
     protected GeographicBoundingBox bbox = DefaultGeographicBoundingBox.WORLD;
     protected HorizontalGrid horizGrid;
 
@@ -122,6 +123,10 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     @Override
     public boolean isElevationPositive() { return zPositive; }
     public void setElevationPositive(boolean zPositive) { this.zPositive = zPositive; }
+
+    @Override
+    public boolean isElevationPressure() { return zPressure; }
+    public void setElevationPressure(boolean zPressure) { this.zPressure = zPressure; }
 
     @Override
     public GeographicBoundingBox getGeographicBoundingBox() { return this.bbox; }

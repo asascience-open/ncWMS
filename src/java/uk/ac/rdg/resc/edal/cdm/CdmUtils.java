@@ -556,8 +556,9 @@ public final class CdmUtils
 
     /**
      * Gets the values of the z axis of the given coordinate system.  Returns
-     * an empty list of the given coordinate system has no vertical axis.
-     * , with sign reversed if zPositive == false.
+     * an empty list of the given coordinate system has no vertical axis.  Reverses
+     * the sign of the z values if {@code coordSys.isZPositive() == false} and
+     * if this is not a pressure axis.
      * Returns an empty list if zAxis is null.
      */
     public static List<Double> getZValues(GridCoordSystem coordSys)
