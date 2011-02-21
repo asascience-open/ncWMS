@@ -111,7 +111,8 @@ public final class Ranges
             this.max = max;
             this.comp = comp;
             if (!this.isEmpty() && this.compare(min, max) > 0) {
-                throw new IllegalArgumentException("min must not be greater than max");
+                throw new IllegalArgumentException(String.format(
+                    "min (%s) must not be greater than max (%s)", min, max));
             }
         }
 
