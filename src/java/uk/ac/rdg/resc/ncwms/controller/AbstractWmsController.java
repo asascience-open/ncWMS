@@ -46,6 +46,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.CombinedDomainXYPlot;
+import org.jfree.chart.plot.PlotOrientation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.joda.time.DateTime;
@@ -561,7 +564,7 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Check the output format
         if (!request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT) &&
-                !request.getOutputFormat().equals(FEATURE_INFO_PNG_FORMAT)) {
+            !request.getOutputFormat().equals(FEATURE_INFO_PNG_FORMAT)) {
             throw new InvalidFormatException("The output format " +
                     request.getOutputFormat() + " is not valid for GetFeatureInfo");
         }
@@ -788,7 +791,34 @@ public abstract class AbstractWmsController extends AbstractController {
         if (outputFormat.equals(FEATURE_INFO_PNG_FORMAT))
         {
             JFreeChart chart = Charting.createTransectPlot(layer, transect, transectData);
-            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, 400, 300);
+            int width = 400;
+            int height = 300;
+
+            // If we have a layer with more than one elevation value, let's also
+            // create a vertical section plot underneath.
+            if (layer.getElevationValues().size() > 1)
+            {
+                // Create the chart
+                JFreeChart verticalSectionChart = createVerticalSectionChart(
+                    params, layer, tValue, transect, transectDomain);
+
+                // Create the combined chart with both the transect and the
+                // vertical section
+                CombinedDomainXYPlot plot = new CombinedDomainXYPlot(
+                        new NumberAxis("distance along path (arbitrary units)"));
+                plot.setGap(20.0);
+                plot.add(chart.getXYPlot(), 1);
+                plot.add(verticalSectionChart.getXYPlot(), 1);
+                plot.setOrientation(PlotOrientation.VERTICAL);
+                String title = layer.getTitle() + " (" + layer.getUnits() + ")";
+                chart = new JFreeChart(title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+                // Use the legend from the vertical section chart
+                chart.addSubtitle(verticalSectionChart.getSubtitle(0));
+
+                height = 600;
+            }
+
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
         }
         else if (outputFormat.equals(FEATURE_INFO_XML_FORMAT))
         {
@@ -882,7 +912,6 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Parse the parameters connected with styling
         // TODO repeats code from GetMap and GetLegendGraphic
-        int numColourBands = GetMapStyleRequest.getNumColourBands(params);
         String outputFormat = params.getMandatoryString("format");
         if (!"image/png".equals(outputFormat) &&
             !"image/jpeg".equals(outputFormat) &&
@@ -890,16 +919,6 @@ public abstract class AbstractWmsController extends AbstractController {
             throw new InvalidFormatException(outputFormat + " is not a valid output format");
         }
         usageLogEntry.setOutputFormat(outputFormat);
-        Range<Float> scaleRange = GetMapStyleRequest.getColorScaleRange(params);
-        if (scaleRange == null) scaleRange = layer.getApproxValueRange();
-        // TODO: deal with auto scale ranges - look at actual values extracted
-        Boolean logScale = GetMapStyleRequest.isLogScale(params);
-        if (logScale == null) logScale = layer.isLogScaling();
-        // TODO: repeats code from GetLegendGraphic
-        String paletteName = params.getString("palette");
-        ColorPalette palette = paletteName == null
-            ? layer.getDefaultColorPalette()
-            : ColorPalette.get(paletteName);
 
         // Get the required coordinate reference system, forcing longitude-first
         // axis order.
@@ -913,13 +932,47 @@ public abstract class AbstractWmsController extends AbstractController {
         Domain<HorizontalPosition> transectDomain = getOptimalTransectDomain(layer, lineString);
         log.debug("Using transect consisting of {} points", transectDomain.getDomainObjects().size());
 
+        JFreeChart chart = createVerticalSectionChart(params, layer, tValue,
+             lineString, transectDomain);
+
+        response.setContentType(outputFormat);
+        int width = 500;
+        int height = 400;
+        if ("image/png".equals(outputFormat)) {
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
+        } else {
+            // Must be a JPEG
+            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
+        }
+
+        return null;
+    }
+
+    private static JFreeChart createVerticalSectionChart(RequestParams params,
+            Layer layer, DateTime tValue, LineString lineString,
+            Domain<HorizontalPosition> transectDomain)
+            throws WmsException, InvalidDimensionValueException, IOException
+    {
+        // Look for styling parameters in the URL
+        int numColourBands = GetMapStyleRequest.getNumColourBands(params);
+        Range<Float> scaleRange = GetMapStyleRequest.getColorScaleRange(params);
+        if (scaleRange == null) scaleRange = layer.getApproxValueRange();
+        // TODO: deal with auto scale ranges - look at actual values extracted
+        Boolean logScale = GetMapStyleRequest.isLogScale(params);
+        if (logScale == null) logScale = layer.isLogScaling();
+        // TODO: repeats code from GetLegendGraphic
+        String paletteName = params.getString("palette");
+        ColorPalette palette = paletteName == null
+            ? layer.getDefaultColorPalette()
+            : ColorPalette.get(paletteName);
+
         // Read data from each elevation in the source grid
         List<Double> zValues = new ArrayList<Double>();
         List<List<Float>> sectionData = new ArrayList<List<Float>>();
         if (layer instanceof ScalarLayer) {
              ScalarLayer scalarLayer = (ScalarLayer) layer;
              List<List<Float>> data = scalarLayer.readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
-             // Filter out all-null values
+             // Filter out all-null levels
              int i = 0;
              for (Double zValue : layer.getElevationValues()) {
                  List<Float> d = data.get(i);
@@ -936,7 +989,7 @@ public abstract class AbstractWmsController extends AbstractController {
                  .readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
              List<List<Float>> sectionDataNorth = vecLayer.getNorthwardComponent()
                  .readVerticalSection(tValue, layer.getElevationValues(), transectDomain);
-             // Calculate magnitudes and filter out all-null values
+             // Calculate magnitudes and filter out all-null levels
              int i = 0;
              for (Double zValue : layer.getElevationValues()) {
                  List<Float> mags = WmsUtils.getMagnitudes(sectionDataEast.get(i), sectionDataNorth.get(i));
@@ -965,19 +1018,8 @@ public abstract class AbstractWmsController extends AbstractController {
             scaleRange = Ranges.newRange(min, max);
         }
 
-        JFreeChart chart = Charting.createVerticalSectionChart(layer, lineString,
+        return Charting.createVerticalSectionChart(layer, lineString,
                 zValues, sectionData, scaleRange, palette, numColourBands, logScale);
-        response.setContentType(outputFormat);
-        int width = 500;
-        int height = 400;
-        if ("image/png".equals(outputFormat)) {
-            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
-        } else {
-            // Must be a JPEG
-            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
-        }
-
-        return null;
     }
 
     /**
@@ -987,14 +1029,10 @@ public abstract class AbstractWmsController extends AbstractController {
      */
     private static boolean allNull(List<Float> data)
     {
-        boolean allNull = true;
         for (Float val : data) {
-            if (val != null) {
-                allNull = false;
-                break;
-            }
+            if (val != null) return false;
         }
-        return allNull;
+        return true;
     }
 
     /**

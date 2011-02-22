@@ -76,6 +76,7 @@ import uk.ac.rdg.resc.ncwms.wms.Layer;
 final class Charting
 {
     private static final Locale US_LOCALE = new Locale("us", "US");
+    private static final Color TRANSPARENT = new Color(0,0,0,0);
     
     public static JFreeChart createTimeseriesPlot(Layer layer, LonLatPosition lonLat,
             Map<DateTime, Float> tsData)
@@ -165,11 +166,10 @@ final class Charting
                 }
                 //add marker to plot
                 plot.addDomainMarker(target);
-
             }
             prevCtrlPointDistance = transectDomain.getFractionalControlPointDistance(i);
-
         }
+
         return chart;
     }
 
@@ -276,6 +276,24 @@ final class Charting
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
+
+        // Iterate through control points to show segments of transect
+        Double prevCtrlPointDistance = null;
+        int xAxisLength = sectionData.get(0).size();
+        for (int i = 0; i < horizPath.getControlPoints().size(); i++) {
+            double ctrlPointDistance = horizPath.getFractionalControlPointDistance(i);
+            if (prevCtrlPointDistance != null) {
+                //determine start end end value for marker based on index of ctrl point
+                IntervalMarker target = new IntervalMarker(
+                        xAxisLength * prevCtrlPointDistance,
+                        xAxisLength * ctrlPointDistance
+                );
+                target.setPaint(TRANSPARENT);
+                //add marker to plot
+                plot.addDomainMarker(target);
+            }
+            prevCtrlPointDistance = horizPath.getFractionalControlPointDistance(i);
+        }
 
         JFreeChart chart = new JFreeChart(layer.getTitle() + " (" + layer.getUnits() + ")", plot);
         chart.removeLegend();
