@@ -75,13 +75,19 @@ window.onload = function()
         line = line.substring(11, line.length - 1);
         // Load an image of the transect
         var server = activeLayer.server == '' ? 'wms' : activeLayer.server;
+        var logscale = $('scaleSpacing').value == 'logarithmic';
         var transectUrl = server + '?REQUEST=GetTransect' +
             '&LAYER=' + activeLayer.id +
             '&CRS=' + map.baseLayer.projection.toString() +
             '&ELEVATION=' + getZValue() +
             '&TIME=' + isoTValue +
             '&LINESTRING=' + line +
-            '&FORMAT=image/png';
+            '&FORMAT=image/png' +
+            // Styling parameters are needed if we create a vertical section plot
+            '&COLORSCALERANGE=' + scaleMinVal + ',' + scaleMaxVal +
+            '&NUMCOLORBANDS=' + $('numColorBands').value +
+            '&LOGSCALE' + logscale +
+            '&PALETTE=' + paletteName;
         popUp(transectUrl, 450, 350);
     });
 
