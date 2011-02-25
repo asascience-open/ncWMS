@@ -44,11 +44,15 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.ui.RectangleInsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.joda.time.DateTime;
@@ -810,13 +814,16 @@ public abstract class AbstractWmsController extends AbstractController {
                 plot.add(chart.getXYPlot(), 1);
                 plot.add(verticalSectionChart.getXYPlot(), 1);
                 plot.setOrientation(PlotOrientation.VERTICAL);
-                String title = layer.getTitle() + " (" + layer.getUnits() + ")";
+                String title = WmsUtils.removeDuplicatedWhiteSpace(layer.getTitle()) + " (" + layer.getUnits() + ")" + " at " + zValue +layer.getElevationUnits();
                 chart = new JFreeChart(title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+                RectangleInsets r = new RectangleInsets(0,10,0,0);  // set left margin to 10 to avoid number wrap at color bar
+                chart.setPadding(r); 
+                
                 // Use the legend from the vertical section chart
                 chart.addSubtitle(verticalSectionChart.getSubtitle(0));
 
                 height = 600;
-            }
+            }           
 
             ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
         }
@@ -840,114 +847,7 @@ public abstract class AbstractWmsController extends AbstractController {
         return null;
     }
 
-    /**
-     * Gets a HorizontalDomain that contains (near) the minimum necessary number of
-     * points to sample a layer's source grid of data.  That is to say,
-     * creating a HorizontalDomain at higher resolution would not result in sampling
-     * significantly more points in the layer's source grid.
-     * @param layer The layer for which the transect will be generated
-     * @param transect The transect as specified in the request
-     * @return a HorizontalDomain that contains (near) the minimum necessary number of
-     * points to sample a layer's source grid of data.
-     */
-    private static Domain<HorizontalPosition> getOptimalTransectDomain(Layer layer,
-            LineString transect) throws Exception {
-        // We need to work out how many points we need to include in order to
-        // completely sample the data grid (i.e. we need the resolution of the
-        // points to be higher than that of the data grid).  It's hard to work
-        // this out neatly (data grids can be irregular) but we can estimate
-        // this by creating transects at progressively higher resolution, and
-        // working out how many grid points will be sampled.
-        int numTransectPoints = 500; // a bit more than the final image width
-        int lastNumUniqueGridPointsSampled = -1;
-        HorizontalDomain pointList = null;
-        while (true) {
-            // Create a transect with the required number of points, interpolating
-            // between the control points in the line string
-            List<HorizontalPosition> points = transect.getPointsOnPath(numTransectPoints);
-            // Create a HorizontalDomain from the interpolated points
-            HorizontalDomain testPointList = new HorizontalDomain(points, transect.getCoordinateReferenceSystem());
-
-            // Work out how many grid points will be sampled by this transect
-            // Relies on equals() being implemented correctly for the GridCoordinates
-            Set<GridCoordinates> gridCoords = new HashSet<GridCoordinates>();
-            for (GridCoordinates coords : layer.getHorizontalGrid().findNearestGridPoints(testPointList)) {
-                gridCoords.add(coords);
-            }
-            int numUniqueGridPointsSampled = gridCoords.size();
-            log.debug("With {} transect points, we'll sample {} grid points",
-                    numTransectPoints, numUniqueGridPointsSampled);
-
-            // If this increase in resolution results in at least 10% more points
-            // being sampled we'll go around the loop again
-            if (numUniqueGridPointsSampled > lastNumUniqueGridPointsSampled * 1.1) {
-                // We need to increase the transect resolution and try again
-                lastNumUniqueGridPointsSampled = numUniqueGridPointsSampled;
-                numTransectPoints += 500;
-                pointList = testPointList;
-            } else {
-                // We've gained little advantage by the last resolution increase
-                return pointList;
-            }
-        }
-    }
-
-    /**
-     * Generate the vertical section JfreeChart object
-     */
-    protected ModelAndView getVerticalSection(RequestParams params, LayerFactory layerFactory,
-            HttpServletResponse response, UsageLogEntry usageLogEntry)
-            throws Exception {
-
-        // Parse the request parameters
-        // TODO repeats code from getTransect()
-        String layerStr = params.getMandatoryString("layer");
-        Layer layer = layerFactory.getLayer(layerStr);
-
-        String crsCode = params.getMandatoryString("crs");
-        String lineStr = params.getMandatoryString("linestring");
-        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
-        DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
-        usageLogEntry.setLayer(layer);
-
-        // Parse the parameters connected with styling
-        // TODO repeats code from GetMap and GetLegendGraphic
-        String outputFormat = params.getMandatoryString("format");
-        if (!"image/png".equals(outputFormat) &&
-            !"image/jpeg".equals(outputFormat) &&
-            !"image/jpg".equals(outputFormat)) {
-            throw new InvalidFormatException(outputFormat + " is not a valid output format");
-        }
-        usageLogEntry.setOutputFormat(outputFormat);
-
-        // Get the required coordinate reference system, forcing longitude-first
-        // axis order.
-        final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
-
-        // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
-        final LineString lineString = new LineString(lineStr, crs);
-        log.debug("Got {} control points", lineString.getControlPoints().size());
-
-        // Find the optimal number of points to sample the layer's source grid
-        Domain<HorizontalPosition> transectDomain = getOptimalTransectDomain(layer, lineString);
-        log.debug("Using transect consisting of {} points", transectDomain.getDomainObjects().size());
-
-        JFreeChart chart = createVerticalSectionChart(params, layer, tValue,
-             lineString, transectDomain);
-
-        response.setContentType(outputFormat);
-        int width = 500;
-        int height = 400;
-        if ("image/png".equals(outputFormat)) {
-            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
-        } else {
-            // Must be a JPEG
-            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
-        }
-
-        return null;
-    }
-
+  
     private static JFreeChart createVerticalSectionChart(RequestParams params,
             Layer layer, DateTime tValue, LineString lineString,
             Domain<HorizontalPosition> transectDomain)
@@ -1017,10 +917,123 @@ public abstract class AbstractWmsController extends AbstractController {
             }
             scaleRange = Ranges.newRange(min, max);
         }
-
+        
+         double zValue = getElevationValue(params.getString("elevation"), layer);
+         
         return Charting.createVerticalSectionChart(layer, lineString,
-                zValues, sectionData, scaleRange, palette, numColourBands, logScale);
+                zValues, sectionData, scaleRange, palette, numColourBands, logScale,zValue);
+    }    
+    
+      
+    /**
+     * Generate the vertical section JfreeChart object
+     */
+    protected ModelAndView getVerticalSection(RequestParams params, LayerFactory layerFactory,
+            HttpServletResponse response, UsageLogEntry usageLogEntry)
+            throws Exception {
+
+        // Parse the request parameters
+        // TODO repeats code from getTransect()
+        String layerStr = params.getMandatoryString("layer");
+        Layer layer = layerFactory.getLayer(layerStr);
+
+        String crsCode = params.getMandatoryString("crs");
+        String lineStr = params.getMandatoryString("linestring");
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
+        usageLogEntry.setLayer(layer);
+
+        // Parse the parameters connected with styling
+        // TODO repeats code from GetMap and GetLegendGraphic
+        String outputFormat = params.getMandatoryString("format");
+        if (!"image/png".equals(outputFormat) &&
+            !"image/jpeg".equals(outputFormat) &&
+            !"image/jpg".equals(outputFormat)) {
+            throw new InvalidFormatException(outputFormat + " is not a valid output format");
+        }
+        usageLogEntry.setOutputFormat(outputFormat);
+
+        // Get the required coordinate reference system, forcing longitude-first
+        // axis order.
+        final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
+
+        // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
+        final LineString lineString = new LineString(lineStr, crs);
+        log.debug("Got {} control points", lineString.getControlPoints().size());
+
+        // Find the optimal number of points to sample the layer's source grid
+        Domain<HorizontalPosition> transectDomain = getOptimalTransectDomain(layer, lineString);
+        log.debug("Using transect consisting of {} points", transectDomain.getDomainObjects().size());
+
+        JFreeChart chart = createVerticalSectionChart(params, layer, tValue,
+             lineString, transectDomain);
+
+        response.setContentType(outputFormat);
+        int width = 500;
+        int height = 400;
+        if ("image/png".equals(outputFormat)) {
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
+        } else {
+            // Must be a JPEG
+            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
+        }
+
+        return null;
     }
+
+    
+    /**
+     * Gets a HorizontalDomain that contains (near) the minimum necessary number of
+     * points to sample a layer's source grid of data.  That is to say,
+     * creating a HorizontalDomain at higher resolution would not result in sampling
+     * significantly more points in the layer's source grid.
+     * @param layer The layer for which the transect will be generated
+     * @param transect The transect as specified in the request
+     * @return a HorizontalDomain that contains (near) the minimum necessary number of
+     * points to sample a layer's source grid of data.
+     */
+    private static Domain<HorizontalPosition> getOptimalTransectDomain(Layer layer,
+            LineString transect) throws Exception {
+        // We need to work out how many points we need to include in order to
+        // completely sample the data grid (i.e. we need the resolution of the
+        // points to be higher than that of the data grid).  It's hard to work
+        // this out neatly (data grids can be irregular) but we can estimate
+        // this by creating transects at progressively higher resolution, and
+        // working out how many grid points will be sampled.
+        int numTransectPoints = 500; // a bit more than the final image width
+        int lastNumUniqueGridPointsSampled = -1;
+        HorizontalDomain pointList = null;
+        while (true) {
+            // Create a transect with the required number of points, interpolating
+            // between the control points in the line string
+            List<HorizontalPosition> points = transect.getPointsOnPath(numTransectPoints);
+            // Create a HorizontalDomain from the interpolated points
+            HorizontalDomain testPointList = new HorizontalDomain(points, transect.getCoordinateReferenceSystem());
+
+            // Work out how many grid points will be sampled by this transect
+            // Relies on equals() being implemented correctly for the GridCoordinates
+            Set<GridCoordinates> gridCoords = new HashSet<GridCoordinates>();
+            for (GridCoordinates coords : layer.getHorizontalGrid().findNearestGridPoints(testPointList)) {
+                gridCoords.add(coords);
+            }
+            int numUniqueGridPointsSampled = gridCoords.size();
+            log.debug("With {} transect points, we'll sample {} grid points",
+                    numTransectPoints, numUniqueGridPointsSampled);
+
+            // If this increase in resolution results in at least 10% more points
+            // being sampled we'll go around the loop again
+            if (numUniqueGridPointsSampled > lastNumUniqueGridPointsSampled * 1.1) {
+                // We need to increase the transect resolution and try again
+                lastNumUniqueGridPointsSampled = numUniqueGridPointsSampled;
+                numTransectPoints += 500;
+                pointList = testPointList;
+            } else {
+                // We've gained little advantage by the last resolution increase
+                return pointList;
+            }
+        }
+    }
+
 
     /**
      * Returns true if all the values in the given list are null
@@ -1034,6 +1047,8 @@ public abstract class AbstractWmsController extends AbstractController {
         }
         return true;
     }
+    
+    
 
     /**
      * Gets the elevation value requested by the client.

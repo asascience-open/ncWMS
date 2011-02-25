@@ -41,12 +41,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.IntervalMarker;
+import org.jfree.chart.plot.Marker;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.PaintScale;
+import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
 import org.jfree.chart.renderer.xy.XYBlockRenderer;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.title.TextTitle;
@@ -66,18 +71,22 @@ import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import uk.ac.rdg.resc.edal.geometry.impl.LineString;
 import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
+
+
 
 /**
  * Code to produce various types of chart.  Used by the {@link AbstractWmsController}.
  * @author Jon Blower
- * @author Kevin Yang
+ * @author Kevin X. Yang
  */
 final class Charting
 {
     private static final Locale US_LOCALE = new Locale("us", "US");
     private static final Color TRANSPARENT = new Color(0,0,0,0);
     
+    //
     public static JFreeChart createTimeseriesPlot(Layer layer, LonLatPosition lonLat,
             Map<DateTime, Float> tsData)
     {
@@ -107,28 +116,48 @@ final class Charting
     public static JFreeChart createTransectPlot(Layer layer, LineString transectDomain,
             List<Float> transectData)
     {
+        JFreeChart chart;
+        XYPlot plot; 
         XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
         for (int i = 0; i < transectData.size(); i++) {
             series.add(i, transectData.get(i));
         }
-
         XYSeriesCollection xySeriesColl = new XYSeriesCollection();
-        xySeriesColl.addSeries(series);
-
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                "Transect for " + layer.getTitle(), // title
-                "distance along transect (arbitrary units)", // TODO more meaningful x axis label
-                layer.getTitle() + " (" + layer.getUnits() + ")",
-                xySeriesColl,
-                PlotOrientation.VERTICAL,
-                false, // show legend
-                false, // show tooltips (?)
-                false // urls (?)
-                );
-
-        XYPlot plot = chart.getXYPlot();
-        plot.getRenderer().setSeriesPaint(0, Color.RED);
-        if (layer.getDataset().getCopyrightStatement() != null) {
+        xySeriesColl.addSeries(series);                  
+  
+        // If we have a layer with more than one elevation value, we create a transect chart
+        // using standard XYItem Renderer to keep the plot renderer consistent with that of vertical section plot
+         if (layer.getElevationValues().size() > 1)
+         {
+              final XYItemRenderer renderer1 = new StandardXYItemRenderer();
+              //Todo: to remove the white space within the title from 'layer'
+              String yAxisTitle =WmsUtils.removeDuplicatedWhiteSpace(layer.getTitle()) + " ("+ layer.getUnits()+")";
+              final NumberAxis rangeAxis1 = new NumberAxis(yAxisTitle);
+              plot = new XYPlot(xySeriesColl, null, rangeAxis1, renderer1);
+              plot.setRangeAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
+              plot.setBackgroundPaint(Color.lightGray);
+              plot.setDomainGridlinesVisible(false);
+              plot.setRangeGridlinePaint(Color.white);       
+              plot.getRenderer().setSeriesPaint(0, Color.RED);
+              plot.setOrientation(PlotOrientation.VERTICAL);
+              chart = new JFreeChart(plot);
+         }
+         else   // If we have a layer which only has one elevation value, we simply create XY Line chart  
+         {           
+             chart = ChartFactory.createXYLineChart(
+                    "Transect for " + layer.getTitle(), // title
+                    "distance along transect (arbitrary units)", // TODO more meaningful x axis label
+                    layer.getTitle() + " (" + layer.getUnits() + ")",
+                    xySeriesColl,
+                    PlotOrientation.VERTICAL,
+                    false, // show legend
+                    false, // show tooltips (?)
+                    false // urls (?)
+                    );                  
+               plot = chart.getXYPlot();                
+             
+         }       
+         if (layer.getDataset().getCopyrightStatement() != null) {
             final TextTitle textTitle = new TextTitle(layer.getDataset().getCopyrightStatement());
             textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
             textTitle.setPosition(RectangleEdge.BOTTOM);
@@ -168,7 +197,7 @@ final class Charting
                 plot.addDomainMarker(target);
             }
             prevCtrlPointDistance = transectDomain.getFractionalControlPointDistance(i);
-        }
+        } 
 
         return chart;
     }
@@ -201,7 +230,7 @@ final class Charting
      */
     public static JFreeChart createVerticalSectionChart(Layer layer, LineString horizPath,
         List<Double> elevationValues, List<List<Float>> sectionData, Range<Float> colourScaleRange,
-        ColorPalette palette, int numColourBands, boolean logarithmic)
+        ColorPalette palette, int numColourBands, boolean logarithmic,double zValue)
     {
         // We can deal with three types of vertical axis: Height, Depth and Presssure.
         // The code for this is very messy in ncWMS, sorry about that...  We should
@@ -272,10 +301,12 @@ final class Charting
         renderer.setBlockHeight(elevationResolution);
         renderer.setPaintScale(scale);
 
+       
         XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
+       // plot.set
 
         // Iterate through control points to show segments of transect
         Double prevCtrlPointDistance = null;
@@ -291,10 +322,18 @@ final class Charting
                 target.setPaint(TRANSPARENT);
                 //add marker to plot
                 plot.addDomainMarker(target);
+                // add line marker to vertical section plot         
+                final Marker verticalLevel = new ValueMarker(Math.abs(zValue));
+                verticalLevel.setPaint(Color.lightGray);
+                verticalLevel.setLabel("at "+zValue +"  level ");
+                verticalLevel.setLabelAnchor(RectangleAnchor.BOTTOM_RIGHT);
+                verticalLevel.setLabelTextAnchor(TextAnchor.TOP_RIGHT);
+                plot.addRangeMarker(verticalLevel); 
+                
             }
             prevCtrlPointDistance = horizPath.getFractionalControlPointDistance(i);
         }
-
+        
         JFreeChart chart = new JFreeChart(layer.getTitle() + " (" + layer.getUnits() + ")", plot);
         chart.removeLegend();
         chart.addSubtitle(paintScaleLegend);

@@ -28,10 +28,12 @@
 
 package uk.ac.rdg.resc.ncwms.util;
 
+import java.io.BufferedReader;
 import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.edal.util.Range;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +43,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.geotoolkit.referencing.CRS;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
@@ -349,6 +353,34 @@ public class WmsUtils
             throw new IllegalStateException(idve);
         }
     }
+    
+   public static String removeDuplicatedWhiteSpace(String theString)
+   {
+       String whiteSpceRemovedString = "";
+       
+       BufferedReader in = new BufferedReader(new StringReader(theString));
+       String string="";
+       try
+       {
+         string = in.readLine();
+         Pattern pattern = Pattern.compile("\\s+");
+         Matcher matcher = pattern.matcher(string);
+        boolean check = matcher.find();
+        whiteSpceRemovedString  = matcher.replaceAll(" ");
+       
+       }
+       catch (IOException e)
+       {
+           throw new RuntimeException("Error occured in removing duplicated white space for the String "+theString+ "  "+e);
+       }      
+      
+       
+       return whiteSpceRemovedString;
+   }
+   
+    
+    
+    
 
     /**
      * Finds the VectorLayers that can be derived from the given collection of
