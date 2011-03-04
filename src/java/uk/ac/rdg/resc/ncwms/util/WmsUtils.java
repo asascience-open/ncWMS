@@ -357,24 +357,9 @@ public class WmsUtils
    public static String removeDuplicatedWhiteSpace(String theString)
    {
        String whiteSpceRemovedString = "";
-       
-       BufferedReader in = new BufferedReader(new StringReader(theString));
-       String string="";
-       try
-       {
-         string = in.readLine();
-         Pattern pattern = Pattern.compile("\\s+");
-         Matcher matcher = pattern.matcher(string);
-        boolean check = matcher.find();
-        whiteSpceRemovedString  = matcher.replaceAll(" ");
-       
-       }
-       catch (IOException e)
-       {
-           throw new RuntimeException("Error occured in removing duplicated white space for the String "+theString+ "  "+e);
-       }      
-      
-       
+       Pattern pattern = Pattern.compile("\\s+");
+       Matcher matcher = pattern.matcher(theString);
+       whiteSpceRemovedString  = matcher.replaceAll(" ");
        return whiteSpceRemovedString;
    }
    
