@@ -89,13 +89,20 @@ final class RTreeGrid extends AbstractCurvilinearGrid
                 for (Cell cell : curvGrid.getCells())
                 {
                     MBR mbr = cell.getMinimumBoundingRectangle();
-                    Rectangle rect = new Rectangle(
-                        (float)mbr.getMinX(),
-                        (float)mbr.getMinY(),
-                        (float)mbr.getMaxX(),
-                        (float)mbr.getMaxY()
-                    );
-                    rtree.add(rect, i);
+                    // Filter out NaN values
+                    if (!Double.isNaN(mbr.getMinX()) &&
+                        !Double.isNaN(mbr.getMinY()) &&
+                        !Double.isNaN(mbr.getMaxX()) &&
+                        !Double.isNaN(mbr.getMaxY()))
+                    {
+                        Rectangle rect = new Rectangle(
+                            (float)mbr.getMinX(),
+                            (float)mbr.getMinY(),
+                            (float)mbr.getMaxX(),
+                            (float)mbr.getMaxY()
+                        );
+                        rtree.add(rect, i);
+                    }
                     i++;
                 }
                 logger.debug("Generated new rtree");
@@ -175,13 +182,14 @@ final class RTreeGrid extends AbstractCurvilinearGrid
     public static void main(String[] args) throws Exception
     {
         Runtime rt = Runtime.getRuntime();
-        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\UCA25D\\UCA25D.20101118.04.nc");
-        GridDatatype grid = CdmUtils.getGridDatatype(nc, "sea_level");
-
-
+        NetcdfDataset nc = NetcdfDataset.openDataset("C:\\Godiva2_data\\EUMETSAT_TEST\\xc_yc\\W_XX-EUMETSAT-Darmstadt,VIS+IR+IMAGERY,MET7+MVIRI_C_EUMS_20091110120000.nc");
+        GridDatatype grid = CdmUtils.getGridDatatype(nc, "ch1");
         long memUsed = getMemoryUsed(rt);
+        long start = System.nanoTime();
         HorizontalGrid rTreeGrid = RTreeGrid.generate(grid.getCoordinateSystem());
+        long finish = System.nanoTime();
         long rTreeFootprint = getMemoryUsed(rt) - memUsed;
+        System.out.println("Rtree constructed in " + (finish - start) / 1e9 + " seconds");
         System.out.println("Rtree consumes " + rTreeFootprint + " bytes");
     }
 
