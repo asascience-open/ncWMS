@@ -52,7 +52,6 @@ import org.joda.time.chrono.JulianChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import uk.ac.rdg.resc.edal.cdm.CdmUtils;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
@@ -722,6 +721,16 @@ public class WmsUtils
         CoordinateReferenceSystem crs = getCrs(dr.getCrsCode());
         BoundingBox bbox = new BoundingBoxImpl(dr.getBbox(), crs);
         return new RegularGridImpl(bbox, dr.getWidth(), dr.getHeight());
+    }
+
+    /**
+     * Returns an ArrayList of null values of the given length
+     */
+    public static ArrayList<Float> nullArrayList(int n)
+    {
+        ArrayList<Float> list = new ArrayList<Float>(n);
+        Collections.fill(list, null);
+        return list;
     }
 
 }

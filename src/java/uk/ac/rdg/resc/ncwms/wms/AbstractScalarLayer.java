@@ -28,13 +28,14 @@
 
 package uk.ac.rdg.resc.ncwms.wms;
 
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.opengis.metadata.extent.GeographicBoundingBox;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
@@ -56,7 +57,7 @@ import uk.ac.rdg.resc.ncwms.util.WmsUtils;
  */
 public abstract class AbstractScalarLayer implements ScalarLayer
 {
-    /** TODO: may belong elsewhere, in which case should be made unmodifiable */
+    /** TODO: may belong elsewhere (e.g. a CDM package), in which case should be made unmodifiable */
     private static final Set<String> PRESSURE_UNITS =
         CollectionUtils.setOf("Pa", "hPa", "bar", "millibar", "decibar", "atmosphere", "atm", "pascal");
 
@@ -67,31 +68,22 @@ public abstract class AbstractScalarLayer implements ScalarLayer
         }
     };
 
-    protected String id;
-    protected String title = null;
-    protected String abstr = null; // "abstract" is a reserved word in Java
-    protected String units;
-    protected String zUnits;
-    protected List<Double> zValues = Collections.emptyList(); // Prevents NullPointerExceptions
-    protected boolean zPositive;
-    protected boolean zPressure;
-    protected GeographicBoundingBox bbox = DefaultGeographicBoundingBox.WORLD;
-    protected HorizontalGrid horizGrid;
+    private final CoverageMetadata lm;
 
     /**
      * Creates an AbstractLayer with a bounding box that covers the whole world
      * and the given identifier.
      * @param id An identifier that is unique within this layer's
      * {@link #getDataset() dataset}.
-     * @throws NullPointerException if {@code id == null}
+     * @throws NullPointerException if {@code lm == null}
      */
-    public AbstractScalarLayer(String id)
+    public AbstractScalarLayer(CoverageMetadata lm)
     {
-        if (id == null) throw new NullPointerException("id cannot be null");
-        this.id = id;
+        if (lm == null) throw new NullPointerException("CoverageMetadata can't be null");
+        this.lm = lm;
     }
 
-    @Override public String getId() { return this.id; }
+    @Override public String getId() { return this.lm.getId(); }
 
     /**
      * Returns a layer name that is unique on this server, created from the
@@ -105,44 +97,31 @@ public abstract class AbstractScalarLayer implements ScalarLayer
         return WmsUtils.createUniqueLayerName(this.getDataset().getId(), this.getId());
     }
 
-    @Override public String getTitle() { return this.title; }
-    public void setTitle(String title) { this.title = title; }
+    @Override public String getTitle() { return this.lm.getTitle(); }
 
-    @Override public String getLayerAbstract() { return this.abstr; }
-    public void setLayerAbstract(String abstr) { this.abstr = abstr; }
+    @Override public String getLayerAbstract() { return this.lm.getDescription(); }
 
-    @Override public String getUnits() { return this.units; }
-    public void setUnits(String units) { this.units = units; }
+    @Override public String getUnits() { return this.lm.getUnits(); }
 
-    @Override public String getElevationUnits() { return this.zUnits; }
-    public void setElevationUnits(String zUnits) { this.zUnits = zUnits; }
+    @Override public String getElevationUnits() { return this.lm.getElevationUnits(); }
 
-    @Override public List<Double> getElevationValues() { return zValues; }
-    public void setElevationValues(List<Double> zValues) { this.zValues = zValues; }
+    @Override public List<Double> getElevationValues() { return this.lm.getElevationValues(); }
 
     @Override
-    public boolean isElevationPositive() { return zPositive; }
-    public void setElevationPositive(boolean zPositive) { this.zPositive = zPositive; }
+    public boolean isElevationPositive() { return this.lm.isElevationPositive(); }
 
     @Override
-    public boolean isElevationPressure() { return zPressure; }
-    public void setElevationPressure(boolean zPressure) { this.zPressure = zPressure; }
+    public boolean isElevationPressure() { return this.lm.isElevationPressure(); }
 
     @Override
-    public GeographicBoundingBox getGeographicBoundingBox() { return this.bbox; }
-    public void setGeographicBoundingBox(GeographicBoundingBox bbox) { this.bbox = bbox; }
-    /** bbox = [minx, miny, maxx, maxy]. */
-    public void setGeographicBoundingBox(double[] bbox)
-    {
-        if (bbox == null) throw new NullPointerException();
-        if (bbox.length != 4) throw new IllegalArgumentException("Bounding box must have four elements");
-        // Note that the order of these arguments are different from OGC BBOX order!
-        this.bbox = new DefaultGeographicBoundingBox(bbox[0], bbox[2], bbox[1], bbox[3]);
+    public GeographicBoundingBox getGeographicBoundingBox() {
+        return this.lm.getGeographicBoundingBox();
     }
 
     @Override
-    public HorizontalGrid getHorizontalGrid() { return this.horizGrid; }
-    public void setHorizontalGrid(HorizontalGrid horizGrid) { this.horizGrid = horizGrid; }
+    public HorizontalGrid getHorizontalGrid() {
+        return this.lm.getHorizontalGrid();
+    }
 
     /**
      * Returns true if this layer has a time axis.  This is a convenience method
@@ -182,6 +161,20 @@ public abstract class AbstractScalarLayer implements ScalarLayer
     public DateTime getDefaultTimeValue()
     {
         return this.getCurrentTimeValue();
+    }
+
+    /**
+     * Returns the Chronology: null if this layer has no time axis, or the
+     * Chronology of the first timestep on the axis if a time axis is present.
+     * @return
+     */
+    @Override
+    public Chronology getChronology()
+    {
+       if (this.hasTimeAxis()) {
+           return this.getTimeValues().get(0).getChronology();
+       }
+       return null;
     }
 
     /**

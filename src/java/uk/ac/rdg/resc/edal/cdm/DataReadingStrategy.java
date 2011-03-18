@@ -35,7 +35,7 @@ import ucar.ma2.Index;
 import ucar.nc2.dataset.VariableDS;
 import ucar.nc2.dt.GridDatatype;
 import uk.ac.rdg.resc.edal.cdm.PixelMap.PixelMapEntry;
-import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
+import uk.ac.rdg.resc.ncwms.config.DataReader;
 
 /**
  * <p>Defines different strategies for reading data from files. The grid below represents the source

@@ -29,11 +29,11 @@
 package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,13 +43,10 @@ import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.Commit;
 import org.simpleframework.xml.load.PersistenceException;
 import org.simpleframework.xml.load.Validate;
-import uk.ac.rdg.resc.edal.util.CollectionUtils;
-import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
-import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
 
 /**
  * A dataset object in the ncWMS configuration system: contains a number of
@@ -128,15 +125,7 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
         metadata, or null if we've never seen an error */
     private DateTime lastFailedUpdateTime = null;
 
-    /** The Layers that belong to this dataset.  This will be loaded through the
-     * {@link #loadLayers()} method, which is called periodically by the
-     * {@link Config} object. 
-     * Initialized to an empty map to prevent null pointer exceptions later
-     */
-    private Map<String, LayerImpl> scalarLayers = CollectionUtils.newHashMap();
-
-    /** The VectorLayers generated from the scalarLayers */
-    private Map<String, VectorLayerImpl> vectorLayers = CollectionUtils.newHashMap();
+    private Map<String, Layer> layers = Collections.emptyMap();
 
     /**
      * Checks that the data we have read are valid.  Checks that there are no
@@ -329,21 +318,16 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     @Override
     public Layer getLayerById(String layerId)
     {
-        Layer layer = this.scalarLayers.get(layerId);
-        if (layer == null) layer = this.vectorLayers.get(layerId);
-        return layer;
+        return this.layers.get(layerId);
     }
     
     /**
-     * @return a Set of all the layers in this dataset.
+     * @return a Collection of all the layers in this dataset.
      */
     @Override
-    public Set<Layer> getLayers()
+    public Collection<Layer> getLayers()
     {
-        Set<Layer> allLayers = new LinkedHashSet<Layer>();
-        allLayers.addAll(this.scalarLayers.values());
-        allLayers.addAll(this.vectorLayers.values());
-        return allLayers;
+        return this.layers.values();
     }
 
     /**
@@ -553,37 +537,13 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
         DataReader dr = DataReader.forName(this.dataReaderClass);
         // Look for OPeNDAP datasets and update the credentials provider accordingly
         this.config.updateCredentialsProvider(this);
-        // Read the metadata
-        this.scalarLayers = dr.getAllLayers(this.getLocation());
-        for (LayerImpl layer : this.scalarLayers.values())
-        {
-            layer.setDataset(this);
-            layer.setDataReader(dr);
-        }
+        // Read the layers from the data reader
+        this.layers = dr.getAllLayers(this);
         this.appendLoadingProgress("loaded layers");
-        // Search for vector quantities (e.g. northward/eastward_sea_water_velocity)
-        this.findVectorQuantities();
-        this.appendLoadingProgress("found vector quantities");
         // Look for overriding attributes in the configuration
         this.readLayerConfig();
         this.appendLoadingProgress("attributes overridden");
         this.appendLoadingProgress("Finished loading metadata");
-    }
-
-    /**
-     * Searches through the collection of scalar Layer objects, looking for
-     * pairs of quantities that represent the components of a vector, e.g.
-     * northward/eastward_sea_water_velocity.  Populates the vector layers
-     * field.
-     * @todo Only works for northward/eastward so far
-     */
-    private void findVectorQuantities()
-    {
-        this.vectorLayers = new LinkedHashMap<String, VectorLayerImpl>();
-        for (VectorLayer vecLayer : WmsUtils.findVectorLayers(this.scalarLayers.values()))
-        {
-            this.vectorLayers.put(vecLayer.getId(), new VectorLayerImpl(this, vecLayer));
-        }
     }
 
     /**

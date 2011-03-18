@@ -28,7 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.wms;
 
-import java.util.Set;
+import java.util.Collection;
 import org.joda.time.DateTime;
 
 /**
@@ -80,11 +80,10 @@ public interface Dataset
     public Layer getLayerById(String layerId);
 
     /**
-     * Gets the {@link Layer}s that comprise this dataset as a Map of
-     * {@link Layer#getId() Layer ID}s to Layer objects.
+     * Gets the {@link Layer}s that comprise this dataset
      * to Layer objects.
      */
-    public Set<Layer> getLayers();
+    public Collection<Layer> getLayers();
 
     /**
      * Returns true if the dataset is ready for use.  If the dataset is ready,

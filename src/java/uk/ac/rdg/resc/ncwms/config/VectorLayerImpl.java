@@ -43,7 +43,7 @@ import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
  * config system.
  * @author Jon
  */
-public final class VectorLayerImpl implements VectorLayer
+final class VectorLayerImpl implements VectorLayer
 {
     private final Dataset ds;
     private final VectorLayer wrappedLayer;

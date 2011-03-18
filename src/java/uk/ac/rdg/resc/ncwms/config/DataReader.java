@@ -26,26 +26,29 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.config.datareader;
+package uk.ac.rdg.resc.ncwms.config;
 
-import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.oro.io.GlobFilenameFilter;
+import org.joda.time.DateTime;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
+import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
-import uk.ac.rdg.resc.ncwms.config.LayerImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.CollectionUtils;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
+import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
 
 /**
  * Abstract superclass for classes that read data and metadata from datasets.
@@ -186,21 +189,22 @@ public abstract class DataReader
     }
     
     /**
-     * Reads and returns the metadata for all the layers (i.e. variables) at the
-     * given location.
-     * @param location Location of the files.  This can be a glob expression.
+     * Reads and returns the metadata for all the layers (i.e. variables) in the
+     * given dataset.
+     * @param dataset The dataset from which we'll read data
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws FileNotFoundException if the location does not match
      * any existing files on the server
      * @throws IOException if there was an error reading from the data source
      */
-    public Map<String, LayerImpl> getAllLayers(final String location)
+    public final Map<String, Layer> getAllLayers(Dataset ds)
         throws FileNotFoundException, IOException
     {
-        Map<String, LayerImpl> layers = new LinkedHashMap<String, LayerImpl>();
+        Map<String, LayerImpl> scalarLayers = CollectionUtils.newLinkedHashMap();
+        String location = ds.getLocation();
         if (WmsUtils.isOpendapLocation(location))
         {
-            this.findAndUpdateLayers(location, layers);
+            this.updateLayers(location, ds, scalarLayers);
         }
         else
         {
@@ -215,23 +219,71 @@ public abstract class DataReader
                 // Read the metadata from the file and update the Map.
                 // TODO: only do this if the file's last modified date has changed?
                 // This would require us to keep the previous metadata...
-                this.findAndUpdateLayers(file.getPath(), layers);
+                this.updateLayers(file.getPath(), ds, scalarLayers);
             }
         }
-        return layers;
+
+        // We create a new Map that combines the scalar and vector layers
+        Map<String, Layer> allLayers = CollectionUtils.newLinkedHashMap();
+        // Add the scalar layers
+        for (LayerImpl scalarLayer : scalarLayers.values())
+        {
+            allLayers.put(scalarLayer.getId(), scalarLayer);
+        }
+        // Now create the vector layers
+        for (VectorLayer vecLayer : WmsUtils.findVectorLayers(scalarLayers.values()))
+        {
+            // We wrap the returned vector layer as a VectorLayerImpl to allow
+            // some of the properties of the layer to be overridden by the
+            // Variable objects, as for scalar layers
+            allLayers.put(vecLayer.getId(), new VectorLayerImpl(ds, vecLayer));
+        }
+
+        return allLayers;
     }
     
     /**
-     * Reads the metadata for all the variables in the file(s)
-     * at the given location, which is the location of a NetCDF file, NcML
-     * aggregation, or OPeNDAP location ({@literal i.e.} one element resulting
-     * from the expansion of a glob aggregation).
-     * @param location Full path to the files
-     * @param layers Map of Layer Ids to Layer objects to populate or update
-     * @throws Exception if there was an error reading from the data source
+     * Reads layer metadata from the given location and updates the map of layer
+     * objects.
+     * @param location the location of the specific file from which we'll read
+     * data, ({@literal i.e.} one element resulting from the expansion of a glob
+     * aggregation).
+     * @param ds The dataset from which we're reading data
      */
-    protected abstract void findAndUpdateLayers(String location,
-        Map<String, LayerImpl> layers) throws IOException;
+    private void updateLayers(String location, Dataset ds, Map<String, LayerImpl> layers)
+            throws IOException
+    {
+        for (CoverageMetadata lm : this.readLayerMetadata(location))
+        {
+            String layerId = lm.getId();
+            LayerImpl layer = layers.get(layerId);
+            if (layer == null)
+            {
+                // We need to create a new layer
+                layer = new LayerImpl(lm, ds, this);
+                layers.put(layerId, layer);
+            }
+            else
+            {
+                // We just update the timesteps in the layer
+                int i = 0;
+                for (DateTime dt : lm.getTimeValues())
+                {
+                    layer.addTimestepInfo(dt, location, i);
+                    i++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Reads metadata for each layer in the data at the given location.
+     * @param location Full path to a single file, NcML file or OPENDAP dataset,
+     * ({@literal i.e.} one element resulting from the expansion of a glob
+     * aggregation).
+     */
+    protected abstract Collection<CoverageMetadata> readLayerMetadata(String location)
+            throws IOException;
 
     /**
      * Expands a glob expression to give a List of absolute paths to files.  This
@@ -312,18 +364,5 @@ public abstract class DataReader
             if (path.isFile()) files.add(path);
         }
         return files;
-    }
-
-    /**
-     * Returns an ArrayList of null values of the given length
-     */
-    protected static ArrayList<Float> nullArrayList(int n)
-    {
-        ArrayList<Float> list = new ArrayList<Float>(n);
-        for (int i = 0; i < n; i++)
-        {
-            list.add((Float)null);
-        }
-        return list;
     }
 }

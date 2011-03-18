@@ -27,8 +27,8 @@
  */
 
 /**
- * <p>Classes in this package are used in the configuration of an ncWMS server
- * and are not used by THREDDS-WMS.
+ * <p>Classes in this package are used in standalone ncWMS but are not used by
+ * THREDDS-WMS.
  * The {@link uk.ac.rdg.resc.ncwms.config.Config} class is the entry point to
  * the configuration information.  The {@link uk.ac.rdg.resc.ncwms.config.NcwmsContext} class
  * contains the context, e.g. the working directory of the server.</p>

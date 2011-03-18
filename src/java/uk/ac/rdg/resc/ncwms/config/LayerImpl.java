@@ -37,32 +37,38 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
-import uk.ac.rdg.resc.ncwms.config.datareader.DataReader;
 import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.ncwms.config.Config;
+import uk.ac.rdg.resc.ncwms.config.Dataset;
+import uk.ac.rdg.resc.ncwms.config.Variable;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
-import uk.ac.rdg.resc.ncwms.wms.AbstractTimeAggregatedLayer;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 
 /**
  * A concrete Layer implementation that supports  time aggregation through the
- * {@link AbstractTimeAggregatedLayer} superclass.
+ * {@link AbstractTimeAggregatedLayer} superclass.  Instances of this class are
+ * returned through the {@link DataReader#getAllLayers(uk.ac.rdg.resc.ncwms.config.Dataset)}
+ * method.
  *
  * @author Jon Blower
  */
-public final class LayerImpl extends AbstractTimeAggregatedLayer
+final class LayerImpl extends AbstractTimeAggregatedLayer
 {
-    private Dataset dataset;
-    private DataReader dataReader;
+    private final Dataset dataset;
+    private final DataReader dataReader;
     
     /**
      * Creates a new Layer using a default bounding box (covering the whole 
      * earth), with the given id and with a default boxfill style
      */
-    public LayerImpl(String id)
+    public LayerImpl(CoverageMetadata lm, Dataset ds, DataReader dr)
     {
-        super(id);
+        super(lm);
+        this.dataset = ds;
+        this.dataReader = dr;
     }
 
     /**
@@ -76,18 +82,10 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
     {
         Variable var = this.getVariable();
         if (var != null && var.getTitle() != null) return var.getTitle();
-        else return this.title;
+        else return super.getTitle();
     }
 
     @Override public Dataset getDataset() { return this.dataset; }
-    // Called by Dataset.loadLayers()
-    public void setDataset(Dataset dataset) { this.dataset = dataset; }
-
-    // Called by Dataset.loadLayers()
-    void setDataReader(DataReader dataReader)
-    {
-        this.dataReader = dataReader;
-    }
     
     /**
      * Returns an approximate range of values that this layer can take.  This
@@ -147,7 +145,7 @@ public final class LayerImpl extends AbstractTimeAggregatedLayer
      */
     private Variable getVariable()
     {
-        return this.dataset.getVariables().get(this.id);
+        return this.dataset.getVariables().get(this.getId());
     }
 
     /**

@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.config.datareader;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,18 +35,24 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
+import org.opengis.metadata.extent.GeographicBoundingBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
-import uk.ac.rdg.resc.ncwms.config.LayerImpl;
+import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import uk.ac.rdg.resc.edal.util.Utils;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 
 /**
  * DataReader for NSIDC snow/water data.  This is an example of how to create
@@ -77,6 +83,9 @@ public class NSIDCSnowWaterDataReader extends DataReader
      */
     private static final double CELL_KM = 25.067525;
     
+    private static final GeographicBoundingBox BBOX = 
+          new DefaultGeographicBoundingBox(-180, 180, 0, 90);
+
     /**
      * Reads and returns the metadata for all the variables in the dataset
      * at the given location, which is the location of a NetCDF file, NcML
@@ -86,27 +95,16 @@ public class NSIDCSnowWaterDataReader extends DataReader
      * @throws IOException if there was an error reading from the data source
      */
     @Override
-    protected void findAndUpdateLayers(String location,
-        Map<String, LayerImpl> layers) throws IOException
+    protected Collection<CoverageMetadata> readLayerMetadata(String location) throws IOException
     {
-        // Look for this layer in the list
-        LayerImpl layer = layers.get("swe");
-        if (layer == null)
-        {
-            layer = new LayerImpl("swe");
-            layer.setTitle("snow_water_equivalent");
-            layer.setUnits("mm");
-            layer.setGeographicBoundingBox(new double[]{-180.0, 0.0, 180.0, 90.0});
-        }
-        
         String filename = new File(location).getName();
-        Date timestep;
+        final DateTime timestep;
         try
         {
             // SimpleDateFormats aren't thread safe so we have to keep creating
             // new ones.
             DateFormat df = new SimpleDateFormat("'NL'yyyyMM'.v01.NSIDC8'");
-            timestep = df.parse(filename);
+            timestep = new DateTime(df.parse(filename).getTime());
         }
         catch(Exception e)
         {
@@ -114,9 +112,47 @@ public class NSIDCSnowWaterDataReader extends DataReader
             // TODO: not really an IOException
             throw new IOException("Error parsing filepath " + location);
         }
-        layer.addTimestepInfo(new DateTime(timestep), location, 0);
+
+        // We only create one CoverageMetadata object
+        CoverageMetadata lm = new CoverageMetadata() {
+
+            @Override public String getId() { return "swe"; }
+
+            @Override public String getTitle() { return "snow_water_equivalent"; }
+
+            @Override
+            public String getDescription() { return "Snow Water Equivalent (SWE)"; }
+
+            @Override
+            public String getUnits() { return "mm"; }
+
+            @Override
+            public GeographicBoundingBox getGeographicBoundingBox() {
+                return BBOX;
+            }
+
+            @Override
+            // This is not used in this class
+            public HorizontalGrid getHorizontalGrid() { return null; }
+
+            @Override
+            public Chronology getChronology() { return timestep.getChronology(); }
+
+            @Override
+            public List<DateTime> getTimeValues() { return Arrays.asList(timestep); }
+
+            @Override
+            public List<Double> getElevationValues() { return Collections.emptyList(); }
+
+            @Override public String getElevationUnits() { return ""; }
+
+            @Override public boolean isElevationPositive() { return false; }
+
+            @Override public boolean isElevationPressure() { return false; }
+
+        };
         
-        layers.put(layer.getId(), layer);
+        return Arrays.asList(lm);
     }
     
     /**
@@ -144,7 +180,7 @@ public class NSIDCSnowWaterDataReader extends DataReader
         logger.debug("Reading data from " + filename);
 
         // Create an array to hold the data
-        List<Float> picData = nullArrayList(domain.getDomainObjects().size());
+        List<Float> picData = WmsUtils.nullArrayList(domain.getDomainObjects().size());
         
         FileInputStream fin = null;
         ByteBuffer data = null;

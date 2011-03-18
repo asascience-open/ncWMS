@@ -235,7 +235,6 @@ public final class NcwmsController extends AbstractWmsController
     }
 
     /**
-     * {@inheritDoc}
      * <p>This implementation uses a {@link TileCache} to store data arrays,
      * speeding up repeat requests.</p>
      */

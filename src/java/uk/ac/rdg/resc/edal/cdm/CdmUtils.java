@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -59,16 +60,16 @@ import ucar.nc2.dataset.CoordinateAxis2D;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
+import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.TypedDatasetFactory;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
-import uk.ac.rdg.resc.edal.coverage.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularAxis;
-import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RectilinearGridImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularAxisImpl;
@@ -104,6 +105,54 @@ public final class CdmUtils
 
     /** Enforce non-instantiability */
     private CdmUtils() { throw new AssertionError(); }
+
+    /**
+     * Reads metadata from each gridded variable in the given GridDataset,
+     * returning a collection of CoverageMetadata objects, one object for each
+     * variable in the dataset.
+     */
+    public static Collection<CoverageMetadata> readCoverageMetadata(GridDataset gd)
+            throws IOException
+    {
+        if (gd == null) throw new NullPointerException("GridDataset can't be null");
+
+        List<CoverageMetadata> layers = new ArrayList<CoverageMetadata>();
+
+        // Search through all coordinate systems, creating appropriate metadata
+        // for each.  This allows metadata objects to be shared among CoverageMetadata
+        // objects, saving memory.
+        for (Gridset gridset : gd.getGridsets())
+        {
+            GridCoordSystem coordSys = gridset.getGeoCoordSystem();
+            logger.debug("Creating coordinate system objects");
+
+            // Create an object that will map lat-lon points to nearest grid points
+            HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
+
+            // Get the bounding box
+            GeographicBoundingBox bbox = CdmUtils.getBbox(coordSys.getLatLonBoundingBox());
+
+            // Create an object representing the elevation axis
+            ElevationAxis zAxis = new ElevationAxis(coordSys);
+
+            // Get the timesteps
+            List<DateTime> timesteps = Collections.emptyList();
+            if (coordSys.hasTimeAxis1D()) {
+                timesteps = CdmUtils.getTimesteps(coordSys.getTimeAxis1D());
+            }
+
+            // Create a CoverageMetadata object for each GridDatatype
+            for (GridDatatype grid : gridset.getGrids())
+            {
+                logger.debug("Creating new CoverageMetadata object for {}", grid.getName());
+                CoverageMetadata lm = new CdmCoverageMetadata(grid, bbox, horizGrid, timesteps, zAxis);
+                // Add this layer to the Map
+                layers.add(lm);
+            }
+        }
+
+        return layers;
+    }
 
     /**
      * Creates a {@link ReferenceableAxis} from the given {@link CoordinateAxis1D}.
@@ -589,33 +638,6 @@ public final class CdmUtils
         }
 
         return tsData;
-    }
-
-    /**
-     * Gets the values of the z axis of the given coordinate system.  Returns
-     * an empty list of the given coordinate system has no vertical axis.  Reverses
-     * the sign of the z values if {@code coordSys.isZPositive() == false} and
-     * if this is not a pressure axis.
-     * Returns an empty list if zAxis is null.
-     */
-    public static List<Double> getZValues(GridCoordSystem coordSys)
-    {
-        if (coordSys == null) throw new NullPointerException("coordSys");
-
-        CoordinateAxis1D zAxis = coordSys.getVerticalAxis();
-        if (zAxis == null) return Collections.emptyList();
-
-        List<Double> zValues = new ArrayList<Double>();
-        boolean isPositive = coordSys.isZPositive();
-        boolean isPressure = zAxis.getAxisType() == AxisType.Pressure;
-        for (double zVal : zAxis.getCoordValues())
-        {
-            // Pressure axes have "positive = down" but we don't want to
-            // reverse the sign of the values.
-            if (isPositive || isPressure) zValues.add(zVal);
-            else zValues.add(-zVal); // This is probably a depth axis
-        }
-        return zValues;
     }
 
     /**

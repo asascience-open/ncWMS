@@ -26,17 +26,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.ncwms.wms;
+package uk.ac.rdg.resc.ncwms.config;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
-import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
+import uk.ac.rdg.resc.ncwms.wms.AbstractScalarLayer;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 
 /**
- * Brings time aggregation capabilities to the {@link AbstractLayer} class.
+ * Brings time aggregation capabilities to the {@link AbstractScalarLayer} class.
  * This class allows for the fact that different timesteps might be contained
  * within different files within the {@link #getDataset() dataset}.  If two files
  * contain information for the same time, the file with the shorter forecast time
@@ -44,7 +45,7 @@ import uk.ac.rdg.resc.ncwms.util.WmsUtils;
  * logic implements the "best estimate" timeseries of a forecast model run collection.
  * @author Jon
  */
-public abstract class AbstractTimeAggregatedLayer extends AbstractScalarLayer
+abstract class AbstractTimeAggregatedLayer extends AbstractScalarLayer
 {
     /** These are sorted into ascending order of time */
     protected final List<TimestepInfo> timesteps = new ArrayList<TimestepInfo>();
@@ -66,26 +67,10 @@ public abstract class AbstractTimeAggregatedLayer extends AbstractScalarLayer
     /**
      * Creates an AbstractTimeAggregatedLayer with a bounding box that covers
      * the whole world and the given identifier.
-     * @param id An identifier that is unique within this layer's
-     * {@link #getDataset() dataset}.
-     * @throws NullPointerException if {@code id == null}
      */
-    public AbstractTimeAggregatedLayer(String id)
+    public AbstractTimeAggregatedLayer(CoverageMetadata lm)
     {
-        super(id);
-    }
-
-    /**
-     * Returns the {@link Chronology} used to interpret {@link DateTime}s that
-     * represent the {@link #getTimeValues() time values} of this layer.
-     * @return the Chronology used to interpret this layer's time values, or null
-     * if this layer has no time values.
-     */
-    @Override
-    public Chronology getChronology()
-    {
-        if (this.timesteps.isEmpty()) return null;
-        return this.timesteps.get(0).timestep.getChronology();
+        super(lm);
     }
 
     /**
@@ -119,7 +104,7 @@ public abstract class AbstractTimeAggregatedLayer extends AbstractScalarLayer
      * is null.
      * @throws IllegalArgumentException if {@code indexInFile} is less than zero
      */
-    public void addTimestepInfo(DateTime dt, String filename, int indexInFile)
+    void addTimestepInfo(DateTime dt, String filename, int indexInFile)
     {
         TimestepInfo tInfo = new TimestepInfo(dt, filename, indexInFile);
         // Find the insertion point in the List of timesteps
