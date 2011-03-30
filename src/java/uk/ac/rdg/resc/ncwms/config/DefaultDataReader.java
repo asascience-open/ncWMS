@@ -34,13 +34,12 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ucar.nc2.dataset.NetcdfDataset;
-import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.cdm.CdmUtils;
-import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
+import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
-import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 
 /**
  * Default data reading class for CF-compliant NetCDF datasets.  Delegates most

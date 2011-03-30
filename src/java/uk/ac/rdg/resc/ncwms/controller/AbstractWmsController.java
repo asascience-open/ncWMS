@@ -317,12 +317,13 @@ public abstract class AbstractWmsController extends AbstractController {
         // TODO: make configurable in admin app
         String[] supportedCrsCodes = new String[]{
             "EPSG:4326", "CRS:84", // Plate Carree
-            "EPSG:41001", // Mercator (~ Google Maps)  TODO replace with real Google Maps code
+            "EPSG:41001", // Mercator
             "EPSG:27700", // British National Grid
             // See http://nsidc.org/data/atlas/ogc_services.html for useful
             // stuff about polar stereographic projections
             "EPSG:3408", // NSIDC EASE-Grid North
             "EPSG:3409", // NSIDC EASE-Grid South
+            "EPSG:3857", // Google Maps
             "EPSG:32661", // North Polar stereographic
             "EPSG:32761" // South Polar stereographic
         };
