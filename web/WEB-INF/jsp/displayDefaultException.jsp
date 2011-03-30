@@ -1,5 +1,6 @@
 <%@include file="xml_header.jsp"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="/WEB-INF/taglib/wms/wmsUtils" prefix="utils"%>
 <%
 response.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1

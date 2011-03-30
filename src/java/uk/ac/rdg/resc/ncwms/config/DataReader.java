@@ -263,15 +263,12 @@ public abstract class DataReader
                 layer = new LayerImpl(lm, ds, this);
                 layers.put(layerId, layer);
             }
-            else
+            // Now we update the timesteps in the layer
+            int i = 0;
+            for (DateTime dt : lm.getTimeValues())
             {
-                // We just update the timesteps in the layer
-                int i = 0;
-                for (DateTime dt : lm.getTimeValues())
-                {
-                    layer.addTimestepInfo(dt, location, i);
-                    i++;
-                }
+                layer.addTimestepInfo(dt, location, i);
+                i++;
             }
         }
     }

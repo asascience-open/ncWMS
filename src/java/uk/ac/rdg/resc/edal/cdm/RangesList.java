@@ -121,7 +121,7 @@ final class RangesList
 
     private void setRange(int index, int min, int max)
     {
-        if (index >= 0)
+        if (index >= 0 && min >= 0 && max >= 0) // TODO: silent failure?
         {
             try
             {
