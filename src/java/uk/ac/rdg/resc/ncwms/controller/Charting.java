@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.AxisLocation;
@@ -67,13 +68,14 @@ import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.TextAnchor;
 import org.joda.time.DateTime;
+import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import uk.ac.rdg.resc.edal.geometry.impl.LineString;
 import uk.ac.rdg.resc.edal.util.Range;
+import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
-
 
 
 /**
@@ -113,6 +115,52 @@ final class Charting
         return chart;
     }
 
+    public static JFreeChart createVerticalProfilePlot(Layer layer, HorizontalPosition pos,
+            List<Double> elevationValues, List<Float> dataValues)
+    {
+        if (elevationValues.size() != dataValues.size())
+        {
+            throw new IllegalArgumentException("Z values and data values not of same length");
+        }
+
+        ZAxisAndValues zAxisAndValues = getZAxisAndValues(layer, elevationValues);
+        // The elevation values might have been reversed
+        elevationValues = zAxisAndValues.zValues;
+        NumberAxis elevationAxis = zAxisAndValues.zAxis;
+        elevationAxis.setAutoRangeIncludesZero(false);
+
+        NumberAxis valueAxis = new NumberAxis(getAxisLabel(layer));
+        valueAxis.setAutoRangeIncludesZero(false);
+
+        XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
+        for (int i = 0; i < elevationValues.size(); i++) {
+            series.add(elevationValues.get(i), dataValues.get(i));
+        }
+        XYSeriesCollection xySeriesColl = new XYSeriesCollection();
+        xySeriesColl.addSeries(series);
+
+
+        final XYItemRenderer renderer1 = new StandardXYItemRenderer();
+        XYPlot plot = new XYPlot(xySeriesColl, elevationAxis, valueAxis, renderer1);
+        plot.setBackgroundPaint(Color.lightGray);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeGridlinePaint(Color.white);
+        plot.getRenderer().setSeriesPaint(0, Color.RED);
+        plot.setOrientation(PlotOrientation.HORIZONTAL);
+
+        // Find the position of the profile in lon-lat coordinates for the label
+        HorizontalPosition lonLatPos = Utils.transformPosition(pos, DefaultGeographicCRS.WGS84);
+        String title = String.format("Profile of %s at (%s, %s)",
+            layer.getTitle(), lonLatPos.getX(), lonLatPos.getY(), layer.getUnits());
+
+        return new JFreeChart(title, null, plot, false);
+    }
+
+    private static String getAxisLabel(Layer layer)
+    {
+        return WmsUtils.removeDuplicatedWhiteSpace(layer.getTitle()) + " (" + layer.getUnits() + ")";
+    }
+
     public static JFreeChart createTransectPlot(Layer layer, LineString transectDomain,
             List<Float> transectData)
     {
@@ -130,9 +178,7 @@ final class Charting
          if (layer.getElevationValues().size() > 1)
          {
               final XYItemRenderer renderer1 = new StandardXYItemRenderer();
-              //Todo: to remove the white space within the title from 'layer'
-              String yAxisTitle =WmsUtils.removeDuplicatedWhiteSpace(layer.getTitle()) + " ("+ layer.getUnits()+")";
-              final NumberAxis rangeAxis1 = new NumberAxis(yAxisTitle);
+              final NumberAxis rangeAxis1 = new NumberAxis(getAxisLabel(layer));
               plot = new XYPlot(xySeriesColl, null, rangeAxis1, renderer1);
               plot.setRangeAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
               plot.setBackgroundPaint(Color.lightGray);
@@ -218,6 +264,55 @@ final class Charting
         return twoDForm.format(d);
     }
 
+    /** Simple class to hold a z axis and its values for a vertical section or
+     * profile plot  */
+    private static final class ZAxisAndValues
+    {
+        private final NumberAxis zAxis;
+        private final List<Double> zValues;
+        public ZAxisAndValues(NumberAxis zAxis, List<Double> zValues)
+        {
+            this.zAxis = zAxis;
+            this.zValues = zValues;
+        }
+    }
+
+    /** Creates a vertical axis for plotting the given elevation values from
+     * the given layer */
+    private static ZAxisAndValues getZAxisAndValues(Layer layer, List<Double> elevationValues)
+    {
+        // We can deal with three types of vertical axis: Height, Depth and Presssure.
+        // The code for this is very messy in ncWMS, sorry about that...  We should
+        // improve this but there are possible knock-on effects, so it's not a very
+        // easy job.
+
+        final String zAxisLabel;
+        final boolean invertYAxis;
+        if (layer.isElevationPositive()) {
+            zAxisLabel = "Height";
+            invertYAxis = false;
+        } else if (layer.isElevationPressure()) {
+            zAxisLabel = "Pressure";
+            invertYAxis = true;
+        } else {
+            zAxisLabel = "Depth";
+            // If this is a depth axis, all the values in elevationValues will be
+            // negative, so we must reverse this (see CdmUtils.getZValues())
+            List<Double> newElValues = new ArrayList<Double>(elevationValues.size());
+            for (Double zVal : elevationValues) {
+                newElValues.add(-zVal);
+            }
+            elevationValues = newElValues;
+            invertYAxis = true;
+        }
+
+        NumberAxis zAxis = new NumberAxis(zAxisLabel + " (" + layer.getElevationUnits() + ")");
+        zAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        if (invertYAxis) zAxis.setInverted(true);
+
+        return new ZAxisAndValues(zAxis, elevationValues);
+    }
+
     /**
      * Creates and returns a vertical section chart.
      * @param layer The Layer from which data have been read
@@ -232,30 +327,9 @@ final class Charting
         List<Double> elevationValues, List<List<Float>> sectionData, Range<Float> colourScaleRange,
         ColorPalette palette, int numColourBands, boolean logarithmic,double zValue)
     {
-        // We can deal with three types of vertical axis: Height, Depth and Presssure.
-        // The code for this is very messy in ncWMS, sorry about that...  We should
-        // improve this but there are possible knock-on effects, so it's not a very
-        // easy job.
-
-        final String yAxisLabel;
-        final boolean invertYAxis;
-        if (layer.isElevationPositive()) {
-            yAxisLabel = "Height";
-            invertYAxis = false;
-        } else if (layer.isElevationPressure()) {
-            yAxisLabel = "Pressure";
-            invertYAxis = true;
-        } else {
-            yAxisLabel = "Depth";
-            // If this is a depth axis, all the values in elevationValues will be
-            // negative, so we must reverse this (see CdmUtils.getZValues())
-            List<Double> newElValues = new ArrayList<Double>(elevationValues.size());
-            for (Double zVal : elevationValues) {
-                newElValues.add(-zVal);
-            }
-            elevationValues = newElValues;
-            invertYAxis = true;
-        }
+        ZAxisAndValues zAxisAndValues = getZAxisAndValues(layer, elevationValues);
+        // The elevation values might have been reversed
+        elevationValues = zAxisAndValues.zValues;
 
         double minElValue = elevationValues.get(0);
         double maxElValue = elevationValues.get(elevationValues.size() - 1);
@@ -277,11 +351,7 @@ final class Charting
                 sectionData, minElValue, maxElValue, numElValues);
         
         NumberAxis xAxis = new NumberAxis("Distance along path (arbitrary units)");
-        NumberAxis yAxis = new NumberAxis(yAxisLabel + " (" + layer.getElevationUnits() + ")");
         xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-        yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-
-        if (invertYAxis) yAxis.setInverted(true);
 
         PaintScale scale = createPaintScale(palette, colourScaleRange,
                 numColourBands, logarithmic);
@@ -302,7 +372,7 @@ final class Charting
         renderer.setPaintScale(scale);
 
        
-        XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
+        XYPlot plot = new XYPlot(dataset, xAxis, zAxisAndValues.zAxis, renderer);
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);

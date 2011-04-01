@@ -166,6 +166,10 @@ public final class NcwmsController extends AbstractWmsController
         {
             return getTransect(params, LAYER_FACTORY, httpServletResponse, usageLogEntry);
         }
+        else if (request.equals("GetVerticalProfile"))
+        {
+            return getVerticalProfile(params, LAYER_FACTORY, httpServletResponse, usageLogEntry);
+        }
         else if (request.equals("GetVerticalSection"))
         {
             return getVerticalSection(params, LAYER_FACTORY, httpServletResponse, usageLogEntry);

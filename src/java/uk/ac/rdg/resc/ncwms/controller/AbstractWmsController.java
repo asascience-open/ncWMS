@@ -66,6 +66,7 @@ import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.edal.geometry.impl.LineString;
 import uk.ac.rdg.resc.edal.coverage.domain.impl.HorizontalDomain;
+import uk.ac.rdg.resc.edal.geometry.impl.HorizontalPositionImpl;
 import uk.ac.rdg.resc.ncwms.exceptions.CurrentUpdateSequence;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidDimensionValueException;
 import uk.ac.rdg.resc.ncwms.exceptions.InvalidFormatException;
@@ -737,7 +738,6 @@ public abstract class AbstractWmsController extends AbstractController {
     /**
      * Outputs a transect (data value versus distance along a path) in PNG or
      * XML format.
-     * @todo this method is too long, refactor!
      */
     protected ModelAndView getTransect(RequestParams params, LayerFactory layerFactory,
             HttpServletResponse response, UsageLogEntry usageLogEntry)
@@ -761,6 +761,7 @@ public abstract class AbstractWmsController extends AbstractController {
 
         usageLogEntry.setLayer(layer);
         usageLogEntry.setOutputFormat(outputFormat);
+        usageLogEntry.setWmsOperation("GetTransect");
 
         // Get the required coordinate reference system, forcing longitude-first
         // axis order.
@@ -845,6 +846,108 @@ public abstract class AbstractWmsController extends AbstractController {
         return null;
     }
 
+    /**
+     * Outputs a vertical profile plot in PNG format.
+     */
+    protected ModelAndView getVerticalProfile(RequestParams params, LayerFactory layerFactory,
+            HttpServletResponse response, UsageLogEntry usageLogEntry)
+            throws WmsException, IOException
+    {
+        // Parse the request parameters
+        String layerStr = params.getMandatoryString("layer");
+        Layer layer = layerFactory.getLayer(layerStr);
+
+        String crsCode = params.getMandatoryString("crs");
+        String point = params.getMandatoryString("point");
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
+        
+        String outputFormat = params.getMandatoryString("format");
+        if (!"image/png".equals(outputFormat) &&
+            !"image/jpeg".equals(outputFormat) &&
+            !"image/jpg".equals(outputFormat)) {
+            throw new InvalidFormatException(outputFormat + " is not a valid output format");
+        }
+
+        usageLogEntry.setLayer(layer);
+        usageLogEntry.setOutputFormat(outputFormat);
+        usageLogEntry.setWmsOperation("GetVerticalProfile");
+
+        // Get the required coordinate reference system, forcing longitude-first
+        // axis order.
+        final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
+        
+        // The location of the vertical profile
+        String[] coords = point.trim().split(" +"); // allows one or more spaces to be used as a delimiter
+        if (coords.length != 2) {
+            throw new WmsException("Invalid POINT format");
+        }
+        double x, y;
+        try {
+            x = Double.parseDouble(coords[0]);
+            y = Double.parseDouble(coords[1]);
+        } catch (NumberFormatException nfe) {
+            throw new WmsException("Invalid POINT format");
+        }
+        HorizontalPosition pos = new HorizontalPositionImpl(x, y, crs);
+        Domain<HorizontalPosition> domain = new HorizontalDomain(pos);
+        
+        // Read data from each elevation in the source grid
+        // We reuse the readVerticalSection code: a profile is essentially a 
+        // one-element vertical section
+        List<Double> zValues = new ArrayList<Double>();
+        List<Float> profileData = new ArrayList<Float>();
+        if (layer instanceof ScalarLayer) {
+             ScalarLayer scalarLayer = (ScalarLayer) layer;
+             List<List<Float>> data = scalarLayer.readVerticalSection(tValue, layer.getElevationValues(), domain);
+             // Filter out null values
+             int i = 0;
+             for (Double zValue : layer.getElevationValues()) {
+                 Float d = data.get(i).get(0); // We know there is only one point in the list
+                 if (d != null) {
+                     profileData.add(d); 
+                     zValues.add(zValue);
+                 }
+                 i++;
+             }
+        }
+        else if (layer instanceof VectorLayer) {
+             VectorLayer vecLayer = (VectorLayer)layer;
+             List<List<Float>> sectionDataEast  = vecLayer.getEastwardComponent()
+                 .readVerticalSection(tValue, layer.getElevationValues(), domain);
+             List<List<Float>> sectionDataNorth = vecLayer.getNorthwardComponent()
+                 .readVerticalSection(tValue, layer.getElevationValues(), domain);
+             // Calculate magnitudes and filter out null values
+             int i = 0;
+             for (Double zValue : layer.getElevationValues()) {
+                 Float mag = WmsUtils.getMagnitudes(sectionDataEast.get(i), sectionDataNorth.get(i)).get(0);
+                 if (mag != null) {
+                     profileData.add(mag);
+                     zValues.add(zValue);
+                 }
+                 i++;
+             }
+        }
+        else {
+            // Shouldn't happen
+            throw new UnsupportedOperationException("Unsupported layer type");
+        }
+
+        // Now create the vertical profile plot
+        JFreeChart chart = Charting.createVerticalProfilePlot(layer, pos, zValues, profileData);
+
+        response.setContentType(outputFormat);
+        int width = 500;
+        int height = 400;
+        if ("image/png".equals(outputFormat)) {
+            ChartUtilities.writeChartAsPNG(response.getOutputStream(), chart, width, height);
+        } else {
+            // Must be a JPEG
+            ChartUtilities.writeChartAsJPEG(response.getOutputStream(), chart, width, height);
+        }
+        
+        return null;
+    }
   
     private static JFreeChart createVerticalSectionChart(RequestParams params,
             Layer layer, DateTime tValue, LineString lineString,
@@ -916,7 +1019,7 @@ public abstract class AbstractWmsController extends AbstractController {
             scaleRange = Ranges.newRange(min, max);
         }
         
-         double zValue = getElevationValue(params.getString("elevation"), layer);
+        double zValue = getElevationValue(params.getString("elevation"), layer);
          
         return Charting.createVerticalSectionChart(layer, lineString,
                 zValues, sectionData, scaleRange, palette, numColourBands, logScale,zValue);
@@ -950,6 +1053,7 @@ public abstract class AbstractWmsController extends AbstractController {
             throw new InvalidFormatException(outputFormat + " is not a valid output format");
         }
         usageLogEntry.setOutputFormat(outputFormat);
+        usageLogEntry.setWmsOperation("GetVerticalSection");
 
         // Get the required coordinate reference system, forcing longitude-first
         // axis order.
