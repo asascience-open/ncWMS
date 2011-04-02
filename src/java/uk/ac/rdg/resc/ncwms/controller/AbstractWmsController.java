@@ -934,7 +934,7 @@ public abstract class AbstractWmsController extends AbstractController {
         }
 
         // Now create the vertical profile plot
-        JFreeChart chart = Charting.createVerticalProfilePlot(layer, pos, zValues, profileData);
+        JFreeChart chart = Charting.createVerticalProfilePlot(layer, pos, zValues, profileData, tValue);
 
         response.setContentType(outputFormat);
         int width = 500;

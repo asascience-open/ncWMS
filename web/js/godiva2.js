@@ -523,6 +523,22 @@ function getFeatureInfo(e)
                         "title='Sets the maximum of the colour scale to " + truncVal + "'>" +
                         "Set colour max</a>";
                 }
+                if (activeLayer.zaxis != null && activeLayer.zaxis.values != null &&
+                    activeLayer.zaxis.values.length > 1) {
+                    // This layer has a vertical axis with > 1 values
+                    // TODO Construct the URL of the vertical profile plot
+                    var profilePlotURL = activeLayer.server == '' ? 'wms' : activeLayer.server;
+                    profilePlotURL += '?REQUEST=GetVerticalProfile' +
+                                      '&LAYER=' + activeLayer.id +
+                                      '&CRS=CRS:84' + // We frame the request in lon/lat coordinates
+                                      '&TIME=' + isoTValue +
+                                      '&POINT=' + lon + '%20' + lat +
+                                      '&FORMAT=image/png';
+
+                    html += "<br /><a href='#' onclick=popUp('" + profilePlotURL + "',550,450)"
+                         + " title='Creates a vertical profile plot at this point'>"
+                         + "Create vertical profile plot</a>";
+                }
                 if (timeSeriesSelected()) {
                     // Construct a GetFeatureInfo request for the timeseries plot
                     var serverAndParams = featureInfoUrl.split('?');

@@ -116,7 +116,7 @@ final class Charting
     }
 
     public static JFreeChart createVerticalProfilePlot(Layer layer, HorizontalPosition pos,
-            List<Double> elevationValues, List<Float> dataValues)
+            List<Double> elevationValues, List<Float> dataValues, DateTime dateTime)
     {
         if (elevationValues.size() != dataValues.size())
         {
@@ -140,18 +140,25 @@ final class Charting
         xySeriesColl.addSeries(series);
 
 
-        final XYItemRenderer renderer1 = new StandardXYItemRenderer();
-        XYPlot plot = new XYPlot(xySeriesColl, elevationAxis, valueAxis, renderer1);
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+        renderer.setSeriesPaint(0, Color.RED);
+        renderer.setSeriesShapesVisible(0, true);
+
+        XYPlot plot = new XYPlot(xySeriesColl, elevationAxis, valueAxis, renderer);
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
-        plot.getRenderer().setSeriesPaint(0, Color.RED);
         plot.setOrientation(PlotOrientation.HORIZONTAL);
 
         // Find the position of the profile in lon-lat coordinates for the label
         HorizontalPosition lonLatPos = Utils.transformPosition(pos, DefaultGeographicCRS.WGS84);
+        // TODO: include time on the plot?
         String title = String.format("Profile of %s at (%s, %s)",
-            layer.getTitle(), lonLatPos.getX(), lonLatPos.getY(), layer.getUnits());
+            layer.getTitle(), lonLatPos.getX(), lonLatPos.getY());
+        if (dateTime != null) {
+            title += " at " + WmsUtils.dateTimeToISO8601(dateTime);
+        }
 
         return new JFreeChart(title, null, plot, false);
     }
