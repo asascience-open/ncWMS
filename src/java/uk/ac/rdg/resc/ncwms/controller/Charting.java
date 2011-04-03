@@ -139,7 +139,6 @@ final class Charting
         XYSeriesCollection xySeriesColl = new XYSeriesCollection();
         xySeriesColl.addSeries(series);
 
-
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
         renderer.setSeriesPaint(0, Color.RED);
@@ -154,8 +153,12 @@ final class Charting
         // Find the position of the profile in lon-lat coordinates for the label
         HorizontalPosition lonLatPos = Utils.transformPosition(pos, DefaultGeographicCRS.WGS84);
         // TODO: include time on the plot?
-        String title = String.format("Profile of %s at (%s, %s)",
-            layer.getTitle(), lonLatPos.getX(), lonLatPos.getY());
+        double lon = lonLatPos.getX();
+        String lonStr = Double.toString(Math.abs(lon)) + ((lon >= 0.0) ? "E" : "W");
+        double lat = lonLatPos.getY();
+        String latStr = Double.toString(Math.abs(lat)) + ((lat >= 0.0) ? "N" : "S");
+        String title = String.format("Profile of %s at %s, %s",
+            layer.getTitle(), lonStr, latStr);
         if (dateTime != null) {
             title += " at " + WmsUtils.dateTimeToISO8601(dateTime);
         }
