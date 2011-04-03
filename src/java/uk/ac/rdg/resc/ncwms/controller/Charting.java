@@ -88,7 +88,6 @@ final class Charting
     private static final Locale US_LOCALE = new Locale("us", "US");
     private static final Color TRANSPARENT = new Color(0,0,0,0);
     
-    //
     public static JFreeChart createTimeseriesPlot(Layer layer, LonLatPosition lonLat,
             Map<DateTime, Float> tsData)
     {
@@ -152,7 +151,6 @@ final class Charting
 
         // Find the position of the profile in lon-lat coordinates for the label
         HorizontalPosition lonLatPos = Utils.transformPosition(pos, DefaultGeographicCRS.WGS84);
-        // TODO: include time on the plot?
         double lon = lonLatPos.getX();
         String lonStr = Double.toString(Math.abs(lon)) + ((lon >= 0.0) ? "E" : "W");
         double lat = lonLatPos.getY();
@@ -163,6 +161,7 @@ final class Charting
             title += " at " + WmsUtils.dateTimeToISO8601(dateTime);
         }
 
+        // Use default font and don't create a legend
         return new JFreeChart(title, null, plot, false);
     }
 
@@ -185,22 +184,22 @@ final class Charting
   
         // If we have a layer with more than one elevation value, we create a transect chart
         // using standard XYItem Renderer to keep the plot renderer consistent with that of vertical section plot
-         if (layer.getElevationValues().size() > 1)
-         {
-              final XYItemRenderer renderer1 = new StandardXYItemRenderer();
-              final NumberAxis rangeAxis1 = new NumberAxis(getAxisLabel(layer));
-              plot = new XYPlot(xySeriesColl, null, rangeAxis1, renderer1);
-              plot.setRangeAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
-              plot.setBackgroundPaint(Color.lightGray);
-              plot.setDomainGridlinesVisible(false);
-              plot.setRangeGridlinePaint(Color.white);       
-              plot.getRenderer().setSeriesPaint(0, Color.RED);
-              plot.setOrientation(PlotOrientation.VERTICAL);
-              chart = new JFreeChart(plot);
-         }
-         else   // If we have a layer which only has one elevation value, we simply create XY Line chart  
-         {           
-             chart = ChartFactory.createXYLineChart(
+        if (layer.getElevationValues().size() > 1)
+        {
+            final XYItemRenderer renderer1 = new StandardXYItemRenderer();
+            final NumberAxis rangeAxis1 = new NumberAxis(getAxisLabel(layer));
+            plot = new XYPlot(xySeriesColl, null, rangeAxis1, renderer1);
+            plot.setRangeAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
+            plot.setBackgroundPaint(Color.lightGray);
+            plot.setDomainGridlinesVisible(false);
+            plot.setRangeGridlinePaint(Color.white);       
+            plot.getRenderer().setSeriesPaint(0, Color.RED);
+            plot.setOrientation(PlotOrientation.VERTICAL);
+            chart = new JFreeChart(plot);
+        }
+        else   // If we have a layer which only has one elevation value, we simply create XY Line chart  
+        {           
+            chart = ChartFactory.createXYLineChart(
                     "Transect for " + layer.getTitle(), // title
                     "distance along transect (arbitrary units)", // TODO more meaningful x axis label
                     layer.getTitle() + " (" + layer.getUnits() + ")",
@@ -210,10 +209,9 @@ final class Charting
                     false, // show tooltips (?)
                     false // urls (?)
                     );                  
-               plot = chart.getXYPlot();                
-             
-         }       
-         if (layer.getDataset().getCopyrightStatement() != null) {
+            plot = chart.getXYPlot();     
+        }       
+        if (layer.getDataset().getCopyrightStatement() != null) {
             final TextTitle textTitle = new TextTitle(layer.getDataset().getCopyrightStatement());
             textTitle.setFont(new Font("SansSerif", Font.PLAIN, 10));
             textTitle.setPosition(RectangleEdge.BOTTOM);
@@ -380,13 +378,11 @@ final class Charting
         double elevationResolution = (maxElValue - minElValue) / numElValues;
         renderer.setBlockHeight(elevationResolution);
         renderer.setPaintScale(scale);
-
        
         XYPlot plot = new XYPlot(dataset, xAxis, zAxisAndValues.zAxis, renderer);
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
-       // plot.set
 
         // Iterate through control points to show segments of transect
         Double prevCtrlPointDistance = null;
