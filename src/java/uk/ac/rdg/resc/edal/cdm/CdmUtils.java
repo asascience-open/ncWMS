@@ -116,7 +116,7 @@ public final class CdmUtils
     {
         if (gd == null) throw new NullPointerException("GridDataset can't be null");
 
-        List<CoverageMetadata> layers = new ArrayList<CoverageMetadata>();
+        List<CoverageMetadata> coverages = new ArrayList<CoverageMetadata>();
 
         // Search through all coordinate systems, creating appropriate metadata
         // for each.  This allows metadata objects to be shared among CoverageMetadata
@@ -145,22 +145,32 @@ public final class CdmUtils
             for (GridDatatype grid : gridset.getGrids())
             {
                 logger.debug("Creating new CoverageMetadata object for {}", grid.getName());
-                CoverageMetadata lm = new CdmCoverageMetadata(grid, bbox, horizGrid, timesteps, zAxis);
+                CoverageMetadata cm = new CdmCoverageMetadata(grid, bbox, horizGrid, timesteps, zAxis);
                 // Add this layer to the Map
-                layers.add(lm);
+                coverages.add(cm);
             }
         }
 
-        return layers;
+        return coverages;
     }
 
     /**
      * Creates a {@link ReferenceableAxis} from the given {@link CoordinateAxis1D}.
+     * Creates a longitude axis if axis.getAxisType() == AxisType.Lon.
      */
     public static ReferenceableAxis createReferenceableAxis(CoordinateAxis1D axis)
     {
+        return createReferenceableAxis(axis, axis.getAxisType() == AxisType.Lon);
+    }
+
+    /**
+     * Creates a {@link ReferenceableAxis} from the given {@link CoordinateAxis1D}.
+     * @param isLongitude true if this is a longitude axis ({@literal i.e.} wraps
+     * at 360 degrees).
+     */
+    public static ReferenceableAxis createReferenceableAxis(CoordinateAxis1D axis, boolean isLongitude)
+    {
         if (axis == null) throw new NullPointerException();
-        boolean isLongitude = axis.getAxisType() == AxisType.Lon;
         String name = axis.getName();
         // TODO: generate coordinate system axes if appropriate
         if (axis.isRegular())

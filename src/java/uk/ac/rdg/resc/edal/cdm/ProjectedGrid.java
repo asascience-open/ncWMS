@@ -39,6 +39,7 @@ import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.Projection;
 import ucar.unidata.geoloc.ProjectionImpl;
 import ucar.unidata.geoloc.ProjectionPoint;
+import ucar.unidata.geoloc.projection.RotatedPole;
 import uk.ac.rdg.resc.edal.coverage.grid.GridCoordinates;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
@@ -74,7 +75,10 @@ class ProjectedGrid extends AbstractHorizontalGrid
     {
         super(DefaultGeographicCRS.WGS84);
         this.proj = coordSys.getProjection();
-        this.xAxis = CdmUtils.createReferenceableAxis((CoordinateAxis1D)coordSys.getXHorizAxis());
+        // If this is a rotated-pole projection then the x axis is longitude and
+        // hence wraps at 0/360 degrees.
+        boolean xAxisIsLongitude = this.proj instanceof RotatedPole;
+        this.xAxis = CdmUtils.createReferenceableAxis((CoordinateAxis1D)coordSys.getXHorizAxis(), xAxisIsLongitude);
         this.yAxis = CdmUtils.createReferenceableAxis((CoordinateAxis1D)coordSys.getYHorizAxis());
         this.axisNames = Collections.unmodifiableList(Arrays.asList(
             this.xAxis.getName(), this.yAxis.getName()));
