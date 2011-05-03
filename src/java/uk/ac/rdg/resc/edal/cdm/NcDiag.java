@@ -115,7 +115,9 @@ public final class NcDiag
             )
         );
         printTableLine(ps, "Elevation axis", String.format("%d values", cm.getElevationValues().size()));
-        printTableLine(ps, "Time axis", String.format("%d values", cm.getTimeValues().size()));
+        printTableLine(ps, "Time axis (" + cm.getChronology() + ")",
+            String.format("%d values", cm.getTimeValues().size())
+        );
         ps.println("</tbody>");
         ps.println("</table>");
         // Create an image of this variable and save it
