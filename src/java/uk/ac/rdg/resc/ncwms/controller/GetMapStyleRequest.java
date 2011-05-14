@@ -69,11 +69,8 @@ public class GetMapStyleRequest
         else this.styles = stylesStr.split(",");
         
         this.imageFormat = params.getMandatoryString("format").replaceAll(" ", "+");
-        
-        String trans = params.getString("transparent", "false").toLowerCase();
-        if (trans.equals("false")) this.transparent = false;
-        else if (trans.equals("true")) this.transparent = true;
-        else throw new WmsException("The value of TRANSPARENT must be \"TRUE\" or \"FALSE\"");
+
+        this.transparent = params.getBoolean("transparent", false);
         
         try
         {

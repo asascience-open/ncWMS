@@ -186,11 +186,24 @@ public class RequestParams
     public String getString(String paramName, String defaultValue)
     {
         String value = this.getString(paramName);
-        if (value == null)
-        {
-            return defaultValue;
-        }
+        if (value == null) return defaultValue;
         return value;
+    }
+
+    /**
+     * Returns the value of the parameter with the given name as a boolean value,
+     * or the provided default if no parameter with the given name has been supplied.
+     * @throws WmsException if the value is not a valid boolean string ("true" or "false",
+     * case-insensitive).
+     */
+    public boolean getBoolean(String paramName, boolean defaultValue) throws WmsException
+    {
+        String value = this.getString(paramName);
+        if (value == null) return defaultValue;
+        value = value.trim();
+        if ("true".equalsIgnoreCase(value)) return true;
+        if ("false".equalsIgnoreCase(value)) return false;
+        throw new WmsException("Invalid boolean value for parameter " + paramName);
     }
     
     /**

@@ -307,6 +307,10 @@ public abstract class AbstractWmsController extends AbstractController {
             }
         }
 
+        // Find out whether we are going to represent times in a verbose or
+        // concise way in the Capabilities document.
+        boolean verboseTimes = params.getBoolean("verbose", false);
+
         Map<String, Object> models = new HashMap<String, Object>();
         models.put("config", this.serverConfig);
         models.put("datasets", datasets);
@@ -336,6 +340,7 @@ public abstract class AbstractWmsController extends AbstractController {
         models.put("legendWidth", ColorPalette.LEGEND_WIDTH);
         models.put("legendHeight", ColorPalette.LEGEND_HEIGHT);
         models.put("paletteNames", ColorPalette.getAvailablePaletteNames());
+        models.put("verboseTimes", verboseTimes);
 
         // Do WMS version negotiation.  From the WMS 1.3.0 spec:
         // * If a version unknown to the server and higher than the lowest
