@@ -37,7 +37,7 @@
          log) are decoupled from the ncwmsContext object, meaning that they can
          be more easily reused in other environments (e.g. THREDDS). -->
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-	<property name="properties"><ref local="properties"/></property>
+    <property name="properties"><ref local="properties"/></property>
         <property name="systemPropertiesModeName">
             <value>SYSTEM_PROPERTIES_MODE_OVERRIDE</value>
         </property>
@@ -60,7 +60,7 @@
     <!-- Object that caches recently-extracted tiles of data, used to speed up
          repeat GetMap requests -->
     <bean id="tileCache" class="uk.ac.rdg.resc.ncwms.cache.TileCache"
-            init-method="init" destroy-method="close">
+            init-method="init" destroy-method="shutdown">
         <property name="cacheDirectory" value="${ncwms.workingDirectory}/tilecache"/>
         <property name="config"><ref local="config"/></property>
     </bean>
