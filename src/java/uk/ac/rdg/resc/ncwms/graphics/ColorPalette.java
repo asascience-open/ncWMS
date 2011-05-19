@@ -185,9 +185,14 @@ public class ColorPalette
     {
         if (name == null || name.trim().equals(""))
         {
-            return palettes.get(DEFAULT_PALETTE_NAME);
+        	return palettes.get(DEFAULT_PALETTE_NAME);
         }
-        return palettes.get(name.trim().toLowerCase());
+        ColorPalette ret = palettes.get(name.trim().toLowerCase());
+        if(ret != null) {
+        	return ret;
+        } else {
+        	return palettes.get(DEFAULT_PALETTE_NAME);
+        }
     }
 
     /** Gets the name of this palette */

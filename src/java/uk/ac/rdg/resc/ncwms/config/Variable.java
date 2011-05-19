@@ -92,12 +92,6 @@ public class Variable
             }
         }
 
-        // Check that the required colour palette exists
-        if (!ColorPalette.getAvailablePaletteNames().contains(this.paletteName))
-        {
-            this.paletteName = ColorPalette.DEFAULT_PALETTE_NAME;
-        }
-
         // Set the scaling of this variable
         // TODO: it's a bit nasty to catch the runtime exception, but this at
         // least allows us to reuse the code in setScaling().
