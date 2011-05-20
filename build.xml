@@ -123,4 +123,45 @@
 
         <delete file="${store.dir}/temp_final.jar"/>
     </target>
+
+    <target name="imagegen" depends="jar-for-THREDDS" description="Builds the image generator tool as a single fat JAR file">
+        
+        <property name="store.dir" value="temp"/>
+        <property name="lib.dir" value="web/WEB-INF/lib"/>
+
+        <!-- See http://java.sun.com/developer/technicalArticles/java_warehouse/single_jar/ -->
+
+        <delete dir="${store.dir}"/>
+        <mkdir dir="${store.dir}"/>
+
+        <jar destfile="${store.dir}/temp_final.jar" filesetmanifest="skip">
+            <zipgroupfileset dir="dist" includes="ncwms.jar"/>
+            <!-- TODO use properties to target libs by reference - see build-impl.xml -->
+            <zipgroupfileset dir="${lib.dir}" includes="
+                netcdf-4.2.jar
+                joda-time-1.6.jar
+                log4j-1.2.15.jar
+                opendap-2.2.jar
+                slf4j-api-1.5.6.jar
+                slf4j-log4j12-1.5.6.jar
+                unidatacommon.jar
+                commons-httpclient-3.1.jar
+                commons-logging-1.1.jar
+                geotk-bundle-referencing-3.12.jar
+                jdom.jar
+            "/>
+
+            <manifest>
+                <attribute name="Main-Class" value="uk.ac.rdg.resc.edal.cdm.NcImageGen"/>
+            </manifest>
+        </jar>
+
+        <mkdir dir="dist"/>
+        <zip destfile="dist/NcImageGen.jar">
+            <zipfileset src="${store.dir}/temp_final.jar"
+            excludes="META-INF/*.SF, META-INF/*.DSA, META-INF/*.RSA"/>
+        </zip>
+
+        <delete file="${store.dir}/temp_final.jar"/>
+    </target>
 </project>
