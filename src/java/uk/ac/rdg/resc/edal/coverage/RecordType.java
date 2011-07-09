@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.edal.coverage;
 
 import java.util.Set;
-import javax.measure.unit.Unit;
 import org.opengis.util.TypeName;
 
 /**
@@ -69,13 +68,12 @@ public interface RecordType {
      * @throws IllegalArgumentException if the memberName is not present in
      * {@link #getMemberNames()}.
      */
-    //public Phenomenon getParameter(String memberName);
+    public Phenomenon getParameter(String memberName);
 
     /**
      * Returns the units of measure of the given record member as a String.
      * @param memberName The name of the record member.
      * @return the units of measure of the give record member
-     * @todo Should we specify that the String must be parseable by Udunits?
      * @todo What if the member inherently has no units (e.g. a quality flag)?
      * Should this return null or the empty string?
      * @todo What if the member has no units, but the numeric value is still
