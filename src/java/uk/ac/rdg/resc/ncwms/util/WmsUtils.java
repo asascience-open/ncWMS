@@ -232,7 +232,7 @@ public class WmsUtils
      * doubles.
      * @throws WmsException if the format of the bounding box is invalid
      */
-    public static double[] parseBbox(String bboxStr) throws WmsException
+    public static double[] parseBbox(String bboxStr, boolean lonFirst) throws WmsException
     {
         String[] bboxEls = bboxStr.split(",");
         // Check the validity of the bounding box
@@ -243,9 +243,16 @@ public class WmsUtils
         double[] bbox = new double[4];
         try
         {
-            for (int i = 0; i < bbox.length; i++)
-            {
-                bbox[i] = Double.parseDouble(bboxEls[i]);
+            if(lonFirst){
+                bbox[0] = Double.parseDouble(bboxEls[0]);
+                bbox[1] = Double.parseDouble(bboxEls[1]);
+                bbox[2] = Double.parseDouble(bboxEls[2]);
+                bbox[3] = Double.parseDouble(bboxEls[3]);
+            } else {
+                bbox[0] = Double.parseDouble(bboxEls[1]);
+                bbox[1] = Double.parseDouble(bboxEls[0]);
+                bbox[2] = Double.parseDouble(bboxEls[3]);
+                bbox[3] = Double.parseDouble(bboxEls[2]);
             }
         }
         catch(NumberFormatException nfe)

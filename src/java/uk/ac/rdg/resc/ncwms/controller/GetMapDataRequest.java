@@ -74,7 +74,10 @@ public class GetMapDataRequest
     {
         // WMS1.3.0 uses "CRS", 1.1.1 uses "SRS".  This is a bit of a kludge
         this.crsCode = params.getMandatoryString(version.equals("1.3.0") ? "crs" : "srs");
-        this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"));
+        if(crsCode.equalsIgnoreCase("EPSG:4326") && version.equalsIgnoreCase("1.1.1")){
+            crsCode = "CRS:84";
+        }
+        this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), !crsCode.equalsIgnoreCase("epsg:4326"));
         this.width = params.getMandatoryPositiveInt("width");
         this.height = params.getMandatoryPositiveInt("height");
         this.timeString = params.getString("time");
