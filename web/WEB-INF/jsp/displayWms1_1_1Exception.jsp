@@ -1,4 +1,4 @@
-<%@page contentType="application/vnd.ogc.se_xml"%><%@page pageEncoding="UTF-8"%><?xml version="1.0" encoding="UTF-8"?>
+<%@include file="xml_header.jsp"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%> 
 <%
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
@@ -11,12 +11,13 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     </c:when>
     <c:otherwise>
         <% response.setStatus( HttpServletResponse.SC_BAD_REQUEST ); %>
-    </c:otherwise>    
+    </c:otherwise>
 </c:choose>
-
 <%-- Displays a WmsException in the correct format --%>
-<!DOCTYPE ServiceExceptionReport SYSTEM "http://schemas.opengis.net/wms/1.1.1/exception_1_1_1.dtd">
-<ServiceExceptionReport version="1.1.1">
+<ServiceExceptionReport version="1.1.1"
+                        xmlns="http://www.opengis.net/ogc"
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                        xsi:schemaLocation="http://www.opengis.net/ogc http://schemas.opengis.net/wms/1.1.1/exceptions_1_1_1.xsd">
     <ServiceException<c:if test="${not empty exception.code}"> code="${exception.code}"</c:if>>
         ${exception.message}
     </ServiceException>
