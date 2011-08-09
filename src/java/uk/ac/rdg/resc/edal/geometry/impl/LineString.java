@@ -33,6 +33,8 @@ import java.util.Collections;
 import java.util.List;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.exceptions.InvalidCrsException;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
  * Represents a path through a coordinate system.  The path consists of a set
@@ -59,17 +61,27 @@ public final class LineString
      * coordinates
      * @throws InvalidLineStringException if the line string is not correctly
      * specified.
+     * @throws InvalidCrsException 
      * @throws NullPointerException if crsHelper == null
      */
-    public LineString(String lineStringSpec, CoordinateReferenceSystem crs) throws InvalidLineStringException {
+    public LineString(String lineStringSpec, String crsCode, String wmsVersion) throws InvalidLineStringException, InvalidCrsException {
         String[] pointsStr = lineStringSpec.split(",");
         if (pointsStr.length < 2) {
             throw new InvalidLineStringException("At least two points are required to generate a transect");
         }
-        if (crs == null) {
+        if (crsCode == null) {
             throw new NullPointerException("CRS cannot be null");
         }
-        this.crs = crs;
+        this.crs = WmsUtils.getCrs(crsCode);
+        
+        int lonIndex = 0;
+        int latIndex = 1;
+        // If we have lat lon order...
+        if(crsCode != null && crsCode.equalsIgnoreCase("EPSG:4326") && wmsVersion != null && wmsVersion.equalsIgnoreCase("1.3.0")){
+            // Swap the co-ordinates to lon lat order
+            latIndex = 0;
+            lonIndex = 1;
+        }
 
         // The control points along the transect as specified by the line string
         final List<HorizontalPosition> ctlPoints = new ArrayList<HorizontalPosition>();
@@ -80,8 +92,8 @@ public final class LineString
             }
             try {
                 ctlPoints.add(new HorizontalPositionImpl(
-                    Double.parseDouble(coords[0].trim()),
-                    Double.parseDouble(coords[1].trim()),
+                    Double.parseDouble(coords[lonIndex].trim()),
+                    Double.parseDouble(coords[latIndex].trim()),
                     crs
                 ));
             } catch (NumberFormatException nfe) {

@@ -773,7 +773,7 @@ public abstract class AbstractWmsController extends AbstractController {
         final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
-        final LineString transect = new LineString(lineString, crs);
+        final LineString transect = new LineString(lineString, crsCode, params.getWmsVersion());
         log.debug("Got {} control points", transect.getControlPoints().size());
 
         // Find the optimal number of points to sample the layer's source grid
@@ -887,10 +887,19 @@ public abstract class AbstractWmsController extends AbstractController {
         if (coords.length != 2) {
             throw new WmsException("Invalid POINT format");
         }
+        int lonIndex = 0;
+        int latIndex = 1;
+        // If we have lat lon order...
+        if(crsCode.equalsIgnoreCase("EPSG:4326") && params.getWmsVersion().equalsIgnoreCase("1.3.0")){
+            // Swap the co-ordinates to lon lat order
+            latIndex = 0;
+            lonIndex = 1;
+        }
+        
         double x, y;
         try {
-            x = Double.parseDouble(coords[0]);
-            y = Double.parseDouble(coords[1]);
+            x = Double.parseDouble(coords[lonIndex]);
+            y = Double.parseDouble(coords[latIndex]);
         } catch (NumberFormatException nfe) {
             throw new WmsException("Invalid POINT format");
         }
@@ -1065,7 +1074,7 @@ public abstract class AbstractWmsController extends AbstractController {
         final CoordinateReferenceSystem crs = WmsUtils.getCrs(crsCode);
 
         // Parse the line string, which is in the form "x1 y1, x2 y2, x3 y3"
-        final LineString lineString = new LineString(lineStr, crs);
+        final LineString lineString = new LineString(lineStr, crsCode, params.getMandatoryWmsVersion());
         log.debug("Got {} control points", lineString.getControlPoints().size());
 
         // Find the optimal number of points to sample the layer's source grid

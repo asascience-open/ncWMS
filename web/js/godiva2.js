@@ -1328,17 +1328,18 @@ function updateMap()
         crs: map.baseLayer.projection,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
         numcolorbands: $('numColorBands').value,
-        logscale: logscale
+        logscale: logscale,
+        version: '1.3.0'
     };
     if (ncwms == null) {
         // Buffer is set to 1 to avoid loading a large halo of tiles outside the
         // current viewport
-        ncwms_tiled = new OpenLayers.Layer.WMS1_3("ncWMS",
+        ncwms_tiled = new OpenLayers.Layer.WMS("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server,
             params,
             {buffer: 1, wrapDateLine: map.baseLayer.projection == 'EPSG:4326'}
         );
-        ncwms_untiled = new OpenLayers.Layer.WMS1_3("ncWMS",
+        ncwms_untiled = new OpenLayers.Layer.WMS("ncWMS",
             activeLayer.server == '' ? 'wms' : activeLayer.server,
             params,
             {buffer: 1, ratio: 1.5, singleTile: true, wrapDateLine: map.baseLayer.projection == 'EPSG:4326'}
