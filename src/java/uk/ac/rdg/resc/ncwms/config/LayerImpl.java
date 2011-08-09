@@ -57,10 +57,6 @@ final class LayerImpl extends AbstractTimeAggregatedLayer
     private final Dataset dataset;
     private final DataReader dataReader;
     
-    /**
-     * Creates a new Layer using a default bounding box (covering the whole 
-     * earth), with the given id and with a default boxfill style
-     */
     public LayerImpl(CoverageMetadata lm, Dataset ds, DataReader dr)
     {
         super(lm);

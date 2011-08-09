@@ -65,8 +65,7 @@ abstract class AbstractTimeAggregatedLayer extends AbstractScalarLayer
         };
     
     /**
-     * Creates an AbstractTimeAggregatedLayer with a bounding box that covers
-     * the whole world and the given identifier.  This will not extract the
+     * Creates an AbstractTimeAggregatedLayer.  This will not extract the
      * dateTimes from the CoverageMetadata objects.  Clients will need to
      * call addTimestepInfo() as required.
      */

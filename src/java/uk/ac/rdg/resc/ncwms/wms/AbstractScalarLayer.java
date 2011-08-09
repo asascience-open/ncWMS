@@ -68,22 +68,21 @@ public abstract class AbstractScalarLayer implements ScalarLayer
         }
     };
 
-    private final CoverageMetadata lm;
+    private final CoverageMetadata cm;
 
     /**
-     * Creates an AbstractLayer with a bounding box that covers the whole world
-     * and the given identifier.
+     * Creates an AbstractScalarLayer from a CoverageMetadata object.
      * @param id An identifier that is unique within this layer's
      * {@link #getDataset() dataset}.
-     * @throws NullPointerException if {@code lm == null}
+     * @throws NullPointerException if {@code cm == null}
      */
-    public AbstractScalarLayer(CoverageMetadata lm)
+    public AbstractScalarLayer(CoverageMetadata cm)
     {
-        if (lm == null) throw new NullPointerException("CoverageMetadata can't be null");
-        this.lm = lm;
+        if (cm == null) throw new NullPointerException("CoverageMetadata can't be null");
+        this.cm = cm;
     }
 
-    @Override public String getId() { return this.lm.getId(); }
+    @Override public String getId() { return this.cm.getId(); }
 
     /**
      * Returns a layer name that is unique on this server, created from the
@@ -97,31 +96,33 @@ public abstract class AbstractScalarLayer implements ScalarLayer
         return WmsUtils.createUniqueLayerName(this.getDataset().getId(), this.getId());
     }
 
-    @Override public String getTitle() { return this.lm.getTitle(); }
+    @Override public String getTitle() { return this.cm.getTitle(); }
 
-    @Override public String getLayerAbstract() { return this.lm.getDescription(); }
+    @Override public String getLayerAbstract() { return this.cm.getDescription(); }
 
-    @Override public String getUnits() { return this.lm.getUnits(); }
+    @Override public String getUnits() { return this.cm.getUnits(); }
 
-    @Override public String getElevationUnits() { return this.lm.getElevationUnits(); }
+    @Override public String getElevationUnits() { return this.cm.getElevationUnits(); }
 
-    @Override public List<Double> getElevationValues() { return this.lm.getElevationValues(); }
-
-    @Override
-    public boolean isElevationPositive() { return this.lm.isElevationPositive(); }
+    @Override public List<Double> getElevationValues() { return this.cm.getElevationValues(); }
 
     @Override
-    public boolean isElevationPressure() { return this.lm.isElevationPressure(); }
+    public boolean isElevationPositive() { return this.cm.isElevationPositive(); }
+
+    @Override
+    public boolean isElevationPressure() { return this.cm.isElevationPressure(); }
 
     @Override
     public GeographicBoundingBox getGeographicBoundingBox() {
-        return this.lm.getGeographicBoundingBox();
+        return this.cm.getGeographicBoundingBox();
     }
 
     @Override
     public HorizontalGrid getHorizontalGrid() {
-        return this.lm.getHorizontalGrid();
+        return this.cm.getHorizontalGrid();
     }
+
+    @Override public List<DateTime> getTimeValues() { return this.cm.getTimeValues(); }
 
     /**
      * Returns true if this layer has a time axis.  This is a convenience method
