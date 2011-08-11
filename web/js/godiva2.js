@@ -228,7 +228,8 @@ window.onload = function()
         map.addLayers([gmapLayer, gmapLayer2]);
     }
 
-    layerSwitcher = new OpenLayers.Control.LayerSwitcher()
+    layerSwitcher = new OpenLayers.Control.LayerSwitcher();
+    
     map.addControl(layerSwitcher);
 
     //map.addControl(new OpenLayers.Control.MousePosition({prefix: 'Lon: ', separator: ' Lat:'}));
