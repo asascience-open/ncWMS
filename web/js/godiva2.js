@@ -1328,8 +1328,7 @@ function updateMap()
         crs: map.baseLayer.projection,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
         numcolorbands: $('numColorBands').value,
-        logscale: logscale,
-        version: '1.3.0'
+        logscale: logscale
     };
     if (ncwms == null) {
         // Buffer is set to 1 to avoid loading a large halo of tiles outside the
