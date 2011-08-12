@@ -478,8 +478,8 @@ function getFeatureInfo(e)
         var params = {
             REQUEST: "GetFeatureInfo",
             BBOX: map.getExtent().toBBOX(),
-            I: e.xy.x,
-            J: e.xy.y,
+            X: e.xy.x,
+            Y: e.xy.y,
             INFO_FORMAT: 'text/xml',
             QUERY_LAYERS: ncwms.params.LAYERS,
             WIDTH: map.size.w,
