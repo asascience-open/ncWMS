@@ -50,15 +50,17 @@ import org.slf4j.LoggerFactory;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
-import org.simpleframework.xml.load.Commit;
-import org.simpleframework.xml.load.PersistenceException;
-import org.simpleframework.xml.load.Persister;
-import org.simpleframework.xml.load.Validate;
+import org.simpleframework.xml.Serializer;
+import org.simpleframework.xml.core.Commit;
+import org.simpleframework.xml.core.PersistenceException;
+import org.simpleframework.xml.core.Persister;
+import org.simpleframework.xml.core.Validate;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.unidata.io.RandomAccessFile;
+import uk.ac.rdg.resc.edal.util.Utils;
 import uk.ac.rdg.resc.ncwms.security.Users;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
@@ -76,6 +78,9 @@ import uk.ac.rdg.resc.ncwms.controller.ServerConfig;
 public class Config implements ServerConfig, ApplicationContextAware
 {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
+
+    /** Reads and writes XML to/from disk.  Fully thread safe. */
+    private static final Serializer PERSISTER = new Persister();
 
     // We don't do "private List<Dataset> datasetList..." here because if we do,
     // the config file will contain "<datasets class="java.util.ArrayList>",
@@ -104,6 +109,7 @@ public class Config implements ServerConfig, ApplicationContextAware
     private DateTime lastUpdateTime;
 
     private File configFile; // Location of the file from which this information has been read
+    private File configBackup; // Location of backup for config file
 
     // Will be injected by Spring: handles authenticated OPeNDAP calls
     private NcwmsCredentialsProvider credentialsProvider;
@@ -135,7 +141,7 @@ public class Config implements ServerConfig, ApplicationContextAware
 
         if (configFile.exists())
         {
-            config = new Persister().read(Config.class, configFile);
+            config = PERSISTER.read(Config.class, configFile);
             config.configFile = configFile;
             logger.debug("Loaded configuration from {}", configFile.getPath());
         }
@@ -194,7 +200,19 @@ public class Config implements ServerConfig, ApplicationContextAware
         {
             throw new IllegalStateException("No location set for config file");
         }
-        new Persister().write(this, this.configFile);
+        // Take a backup of the existing config file
+        if (this.configBackup == null) {
+            String backupName = this.configFile.getAbsolutePath() + ".bak";
+            this.configBackup = new File(backupName);
+        }
+        // Copy current config file to the backup file.
+        if (this.configFile.exists()) {
+            // Delete existing backup
+            this.configBackup.delete();
+            Utils.copyFile(this.configFile, this.configBackup);
+        }
+
+        PERSISTER.write(this, this.configFile);
         logger.debug("Config information saved to {}", this.configFile.getPath());
     }
 

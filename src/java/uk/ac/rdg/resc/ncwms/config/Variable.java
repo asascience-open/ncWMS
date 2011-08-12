@@ -30,11 +30,12 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Root;
-import org.simpleframework.xml.load.PersistenceException;
-import org.simpleframework.xml.load.Validate;
+import org.simpleframework.xml.core.PersistenceException;
+import org.simpleframework.xml.core.Validate;
 import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.edal.util.Ranges;
 import uk.ac.rdg.resc.ncwms.graphics.ColorPalette;
+import uk.ac.rdg.resc.ncwms.wms.Layer;
 
 /**
  * Contains fields that can be filled in to override values that are
