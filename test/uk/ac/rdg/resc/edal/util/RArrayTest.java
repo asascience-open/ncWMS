@@ -26,42 +26,52 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package uk.ac.rdg.resc.edal.coverage.domain;
+package uk.ac.rdg.resc.edal.util;
 
-import java.util.List;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * A geospatial/temporal domain: defines the set of points for which a {@link DiscreteCoverage}
- * is defined.  The domain is comprised of a set of unique domain objects in a
- * defined order.  The domain therefore has the semantics of both a {@link Set}
- * and a {@link List} of domain objects.
- * @param <DO> The type of the domain object
+ * Tests the RArray classes
  * @author Jon
  */
-public interface Domain<DO>
-{
-    /**
-     * Gets the coordinate reference system to which objects in this domain are
-     * referenced.  Returns null if the domain objects cannot be referenced
-     * to an external coordinate reference system.
-     * @return the coordinate reference system to which objects in this domain are
-     * referenced, or null if the domain objects are not externally referenced.
-     */
-    public CoordinateReferenceSystem getCoordinateReferenceSystem();
+public class RArrayTest {
 
-    /**
-     * Returns the {@link List} of domain objects that comprise this domain.
-     * @todo There may be issues for large grids if the number of domain objects
-     * is greater than Integer.MAX_VALUE, as the size of this list will be recorded
-     * incorrectly.  This will only happen for very large domains (e.g. large grids).
-     */
-    public List<DO> getDomainObjects();
+    @Test
+    public void test()
+    {
+        testMinAndMax(new RUIntArray(1000));
+        testMinAndMax(new RUShortArray(1000));
+        testMinAndMax(new RUByteArray(1000));
+    }
 
-    /**
-     * <p>Returns the number of domain objects in the domain.</p>
-     * <p>This is a long integer because grids can grow very large, beyond the
-     * range of a 4-byte integer.</p>
-     */
-    public long size();
+    private void testMinAndMax(RArray array)
+    {
+        assertEquals(0, array.size());
+        array.append(array.getMinValue());
+        assertEquals(1, array.size());
+        assertEquals(array.getMinValue(), array.getLong(0));
+        assertEquals(0,  array.getInt(0));
+
+        array.append(array.getMaxValue());
+        assertEquals(2, array.size());
+        assertEquals(array.getMaxValue(), array.getLong(1));
+
+        boolean thrown = false;
+        try {
+            array.append(array.getMinValue() - 1);
+        } catch (ArithmeticException ae) {
+            thrown = true;
+        }
+        assertTrue(thrown);
+
+        thrown = false;
+        try {
+            array.append(array.getMaxValue() + 1);
+        } catch (ArithmeticException ae) {
+            thrown = true;
+        }
+        assertTrue(thrown);
+    }
+
 }

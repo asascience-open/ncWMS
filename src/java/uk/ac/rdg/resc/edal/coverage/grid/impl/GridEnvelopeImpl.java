@@ -42,7 +42,7 @@ public final class GridEnvelopeImpl implements GridEnvelope {
 
     // These are calculated from the GridCoordinates upon construction
     private transient final int[] combos;
-    private transient final int size;
+    private transient final long size;
 
     /**
      * Creates a new GridEnvelope with the given low and high coordinates.  Note
@@ -79,7 +79,7 @@ public final class GridEnvelopeImpl implements GridEnvelope {
         // same time.
         this.combos = new int[this.getDimension()];
         this.combos[this.getDimension() - 1] = 1;
-        int n = this.getSpan(this.getDimension() - 1);
+        long n = this.getSpan(this.getDimension() - 1);
         for (int j = this.getDimension() - 2; j >= 0; j--) {
             this.combos[j] = this.combos[j + 1] * this.getSpan(j + 1);
             n *= this.getSpan(j);
@@ -266,7 +266,7 @@ public final class GridEnvelopeImpl implements GridEnvelope {
      * Returns the total number of GridCoordinates objects in this envelope.
      * @return the total number of GridCoordinates objects in this envelope.
      */
-    public int getSize() {
+    public long getSize() {
         return this.size; // pre-computed for efficiency
     }
 

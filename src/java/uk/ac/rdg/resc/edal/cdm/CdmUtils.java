@@ -439,7 +439,9 @@ public final class CdmUtils
         if (zIndices == null) zIndices = Arrays.asList(-1);
         List<List<Float>> data = new ArrayList<List<Float>>(zIndices.size());
         for (int zIndex : zIndices) {
-            data.add(readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, targetDomain.size()));
+            // It's very unlikely that the target domain will be bigger than
+            // Integer.MAX_VALUE
+            data.add(readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, (int)targetDomain.size()));
         }
         return data;
     }
@@ -509,10 +511,12 @@ public final class CdmUtils
         {
             // There is no overlap between the source data grid and the target
             // domain.  Return a list of null values.
-            return nullList(targetDomain.size());
+            // It's very unlikely that the target domain will be bigger than
+            // Integer.MAX_VALUE
+            return nullList((int)targetDomain.size());
         }
 
-        return readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, targetDomain.size());
+        return readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, (int)targetDomain.size());
     }
 
     static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,

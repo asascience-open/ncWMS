@@ -29,7 +29,6 @@
 package uk.ac.rdg.resc.edal.cdm;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
@@ -47,6 +46,11 @@ import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularAxisImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularGridImpl;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.edal.util.RArray;
+import uk.ac.rdg.resc.edal.util.RUIntArray;
+import uk.ac.rdg.resc.edal.util.RLongArray;
+import uk.ac.rdg.resc.edal.util.RUByteArray;
+import uk.ac.rdg.resc.edal.util.RUShortArray;
 import uk.ac.rdg.resc.edal.util.Utils;
 
 /**
@@ -86,22 +90,10 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
 {
     private static final Logger logger = LoggerFactory.getLogger(PixelMap.class);
 
-    /**
-     * <p>Maps points in the source grid to points in the target grid.  Each entry
-     * in this array represents a mapping from one source grid point (high four
-     * bytes) to one target grid point (low four bytes).</p>
-     * <p>We use an array of longs instead of an array of objects (e.g. Pair<Integer>
-     * or similar) because each object carries a memory overhead.</p>
-     */
-    private long[] pixelMapEntries;
-    /** The number of entries in this pixel map */
-    private int numEntries = 0;
-    /**
-     * The array of pixel map entries will grow in size as required by this
-     * number of longs.  This means that the array of pixel map entries will
-     * never be more than {@code chunkSize - 1} greater than it has to be.
-     */
-    private final int chunkSize;
+    /** Stores the source grid indices */
+    private final RArray sourceGridIndices;
+    /** Stores the target grid indices */
+    private final RArray targetGridIndices;
 
     /**
      * Maps a point in the source grid to corresponding points in the target grid.
@@ -139,16 +131,40 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
         logger.debug("SourceGrid class: {}, targetDomain class: {}",
                 sourceGrid.getClass(), targetDomain.getClass());
 
+        if (targetDomain.size() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Cannot handle target domains" +
+                    " greater than Integer.MAX_VALUE in size");
+            // This is essentially because PixelMapEntry.getTargetGridPoints()
+            // returns a List of Integers.  Also because the results of extracting
+            // data are usually held in a primitive array, which can only be
+            // indexed by integer values.
+        }
+
         this.sourceGridISize = sourceGrid.getGridExtent().getSpan(0);
 
         // Create an estimate of a suitable chunk size.  We don't want this to
         // be too small because we would have to do many array copy operations
-        // to grow the array in put().  Conversely we don't want it to be too
+        // to grow resizeable arrays.  Conversely we don't want it to be too
         // large and lead to wasted space.
-        this.chunkSize = targetDomain.size() < 1000
+        int chunkSize = (int)(targetDomain.size() < 1000
             ? targetDomain.size()
-            : targetDomain.size() / 10;
-        this.pixelMapEntries = new long[this.chunkSize];
+            : targetDomain.size() / 10);
+        
+        // Choose storage for the mappings appropriate to the sizes of the domains
+        long maxSourceGridIndex = sourceGrid.size() - 1;
+        this.sourceGridIndices = chooseRArray(maxSourceGridIndex, chunkSize);
+        logger.debug("Source grid indices (max: {}) stored in a {}",
+                maxSourceGridIndex, this.sourceGridIndices.getClass());
+
+        long maxTargetGridIndex = targetDomain.size() - 1;
+        this.targetGridIndices = chooseRArray(maxTargetGridIndex, chunkSize);
+        logger.debug("Target grid indices (max: {}) stored in a {}",
+                maxTargetGridIndex, this.targetGridIndices.getClass());
+        // This is just a double-check: shouldn't happen
+        if (this.targetGridIndices instanceof RLongArray) {
+            throw new IllegalStateException("Can't store target grid indices as" +
+                 " longs: must be integers or smaller");
+        }
 
         long start = System.currentTimeMillis();
         if (sourceGrid instanceof RectilinearGrid && targetDomain instanceof RectilinearGrid &&
@@ -178,12 +194,94 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
             }
         }
 
-        // Sort the array. Because the source grid indices are the high four bytes
-        // in the array, the sorted array will be in order of increasing source
-        // grid index, then increasing target grid index.
-        Arrays.sort(this.pixelMapEntries, 0, this.numEntries);
+        this.sortIndices();
 
         logger.debug("Built pixel map in {} ms", System.currentTimeMillis() - start);
+    }
+
+    /**
+     * Creates and returns a resizable array for holding values up to and including
+     * maxElementValue.  For example, an unsigned short array may be used if
+     * the array will only hold values up to 65535.
+     */
+    private static RArray chooseRArray(long maxElementValue, int chunkSize) {
+        if (maxElementValue <= RUByteArray.MAX_VALUE) return new RUByteArray(chunkSize);
+        if (maxElementValue <= RUShortArray.MAX_VALUE) return new RUShortArray(chunkSize);
+        if (maxElementValue <= RUIntArray.MAX_VALUE) return new RUIntArray(chunkSize);
+        return new RLongArray(chunkSize);
+    }
+
+    /**
+     * Sorts the arrays of source and target indices so that the arrays are in
+     * order of increasing source grid index, then increasing target grid index.
+     * Uses an in-place quicksort algorithm adapted from
+     * http://www.vogella.de/articles/JavaAlgorithmsQuicksort/article.html.
+     */
+    private void sortIndices()
+    {
+        int numElements = this.sourceGridIndices.size();
+        // Nothing to do if there are only zero or one elements
+        if (numElements < 2) return;
+        this.quicksort(0, numElements - 1);
+    }
+
+    private void quicksort(final int low, final int high)
+    {
+        int i = low;
+        int j = high;
+        // The elements to be sorted are pairs of longs: the first is the
+        // source grid index, the second is the target grid index.
+        final long[] pivot = getPair(low + (high-low) / 2);
+
+        // Divide into two lists
+        while (i <= j) {
+            while(comparePairs(getPair(i), pivot) < 0) {
+                i++;
+            }
+            while(comparePairs(getPair(j), pivot) > 0) {
+                j--;
+            }
+            if (i <= j) {
+                exchange(i, j);
+                i++;
+                j--;
+            }
+        }
+        // Recursion
+        if (low < j)  quicksort(low, j);
+        if (i < high) quicksort(i, high);
+    }
+
+    /** Gets the pair of [source, target] grid indices at the given index */
+    private long[] getPair(int index) {
+        return new long[] {
+            sourceGridIndices.getLong(index),
+            targetGridIndices.getLong(index)
+        };
+    }
+
+    /**
+     * Returns <0 if pair1 < pair2, 0 if pair1 == pair2, >0 otherwise.
+     * Comparisons are performed first on the source grid index, then on the
+     * target grid index.
+     */
+    private int comparePairs(long[] pair1, long[] pair2) {
+        if (pair1[0] < pair2[0]) return -1;
+        if (pair1[0] > pair2[0]) return 1;
+        // Source grid indices must be equal, so compare target grid indices
+        if (pair1[1] < pair2[1]) return -1;
+        if (pair1[1] > pair2[1]) return 1;
+        // Both equal
+        return 0;
+    }
+
+    /**
+     * Exchanges the values in the source and target grid arrays with indices
+     * i1 and i2
+     */
+    private void exchange(int i1, int i2) {
+        this.sourceGridIndices.swapElements(i1, i2);
+        this.targetGridIndices.swapElements(i1, i2);
     }
 
     private void initFromPointList(HorizontalGrid sourceGrid, Domain<HorizontalPosition> targetDomain)
@@ -273,21 +371,11 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
 
         // Calculate a single integer representing this grid point in the source grid
         // TODO: watch out for overflows (would only happen with a very large grid!)
-        int sourceGridIndex = j * this.sourceGridISize + i;
+        long sourceGridIndex = (long)j * this.sourceGridISize + i;
 
-        // See if we need to grow the array of pixel map entries
-        if (this.numEntries >= this.pixelMapEntries.length)
-        {
-            long[] newArray = new long[this.pixelMapEntries.length + this.chunkSize];
-            System.arraycopy(this.pixelMapEntries, 0, newArray, 0, this.pixelMapEntries.length);
-            this.pixelMapEntries = newArray;
-        }
-
-        // Make an entry in the pixel map.  The source grid index becomes the
-        // high four bytes of the entry (long value) and the targetGridIndex
-        // becomes the low four bytes.
-        this.pixelMapEntries[this.numEntries] = (long)sourceGridIndex << 32 | targetGridIndex;
-        this.numEntries++;
+        // Add to the arrays holding the mapping
+        this.sourceGridIndices.append(sourceGridIndex);
+        this.targetGridIndices.append(targetGridIndex);
     }
 
     /**
@@ -298,7 +386,7 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
      */
     public boolean isEmpty()
     {
-        return this.numEntries == 0;
+        return this.sourceGridIndices.size() == 0;
     }
 
     /**
@@ -356,25 +444,6 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
     }
 
     /**
-     * Gets the sum of the lengths of each row of data points,
-     * {@literal i.e.} sum(imax - imin + 1).  This is the number of data points that will
-     * be extracted by the {@link DataReadingStrategy#SCANLINE SCANLINE} data
-     * reading strategy.
-     * @return the sum of the lengths of each row of data points
-     * @todo could reinstate this by moving the Scanline-generating code from
-     * DataReadingStrategy to this class and counting the lengths of the scanlines
-     */
-    /*public int getSumRowLengths()
-    {
-        int sumRowLengths = 0;
-        for (Row row : this.pixelMap.values())
-        {
-            sumRowLengths += (row.getMaxIIndex() - row.getMinIIndex() + 1);
-        }
-        return sumRowLengths;
-    }*/
-
-    /**
      * Gets the size of the i-j bounding box that encompasses all data.  This is
      * the number of data points that will be extracted using the
      * {@link DataReadingStrategy#BOUNDING_BOX BOUNDING_BOX} data reading strategy.
@@ -399,28 +468,25 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
 
             @Override
             public boolean hasNext() {
-                return index < PixelMap.this.numEntries;
+                return index < sourceGridIndices.size();
             }
 
             @Override
             public PixelMapEntry next() {
-                long packed = PixelMap.this.pixelMapEntries[this.index];
-                // Unpack the source grid and target grid indices
-                int[] unpacked = unpack(packed);
-                this.index++;
-                final int sourceGridIndex = unpacked[0];
-                final List<Integer> targetGridIndices = new ArrayList<Integer>();
-                targetGridIndices.add(unpacked[1]);
+                final long entrySourceIndex = sourceGridIndices.getLong(index);
+                //
+                final List<Integer> entryTargetIndices = new ArrayList<Integer>();
+                entryTargetIndices.add(targetGridIndices.getInt(index));
+                index++;
 
                 // Now find all the other entries that use the same source grid
                 // index
                 boolean done = false;
                 while (!done && this.hasNext()) {
-                    packed = PixelMap.this.pixelMapEntries[this.index];
-                    unpacked = unpack(packed);
-                    if (unpacked[0] == sourceGridIndex) {
-                        targetGridIndices.add(unpacked[1]);
-                        this.index++;
+                    long newSourceIndex = sourceGridIndices.getLong(index);
+                    if (newSourceIndex == entrySourceIndex) {
+                        entryTargetIndices.add(targetGridIndices.getInt(index));
+                        index++;
                     } else {
                         done = true;
                     }
@@ -430,17 +496,17 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
 
                     @Override
                     public int getSourceGridIIndex() {
-                        return sourceGridIndex % PixelMap.this.sourceGridISize;
+                        return (int)(entrySourceIndex % sourceGridISize);
                     }
 
                     @Override
                     public int getSourceGridJIndex() {
-                        return sourceGridIndex / PixelMap.this.sourceGridISize;
+                        return (int)(entrySourceIndex / sourceGridISize);
                     }
 
                     @Override
                     public List<Integer> getTargetGridPoints() {
-                        return targetGridIndices;
+                        return entryTargetIndices;
                     }
 
                 };
@@ -454,22 +520,12 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
         };
     }
 
-    /** Unpacks a long integer into two 4-byte integers (first value in array
-     * are the high 4 bytes of the long). */
-    private static int[] unpack(long packed)
-    {
-        return new int[] {
-            (int)(packed >> 32),
-            (int)(packed & 0xffffffff)
-        };
-    }
-
     public static void main(String[] args) throws Exception
     {
-        RegularAxis lonAxis = new RegularAxisImpl("lon", 64.01358, 0.045, 3474, true);
-        RegularAxis latAxis = new RegularAxisImpl("lat", 80.12541, -0.045, 3564, false);
+        RegularAxis lonAxis = new RegularAxisImpl("lon", 64.01358, 0.045, 347400, true);
+        RegularAxis latAxis = new RegularAxisImpl("lat", 80.12541, -0.045, 35640, false);
         RegularGrid sourceDomain = new RegularGridImpl(lonAxis, latAxis, DefaultGeographicCRS.WGS84);
-        RegularGrid targetDomain = new RegularGridImpl(DefaultGeographicBoundingBox.WORLD, 2048, 2048);
+        RegularGrid targetDomain = new RegularGridImpl(DefaultGeographicBoundingBox.WORLD, 10, 10);
 
         Runtime rt = Runtime.getRuntime();
 
@@ -479,7 +535,7 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
         long finish = System.nanoTime();
         long memUsed = memUsed(rt) - startMemUsed;
 
-        System.out.println("Built PixelMap in " + ((finish - start) / 1.e6));
+        System.out.println("Built PixelMap in " + ((finish - start) / 1.e6) + " ms");
         //System.out.println("Number of entries " + pixelMap.numEntries + " (" + pixelMap.pixelMapEntries.length + ")");
         //System.out.println("Num unique pairs = " + pixelMap.getNumUniqueIJPairs());
         //System.out.println("Total insert time " + (pixelMap.insertTime / 1.e6));

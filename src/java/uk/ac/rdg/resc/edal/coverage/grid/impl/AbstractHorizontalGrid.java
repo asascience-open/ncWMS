@@ -51,7 +51,7 @@ public abstract class AbstractHorizontalGrid extends AbstractGrid implements Hor
     {
         private final int iAxisSize = AbstractHorizontalGrid.this.getGridExtent().getSpan(0);
         private final int jAxisSize = AbstractHorizontalGrid.this.getGridExtent().getSpan(1);
-        private final int size = AbstractHorizontalGrid.this.size();
+        private final long size = AbstractHorizontalGrid.this.size();
         
         @Override
         public HorizontalPosition get(int index) {
@@ -74,7 +74,8 @@ public abstract class AbstractHorizontalGrid extends AbstractGrid implements Hor
 
         @Override
         public int size() {
-            return this.size;
+            // By the contract of java.util.Collection
+            return this.size > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int)size;
         }
     };
 

@@ -263,7 +263,10 @@ final class KdTreeGrid extends AbstractCurvilinearGrid
         System.out.println("Created PixelMap in " + getTimingMs(start) + " ms");
 
         start = System.nanoTime();
-        List<Float> newData = CdmUtils.readHorizontalPoints(nc, grid, 0, 0, pixelMap, targetDomain.size());
+
+        // It's very unlikely that the target domain will be bigger than
+        // Integer.MAX_VALUE
+        List<Float> newData = CdmUtils.readHorizontalPoints(nc, grid, 0, 0, pixelMap, (int)targetDomain.size());
         System.out.println("Read data in " + getTimingMs(start) + " ms");
         nc.close();
 
