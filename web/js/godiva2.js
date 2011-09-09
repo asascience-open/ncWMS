@@ -1326,7 +1326,8 @@ function updateMap()
         time: isoTValue,
         transparent: 'true',
         styles: style,
-        crs: map.baseLayer.projection,
+        // Removed this because it is no longer needed (OpenLayers takes care of it)
+        //crs: map.baseLayer.projection,
         colorscalerange: scaleMinVal + ',' + scaleMaxVal,
         numcolorbands: $('numColorBands').value,
         logscale: logscale

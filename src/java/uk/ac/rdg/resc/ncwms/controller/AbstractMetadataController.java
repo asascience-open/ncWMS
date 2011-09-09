@@ -276,9 +276,9 @@ public abstract class AbstractMetadataController
     {
         RequestParams params = new RequestParams(request.getParameterMap());
         // We only need the bit of the GetMap request that pertains to data extraction
-        // TODO: the hard-coded "1.3.0" is ugly: it basically means that the
-        // GetMapDataRequest object will look for "CRS" instead of "SRS"
-        GetMapDataRequest dr = new GetMapDataRequest(params, "1.3.0");
+        // TODO: the hard-coded "1.1.1" is ugly: it basically means that the
+        // GetMapDataRequest object will look for "SRS" instead of "CRS"
+        GetMapDataRequest dr = new GetMapDataRequest(params, "1.1.1");
         
         // Get the variable we're interested in
         Layer layer = this.layerFactory.getLayer(dr.getLayers()[0]);

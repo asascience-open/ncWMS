@@ -171,9 +171,10 @@ function getMinMax(url, params) {
             bbox: params.bbox,
             elevation: params.elevation,
             time: params.time,
-            crs: params.crs,
+            srs: params.crs,
             width: 50, // Request only a small box to save extracting lots of data
-            height: 50
+            height: 50,
+            version: '1.1.1'
         },
         onSuccess: params.callback
     });
