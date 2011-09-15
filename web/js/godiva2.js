@@ -757,6 +757,7 @@ function layerSelected(layerDetails)
 
     // Make the editing toolbar visible
     editingToolbar.div.style.visibility = 'visible';
+    editingToolbar.draw();
 
     // Now set up the calendar control
     if (layerDetails.datesWithData == null)
