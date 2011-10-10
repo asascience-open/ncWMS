@@ -154,7 +154,6 @@ public class WmsUtils
         }
         catch(RuntimeException re)
         {
-            re.printStackTrace();
             throw re;
         }
     }
@@ -480,7 +479,7 @@ public class WmsUtils
     {
         // Take care of some simple cases
         if (times == null) throw new NullPointerException();
-        if (times.size() == 0) return EMPTY_STRING;
+        if (times.isEmpty()) return EMPTY_STRING;
         if (times.size() == 1) return dateTimeToISO8601(times.get(0));
 
         // We look for sublists that are regularly-spaced
@@ -613,7 +612,7 @@ public class WmsUtils
      */
     static StringBuilder getRegularlySpacedTimeString(List<DateTime> times, long period)
     {
-        if (times.size() == 0) throw new IllegalArgumentException();
+        if (times.isEmpty()) throw new IllegalArgumentException();
         StringBuilder str = new StringBuilder();
         str.append(dateTimeToISO8601(times.get(0)));
         if (times.size() == 2)

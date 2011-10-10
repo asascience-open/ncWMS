@@ -210,7 +210,7 @@ public abstract class DataReader
         {
             // The location represents locally-held data so we do a glob expansion
             List<File> files = expandGlobExpression(location);
-            if (files.size() == 0)
+            if (files.isEmpty())
             {
                 throw new FileNotFoundException(location + " does not match any files");
             }

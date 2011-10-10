@@ -108,4 +108,6 @@ final class CdmCoverageMetadata implements CoverageMetadata
 
     @Override
     public boolean isElevationPressure() { return this.zAxis.isPressure(); }
+    
+    ElevationAxis getElevationAxis() { return this.zAxis; }
 }

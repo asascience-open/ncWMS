@@ -124,34 +124,70 @@ public final class CdmUtils
         for (Gridset gridset : gd.getGridsets())
         {
             GridCoordSystem coordSys = gridset.getGeoCoordSystem();
-            logger.debug("Creating coordinate system objects");
-
-            // Create an object that will map lat-lon points to nearest grid points
-            HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
-
-            // Get the bounding box
-            GeographicBoundingBox bbox = CdmUtils.getBbox(coordSys.getLatLonBoundingBox());
-
-            // Create an object representing the elevation axis
-            ElevationAxis zAxis = new ElevationAxis(coordSys);
-
-            // Get the timesteps
-            List<DateTime> timesteps = Collections.emptyList();
-            if (coordSys.hasTimeAxis1D()) {
-                timesteps = CdmUtils.getTimesteps(coordSys.getTimeAxis1D());
-            }
+            
+            PartialCoverageMetadata temp = readCoverageMetadata(coordSys);
 
             // Create a CoverageMetadata object for each GridDatatype
             for (GridDatatype grid : gridset.getGrids())
             {
                 logger.debug("Creating new CoverageMetadata object for {}", grid.getName());
-                CoverageMetadata cm = new CdmCoverageMetadata(grid, bbox, horizGrid, timesteps, zAxis);
+                CoverageMetadata cm = new CdmCoverageMetadata(
+                    grid, temp.bbox, temp.hGrid, temp.timesteps, temp.zAxis
+                );
                 // Add this layer to the Map
                 coverages.add(cm);
             }
         }
 
         return coverages;
+    }
+    
+    public static CoverageMetadata readCoverageMetadata(GridDatatype grid)
+    {
+        PartialCoverageMetadata temp = readCoverageMetadata(grid.getCoordinateSystem());
+        return new CdmCoverageMetadata(
+            grid, temp.bbox, temp.hGrid, temp.timesteps, temp.zAxis
+        );
+    }
+    
+    private static final class PartialCoverageMetadata
+    {
+        private HorizontalGrid hGrid;
+        private GeographicBoundingBox bbox;
+        private List<DateTime> timesteps;
+        private ElevationAxis zAxis;
+
+        public PartialCoverageMetadata(HorizontalGrid hGrid,
+                GeographicBoundingBox bbox, List<DateTime> timesteps,
+                ElevationAxis zAxis) {
+            this.hGrid = hGrid;
+            this.bbox = bbox;
+            this.timesteps = timesteps;
+            this.zAxis = zAxis;
+        }
+    }
+    
+    private static PartialCoverageMetadata readCoverageMetadata(GridCoordSystem coordSys)
+    {
+        logger.debug("Creating coordinate system objects");
+
+        // Create an object that will map lat-lon points to nearest grid points
+        HorizontalGrid horizGrid = CdmUtils.createHorizontalGrid(coordSys);
+
+        // Get the bounding box
+        GeographicBoundingBox bbox = CdmUtils.getBbox(coordSys.getLatLonBoundingBox());
+
+        // Create an object representing the elevation axis
+        ElevationAxis zAxis = new ElevationAxis(coordSys);
+
+        // Get the timesteps
+        List<DateTime> timesteps = Collections.emptyList();
+        if (coordSys.hasTimeAxis1D()) {
+            timesteps = CdmUtils.getTimesteps(coordSys.getTimeAxis1D());
+        }
+        
+        // We just use this as a temporary object
+        return new PartialCoverageMetadata(horizGrid, bbox, timesteps, zAxis);
     }
 
     /**
@@ -258,16 +294,24 @@ public final class CdmUtils
 
     /**
      * Estimates the optimum {@link DataReadingStrategy} from the given
-     * NetcdfDataset.  Essentially, if the data are remote (e.g. OPeNDAP) or
+     * NetcdfDataset.  Essentially, if the amount of data to be read is very
+     * large, {@link DataReadingStrategy#SCANLINE} will be returned.  Otherwise,
+     * if the data are remote remote (e.g. OPeNDAP) or
      * compressed, this will return {@link DataReadingStrategy#BOUNDING_BOX},
      * which makes a single i/o call, minimizing the overhead.  If the data
      * are local and uncompressed this will return {@link DataReadingStrategy#SCANLINE},
      * which reduces the amount of data read.
+     * @param pixelMap The PixelMap that determines what data will actually be read
      * @param nc The NetcdfDataset from which data will be read.
      * @return an optimum DataReadingStrategy for reading from the dataset
      */
-    public static DataReadingStrategy getOptimumDataReadingStrategy(NetcdfDataset nc)
+    public static DataReadingStrategy getOptimumDataReadingStrategy(PixelMap pixelMap, NetcdfDataset nc)
     {
+        if (pixelMap.getBoundingBoxSize() > 25000000) {
+            // 25 million data points will translate to roughly 100MB of data read
+            // This is an arbitrary limit, which could be tweaked
+            return DataReadingStrategy.SCANLINE;
+        }
         String fileType = nc.getFileTypeId();
         return "netCDF".equals(fileType) || "HDF4".equals(fileType)
             ? DataReadingStrategy.SCANLINE
@@ -523,12 +567,21 @@ public final class CdmUtils
             int tIndex, int zIndex, PixelMap pixelMap, int targetDomainSize)
             throws IOException
     {
+        DataReadingStrategy strategy = getOptimumDataReadingStrategy(pixelMap, nc);
+        
+        return readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, strategy, targetDomainSize);
+    }
+
+    static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
+            int tIndex, int zIndex, PixelMap pixelMap, DataReadingStrategy strategy,
+            int targetDomainSize)
+            throws IOException
+    {
         // Create an array of the right size to hold the data
         float[] data = new float[targetDomainSize];
         Arrays.fill(data, Float.NaN); // Will be represented as nulls in the returned List
 
-        // Now read the actual data
-        DataReadingStrategy strategy = getOptimumDataReadingStrategy(nc);
+        logger.debug("Reading data using strategy {}", strategy);
         long start = System.nanoTime();
         int bytesRead = strategy.readData(tIndex, zIndex, grid, pixelMap, data);
         long finish = System.nanoTime();

@@ -449,10 +449,10 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
      * {@link DataReadingStrategy#BOUNDING_BOX BOUNDING_BOX} data reading strategy.
      * @return the size of the i-j bounding box that encompasses all data.
      */
-    public int getBoundingBoxSize()
+    public long getBoundingBoxSize()
     {
-        return (this.maxIIndex - this.minIIndex + 1) *
-               (this.maxJIndex - this.minJIndex + 1);
+        return (long)(this.maxIIndex - this.minIIndex + 1) *
+                     (this.maxJIndex - this.minJIndex + 1);
     }
 
     /**
@@ -547,7 +547,7 @@ public final class PixelMap implements Iterable<PixelMap.PixelMapEntry>
         // Without compression: 140ms, 2.1M
     }
 
-    private static final long memUsed(Runtime rt)
+    private static long memUsed(Runtime rt)
     {
         System.gc();
         return rt.totalMemory() - rt.freeMemory();

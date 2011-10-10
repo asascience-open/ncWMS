@@ -95,7 +95,7 @@ public final class NcImageGen
             		}
             	}
             	
-            	if(zVals.size() == 0) {
+            	if(zVals.isEmpty()) {
             		System.out.println("Variable: "+cm.getId()+" only has one point in the vertical axis.");
             	} else {
             		System.out.println("Variable: "+cm.getId()+" has "+zVals.size()+" elevation data.  Nearest elevation to " +
