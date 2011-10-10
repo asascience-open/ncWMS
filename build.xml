@@ -106,8 +106,9 @@
                 unidatacommon.jar
                 commons-httpclient-3.1.jar
                 commons-logging-1.1.jar
-                geotk-bundle-referencing-3.12.jar
+                geotk-bundle-referencing-3.17.jar
                 jdom.jar
+                prtree.jar
             "/>
 
             <manifest>
@@ -147,8 +148,9 @@
                 unidatacommon.jar
                 commons-httpclient-3.1.jar
                 commons-logging-1.1.jar
-                geotk-bundle-referencing-3.12.jar
+                geotk-bundle-referencing-3.17.jar
                 jdom.jar
+                prtree.jar
             "/>
 
             <manifest>
