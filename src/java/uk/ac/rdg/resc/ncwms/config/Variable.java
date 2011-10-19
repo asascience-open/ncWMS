@@ -164,7 +164,7 @@ public class Variable
         // In previous versions of ncWMS we used a comma as a separator,
         // which caused problems in certain locales where a comma is used
         // as a decimal separator
-        return String.format("%f %f", colorScaleRange.getMinimum(), colorScaleRange.getMaximum());
+        return Float.toString(colorScaleRange.getMinimum()) + " " + Float.toString(colorScaleRange.getMaximum());
     }
 
     /**
