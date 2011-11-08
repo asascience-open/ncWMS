@@ -338,9 +338,14 @@ final class Charting
         ZAxisAndValues zAxisAndValues = getZAxisAndValues(layer, elevationValues);
         // The elevation values might have been reversed
         elevationValues = zAxisAndValues.zValues;
+        
+        double minElValue = 0.0;
+        double maxElValue = 1.0;
+        if(elevationValues.size() != 0 && sectionData.size() != 0){
+            minElValue = elevationValues.get(0);
+            maxElValue = elevationValues.get(elevationValues.size() - 1);
+        }
 
-        double minElValue = elevationValues.get(0);
-        double maxElValue = elevationValues.get(elevationValues.size() - 1);
 
         // Sometimes values on the axes are reversed
         if (minElValue > maxElValue) {
@@ -386,7 +391,9 @@ final class Charting
 
         // Iterate through control points to show segments of transect
         Double prevCtrlPointDistance = null;
-        int xAxisLength = sectionData.get(0).size();
+        int xAxisLength = 0;
+        if(sectionData.size() > 0)
+            xAxisLength = sectionData.get(0).size();
         for (int i = 0; i < horizPath.getControlPoints().size(); i++) {
             double ctrlPointDistance = horizPath.getFractionalControlPointDistance(i);
             if (prevCtrlPointDistance != null) {
@@ -434,7 +441,10 @@ final class Charting
                 List<List<Float>> sectionData, double minElValue, double maxElValue,
                 int numElevations)
         {
-            this.horizPathLength = sectionData.get(0).size();
+            if(sectionData.size() > 0)
+                this.horizPathLength = sectionData.get(0).size();
+            else
+                this.horizPathLength = 0;
             this.sectionData = sectionData;
             this.elevationValues = elevationValues;
             this.minElValue = minElValue;
