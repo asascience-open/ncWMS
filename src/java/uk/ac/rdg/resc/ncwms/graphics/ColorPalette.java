@@ -36,6 +36,7 @@ import java.awt.image.IndexColorModel;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.Reader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,8 +44,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import uk.ac.rdg.resc.edal.util.Range;
 
 /**
@@ -161,7 +164,7 @@ public class ColorPalette
                 try
                 {
                     String paletteName = file.getName().substring(0, file.getName().lastIndexOf("."));
-                    ColorPalette palette = new ColorPalette(paletteName, readColorPalette(file));
+                    ColorPalette palette = new ColorPalette(paletteName, readColorPalette(new FileReader(file)));
                     logger.debug("Read palette with name {}", paletteName);
                     palettes.put(palette.getName(), palette);
                 }
@@ -461,9 +464,9 @@ public class ColorPalette
      * @throws Exception if the palette file could not be read or contains a
      * format error
      */
-    private static Color[] readColorPalette(File paletteFile) throws Exception
+    private static Color[] readColorPalette(Reader paletteReader) throws Exception
     {
-        BufferedReader reader = new BufferedReader(new FileReader(paletteFile));
+        BufferedReader reader = new BufferedReader(paletteReader);
         List<Color> colours = new ArrayList<Color>();
         String line;
         try
@@ -507,6 +510,16 @@ public class ColorPalette
             if (reader != null) reader.close();
         }
         return colours.toArray(new Color[0]);
+    }
+    
+    public static void addPalette(String name, Reader reader){
+        try {
+            ColorPalette palette = new ColorPalette(name, readColorPalette(reader));
+            if(!palettes.containsKey(palette.getName()))
+                palettes.put(palette.getName(), palette);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
