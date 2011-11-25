@@ -83,7 +83,8 @@ import uk.ac.rdg.resc.ncwms.wms.Layer;
  * @author Jon Blower
  * @author Kevin X. Yang
  */
-final class Charting
+//final class Charting
+public class Charting
 {
     private static final Locale US_LOCALE = new Locale("us", "US");
     private static final Color TRANSPARENT = new Color(0,0,0,0);
@@ -113,6 +114,98 @@ final class Charting
         
         return chart;
     }
+    
+    public static JFreeChart createTimeseriesPlot(String lon, String lat,
+            Map<DateTime, Float> tsData, String variableName)
+    {
+        TimeSeries ts = new TimeSeries("Data", Millisecond.class);
+        for (Entry<DateTime, Float> entry : tsData.entrySet()) {
+            ts.add(new Millisecond(entry.getKey().toDate()), entry.getValue());
+        }
+        TimeSeriesCollection xydataset = new TimeSeriesCollection();
+        xydataset.addSeries(ts);
+
+        // Create a chart with no legend, tooltips or URLs
+        String title = "Lon: " + lon + ", Lat: " + lat;
+        
+        //String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";        
+        //Todo: How to get unit ? 
+        String yLabel = variableName; // Unit to be added 
+                       
+        JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
+                "Date / time", yLabel, xydataset, false, false, false);
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+        renderer.setSeriesShapesVisible(0, true);
+        chart.getXYPlot().setRenderer(renderer);
+        chart.getXYPlot().setNoDataMessage("There is no data for your choice");
+        chart.getXYPlot().setNoDataMessageFont(new Font("sansserif", Font.BOLD, 32));
+        
+        return chart;
+    }
+    
+    public static JFreeChart createVerticalProfilePlot(double lon, double lat, List<Float> dataValues, List<Double> elevationValues, String variableName,DateTime dateTime)
+    {
+        if (elevationValues.size() != dataValues.size())
+        {
+            throw new IllegalArgumentException("Z values and data values not of same length");
+        }
+
+        String zAxisLabel = "Depth";
+        boolean invertYAxis =true;
+      
+        NumberAxis zAxis = new NumberAxis(zAxisLabel + " (meters)");
+        zAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        if (invertYAxis) zAxis.setInverted(true);
+        ZAxisAndValues zAxisAndValues = new ZAxisAndValues(zAxis, elevationValues);
+                
+        //ZAxisAndValues zAxisAndValues = getZAxisAndValues(layer, elevationValues);
+        // The elevation values might have been reversed
+        elevationValues = zAxisAndValues.zValues;
+        NumberAxis elevationAxis = zAxisAndValues.zAxis;
+        elevationAxis.setAutoRangeIncludesZero(false);
+
+        //String axisLabel = variableName + "(meters)";
+        String axisLabel = variableName;   // TODO: Unit to be added ...
+        
+        NumberAxis valueAxis = new NumberAxis(axisLabel);
+        valueAxis.setAutoRangeIncludesZero(false);
+
+        XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
+        for (int i = 0; i < elevationValues.size(); i++) {
+            series.add(elevationValues.get(i), dataValues.get(i));
+        }
+        XYSeriesCollection xySeriesColl = new XYSeriesCollection();
+        xySeriesColl.addSeries(series);
+
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesShape(0, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+        renderer.setSeriesPaint(0, Color.RED);
+        renderer.setSeriesShapesVisible(0, true);
+
+        XYPlot plot = new XYPlot(xySeriesColl, elevationAxis, valueAxis, renderer);
+        plot.setBackgroundPaint(Color.lightGray);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeGridlinePaint(Color.white);
+        plot.setOrientation(PlotOrientation.HORIZONTAL);
+
+        // Find the position of the profile in lon-lat coordinates for the label
+        // HorizontalPosition lonLatPos = Utils.transformPosition(pos, DefaultGeographicCRS.WGS84);
+        //double lon = Double.parseDouble(longi);
+        String lonStr = Double.toString(Math.abs(lon)) + ((lon >= 0.0) ? "E" : "W");
+        //double lat = Double.parseDouble(latt);
+        String latStr = Double.toString(Math.abs(lat)) + ((lat >= 0.0) ? "N" : "S");
+        String title = String.format("Profile of %s at %s, %s",variableName, lonStr, latStr);
+        if (dateTime != null) {
+            title += " at " + WmsUtils.dateTimeToISO8601(dateTime);
+        }
+
+        // Use default font and don't create a legend
+        return new JFreeChart(title, null, plot, false);        
+    }
+    
+    
+    
 
     public static JFreeChart createVerticalProfilePlot(Layer layer, HorizontalPosition pos,
             List<Double> elevationValues, List<Float> dataValues, DateTime dateTime)
@@ -184,6 +277,7 @@ final class Charting
   
         // If we have a layer with more than one elevation value, we create a transect chart
         // using standard XYItem Renderer to keep the plot renderer consistent with that of vertical section plot
+
         if (layer.getElevationValues().size() > 1)
         {
             final XYItemRenderer renderer1 = new StandardXYItemRenderer();
@@ -320,6 +414,10 @@ final class Charting
 
         return new ZAxisAndValues(zAxis, elevationValues);
     }
+    
+    
+    
+    
 
     /**
      * Creates and returns a vertical section chart.
