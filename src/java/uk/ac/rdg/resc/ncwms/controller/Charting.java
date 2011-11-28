@@ -116,7 +116,7 @@ public class Charting
     }
     
     public static JFreeChart createTimeseriesPlot(String lon, String lat,
-            Map<DateTime, Float> tsData, String variableName)
+            Map<DateTime, Float> tsData, String variableName, String variableUnit)
     {
         TimeSeries ts = new TimeSeries("Data", Millisecond.class);
         for (Entry<DateTime, Float> entry : tsData.entrySet()) {
@@ -129,8 +129,7 @@ public class Charting
         String title = "Lon: " + lon + ", Lat: " + lat;
         
         //String yLabel = layer.getTitle() + " (" + layer.getUnits() + ")";        
-        //Todo: How to get unit ? 
-        String yLabel = variableName; // Unit to be added 
+        String yLabel = variableName +"(" +variableUnit+")";
                        
         JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
                 "Date / time", yLabel, xydataset, false, false, false);
@@ -144,7 +143,7 @@ public class Charting
         return chart;
     }
     
-    public static JFreeChart createVerticalProfilePlot(double lon, double lat, List<Float> dataValues, List<Double> elevationValues, String variableName,DateTime dateTime)
+    public static JFreeChart createVerticalProfilePlot(double lon, double lat, List<Float> dataValues, List<Double> elevationValues, String variableName,String variableUnit, DateTime dateTime)
     {
         if (elevationValues.size() != dataValues.size())
         {
@@ -166,7 +165,7 @@ public class Charting
         elevationAxis.setAutoRangeIncludesZero(false);
 
         //String axisLabel = variableName + "(meters)";
-        String axisLabel = variableName;   // TODO: Unit to be added ...
+        String axisLabel = variableName +"("+variableName+")"; 
         
         NumberAxis valueAxis = new NumberAxis(axisLabel);
         valueAxis.setAutoRangeIncludesZero(false);
@@ -203,7 +202,6 @@ public class Charting
         // Use default font and don't create a legend
         return new JFreeChart(title, null, plot, false);        
     }
-    
     
     
 
