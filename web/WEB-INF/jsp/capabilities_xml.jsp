@@ -108,18 +108,18 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:set var="tvalues" value="${layer.timeValues}"/>
                     <c:if test="${not empty tvalues}">
-                        <Dimension name="time" units="${utils:getTimeAxisUnits(layer.chronology)}" multipleValues="true" current="true" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}">
-                            <c:choose>
-                                <c:when test="${verboseTimes}">
-                                    <%-- Use the verbose version of the time string --%>
-                                    <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
-                                </c:when>
-                                <c:otherwise>
-                                    <%-- Use the most concise version of the time string --%>
-                                    <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
-                                </c:otherwise>
-                            </c:choose>
-                        </Dimension>
+                      <Dimension name="time" units="${utils:getTimeAxisUnits(layer.chronology)}" multipleValues="true" current="true" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}"<c:if test="${layer.nearestTime}"> nearestValue="1"</c:if>>
+                          <c:choose>
+                              <c:when test="${verboseTimes}">
+                                  <%-- Use the verbose version of the time string --%>
+                                  <c:forEach var="tval" items="${tvalues}" varStatus="status"><c:if test="${status.index > 0}">,</c:if>${utils:dateTimeToISO8601(tval)}</c:forEach>
+                              </c:when>
+                              <c:otherwise>
+                                  <%-- Use the most concise version of the time string --%>
+                                  <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
+                              </c:otherwise>
+                          </c:choose>
+                      </Dimension>
                     </c:if>
                     <c:set var="styles" value="boxfill"/>
                     <c:if test="${utils:isVectorLayer(layer)}">

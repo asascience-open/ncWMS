@@ -46,6 +46,7 @@ import org.geotoolkit.referencing.CRS;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.chrono.JulianChronology;
@@ -185,6 +186,49 @@ public class WmsUtils
     public static int findTimeIndex(List<DateTime> dtList, DateTime target)
     {
         return Collections.binarySearch(dtList, target, DATE_TIME_COMPARATOR);
+    }
+
+     /**
+     * Searches the given list of timesteps for the nearest date-time of the
+     * specified date-time using the binary search algorithm.
+     * Matches are found based only upon the millisecond instant of the target
+     * DateTime, not its Chronology.
+     * @param  target The timestep to search for.
+     * @return the index of the search key, if it is contained in the list;
+     *	       otherwise, <tt>(-(<i>insertion point</i>) - 1)</tt>.  The
+     *	       <i>insertion point</i> is defined as the point at which the
+     *	       key would be inserted into the list: the index of the first
+     *	       element greater than the key, or <tt>list.size()</tt> if all
+     *	       elements in the list are less than the specified key.  Note
+     *	       that this guarantees that the return value will be &gt;= 0 if
+     *	       and only if the key is found.  If this Layer does not have a time
+     *         axis this method will return -1.
+     */
+    public static int findNearestTimeIndex(List<DateTime> dtList, DateTime target)
+    {
+        int index = Collections.binarySearch(dtList, target, DATE_TIME_COMPARATOR);
+        if (index < 0)
+        {
+            // No exact match, but we have the insertion point, i.e. the index of
+            // the first element that is greater than the target value
+            int insertionPoint = -(index + 1);
+
+            // Deal with the extremes
+            if (insertionPoint == 0) {
+                index = 0;
+            } else if (insertionPoint == dtList.size()) {
+                index = dtList.size() - 1;
+            } else {
+                // We need to work out which index is closer: insertionPoint or
+                // (insertionPoint - 1)
+                long mils = DateTimeUtils.getInstantMillis(target);
+                long d1 = Math.abs(mils - DateTimeUtils.getInstantMillis(dtList.get(insertionPoint)));
+                long d2 = Math.abs(mils - DateTimeUtils.getInstantMillis(dtList.get(insertionPoint - 1)));
+                if (d1 < d2) index = insertionPoint;
+                else index = insertionPoint - 1;
+            }
+        }
+        return index;
     }
     
     /**

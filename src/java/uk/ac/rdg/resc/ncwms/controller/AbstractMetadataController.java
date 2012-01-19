@@ -291,7 +291,7 @@ public abstract class AbstractMetadataController
         double zValue = AbstractWmsController.getElevationValue(dr.getElevationString(), layer);
         
         // Get the requested timestep (taking the first only if an animation is requested)
-        List<DateTime> timeValues = AbstractWmsController.getTimeValues(dr.getTimeString(), layer);
+        List<DateTime> timeValues = AbstractWmsController.getTimeValues(dr.getTimeString(), layer, false);
         DateTime tValue = timeValues.isEmpty() ? null : timeValues.get(0);
         
         // Now read the data and calculate the minimum and maximum values
@@ -335,8 +335,8 @@ public abstract class AbstractMetadataController
         }
 
         // Find the start and end indices along the time axis
-        int startIndex = AbstractWmsController.findTIndex(startStr, layer);
-        int endIndex = AbstractWmsController.findTIndex(endStr, layer);
+        int startIndex = AbstractWmsController.findTIndex(startStr, layer, false);
+        int endIndex = AbstractWmsController.findTIndex(endStr, layer, false);
         List<DateTime> tValues = layer.getTimeValues();
 
         // E.g.: {

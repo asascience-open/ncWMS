@@ -81,6 +81,11 @@ public interface Layer
     public boolean isQueryable();
 
     /**
+     * Returns true if this Layer should return the nearest time through WMS
+     */
+    public boolean isNearestTime();
+
+    /**
      * Returns the geographic extent of this layer in latitude-longitude
      * coordinates.  Note that this extent is not necessarily precise so
      * specifying the coordinate system is unnecessary.

@@ -46,6 +46,8 @@ public class Server
     private String title = "My ncWMS server"; // Title for this ncWMS
     @Element(name="allowFeatureInfo", required=false)
     private boolean allowFeatureInfo = true; // True if we allow the GetFeatureInfo operation globally
+    @Element(name="allowNearestTime", required=false)
+    private boolean allowNearestTime = true; // True if we allow NearestTime rounding globally
     @Element(name="maxImageWidth", required=false)
     private int maxImageWidth = 1024;
     @Element(name="maxImageHeight", required=false)
@@ -79,6 +81,16 @@ public class Server
     public void setAllowFeatureInfo(boolean allowFeatureInfo)
     {
         this.allowFeatureInfo = allowFeatureInfo;
+    }
+
+    public boolean isAllowNearestTime()
+    {
+        return allowNearestTime;
+    }
+
+    public void setAllowNearestTime(boolean allowNearestTime)
+    {
+        this.allowNearestTime = allowNearestTime;
     }
 
     public boolean isAllowGlobalCapabilities() {

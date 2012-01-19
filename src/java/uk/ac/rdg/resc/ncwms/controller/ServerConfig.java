@@ -89,4 +89,6 @@ public interface ServerConfig
 
     public String getContactEmail();
 
+    public boolean getAllowsNearestTime();
+
 }

@@ -147,6 +147,7 @@ public class AdminController extends MultiActionController
             server.setMaxImageWidth(Integer.parseInt(request.getParameter("server.maximagewidth")));
             server.setMaxImageHeight(Integer.parseInt(request.getParameter("server.maximageheight")));
             server.setAllowFeatureInfo(request.getParameter("server.allowfeatureinfo") != null);
+            server.setAllowNearestTime(request.getParameter("server.allownearesttime") != null);
             server.setAllowGlobalCapabilities(request.getParameter("server.allowglobalcapabilities") != null);
 
             // Save the dataset information, checking for removals
@@ -184,6 +185,7 @@ public class AdminController extends MultiActionController
                     }
                     ds.setDisabled(disabled);
                     ds.setQueryable(request.getParameter("dataset." + ds.getId() + ".queryable") != null);
+                    ds.setNearestTime(request.getParameter("dataset." + ds.getId() + ".nearestTime") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset." + ds.getId() + ".updateinterval")));
                     ds.setMoreInfo(request.getParameter("dataset." + ds.getId() + ".moreinfo"));
                     ds.setCopyrightStatement(request.getParameter("dataset." + ds.getId() + ".copyright"));
@@ -236,6 +238,7 @@ public class AdminController extends MultiActionController
                     ds.setDataReaderClass(request.getParameter("dataset.new" + i + ".reader"));
                     ds.setDisabled(request.getParameter("dataset.new" + i + ".disabled") != null);
                     ds.setQueryable(request.getParameter("dataset.new" + i + ".queryable") != null);
+                    ds.setNearestTime(request.getParameter("dataset.new" + i + ".nearestTime") != null);
                     ds.setUpdateInterval(Integer.parseInt(request.getParameter("dataset.new" + i + ".updateinterval")));
                     ds.setMoreInfo(request.getParameter("dataset.new" + i + ".moreinfo"));
                     ds.setCopyrightStatement(request.getParameter("dataset.new" + i + ".copyright"));

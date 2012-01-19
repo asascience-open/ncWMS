@@ -55,8 +55,10 @@ import org.jfree.ui.RectangleInsets;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 
@@ -91,6 +93,7 @@ import uk.ac.rdg.resc.ncwms.wms.Dataset;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
 import uk.ac.rdg.resc.ncwms.wms.VectorLayer;
+import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
 /**
  * <p>This Controller is the entry point for all standard WMS operations
@@ -479,7 +482,8 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Cycle through all the provided timesteps, extracting data for each step
         List<String> tValueStrings = new ArrayList<String>();
-        List<DateTime> timeValues = getTimeValues(dr.getTimeString(), layer);
+        List<String> responseValueStrings = new ArrayList<String>();
+        List<DateTime> timeValues = getTimeValues(dr.getTimeString(), layer, this.serverConfig.getAllowsNearestTime());
         if (timeValues.size() > 1 && !imageFormat.supportsMultipleFrames()) {
             throw new WmsException("The image format " + mimeType +
                     " does not support multiple frames");
@@ -488,13 +492,20 @@ public abstract class AbstractWmsController extends AbstractController {
         long beforeExtractData = System.currentTimeMillis();
         // Use a single null time value if the layer has no time axis
         if (timeValues.isEmpty()) timeValues = Arrays.asList((DateTime)null);
+        String tValueStr;
         for (DateTime timeValue : timeValues) {
-            // Only add a label if this is part of an animation
-            String tValueStr = "";
-            if (timeValues.size() > 1 && timeValue != null) {
-                tValueStr = WmsUtils.dateTimeToISO8601(timeValue);
+            // Add all times to a string.  This is used in the response headers
+            // and also to show the animation text.  If this is not an animatoin,
+            // tValueStrings is later cleared so no animation text shows up.
+            tValueStr = WmsUtils.dateTimeToISO8601(timeValue);
+            responseValueStrings.add(tValueStr);
+            if ((timeValues.size() > 1) && (timeValue != null)) {
+              tValueStrings.add(tValueStr);
+            } else {
+              tValueStr = "";
             }
-            tValueStrings.add(tValueStr);
+            
+            
 
             if (layer instanceof ScalarLayer) {
                 // Note that if the layer doesn't have a time axis, timeValue==null but this
@@ -516,6 +527,16 @@ public abstract class AbstractWmsController extends AbstractController {
         // We only create a legend object if the image format requires it
         BufferedImage legend = imageFormat.requiresLegend() ? imageProducer.getLegend(layer) : null;
 
+        // Return the rounded time in the header if we did, in fact, round to the nearest time
+        // Do we always want to add the response header, even if the sent time was not rounded
+        // at all?
+        String units = WmsUtils.getTimeAxisUnits(layer.getChronology());
+        String times = responseValueStrings.toString();
+        if (layer.isNearestTime() && this.serverConfig.getAllowsNearestTime()) {
+          httpServletResponse.setHeader("Warning", "99 Nearest value used: " +
+                    "time=" + times.toString().substring(1,times.length()-1).replace(" ", "") + " " + units);
+        }
+
         // Write the image to the client.
         // First we set the HTTP headers
         httpServletResponse.setStatus(HttpServletResponse.SC_OK);
@@ -525,6 +546,7 @@ public abstract class AbstractWmsController extends AbstractController {
             httpServletResponse.setHeader("Content-Disposition", "inline; filename=" +
                     layer.getDataset().getId() + "_" + layer.getId() + ".kmz");
         }
+
         // Render the images and write to the output stream
         imageFormat.writeImage(imageProducer.getRenderedFrames(),
                 httpServletResponse.getOutputStream(), layer, tValueStrings,
@@ -610,7 +632,7 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Get the requested timesteps.  If the layer doesn't have
         // a time axis then this will return a single-element List with value null.
-        List<DateTime> tValues = getTimeValues(dr.getTimeString(), layer);
+        List<DateTime> tValues = getTimeValues(dr.getTimeString(), layer, this.serverConfig.getAllowsNearestTime());
         usageLogEntry.setNumTimeSteps(tValues.size());
 
         // First we read the timeseries data.  If the layer doesn't have a time
@@ -663,6 +685,16 @@ public abstract class AbstractWmsController extends AbstractController {
             for (int i = 0; i < tValues.size(); i++) {
                 featureData.put(tValues.get(i), tsData.get(i));
             }
+        }
+        
+        // Return the rounded time in the header if we did, in fact, round to the nearest time
+        // Do we always want to add the response header, even if the sent time was not rounded
+        // at all?
+        String units = WmsUtils.getTimeAxisUnits(layer.getChronology());
+        String times = tValues.toString();
+        if (layer.isNearestTime() && this.serverConfig.getAllowsNearestTime()) {
+          httpServletResponse.setHeader("Warning", "99 Nearest value used: " +
+                    "time=" + times.toString().substring(1,times.length()-1).replace(" ", "") + " " + units);
         }
 
         if (request.getOutputFormat().equals(FEATURE_INFO_XML_FORMAT)) {
@@ -759,7 +791,7 @@ public abstract class AbstractWmsController extends AbstractController {
         String crsCode = params.getMandatoryString("crs");
         String lineString = params.getMandatoryString("linestring");
         String outputFormat = params.getMandatoryString("format");
-        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer, this.serverConfig.getAllowsNearestTime());
         DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
         double zValue = getElevationValue(params.getString("elevation"), layer);
 
@@ -868,7 +900,7 @@ public abstract class AbstractWmsController extends AbstractController {
 
         String crsCode = params.getMandatoryString("crs");
         String point = params.getMandatoryString("point");
-        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer, this.serverConfig.getAllowsNearestTime());
         DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
         
         String outputFormat = params.getMandatoryString("format");
@@ -1058,7 +1090,7 @@ public abstract class AbstractWmsController extends AbstractController {
 
         String crsCode = params.getMandatoryString("crs");
         String lineStr = params.getMandatoryString("linestring");
-        List<DateTime> tValues = getTimeValues(params.getString("time"), layer);
+        List<DateTime> tValues = getTimeValues(params.getString("time"), layer, this.serverConfig.getAllowsNearestTime());
         DateTime tValue = tValues.isEmpty() ? null : tValues.get(0);
         usageLogEntry.setLayer(layer);
 
@@ -1218,7 +1250,7 @@ public abstract class AbstractWmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the time string cannot be parsed,
      * or if any of the requested times are not valid times for the layer
      */
-    static List<DateTime> getTimeValues(String timeString, Layer layer)
+    static List<DateTime> getTimeValues(String timeString, Layer layer, boolean globalNearestTime)
             throws InvalidDimensionValueException {
 
         // If the layer does not have a time axis return an empty list
@@ -1240,10 +1272,10 @@ public abstract class AbstractWmsController extends AbstractController {
             String[] startStop = t.split("/");
             if (startStop.length == 1) {
                 // This is a single time value
-                tValues.add(findTValue(startStop[0], layer));
+                tValues.add(findTValue(startStop[0], layer, globalNearestTime));
             } else if (startStop.length == 2) {
                 // Use all time values from start to stop inclusive
-                tValues.addAll(findTValues(startStop[0], startStop[1], layer));
+                tValues.addAll(findTValues(startStop[0], startStop[1], layer, globalNearestTime));
             } else {
                 throw new InvalidDimensionValueException("time", t);
             }
@@ -1257,7 +1289,7 @@ public abstract class AbstractWmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the layer does not contain
      * the given time, or if the given ISO8601 string is not valid.
      */
-    static int findTIndex(String isoDateTime, Layer layer)
+    static int findTIndex(String isoDateTime, Layer layer, boolean globalNearestTime)
         throws InvalidDimensionValueException
     {
         DateTime target;
@@ -1274,7 +1306,10 @@ public abstract class AbstractWmsController extends AbstractController {
         // Find the equivalent DateTime in the Layer.  Note that we can't simply
         // use the contains() method of the List, since this is based on equals().
         // We want to find the DateTime with the same millisecond instant.
-        int index = WmsUtils.findTimeIndex(layer.getTimeValues(), target);
+        int index = layer.isNearestTime() && globalNearestTime
+            ? WmsUtils.findNearestTimeIndex(layer.getTimeValues(), target)
+            : WmsUtils.findTimeIndex(layer.getTimeValues(), target);
+
         if (index < 0)
         {
             throw new InvalidDimensionValueException("time", isoDateTime);
@@ -1288,10 +1323,10 @@ public abstract class AbstractWmsController extends AbstractController {
      * @throws InvalidDimensionValueException if the layer does not contain
      * the given time, or if the given ISO8601 string is not valid.
      */
-    private static DateTime findTValue(String isoDateTime, Layer layer)
+    private static DateTime findTValue(String isoDateTime, Layer layer, boolean globalNearestTime)
         throws InvalidDimensionValueException
     {
-        return layer.getTimeValues().get(findTIndex(isoDateTime, layer));
+        return layer.getTimeValues().get(findTIndex(isoDateTime, layer, globalNearestTime));
     }
 
     /**
@@ -1304,10 +1339,10 @@ public abstract class AbstractWmsController extends AbstractController {
      * values were not found in the axis, or if they are not valid ISO8601 times.
      */
     private static List<DateTime> findTValues(String isoDateTimeStart,
-        String isoDateTimeEnd, Layer layer) throws InvalidDimensionValueException
+        String isoDateTimeEnd, Layer layer, boolean globalNearestTime) throws InvalidDimensionValueException
     {
-        int startIndex = findTIndex(isoDateTimeStart, layer);
-        int endIndex = findTIndex(isoDateTimeEnd, layer);
+        int startIndex = findTIndex(isoDateTimeStart, layer, globalNearestTime);
+        int endIndex = findTIndex(isoDateTimeEnd, layer, globalNearestTime);
         if (startIndex > endIndex)
         {
             throw new InvalidDimensionValueException("time",

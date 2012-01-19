@@ -115,7 +115,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <LatLonBoundingBox minx="${bbox.westBoundLongitude}" maxx="${bbox.eastBoundLongitude}" miny="${bbox.southBoundLatitude}" maxy="${bbox.northBoundLatitude}"/>
                     <BoundingBox SRS="EPSG:4326" minx="${bbox.westBoundLongitude}" maxx="${bbox.eastBoundLongitude}" miny="${bbox.southBoundLatitude}" maxy="${bbox.northBoundLatitude}"/>
                     <c:if test="${not empty layer.elevationValues}"><Dimension name="elevation" units="${layer.elevationUnits}"/><!-- TODO: units correct? --></c:if>
-                    <c:if test="${not empty layer.timeValues}"><Dimension name="time" units="${utils:getTimeAxisUnits(layer.chronology)}"/></c:if>
+                    <c:if test="${not empty layer.timeValues}"><Dimension name="time" units="${utils:getTimeAxisUnits(layer.chronology)}"<c:if test="${layer.nearestTime}"> nearestValue="1"</c:if>/></c:if>
                     <c:if test="${not empty layer.elevationValues}">
                     <Extent name="elevation" default="${layer.defaultElevationValue}">
                         <%-- Print out the dimension values, comma separated, making sure
@@ -127,7 +127,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     </c:if>
                     <c:set var="tvalues" value="${layer.timeValues}"/>
                     <c:if test="${not empty tvalues}">
-                    <Extent name="time" multipleValues="1" current="1" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}">
+                      <Extent name="time" multipleValues="1" current="1" default="${utils:dateTimeToISO8601(layer.defaultTimeValue)}"<c:if test="${layer.nearestTime}"> nearestValue="1"</c:if>>
                         <c:choose>
                             <c:when test="${verboseTimes}">
                                 <%-- Use the verbose version of the time string --%>
@@ -138,7 +138,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                                 <c:out value="${utils:getTimeStringForCapabilities(tvalues)}"/>
                             </c:otherwise>
                         </c:choose>
-                    </Extent>
+                      </Extent>
                     </c:if>
                     <c:set var="styles" value="boxfill"/>
                     <c:if test="${utils:isVectorLayer(layer)}">

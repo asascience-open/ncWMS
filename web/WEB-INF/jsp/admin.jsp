@@ -42,7 +42,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         
         <h2>Datasets</h2>
         <table border="1">
-        <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
+        <tr><th>Edit variables</th><th>Unique ID</th><th>Title</th><th>Location</th><th>State</th><th>Last update</th><th>Auto refresh frequency</th><th>Force refresh?</th><th>Disabled?</th><th>Queryable?</th><th>Return nearest time?</th><th>Remove?</th><th>Data reading class</th><th>Link to more info</th><th>Copyright statement</th></tr>
 
             <c:forEach var="datasetEntry" items="${config.allDatasets}">
                 <c:set var="dataset" value="${datasetEntry.value}"/>
@@ -86,6 +86,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td><input type="checkbox" name="dataset.${dataset.id}.refresh"/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.disabled"<c:if test="${dataset.disabled}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.queryable"<c:if test="${dataset.queryable}"> checked="checked"</c:if>/></td>
+                    <td><input type="checkbox" name="dataset.${dataset.id}.nearestTime"<c:if test="${dataset.nearestTime}"> checked="checked"</c:if>/></td>
                     <td><input type="checkbox" name="dataset.${dataset.id}.remove"/></td>
                     <td><input type="text" name="dataset.${dataset.id}.reader" value="${dataset.dataReaderClass}"/></td>
                     <td><input type="text" name="dataset.${dataset.id}.moreinfo" value="${dataset.moreInfoUrl}"/></td>
@@ -116,6 +117,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                     <td>N/A</td>
                     <td><input type="checkbox" name="dataset.new${i}.disabled"/></td>
                     <td><input type="checkbox" name="dataset.new${i}.queryable" checked="checked"/></td>
+                    <td><input type="checkbox" name="dataset.new${i}.nearestTime" checked="checked"/></td>
                     <td>N/A</td>
                     <td><input type="text" name="dataset.new${i}.reader" value=""/></td>
                     <td><input type="text" name="dataset.new${i}.moreinfo" value=""/></td>
@@ -181,6 +183,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <tr><th>Max image width</th><td><input type="text" name="server.maximagewidth" value="${config.server.maxImageWidth}"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Max image height</th><td><input type="text" name="server.maximageheight" value="${config.server.maxImageHeight}"/></td><td>Maximum width of image that can be requested</td></tr>
             <tr><th>Allow GetFeatureInfo</th><td><input type="checkbox" name="server.allowfeatureinfo"<c:if test="${config.server.allowFeatureInfo}"> checked="checked"</c:if>/></td><td>Check this box to enable the GetFeatureInfo operation</td></tr>
+            <tr><th>Allow NearestTime</th><td><input type="checkbox" name="server.allownearesttime"<c:if test="${config.server.allowNearestTime}"> checked="checked"</c:if>/></td><td>Check this box to enable the NearestTime operation</td></tr>
             <tr><th>Allow global Capabilities</th><td><input type="checkbox" name="server.allowglobalcapabilities"<c:if test="${config.server.allowGlobalCapabilities}"> checked="checked"</c:if>/></td><td>Check this box to allow clients to request a
             WMS Capabilities document including all datasets on this server (not recommended if this server hosts a large number of datasets)</td></tr>
         </table>

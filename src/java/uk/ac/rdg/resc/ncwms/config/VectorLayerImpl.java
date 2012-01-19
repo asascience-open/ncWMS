@@ -137,6 +137,9 @@ final class VectorLayerImpl implements VectorLayer
     public boolean isQueryable()  { return this.wrappedLayer.isQueryable(); }
 
     @Override
+    public boolean isNearestTime()  { return this.wrappedLayer.isNearestTime(); }
+
+    @Override
     public GeographicBoundingBox getGeographicBoundingBox() {
         return this.wrappedLayer.getGeographicBoundingBox();
     }

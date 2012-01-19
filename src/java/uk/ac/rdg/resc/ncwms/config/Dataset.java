@@ -69,6 +69,9 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     
     @Attribute(name="queryable", required=false)
     private boolean queryable = true; // True if we want GetFeatureInfo enabled for this dataset
+
+    @Attribute(name="nearestTime", required=false)
+    private boolean nearestTime = true; // True if we want to return NearestTime for a WMS request
     
     @Attribute(name="dataReaderClass", required=false)
     private String dataReaderClass = ""; // We'll use a default data reader
@@ -249,6 +252,19 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     public void setQueryable(boolean queryable)
     {
         this.queryable = queryable;
+    }
+
+     /**
+     * @return true if this dataset should search for NearestTime on WMS requests
+     */
+    public boolean isNearestTime()
+    {
+        return this.nearestTime;
+    }
+
+    public void setNearestTime(boolean nearestTime)
+    {
+        this.nearestTime = nearestTime;
     }
     
     /**
