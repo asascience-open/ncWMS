@@ -1,30 +1,30 @@
 /*
- * Copyright (c) 2010 The University of Reading
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University of Reading, nor the names of the
- *    authors or contributors may be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+* Copyright (c) 2010 The University of Reading
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+* notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+* notice, this list of conditions and the following disclaimer in the
+* documentation and/or other materials provided with the distribution.
+* 3. Neither the name of the University of Reading, nor the names of the
+* authors or contributors may be used to endorse or promote products
+* derived from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+* OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+* NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+* THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 package uk.ac.rdg.resc.edal.cdm;
 
@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Formatter;
 import java.util.List;
 import java.util.Map;
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
@@ -62,14 +63,16 @@ import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDataset;
 import ucar.nc2.dt.GridDataset.Gridset;
 import ucar.nc2.dt.GridDatatype;
-import ucar.nc2.dt.TypedDatasetFactory;
+import ucar.nc2.ft.FeatureDatasetFactoryManager;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.unidata.geoloc.LatLonRect;
 import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid;
+import uk.ac.rdg.resc.edal.coverage.grid.RectilinearGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.ReferenceableAxis;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularAxis;
+import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RectilinearGridImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.ReferenceableAxisImpl;
 import uk.ac.rdg.resc.edal.coverage.grid.impl.RegularAxisImpl;
@@ -288,17 +291,16 @@ public final class CdmUtils
     /** Gets a GridDataset from the given NetcdfDataset */
     public static GridDataset getGridDataset(NetcdfDataset nc) throws IOException
     {
-        return (GridDataset)TypedDatasetFactory.open(FeatureType.GRID,
-            nc, null, null);
+        return (GridDataset)FeatureDatasetFactoryManager.open(FeatureType.GRID, nc.getLocation(), null, new Formatter());
     }
 
     /**
      * Estimates the optimum {@link DataReadingStrategy} from the given
-     * NetcdfDataset.  Essentially, if the amount of data to be read is very
-     * large, {@link DataReadingStrategy#SCANLINE} will be returned.  Otherwise,
+     * NetcdfDataset. Essentially, if the amount of data to be read is very
+     * large, {@link DataReadingStrategy#SCANLINE} will be returned. Otherwise,
      * if the data are remote remote (e.g. OPeNDAP) or
      * compressed, this will return {@link DataReadingStrategy#BOUNDING_BOX},
-     * which makes a single i/o call, minimizing the overhead.  If the data
+     * which makes a single i/o call, minimizing the overhead. If the data
      * are local and uncompressed this will return {@link DataReadingStrategy#SCANLINE},
      * which reduces the amount of data read.
      * @param pixelMap The PixelMap that determines what data will actually be read
@@ -312,6 +314,11 @@ public final class CdmUtils
             // This is an arbitrary limit, which could be tweaked
             return DataReadingStrategy.SCANLINE;
         }
+        return getOptimumDataReadingStrategy(nc);
+    }
+    
+    public static DataReadingStrategy getOptimumDataReadingStrategy(NetcdfDataset nc)
+    {
         String fileType = nc.getFileTypeId();
         return "netCDF".equals(fileType) || "HDF4".equals(fileType)
             ? DataReadingStrategy.SCANLINE
@@ -320,10 +327,12 @@ public final class CdmUtils
 
     /**
      * Converts the given LatLonRect to a GeographicBoundingBox.
-     * @todo Should probably be an Extent or a BoundingBox (I think Extent
-     * is more accurate - see the GeoAPI spec document.  Extents do not cross
-     * the anti-meridian).  Also do we need to return a more precise CRS?
-     * GeographicBoundingBox is deliberately approximate so doesn't use a CRS.
+     * 
+     * @todo Should probably be an Extent or a BoundingBox (I think Extent is
+     *       more accurate - see the GeoAPI spec document. Extents do not cross
+     *       the anti-meridian). Also do we need to return a more precise CRS?
+     *       GeographicBoundingBox is deliberately approximate so doesn't use a
+     *       CRS.
      */
     public static GeographicBoundingBox getBbox(LatLonRect latLonRect)
     {
@@ -356,14 +365,16 @@ public final class CdmUtils
     }
 
     /**
-     * Gets List of DateTimes representing the timesteps of the given coordinate system,
-     * in an appropriate {@link Chronology}.  (Chronologies represent the
+     * Gets List of DateTimes representing the timesteps of the given coordinate
+     * system, in an appropriate {@link Chronology}. (Chronologies represent the
      * calendar system.)
-     * @param coordSys The coordinate system containing the time information
+     * 
+     * @param coordSys
+     *            The coordinate system containing the time information
      * @return List of TimestepInfo objects, or an empty list if the coordinate
-     * system has no time axis
-     * @throws IllegalArgumentException if the calendar system of the time axis
-     * cannot be handled.
+     *         system has no time axis
+     * @throws IllegalArgumentException
+     *             if the calendar system of the time axis cannot be handled.
      */
     public static List<DateTime> getTimesteps(CoordinateAxis1DTime timeAxis)
     {
@@ -393,7 +404,7 @@ public final class CdmUtils
     }
 
     /**
-     * Creates a list of DateTimes in a non-standard calendar system.  All of the
+     * Creates a list of DateTimes in a non-standard calendar system. All of the
      * DateTimes will have a zero time zone offset (i.e. UTC).
      */
     private static List<DateTime> getTimestepsForChronology(CoordinateAxis1DTime timeAxis, Chronology chron)
@@ -423,23 +434,31 @@ public final class CdmUtils
 
     /**
      * Reads a set of points at a given time and elevation from the given
-     * GridDatatype.  This method will internally create a {@link HorizontalGrid}
-     * object with each invocation; if you expect to call this method multiple times,
-     * greater efficiency may be gained by creating the HorizontalGrid once and
-     * calling {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset,
-     * java.lang.String, uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid, int,
-     * int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
-     * @param nc The (already-opened) NetcdfDataset from which we'll read data
-     * @param varId The ID of the variable from which we will read data
-     * @param tIndex The time index, ignored if the grid has no time axis
-     * @param zIndex The elevation index, ignored if the grid has no elevation axis
-     * @param targetDomain The list of horizontal points for which we need data
+     * GridDatatype. This method will internally create a {@link HorizontalGrid}
+     * object with each invocation; if you expect to call this method multiple
+     * times, greater efficiency may be gained by creating the HorizontalGrid
+     * once and calling
+     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String, uk.ac.rdg.resc.edal.coverage.grid.HorizontalGrid, int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}
+     * .
+     * 
+     * @param nc
+     *            The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId
+     *            The ID of the variable from which we will read data
+     * @param tIndex
+     *            The time index, ignored if the grid has no time axis
+     * @param zIndex
+     *            The elevation index, ignored if the grid has no elevation axis
+     * @param targetDomain
+     *            The list of horizontal points for which we need data
      * @return a List of floating point numbers, one for each point in the
-     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
-     * in oceanography data} are represented as nulls.
-     * @throws IllegalArgumentException if there is no variable in the dataset
-     * with the id {@code varId}.
-     * @throws IOException if there was an error reading data from the data source
+     *         {@code targetDomain}, in the same order. Missing values (e.g.
+     *         land pixels in oceanography data} are represented as nulls.
+     * @throws IllegalArgumentException
+     *             if there is no variable in the dataset with the id
+     *             {@code varId}.
+     * @throws IOException
+     *             if there was an error reading data from the data source
      */
     public static List<Float> readHorizontalPoints(NetcdfDataset nc, String varId,
             int tIndex, int zIndex, Domain<HorizontalPosition> targetDomain)
@@ -454,20 +473,30 @@ public final class CdmUtils
     /**
      * Reads a set of points at a given time from the given GridDatatype at a
      * number of elevations.
-     * @param nc The (already-opened) NetcdfDataset from which we'll read data
-     * @param varId The ID of the variable from which we will read data
-     * @param sourceGrid object that maps between real-world and grid coordinates
-     * in the source data grid
-     * @param tIndex The time index, ignored if the grid has no time axis
-     * @param zIndices The elevation indices, ignored if the grid has no elevation axis
-     * @param targetDomain The list of horizontal points for which we need data
+     * 
+     * @param nc
+     *            The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId
+     *            The ID of the variable from which we will read data
+     * @param sourceGrid
+     *            object that maps between real-world and grid coordinates in
+     *            the source data grid
+     * @param tIndex
+     *            The time index, ignored if the grid has no time axis
+     * @param zIndices
+     *            The elevation indices, ignored if the grid has no elevation
+     *            axis
+     * @param targetDomain
+     *            The list of horizontal points for which we need data
      * @return a List of floating point numbers for each elevation; each list
-     * contains a value for each point in the {@code targetDomain}, in the same
-     * order.  Missing values (e.g. land pixels in oceanography data} are
-     * represented as nulls.
-     * @throws IllegalArgumentException if there is no variable in the dataset
-     * with the id {@code varId}.
-     * @throws IOException if there was an error reading data from the data source
+     *         contains a value for each point in the {@code targetDomain}, in
+     *         the same order. Missing values (e.g. land pixels in oceanography
+     *         data} are represented as nulls.
+     * @throws IllegalArgumentException
+     *             if there is no variable in the dataset with the id
+     *             {@code varId}.
+     * @throws IOException
+     *             if there was an error reading data from the data source
      */
     public static List<List<Float>> readVerticalSection(NetcdfDataset nc, String varId,
             HorizontalGrid sourceGrid, int tIndex, List<Integer> zIndices,
@@ -478,37 +507,57 @@ public final class CdmUtils
         GridDatatype grid = getGridDatatype(nc, varId);
         // We create the pixelMap only once
         PixelMap pixelMap = new PixelMap(sourceGrid, targetDomain);
-
+        DataReadingStrategy strategy = getOptimumDataReadingStrategy(pixelMap, nc);
+        
+        return readVerticalSection(nc, grid, tIndex, zIndices, pixelMap, strategy, (int)targetDomain.size());
+    }
+    
+    public static List<List<Float>> readVerticalSection(NetcdfDataset nc, GridDatatype grid,
+            int tIndex, List<Integer> zIndices, PixelMap pixelMap, DataReadingStrategy strategy,
+            int targetDomainSize)
+            throws IOException
+    {
         // Defend against null values
         if (zIndices == null) zIndices = Arrays.asList(-1);
         List<List<Float>> data = new ArrayList<List<Float>>(zIndices.size());
         for (int zIndex : zIndices) {
             // It's very unlikely that the target domain will be bigger than
             // Integer.MAX_VALUE
-            data.add(readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, (int)targetDomain.size()));
+            data.add(readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, strategy, targetDomainSize));
         }
         return data;
     }
     
+    
     /**
      * Reads a set of points at a given time and elevation from the given
-     * GridDatatype.  Use this method if you already have a {@link HorizontalGrid}
-     * object created for the variable in question, otherwise use
-     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String,
-     * int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
-     * @param nc The (already-opened) NetcdfDataset from which we'll read data
-     * @param varId The ID of the variable from which we will read data
-     * @param sourceGrid object that maps between real-world and grid coordinates
-     * in the source data grid
-     * @param tIndex The time index, ignored if the grid has no time axis
-     * @param zIndex The elevation index, ignored if the grid has no elevation axis
-     * @param targetDomain The list of horizontal points for which we need data
+     * GridDatatype. Use this method if you already have a
+     * {@link HorizontalGrid} object created for the variable in question,
+     * otherwise use
+     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String, int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}
+     * .
+     * 
+     * @param nc
+     *            The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId
+     *            The ID of the variable from which we will read data
+     * @param sourceGrid
+     *            object that maps between real-world and grid coordinates in
+     *            the source data grid
+     * @param tIndex
+     *            The time index, ignored if the grid has no time axis
+     * @param zIndex
+     *            The elevation index, ignored if the grid has no elevation axis
+     * @param targetDomain
+     *            The list of horizontal points for which we need data
      * @return a List of floating point numbers, one for each point in the
-     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
-     * in oceanography data} are represented as nulls.
-     * @throws IllegalArgumentException if there is no variable in the dataset
-     * with the id {@code varId}.
-     * @throws IOException if there was an error reading data from the data source
+     *         {@code targetDomain}, in the same order. Missing values (e.g.
+     *         land pixels in oceanography data} are represented as nulls.
+     * @throws IllegalArgumentException
+     *             if there is no variable in the dataset with the id
+     *             {@code varId}.
+     * @throws IOException
+     *             if there was an error reading data from the data source
      */
     public static List<Float> readHorizontalPoints(NetcdfDataset nc, String varId,
             HorizontalGrid sourceGrid, int tIndex, int zIndex,
@@ -521,23 +570,33 @@ public final class CdmUtils
 
     /**
      * Reads a set of points at a given time and elevation from the given
-     * GridDatatype.  Use this method if you already have a {@link HorizontalGrid}
-     * object created for the variable in question, otherwise use
-     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String,
-     * int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}.
-     * @param nc The (already-opened) NetcdfDataset from which we'll read data
-     * @param grid The GridDatatype object representing the data to be read
-     * @param sourceGrid object that maps between real-world and grid coordinates
-     * in the source data grid
-     * @param tIndex The time index, ignored if the grid has no time axis
-     * @param zIndex The elevation index, ignored if the grid has no elevation axis
-     * @param targetDomain The list of horizontal points for which we need data
+     * GridDatatype. Use this method if you already have a
+     * {@link HorizontalGrid} object created for the variable in question,
+     * otherwise use
+     * {@link #readHorizontalPoints(ucar.nc2.dataset.NetcdfDataset, java.lang.String, int, int, uk.ac.rdg.resc.edal.coverage.domain.Domain)}
+     * .
+     * 
+     * @param nc
+     *            The (already-opened) NetcdfDataset from which we'll read data
+     * @param grid
+     *            The GridDatatype object representing the data to be read
+     * @param sourceGrid
+     *            object that maps between real-world and grid coordinates in
+     *            the source data grid
+     * @param tIndex
+     *            The time index, ignored if the grid has no time axis
+     * @param zIndex
+     *            The elevation index, ignored if the grid has no elevation axis
+     * @param targetDomain
+     *            The list of horizontal points for which we need data
      * @return a List of floating point numbers, one for each point in the
-     * {@code targetDomain}, in the same order.  Missing values (e.g. land pixels
-     * in oceanography data} are represented as nulls.
-     * @throws IllegalArgumentException if there is no variable in the dataset
-     * with the id {@code varId}.
-     * @throws IOException if there was an error reading data from the data source
+     *         {@code targetDomain}, in the same order. Missing values (e.g.
+     *         land pixels in oceanography data} are represented as nulls.
+     * @throws IllegalArgumentException
+     *             if there is no variable in the dataset with the id
+     *             {@code varId}.
+     * @throws IOException
+     *             if there was an error reading data from the data source
      */
     public static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
             HorizontalGrid sourceGrid, int tIndex, int zIndex,
@@ -572,7 +631,7 @@ public final class CdmUtils
         return readHorizontalPoints(nc, grid, tIndex, zIndex, pixelMap, strategy, targetDomainSize);
     }
 
-    static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
+    public static List<Float> readHorizontalPoints(NetcdfDataset nc, GridDatatype grid,
             int tIndex, int zIndex, PixelMap pixelMap, DataReadingStrategy strategy,
             int targetDomainSize)
             throws IOException
@@ -593,7 +652,9 @@ public final class CdmUtils
 
     /**
      * Returns an immutable List of the given size in which all values are null.
-     * @todo we could cache instances of this object for some typical sizes (e.g. 256x256)
+     * 
+     * @todo we could cache instances of this object for some typical sizes
+     *       (e.g. 256x256)
      */
     private static List<Float> nullList(final int size)
     {
@@ -609,7 +670,7 @@ public final class CdmUtils
     }
 
     /**
-     * Wraps a float array as an immutable List.  NaNs in the passed array will
+     * Wraps a float array as an immutable List. NaNs in the passed array will
      * be returned as null values.
      */
     private static List<Float> wrap(final float[] arr)
@@ -646,16 +707,25 @@ public final class CdmUtils
     /**
      * Reads a timeseries of points from the given GridDatatype at a given
      * elevation and xy location
-     * @param nc The (already-opened) NetcdfDataset from which we'll read data
-     * @param varId The ID of the variable from which we will read data
-     * @param horizGrid object that maps between real-world and grid coordinates
-     * in the source data grid
-     * @param tIndices The list of indices along the time axis
-     * @param zIndex The elevation index, ignored if the grid has no elevation axis
-     * @param xy The horizontal location of the required timeseries
-     * @return a list of floating-point numbers, one for each of the time indices.
-     * Missing values (e.g. land pixels in oceanography data} are represented as nulls.
-     * @throws IOException if there was an error reading data from the data source
+     * 
+     * @param nc
+     *            The (already-opened) NetcdfDataset from which we'll read data
+     * @param varId
+     *            The ID of the variable from which we will read data
+     * @param horizGrid
+     *            object that maps between real-world and grid coordinates in
+     *            the source data grid
+     * @param tIndices
+     *            The list of indices along the time axis
+     * @param zIndex
+     *            The elevation index, ignored if the grid has no elevation axis
+     * @param xy
+     *            The horizontal location of the required timeseries
+     * @return a list of floating-point numbers, one for each of the time
+     *         indices. Missing values (e.g. land pixels in oceanography data}
+     *         are represented as nulls.
+     * @throws IOException
+     *             if there was an error reading data from the data source
      */
     public static List<Float> readTimeseries(NetcdfDataset nc, String varId,
             HorizontalGrid horizGrid, List<Integer> tIndices,
@@ -708,9 +778,9 @@ public final class CdmUtils
     }
 
     /**
-     * @return the value of the standard_name attribute of the variable,
-     * or the long_name if it does not exist, or the unique id if neither of
-     * these attributes exist.
+     * @return the value of the standard_name attribute of the variable, or the
+     *         long_name if it does not exist, or the unique id if neither of
+     *         these attributes exist.
      */
     public static String getVariableTitle(Variable var)
     {
