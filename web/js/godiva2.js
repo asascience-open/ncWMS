@@ -87,7 +87,8 @@ window.onload = function()
             '&COLORSCALERANGE=' + scaleMinVal + ',' + scaleMaxVal +
             '&NUMCOLORBANDS=' + $('numColorBands').value +
             '&LOGSCALE=' + logscale +
-            '&PALETTE=' + paletteName;
+            '&PALETTE=' + paletteName +
+            '&VERSION=1.1.1';
         popUp(transectUrl, 450, 350);
     });
 
