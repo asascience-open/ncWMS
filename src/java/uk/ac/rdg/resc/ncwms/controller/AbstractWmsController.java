@@ -404,6 +404,7 @@ public abstract class AbstractWmsController extends AbstractController {
         String mimeType = styleRequest.getImageFormat();
         // This throws an InvalidFormatException if the MIME type is not supported
         ImageFormat imageFormat = ImageFormat.get(mimeType);
+        float vectorScale = styleRequest.getVectorScale();
 
         GetMapDataRequest dr = getMapRequest.getDataRequest();
 
@@ -439,6 +440,11 @@ public abstract class AbstractWmsController extends AbstractController {
             String styleType = styleStrEls[0];
             if (styleType.equalsIgnoreCase("boxfill")) style = ImageProducer.Style.BOXFILL;
             else if (styleType.equalsIgnoreCase("vector")) style = ImageProducer.Style.VECTOR;
+            else if (styleType.equalsIgnoreCase("fancyvec")) style = ImageProducer.Style.FANCYVEC;
+            else if (styleType.equalsIgnoreCase("linevec")) style = ImageProducer.Style.LINEVEC;
+            else if (styleType.equalsIgnoreCase("stumpvec")) style = ImageProducer.Style.STUMPVEC;
+            else if (styleType.equalsIgnoreCase("trivec")) style = ImageProducer.Style.TRIVEC;
+            else if (styleType.equalsIgnoreCase("barb")) style = ImageProducer.Style.BARB;
             else throw new StyleNotDefinedException("The style " + styles[0] +
                 " is not supported by this server");
 
@@ -463,6 +469,8 @@ public abstract class AbstractWmsController extends AbstractController {
             .logarithmic(logScale)
             .opacity(styleRequest.getOpacity())
             .numColourBands(styleRequest.getNumColourBands())
+            .vectorScale(vectorScale)
+            .units(layer.getUnits())
             .build();
         // Need to make sure that the images will be compatible with the
         // requested image format

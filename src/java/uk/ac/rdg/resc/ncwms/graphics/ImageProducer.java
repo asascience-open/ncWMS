@@ -31,7 +31,9 @@ package uk.ac.rdg.resc.ncwms.graphics;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
+import java.awt.RenderingHints;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
@@ -39,6 +41,7 @@ import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -58,7 +61,7 @@ public final class ImageProducer
 {
     private static final Logger logger = LoggerFactory.getLogger(ImageProducer.class);
 
-    public static enum Style {BOXFILL, VECTOR};
+    public static enum Style {BOXFILL, VECTOR, BARB, STUMPVEC, TRIVEC, LINEVEC, FANCYVEC};
     
     private Style style;
     // Width and height of the resulting picture
@@ -77,11 +80,14 @@ public final class ImageProducer
      * means that the picture will be auto-scaled.
      */
     private Range<Float> scaleRange;
-    
+
     /**
-     * The length of arrows in pixels, only used for vector plots
+     * The scale factor between vectors
      */
-    private float arrowLength = 10.0f;
+    private float vectorScale;
+    private String units;
+    private float arrowLength = 14.0f;
+    private float barbLength = 28.0f;
     
     // set of rendered images, ready to be turned into a picture
     private List<BufferedImage> renderedFrames = new ArrayList<BufferedImage>();
@@ -173,28 +179,12 @@ public final class ImageProducer
         return this.colorPalette.getColorModel(this.numColourBands,
             this.opacity, this.bgColor, this.transparent);
     }
-    
-    /**
-     * Creates and returns a single frame as an Image, based on the given data.
-     * Adds the label if one has been set.  The scale must be set before
-     * calling this method.
-     */
-    private BufferedImage createImage(Components comps, String label)
-    {
-        // Create the pixel array for the frame
+
+    // Create the pixel array for the frame
+    private BufferedImage createVector(Components comps, String label) {
+
         byte[] pixels = new byte[this.picWidth * this.picHeight];
-        // We get the magnitude of the input data (takes care of the case
-        // in which the data are two components of a vector)
-        List<Float> magnitudes = comps.getMagnitudes();
-        for (int i = 0; i < pixels.length; i++)
-        {
-            // The image coordinate system has the vertical axis increasing
-            // downward, but the data's coordinate system has the vertical axis
-            // increasing upwards.  The method below flips the axis
-            int dataIndex = this.getDataIndex(i);
-            pixels[i] = (byte)this.getColourIndex(magnitudes.get(dataIndex));
-        }
-        
+        Arrays.fill(pixels, (byte)this.numColourBands);
         // Create a ColorModel for the image
         ColorModel colorModel = this.getColorModel();
         
@@ -203,7 +193,7 @@ public final class ImageProducer
         SampleModel sampleModel = colorModel.createCompatibleSampleModel(this.picWidth, this.picHeight);
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
         BufferedImage image = new BufferedImage(colorModel, raster, false, null);
-        
+
         // Add the label to the image
         // TODO: colour needs to change with different palettes!
         if (label != null && !label.equals(""))
@@ -214,49 +204,64 @@ public final class ImageProducer
             gfx.setPaint(new Color(255, 151, 0));
             gfx.drawString(label, 10, image.getHeight() - 5);
         }
-        
-        if (this.style == Style.VECTOR)
-        {
-            // We superimpose direction arrows on top of the background
-            // TODO: only do this for lat-lon projections!
-            Graphics2D g = image.createGraphics();
-            // TODO: control the colour of the arrows with an attribute
-            // Must be part of the colour palette (here we use the colour
-            // for out-of-range values)
-            g.setColor(Color.BLACK);
 
-            logger.debug("Drawing vectors, length = {} pixels", this.arrowLength);
-            for (int i = 0; i < this.picWidth; i += Math.ceil(this.arrowLength * 1.2))
+        Graphics2D g = image.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_OFF);
+        g.setColor(new Color(0,0,0,100));
+
+        //logger.debug("Drawing vectors, length = {} pixels", this.arrowLength);
+        //List<Float> east = data.get(0);
+        //List<Float> north = data.get(1);
+
+        float stepScale = 1.1f;
+        float imageLength = this.arrowLength;
+
+        if (this.style == Style.BARB) {
+            imageLength = this.barbLength * this.vectorScale;
+            stepScale = 1.2f * this.vectorScale;
+         } else {
+            imageLength = this.arrowLength * this.vectorScale;
+            stepScale = 1.1f * this.vectorScale;
+         }
+
+        int index;
+        int dataIndex;
+        double angle;
+        double radangle;
+        Double mag;
+        Float eastVal;
+        Float northVal;
+        Path2D drawing;
+
+        for (int i = 0; i < this.picWidth; i += Math.ceil(imageLength + stepScale))
+        {
+            for (int j = 0; j < this.picHeight; j += Math.ceil(imageLength + stepScale))
             {
-                for (int j = 0; j < this.picHeight; j += Math.ceil(this.arrowLength * 1.2))
+                dataIndex = this.getDataIndex(i, j);
+                eastVal = comps.x.get(dataIndex);
+                northVal = comps.y.get(dataIndex);
+                if (eastVal != null && northVal != null)
                 {
-                    int dataIndex = this.getDataIndex(i, j);
-                    Float eastVal = comps.x.get(dataIndex);
-                    Float northVal = comps.y.get(dataIndex);
-                    if (eastVal != null && northVal != null)
-                    {
-                        double angle = Math.atan2(northVal.doubleValue(), eastVal.doubleValue());
-                        // Calculate the end point of the arrow
-                        double iEnd = i + this.arrowLength * Math.cos(angle);
-                        // Screen coordinates go down, but north is up, hence the minus sign
-                        double jEnd = j - this.arrowLength * Math.sin(angle);
-                        //logger.debug("i={}, j={}, dataIndex={}, east={}, north={}",
-                        //    new Object[]{i, j, dataIndex, data[0][dataIndex], data[1][dataIndex]});
-                        // Draw a dot representing the data location
-                        g.fillOval(i - 2, j - 2, 4, 4);
-                        // Draw a line representing the vector direction and magnitude
-                        g.setStroke(new BasicStroke(1));
-                        g.drawLine(i, j, (int)Math.round(iEnd), (int)Math.round(jEnd));
-                        // Draw the arrow on the canvas
-                        //drawArrow(g, i, j, (int)Math.round(iEnd), (int)Math.round(jEnd), 2);
+                    angle = Math.toDegrees(Math.atan2(eastVal.doubleValue(), northVal.doubleValue()));
+                    angle = (eastVal.doubleValue() < 0) ? angle + 360 : angle;
+                    radangle = Math.toRadians(angle);
+                    mag = Math.sqrt(Math.pow(northVal.doubleValue(), 2) + Math.pow(eastVal.doubleValue() , 2));
+
+                    // Color arrow
+                    index = this.getColourIndex(mag.floatValue());
+                    g.setColor(new Color(colorModel.getRGB(index)));
+                    if (this.style == Style.BARB) {                   
+                      g.setStroke(new BasicStroke(1));                
+                      BarbFactory.renderWindBarbForSpeed(mag, radangle, i, j, this.units, this.vectorScale, g);                                              
+                    } else {
+                      // Arrows.  We need to pick the style arrow now
+                      VectorFactory.renderVector(this.style.name(), mag, radangle, i, j, this.vectorScale, g);
                     }
                 }
             }
         }
-        
         return image;
     }
-
     /**
      * Calculates the index of the data point in a data array that corresponds
      * with the given index in the image array, taking into account that the
@@ -279,6 +284,94 @@ public final class ImageProducer
         int dataJ = this.picHeight - imageJ - 1;
         int dataIndex = dataJ * this.picWidth + imageI;
         return dataIndex;
+    }
+
+    /**
+    * Creates and returns a single frame as an Image, based on the given data.
+    * Adds the label if one has been set. The scale must be set before
+    * calling this method.
+    */
+    private BufferedImage createImage(Components comps, String label)
+    {
+        if (this.style == Style.FANCYVEC || this.style == Style.TRIVEC || this.style == Style.BARB || this.style == Style.STUMPVEC || this.style == Style.LINEVEC) {
+            return this.createVector(comps, label);
+        } else {
+            // Create the pixel array for the frame
+            byte[] pixels = new byte[this.picWidth * this.picHeight];
+            // We get the magnitude of the input data (takes care of the case
+            // in which the data are two components of a vector)
+            List<Float> magnitudes = comps.getMagnitudes();
+            for (int i = 0; i < pixels.length; i++)
+            {
+                // The image coordinate system has the vertical axis increasing
+                // downward, but the data's coordinate system has the vertical axis
+                // increasing upwards. The method below flips the axis
+                int dataIndex = this.getDataIndex(i);
+                pixels[i] = (byte)this.getColourIndex(magnitudes.get(dataIndex));
+            }
+
+            // Create a ColorModel for the image
+            ColorModel colorModel = this.getColorModel();
+
+
+            // Create the Image
+            DataBuffer buf = new DataBufferByte(pixels, pixels.length);
+            SampleModel sampleModel = colorModel.createCompatibleSampleModel(this.picWidth, this.picHeight);
+            WritableRaster raster = Raster.createWritableRaster(sampleModel, buf, null);
+            BufferedImage image = new BufferedImage(colorModel, raster, false, null);
+
+            // Add the label to the image
+            // TODO: colour needs to change with different palettes!
+            if (label != null && !label.equals(""))
+            {
+                Graphics2D gfx = (Graphics2D)image.getGraphics();
+                gfx.setPaint(new Color(0, 0, 143));
+                gfx.fillRect(1, image.getHeight() - 19, image.getWidth() - 1, 18);
+                gfx.setPaint(new Color(255, 151, 0));
+                gfx.drawString(label, 10, image.getHeight() - 5);
+            }
+
+            if (this.style == Style.VECTOR)
+            {
+                // We superimpose direction arrows on top of the background
+                // TODO: only do this for lat-lon projections!
+                Graphics2D g = image.createGraphics();
+                // TODO: control the colour of the arrows with an attribute
+                // Must be part of the colour palette (here we use the colour
+                // for out-of-range values)
+                g.setColor(Color.BLACK);
+
+                logger.debug("Drawing vectors, length = {} pixels", this.arrowLength);
+                for (int i = 0; i < this.picWidth; i += Math.ceil(this.arrowLength * 1.2))
+                {
+                    for (int j = 0; j < this.picHeight; j += Math.ceil(this.arrowLength * 1.2))
+                    {
+                        int dataIndex = this.getDataIndex(i, j);
+                        Float eastVal = comps.x.get(dataIndex);
+                        Float northVal = comps.y.get(dataIndex);
+                        if (eastVal != null && northVal != null)
+                        {
+                            double angle = Math.atan2(northVal.doubleValue(), eastVal.doubleValue());
+                            // Calculate the end point of the arrow
+                            double iEnd = i + this.arrowLength * Math.cos(angle);
+                            // Screen coordinates go down, but north is up, hence the minus sign
+                            double jEnd = j - this.arrowLength * Math.sin(angle);
+                            //logger.debug("i={}, j={}, dataIndex={}, east={}, north={}",
+                            // new Object[]{i, j, dataIndex, data[0][dataIndex], data[1][dataIndex]});
+                            // Draw a dot representing the data location
+                            g.fillOval(i - 2, j - 2, 4, 4);
+                            // Draw a line representing the vector direction and magnitude
+                            g.setStroke(new BasicStroke(1));
+                            g.drawLine(i, j, (int)Math.round(iEnd), (int)Math.round(jEnd));
+                            // Draw the arrow on the canvas
+                            //drawArrow(g, i, j, (int)Math.round(iEnd), (int)Math.round(jEnd), 2);
+                        }
+                    }
+                }
+            }
+
+            return image;
+        }
     }
     
     /**
@@ -387,11 +480,13 @@ public final class ImageProducer
         private int picHeight = -1;
         private boolean transparent = false;
         private int opacity = 100;
+        private float vectorScale = 1;
         private int numColourBands = ColorPalette.MAX_NUM_COLOURS;
         private Boolean logarithmic = null;
         private Color bgColor = Color.WHITE;
         private Range<Float> scaleRange = null;
         private Style style = null;
+        private String units = null;
         private ColorPalette colorPalette = null;
 
         /**
@@ -479,6 +574,19 @@ public final class ImageProducer
             return this;
         }
 
+        /** Sets the vectorScale (defaults to 1.0) */
+        public Builder vectorScale(float scale) {
+            if (scale <= 0) throw new IllegalArgumentException();
+            this.vectorScale = scale;
+            return this;
+        }
+        
+        /** Sets the layes units */
+        public Builder units(String units) {
+            this.units = units;
+            return this;
+        }
+
         /**
          * Checks the fields for internal consistency, then creates and returns
          * a new ImageProducer object.
@@ -512,7 +620,8 @@ public final class ImageProducer
             ip.scaleRange = this.scaleRange == null
                 ? emptyRange
                 : this.scaleRange;
-
+            ip.vectorScale = this.vectorScale;
+            ip.units = this.units;
             return ip;
         }
     }
