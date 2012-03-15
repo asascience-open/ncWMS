@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -68,6 +69,7 @@ import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.TextAnchor;
 import org.joda.time.DateTime;
+
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
 import uk.ac.rdg.resc.edal.geometry.LonLatPosition;
 import uk.ac.rdg.resc.edal.geometry.impl.LineString;
@@ -92,7 +94,7 @@ public class Charting
     public static JFreeChart createTimeseriesPlot(Layer layer, LonLatPosition lonLat,
             Map<DateTime, Float> tsData)
     {
-        TimeSeries ts = new TimeSeries("Data", Millisecond.class);
+        TimeSeries ts = new TimeSeries("Data");
         for (Entry<DateTime, Float> entry : tsData.entrySet()) {
             ts.add(new Millisecond(entry.getKey().toDate()), entry.getValue());
         }
@@ -118,7 +120,7 @@ public class Charting
     public static JFreeChart createTimeseriesPlot(String lon, String lat,
             Map<DateTime, Float> tsData, String variableName, String variableUnit)
     {
-        TimeSeries ts = new TimeSeries("Data", Millisecond.class);
+        TimeSeries ts = new TimeSeries("Data");
         for (Entry<DateTime, Float> entry : tsData.entrySet()) {
             ts.add(new Millisecond(entry.getKey().toDate()), entry.getValue());
         }
@@ -140,6 +142,54 @@ public class Charting
         chart.getXYPlot().setNoDataMessage("There is no data for your choice");
         chart.getXYPlot().setNoDataMessageFont(new Font("sansserif", Font.BOLD, 32));
         
+        return chart;
+    }
+    
+    
+    public static JFreeChart createMultiTimeseriesPlot(List<Map<DateTime, Float>> tsData,
+            List<String> labels, String variableUnit) {
+        if(tsData.size() != labels.size()){
+            throw new IllegalArgumentException("tsData and labels must be the same length");
+        }
+        
+        TimeSeriesCollection xydataset = new TimeSeriesCollection();
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        
+        /*
+         * Auto range seems to fail randomly, so we have to do it manually...
+         */
+        float low = Float.MAX_VALUE;
+        float high = Float.MIN_VALUE;
+        
+        for(int i = 0; i < tsData.size(); i++){
+            Map<DateTime, Float> tsDatum = tsData.get(i);
+            String label = labels.get(i);
+            TimeSeries ts = new TimeSeries(label);
+            for (Entry<DateTime, Float> entry : tsDatum.entrySet()) {
+                Float val = entry.getValue();
+                if(val < low)
+                    low = val;
+                if(val > high)
+                    high = val;
+                ts.add(new Millisecond(entry.getKey().toDate()), entry.getValue());
+            }
+            xydataset.addSeries(ts);
+            renderer.setSeriesShape(i, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+            renderer.setSeriesShapesVisible(i, true);
+        }
+        
+        String title = "";
+        
+        String yLabel = variableUnit;
+        
+        JFreeChart chart = ChartFactory.createTimeSeriesChart(title,
+                "Date / time", yLabel, xydataset, true, false, false);
+        chart.getXYPlot().setRenderer(renderer);
+        chart.getXYPlot().setNoDataMessage("There is no data for your choice");
+        chart.getXYPlot().setNoDataMessageFont(new Font("sansserif", Font.BOLD, 32));
+
+        chart.getXYPlot().getDomainAxis().setAutoRange(true);
+        chart.getXYPlot().getRangeAxis().setRange(low, high);
         return chart;
     }
     
@@ -165,7 +215,7 @@ public class Charting
         elevationAxis.setAutoRangeIncludesZero(false);
 
         //String axisLabel = variableName + "(meters)";
-        String axisLabel = variableName +"("+variableName+")"; 
+        String axisLabel = variableName +"("+variableUnit+")"; 
         
         NumberAxis valueAxis = new NumberAxis(axisLabel);
         valueAxis.setAutoRangeIncludesZero(false);
@@ -203,6 +253,55 @@ public class Charting
         return new JFreeChart(title, null, plot, false);        
     }
     
+    public static JFreeChart createMultiVerticalProfilePlot(List<Map<Double, Float>> dataValues,
+            List<String> labels, String variableUnit, DateTime dateTime) {
+        if(dataValues.size() != labels.size()){
+            throw new IllegalArgumentException("must provide labels for each data series");
+        }
+        
+        String zAxisLabel = "Depth";
+        boolean invertYAxis = true;
+        
+        NumberAxis zAxis = new NumberAxis(zAxisLabel + " (meters)");
+        zAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        zAxis.setInverted(invertYAxis);
+        zAxis.setAutoRangeIncludesZero(false);
+
+        NumberAxis valueAxis = new NumberAxis(variableUnit);
+        valueAxis.setAutoRangeIncludesZero(false);
+        
+        XYSeriesCollection xySeriesColl = new XYSeriesCollection();
+        for(int i=0; i<dataValues.size(); i++){
+            Map<Double, Float> datumValues = dataValues.get(i);
+            XYSeries series = new XYSeries(labels.get(i), true);
+            for(Entry<Double, Float> entryPair : datumValues.entrySet()){
+                series.add(entryPair.getKey(), entryPair.getValue());
+            }
+            xySeriesColl.addSeries(series);
+        }
+        valueAxis.setAutoRange(true);
+        
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        renderer.setSeriesPaint(0, Color.RED);
+        renderer.setSeriesShapesVisible(0, true);
+        for(int i=0; i<dataValues.size(); i++)
+            renderer.setSeriesShape(i, new Ellipse2D.Double(-1.0, -1.0, 2.0, 2.0));
+        
+        XYPlot plot = new XYPlot(xySeriesColl, zAxis, valueAxis, renderer);
+        plot.setBackgroundPaint(Color.lightGray);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeGridlinePaint(Color.white);
+        plot.setOrientation(PlotOrientation.HORIZONTAL);
+        
+        String title = "";
+        if (dateTime != null) {
+            title += " at " + WmsUtils.dateTimeToISO8601(dateTime);
+        }
+        
+        // Use default font and don't create a legend
+        return new JFreeChart(title, null, plot, true);        
+    }
+    
     
 
     public static JFreeChart createVerticalProfilePlot(Layer layer, HorizontalPosition pos,
@@ -221,6 +320,7 @@ public class Charting
 
         NumberAxis valueAxis = new NumberAxis(getAxisLabel(layer));
         valueAxis.setAutoRangeIncludesZero(false);
+        valueAxis.setAutoRange(true);
 
         XYSeries series = new XYSeries("data", true); // TODO: more meaningful title
         for (int i = 0; i < elevationValues.size(); i++) {
@@ -526,6 +626,7 @@ public class Charting
      */
     private static class VerticalSectionDataset extends AbstractXYZDataset
     {
+        private static final long serialVersionUID = 1L;
         private final int horizPathLength;
         private final List<List<Float>> sectionData;
         private final List<Double> elevationValues;
