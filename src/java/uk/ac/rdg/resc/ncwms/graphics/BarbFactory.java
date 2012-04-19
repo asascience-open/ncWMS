@@ -194,7 +194,7 @@ public class BarbFactory {
     }
   }
 
-  public static void renderWindBarbForSpeed(double speed, double angle, int i, int j, String units, float scale, Graphics2D g) {
+  public static void renderWindBarbForSpeed(double speed, double angle, int i, int j, String units, float scale, boolean southern_hemisphere, Graphics2D g) {
     /* Convert to knots */
     if (units.trim().equalsIgnoreCase("m/s")) {
       speed = speed * 1.94384449;
@@ -213,12 +213,37 @@ public class BarbFactory {
     }
 
     Path2D ret = (Path2D) windBarbs.get(rank).clone();
-    /* Rotate and set position */
-    ret.transform(AffineTransform.getRotateInstance(-Math.PI / 2));
+    /* Rotate so the Barb represents 0 from degrees.
+     * 
+     * Barbs are initially drawn like this:  
+     * 
+     *  *--------
+     *         ||
+     *         ||
+     * 
+     * Wind is the "From" direction, so we need to rotate the
+     * barb by 1 * (Math.PI / 2).
+     * 
+     * 
+     *         *
+     *         |
+     *         |
+     *         |
+     *     ----|
+     *     ----|
+     *     
+     */
+    /* Southern Hemisphere barbs need to be flipped so they point in the
+     * anti-clockwise direction */
+    if (!southern_hemisphere) {
+      ret.transform(AffineTransform.getScaleInstance(1.0, -1.0));
+    }
+    ret.transform(AffineTransform.getRotateInstance(1 * (Math.PI / 2)));
+    // Now rotate by the correct angle, clockwise
     ret.transform(AffineTransform.getRotateInstance(angle));
-    /* Bards are the FROM direction */
-    ret.transform(AffineTransform.getRotateInstance(Math.toRadians(180.0)));
+    // Scale the image
     ret.transform(AffineTransform.getScaleInstance(scale, scale));
+    // Place the image
     ret.transform(AffineTransform.getTranslateInstance(i, j));
     g.draw(ret);
   }

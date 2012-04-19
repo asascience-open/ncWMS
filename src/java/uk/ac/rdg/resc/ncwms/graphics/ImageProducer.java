@@ -86,6 +86,7 @@ public final class ImageProducer
      */
     private float vectorScale;
     private String units;
+    private int equator_y_index;
     private float arrowLength = 14.0f;
     private float barbLength = 28.0f;
     
@@ -226,12 +227,10 @@ public final class ImageProducer
 
         int index;
         int dataIndex;
-        double angle;
         double radangle;
         Double mag;
         Float eastVal;
         Float northVal;
-        Path2D drawing;
 
         for (int i = 0; i < this.picWidth; i += Math.ceil(imageLength + stepScale))
         {
@@ -242,17 +241,15 @@ public final class ImageProducer
                 northVal = comps.y.get(dataIndex);
                 if (eastVal != null && northVal != null)
                 {
-                    angle = Math.toDegrees(Math.atan2(eastVal.doubleValue(), northVal.doubleValue()));
-                    angle = (eastVal.doubleValue() < 0) ? angle + 360 : angle;
-                    radangle = Math.toRadians(angle);
+                    radangle = Math.atan2(eastVal.doubleValue(), northVal.doubleValue());
                     mag = Math.sqrt(Math.pow(northVal.doubleValue(), 2) + Math.pow(eastVal.doubleValue() , 2));
 
                     // Color arrow
                     index = this.getColourIndex(mag.floatValue());
                     g.setColor(new Color(colorModel.getRGB(index)));
                     if (this.style == Style.BARB) {                   
-                      g.setStroke(new BasicStroke(1));                
-                      BarbFactory.renderWindBarbForSpeed(mag, radangle, i, j, this.units, this.vectorScale, g);                                              
+                      g.setStroke(new BasicStroke(1));
+                      BarbFactory.renderWindBarbForSpeed(mag, radangle, i, j, this.units, this.vectorScale, j >= this.equator_y_index, g);
                     } else {
                       // Arrows.  We need to pick the style arrow now
                       VectorFactory.renderVector(this.style.name(), mag, radangle, i, j, this.vectorScale, g);
@@ -487,6 +484,7 @@ public final class ImageProducer
         private Range<Float> scaleRange = null;
         private Style style = null;
         private String units = null;
+        private int equator_y_index = 0;
         private ColorPalette colorPalette = null;
 
         /**
@@ -581,12 +579,20 @@ public final class ImageProducer
             return this;
         }
         
-        /** Sets the layes units */
+        /** Sets the layers units */
         public Builder units(String units) {
             this.units = units;
             return this;
         }
 
+        /** Sets the yindex that the hemisphere switches to southern
+         *  value is 0 if it does not touch the southern hemisphere. */
+        public Builder equator_y_index(int equator_y_index) {
+            this.equator_y_index = equator_y_index;
+            return this;
+        }
+
+        
         /**
          * Checks the fields for internal consistency, then creates and returns
          * a new ImageProducer object.
@@ -622,6 +628,7 @@ public final class ImageProducer
                 : this.scaleRange;
             ip.vectorScale = this.vectorScale;
             ip.units = this.units;
+            ip.equator_y_index = this.equator_y_index;
             return ip;
         }
     }

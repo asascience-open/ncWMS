@@ -46,17 +46,21 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.geotoolkit.geometry.GeneralDirectPosition;
+import org.geotoolkit.geometry.GeneralEnvelope;
+import org.geotoolkit.referencing.CRS;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.ui.RectangleInsets;
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.opengis.geometry.Envelope;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 
@@ -422,7 +426,33 @@ public abstract class AbstractWmsController extends AbstractController {
 
         // Get the grid onto which the data will be projected
         RegularGrid grid = WmsUtils.getImageGrid(dr);
-
+        
+        CoordinateReferenceSystem sourcecs = WmsUtils.getCrs(dr.getCrsCode());
+        CoordinateReferenceSystem wgs84cs = WmsUtils.getCrs("CRS:84");
+        GeneralEnvelope bbox = new GeneralEnvelope((Envelope)grid.getExtent());
+        bbox = (GeneralEnvelope) CRS.transform(bbox, wgs84cs);
+        
+        double[] urc = bbox.getUpperCorner().getCoordinate();
+        double[] llc = bbox.getLowerCorner().getCoordinate();
+        // Assume grid does not cross equator.
+        int equator_y_index = dr.getHeight();
+        
+        if (llc[1] < 0) {
+          // Dataset is 100% in the southern hemisphere or crosses the equator
+          GeneralDirectPosition gdp = new GeneralDirectPosition(wgs84cs);
+          gdp.setLocation(llc[0],0);
+          GeneralEnvelope yaxisbox = (GeneralEnvelope) CRS.transform(new GeneralEnvelope(gdp,gdp),sourcecs);
+          HorizontalPosition hp = new HorizontalPositionImpl(yaxisbox.getUpperCorner().getCoordinate()[0], yaxisbox.getUpperCorner().getCoordinate()[1], sourcecs);
+          GridCoordinates gc = grid.findNearestGridPoint(hp);
+          if (gc != null) {
+            // Crosses the Equator
+            equator_y_index = dr.getHeight() - gc.getCoordinateValue(1);
+          } else {
+            // Does not cross the equator
+            equator_y_index = 0;
+          }
+        }
+        
         // Create an object that will turn data into BufferedImages
         Range<Float> scaleRange = styleRequest.getColorScaleRange();
         if (scaleRange == null) scaleRange = layer.getApproxValueRange();
@@ -471,6 +501,7 @@ public abstract class AbstractWmsController extends AbstractController {
             .numColourBands(styleRequest.getNumColourBands())
             .vectorScale(vectorScale)
             .units(layer.getUnits())
+            .equator_y_index(equator_y_index)
             .build();
         // Need to make sure that the images will be compatible with the
         // requested image format
