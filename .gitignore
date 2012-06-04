@@ -1,0 +1,25 @@
+# /
+/store
+/temp
+/build
+/catalog.xml
+/dist
+/.settings
+/.classpath
+/.project
+/.gwt
+/buildcommand.sh
+
+# /nbproject/
+/nbproject/private
+
+# /src/java/uk/ac/rdg/resc/edal/cdm/kdtree/
+/src/java/uk/ac/rdg/resc/edal/cdm/kdtree/KDTreeBinary.java
+
+# /web/
+/web/gwtmap
+/web/js_backup
+
+# /web/WEB-INF/
+/web/WEB-INF/classes
+/web/WEB-INF/deploy
