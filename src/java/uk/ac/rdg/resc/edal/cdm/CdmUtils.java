@@ -291,7 +291,7 @@ public final class CdmUtils
     /** Gets a GridDataset from the given NetcdfDataset */
     public static GridDataset getGridDataset(NetcdfDataset nc) throws IOException
     {
-        return (GridDataset)FeatureDatasetFactoryManager.open(FeatureType.GRID, nc.getLocation(), null, new Formatter());
+        return (GridDataset)FeatureDatasetFactoryManager.wrap(FeatureType.GRID, nc, null, new Formatter());
     }
 
     /**
