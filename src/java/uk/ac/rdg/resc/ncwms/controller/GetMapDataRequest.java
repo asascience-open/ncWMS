@@ -72,20 +72,21 @@ public class GetMapDataRequest
      */
     protected void init(RequestParams params, String version) throws WmsException
     {
-        boolean lonFirst = true;
         if (version.equals("1.3.0")) {
             this.crsCode = params.getMandatoryString("crs");
             if (crsCode.equalsIgnoreCase("EPSG:4326")) {
-                crsCode = "CRS:84";
+                this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), false);
+            } else {
+                this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), true);
             }
         } else {
             this.crsCode = params.getMandatoryString("srs");
             if (crsCode.equalsIgnoreCase("EPSG:4326")) {
-                lonFirst = false;
+                crsCode = "CRS:84";
             }
+            this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), true);
         }
         
-        this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), lonFirst);
         this.width = params.getMandatoryPositiveInt("width");
         this.height = params.getMandatoryPositiveInt("height");
         this.timeString = params.getString("time");
