@@ -31,8 +31,10 @@ package uk.ac.rdg.resc.edal.cdm;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
 import org.geotoolkit.referencing.crs.DefaultGeographicCRS;
 import org.opengis.coverage.grid.GridEnvelope;
+
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -91,10 +93,7 @@ class ProjectedGrid extends AbstractHorizontalGrid
         double x = this.xAxis.getCoordinateValue(i);
         double y = this.yAxis.getCoordinateValue(j);
         // Translate this point to lon-lat coordinates
-        LatLonPoint latLon;
-        synchronized(this.proj) {
-            latLon = this.proj.projToLatLon(x, y);
-        }
+        LatLonPoint latLon = this.proj.projToLatLon(x, y);
         return new LonLatPositionImpl(latLon.getLongitude(), latLon.getLatitude());
     }
 
@@ -106,7 +105,7 @@ class ProjectedGrid extends AbstractHorizontalGrid
         if (i < 0 || j < 0) return null;
         return new GridCoordinatesImpl(i, j);
     }
-
+    
     @Override
     public GridCoordinates inverseTransformCoordinates(HorizontalPosition pos) {
         ProjectionPoint point = this.getProjectionPoint(pos);
@@ -121,12 +120,7 @@ class ProjectedGrid extends AbstractHorizontalGrid
     private ProjectionPoint getProjectionPoint(HorizontalPosition pos) {
         // Translate the point into lat-lon coordinates
         pos = Utils.transformPosition(pos, this.getCoordinateReferenceSystem());
-        // Now we go from lon-lat to the coordinate system of the axes.
-        // ProjectionImpls are not thread-safe.  Thanks to Marcos
-        // Hermida of Meteogalicia for pointing this out!
-        synchronized(this.proj) {
-            return this.proj.latLonToProj(pos.getY(), pos.getX());
-        }
+        return this.proj.latLonToProj(pos.getY(), pos.getX());
     }
 
     @Override

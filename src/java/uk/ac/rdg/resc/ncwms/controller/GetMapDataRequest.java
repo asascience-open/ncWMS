@@ -75,6 +75,7 @@ public class GetMapDataRequest
         if (version.equals("1.3.0")) {
             this.crsCode = params.getMandatoryString("crs");
             if (crsCode.equalsIgnoreCase("EPSG:4326")) {
+                crsCode = "CRS:84";
                 this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), false);
             } else {
                 this.bbox = WmsUtils.parseBbox(params.getMandatoryString("bbox"), true);
