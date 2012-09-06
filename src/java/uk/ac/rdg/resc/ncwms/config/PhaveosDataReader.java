@@ -27,6 +27,7 @@
  */
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +44,7 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import ucar.ma2.Array;
 import ucar.ma2.Index;
 import ucar.ma2.InvalidRangeException;
-import ucar.nc2.NetcdfFile;
+import ucar.nc2.dataset.NetcdfDataset;
 import uk.ac.rdg.resc.edal.cdm.CdmUtils;
 import uk.ac.rdg.resc.edal.cdm.PixelMap;
 import uk.ac.rdg.resc.edal.cdm.PixelMap.PixelMapEntry;
@@ -90,7 +91,6 @@ public final class PhaveosDataReader extends DataReader {
             RegularAxis xAxis = new RegularAxisImpl("x", BNG_BBOX[0], xSpacing, NX, false);
             RegularAxis yAxis = new RegularAxisImpl("y", BNG_BBOX[3], ySpacing, NY, false);
             SOURCE_GRID = new RegularGridImpl(xAxis, yAxis, BNG);
-            //SOURCE_GRID = new RegularGridImpl(BNG_BBOX, BNG, NX, NY);
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -100,9 +100,9 @@ public final class PhaveosDataReader extends DataReader {
     public List<Float> read(String filename, Layer layer, int tIndex, int zIndex,
             Domain<HorizontalPosition> targetDomain) throws IOException {
 
-        NetcdfFile nc = null;
+        NetcdfDataset nc = null;
         try {
-            nc = NetcdfFile.open(filename);
+            nc = NetcdfDataset.openDataset(filename);
             ucar.nc2.Variable var = nc.findVariable(layer.getId());
 
             // We read in data using a "bounding box" strategy
@@ -140,17 +140,18 @@ public final class PhaveosDataReader extends DataReader {
     }
 
     @Override
-    protected Collection<CoverageMetadata> readLayerMetadata(String location) throws IOException {
+    protected Collection<CoverageMetadata> readLayerMetadata(String location) throws IOException
+    {
         // We create a new Coverage for each Variable that has this shape
         // (other variables are coordinate variables or dummy variables)
         int[] expectedShape = new int[]{NY, NX};
 
         List<CoverageMetadata> cms = new ArrayList<CoverageMetadata>();
-        NetcdfFile nc = null;
+        NetcdfDataset nc = null;
         
         try
         {
-            nc = NetcdfFile.open(location);
+            nc = NetcdfDataset.openDataset(location);
             DateTime dt = getDateTime(location);
             for (ucar.nc2.Variable var : nc.getVariables())
             {
@@ -175,9 +176,10 @@ public final class PhaveosDataReader extends DataReader {
     /** Uses the name of the file to deduce the date of the data */
     private static DateTime getDateTime(String filename)
     {
-        // The pattern is "fAPAR-JRC_YYYYMMDD_L4.nc" or "TOA_VEG_YYYYMMDD_L4.nc"
-        int firstchar = filename.length() - 14;
-        String dateStr = filename.substring(firstchar, firstchar + 8);
+        // We strip off the filename from the full path
+        filename = new File(filename).getName();
+        // The pattern is "PHAVEOS_YYYYMMDD.nc" 
+        String dateStr = filename.split("_|\\.")[1];
         int year = Integer.valueOf(dateStr.substring(0, 4));
         int month = Integer.valueOf(dateStr.substring(4, 6));
         int day = Integer.valueOf(dateStr.substring(6, 8));
